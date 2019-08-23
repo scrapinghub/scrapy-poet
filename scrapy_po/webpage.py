@@ -50,3 +50,18 @@ class WebPage(PageObject):
 
     def css(self, query):
         return self.selector.css(query)
+
+
+class ItemPage(WebPage):
+    @abc.abstractmethod
+    def to_item(self):
+        pass
+
+
+def callback_for(page_cls):
+    """ Helper for defining callbacks for pages with to_item methods """
+    def parse(*args, page: page_cls):
+        return page.to_item()
+    return parse
+
+

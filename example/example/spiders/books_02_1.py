@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 Scrapy spider which uses Page Objects to make extraction code more reusable.
-BookPage is now independent of Scrapy.
+BookPage is now independent of Scrapy. callback_for is used to reduce
+boilerplate.
 """
 import scrapy
-from scrapy_po import WebPage
+from scrapy_po import WebPage, callback_for
 
 
 class BookPage(WebPage):
@@ -16,12 +17,10 @@ class BookPage(WebPage):
 
 
 class BooksSpider(scrapy.Spider):
-    name = 'books_02'
+    name = 'books_02_1'
     start_urls = ['http://books.toscrape.com/']
+    parse_book = callback_for(BookPage)
 
     def parse(self, response):
         for url in response.css('.image_container a::attr(href)').getall():
             yield response.follow(url, self.parse_book)
-
-    def parse_book(self, response, book_page: BookPage):
-        yield book_page.to_item()
