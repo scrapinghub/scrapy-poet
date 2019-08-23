@@ -34,6 +34,11 @@ Installation
 
 scrapy-po requires Python >= 3.5.3 and Scrapy 1.7+.
 
+Usage
+=====
+
+TODO. For now, check spiders in "example" folder.
+
 Contributing
 ============
 
