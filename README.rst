@@ -37,7 +37,43 @@ scrapy-po requires Python >= 3.6 and Scrapy 1.7+.
 Usage
 =====
 
-TODO. For now, check spiders in "example" folder:
+First, enable middleware in your settings.py::
+
+    DOWNLOADER_MIDDLEWARES = {
+       'scrapy_po.InjectPageObjectsMiddleware': 543,
+    }
+
+After that you can write spiders which use page object pattern to separate
+extraction code from a spider:
+
+.. code-block:: python
+
+    import scrapy
+    from scrapy_po import WebPage
+
+
+    class BookPage(WebPage):
+        def to_item(self):
+            return {
+                'url': self.url,
+                'name': self.css("title::text").get(),
+            }
+
+
+    class BooksSpider(scrapy.Spider):
+        name = 'books'
+        start_urls = ['http://books.toscrape.com/']
+
+        def parse(self, response):
+            for url in response.css('.image_container a::attr(href)').getall():
+                yield response.follow(url, self.parse_book)
+
+        def parse_book(self, response, book_page: BookPage):
+            yield book_page.to_item()
+
+TODO: document motivation, the rest of the features, provide
+more usage examples, explain shortcuts, etc.
+For now, please check spiders in "example" folder:
 https://github.com/scrapinghub/scrapy-po/tree/master/example/example/spiders
 
 Contributing
