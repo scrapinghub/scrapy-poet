@@ -10,8 +10,8 @@ scrapy-po
    :target: https://pypi.python.org/pypi/scrapy-po
    :alt: Supported Python Versions
 
-.. image:: https://travis-ci.org/scrapinghub/scrapy-po.svg?branch=master
-   :target: https://travis-ci.org/scrapinghub/scrapy-po
+.. image:: https://travis-ci.com/scrapinghub/scrapy-po.svg?branch=master
+   :target: https://travis-ci.com/scrapinghub/scrapy-po
    :alt: Build Status
 
 .. image:: https://codecov.io/github/scrapinghub/scrapy-po/coverage.svg?branch=master
@@ -32,7 +32,7 @@ Installation
 
     pip install scrapy-po
 
-scrapy-po requires Python >= 3.5.3 and Scrapy 1.7+.
+scrapy-po requires Python >= 3.6 and Scrapy 1.7+.
 
 Usage
 =====

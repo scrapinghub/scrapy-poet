@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import abc
+
 from scrapy.http.response import Response
 from .page_inputs import ResponseData
 
