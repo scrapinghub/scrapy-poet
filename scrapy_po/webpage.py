@@ -64,4 +64,3 @@ def callback_for(page_cls):
         return page.to_item()
     return parse
 
-

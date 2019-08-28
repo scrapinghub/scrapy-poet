@@ -22,8 +22,7 @@ class BookPage(WebPage):
 class BooksSpider(scrapy.Spider):
     name = 'books_04'
     start_urls = ['http://books.toscrape.com/']
-    parse_book = callback_for(BookPage)
 
     def parse(self, response, page: BookListPage):
         for url in page.product_urls():
-            yield response.follow(url, self.parse_book)
+            yield response.follow(url, callback_for(BookPage))

@@ -11,8 +11,7 @@ from example.autoextract import ProductPage
 class BooksSpider(scrapy.Spider):
     name = 'books_03'
     start_urls = ['http://books.toscrape.com/']
-    parse_book = callback_for(ProductPage)
 
     def parse(self, response):
         for url in response.css('.image_container a::attr(href)').getall():
-            yield response.follow(url, self.parse_book)
+            yield response.follow(url, callback_for(ProductPage))
