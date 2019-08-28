@@ -37,7 +37,8 @@ scrapy-po requires Python >= 3.6 and Scrapy 1.7+.
 Usage
 =====
 
-TODO. For now, check spiders in "example" folder.
+TODO. For now, check spiders in "example" folder:
+https://github.com/scrapinghub/scrapy-po/tree/master/example/example/spiders
 
 Contributing
 ============
