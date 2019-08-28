@@ -10,8 +10,8 @@ setup(
     author='Mikhail Korobov',
     author_email='kmike84@gmail.com',
     url='https://github.com/scrapinghub/scrapy-po',
-    packages=find_packages(exclude=['tests']),
-    install_requires=['andi'],
+    packages=find_packages(exclude=['tests', 'example']),
+    install_requires=['andi', 'attrs', 'parsel'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
