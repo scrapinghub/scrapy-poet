@@ -40,7 +40,7 @@ class NoneProvider(PageObjectInputProvider):
 
 @provides(ResponseData)
 class ResponseDataProvider(PageObjectInputProvider):
-    def __call__(self, ):
+    def __call__(self):
         return ResponseData(
             url=self.response.url,
             html=self.response.text
