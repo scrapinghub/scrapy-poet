@@ -23,11 +23,9 @@ class AutoextractProductResponse:
 class AutoextractProductProvider(PageObjectInputProvider):
     @inlineCallbacks
     def __call__(self):
-        raise returnValue(
-            AutoextractProductResponse(
-                data=(yield get_autoextract_product(self.response.url))
-            )
-        )
+        data = (yield get_autoextract_product(self.response.url))
+        res = AutoextractProductResponse(data=data)
+        raise returnValue(res)
 
 
 @inlineCallbacks
