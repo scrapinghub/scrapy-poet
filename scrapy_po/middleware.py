@@ -16,6 +16,8 @@ class InjectPageObjectsMiddleware:
     for this argument.
 
     XXX: should it really be a downloader middleware?
+    XXX: can this middleware allow to skip downloading
+    a page if it is not needed?
     """
     @inlineCallbacks
     def process_response(self, request: Request, response, spider):
