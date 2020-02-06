@@ -8,6 +8,10 @@ from .utils import get_callback
 from .page_input_providers import providers
 
 
+def is_page_object(argument_type) -> bool:
+    return issubclass(argument_type, PageObject)
+
+
 class InjectPageObjectsMiddleware:
     """
     This downloader middleware instantiates all PageObject subclasses declared
@@ -24,7 +28,7 @@ class InjectPageObjectsMiddleware:
         # find out which arguments need to be created
         callback = get_callback(request, spider)
         kwargs_to_provide = andi.to_provide(callback,
-                                            can_provide=self.is_page_object)
+                                            can_provide=is_page_object)
 
         # create WebPage objects and pass them to the callback
         for argname, cls in kwargs_to_provide.items():
@@ -33,13 +37,9 @@ class InjectPageObjectsMiddleware:
 
         raise returnValue(response)
 
-    @classmethod
-    def is_page_object(cls, argument_type) -> bool:
-        return issubclass(argument_type, PageObject)
-
 
 @inlineCallbacks
-def create_page_object(page_cls, response):
+def create_page_object(page_cls, response, dependency_graph=[]):
     """
     Create PageObject instances, resolving all constructor dependencies.
     """
@@ -47,9 +47,12 @@ def create_page_object(page_cls, response):
     provider_funcs = {cls: provider(response)
                       for cls, provider in providers.items()}
 
+    def can_provide(cls):
+        return cls in provider_funcs or is_page_object(cls)
+
     # find out which arguments page object needs.
     arguments = andi.inspect(page_cls.__init__)
-    kwargs_to_provide = andi.to_provide(arguments, can_provide=provider_funcs)
+    kwargs_to_provide = andi.to_provide(arguments, can_provide=can_provide)
     not_supported = arguments.keys() - kwargs_to_provide.keys()
     if not_supported:
         raise TypeError("Can't instantiate arguments: %s" % not_supported)
@@ -57,8 +60,15 @@ def create_page_object(page_cls, response):
     # instantiate all arguments
     kwargs = {}
     for argname, cls in kwargs_to_provide.items():
-        provider = provider_funcs[cls]
-        kwargs[argname] = yield maybeDeferred(provider)
+        if cls in dependency_graph:
+            raise TypeError("Cyclic dependency found. Dependency graph: %s ",
+                            " -> ".join(map(str, dependency_graph + [cls])))
+        if cls in provider_funcs:
+            provider = provider_funcs[cls]
+            kwargs[argname] = yield maybeDeferred(provider)
+        else:
+            page = yield create_page_object(cls, response, dependency_graph + [cls])
+            kwargs[argname] = page
 
     # create and return WebPage object
     page = page_cls(**kwargs)
