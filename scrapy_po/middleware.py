@@ -39,7 +39,7 @@ class InjectPageObjectsMiddleware:
 
 
 @inlineCallbacks
-def create_page_object(page_cls, response, dependency_graph=[]):
+def create_page_object(page_cls, response, dependency_graph=None):
     """
     Create PageObject instances, resolving all constructor dependencies.
     """
@@ -59,6 +59,7 @@ def create_page_object(page_cls, response, dependency_graph=[]):
 
     # instantiate all arguments
     kwargs = {}
+    dependency_graph = dependency_graph or []
     for argname, cls in kwargs_to_provide.items():
         if cls in dependency_graph:
             raise TypeError("Cyclic dependency found. Dependency graph: %s ",
