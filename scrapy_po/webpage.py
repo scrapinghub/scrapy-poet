@@ -17,17 +17,18 @@ class PageObject(abc.ABC):
     pass
 
 
-@attr.s(auto_attribs=True)
-class WebPage(PageObject):
-    """
-    Default WebPage class. It uses basic response data (html, url),
-    and provides xpath / css shortcuts.
+class ItemPage(PageObject):
+    """ Page Object which requires to_item method to be implemented. """
+    @abc.abstractmethod
+    def to_item(self):
+        pass
 
-    This class is most useful as a base class for page objects, when
-    extraction logic is similar to what's usually happening in scrapy
-    spider callbacks.
+
+class ResponseShortcutsMixin:
     """
-    response: ResponseData
+    A mixin with common shortcut methods for working with self.response.
+    It requires "response" attribute to be present.
+    """
     _cached_selector = None
 
     @property
@@ -52,10 +53,17 @@ class WebPage(PageObject):
         return self.selector.css(query)
 
 
-class ItemPage(WebPage):
-    @abc.abstractmethod
-    def to_item(self):
-        pass
+@attr.s(auto_attribs=True)
+class WebPage(PageObject, ResponseShortcutsMixin):
+    """
+    Default WebPage class. It uses basic response data (html, url),
+    and provides xpath / css shortcuts.
+
+    This class is most useful as a base class for page objects, when
+    extraction logic is similar to what's usually happening in scrapy
+    spider callbacks.
+    """
+    response: ResponseData
 
 
 def callback_for(page_cls):
