@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import Dict, Callable
+
 import andi
 from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
 from scrapy import Request
@@ -11,8 +13,8 @@ from .page_input_providers import providers
 class InjectPageObjectsMiddleware:
     """
     This downloader middleware instantiates all PageObject subclasses declared
-    as request callback arguments. If an argument is not annotated
-    as PageObject, this middleware doesn't populate request.cb_kwargs
+    as request callback arguments and any other parameter with a provider
+    for its type. Otherwise this middleware doesn't populate request.cb_kwargs
     for this argument.
 
     XXX: should it really be a downloader middleware?
@@ -21,45 +23,44 @@ class InjectPageObjectsMiddleware:
     """
     @inlineCallbacks
     def process_response(self, request: Request, response, spider):
-        # find out which arguments need to be created
+        # find out the dependencies
         callback = get_callback(request, spider)
-        kwargs_to_provide = andi.to_provide(callback,
-                                            can_provide=self.is_page_object)
+        providers = build_providers(response)
+        can_provide = can_provide_fn(providers)
+        plan = andi.plan(callback, can_provide,
+                         providers.__contains__)
 
-        # create WebPage objects and pass them to the callback
-        for argname, cls in kwargs_to_provide.items():
-            page = yield create_page_object(cls, response)
-            request.cb_kwargs[argname] = page
+        # Build all instances declared as dependencies
+        instances = {}
+        for cls, params in plan.items():
+            if cls in providers:
+                instances[cls] = yield maybeDeferred(providers[cls])
+            else:
+                kwargs = {param: instances[pcls]
+                          for param, pcls in params.items()}
+                instances[cls] = cls(**kwargs)
+
+        # Fill the callback arguments with the created instances
+        for argname, cls in andi.to_provide(
+                andi.inspect(callback), can_provide).items():
+            if cls in instances:
+                request.cb_kwargs[argname] = instances[cls]
+            # TODO: check if all arguments are fulfilled somehow?
 
         raise returnValue(response)
 
-    @classmethod
-    def is_page_object(cls, argument_type) -> bool:
-        return issubclass(argument_type, PageObject)
 
-
-@inlineCallbacks
-def create_page_object(page_cls, response):
-    """
-    Create PageObject instances, resolving all constructor dependencies.
-    """
+def build_providers(response) -> Dict[type, Callable]:
     # find out what resources are available
-    provider_funcs = {cls: provider(response)
-                      for cls, provider in providers.items()}
+    return {cls: provider(response)
+            for cls, provider in providers.items()}
 
-    # find out which arguments page object needs.
-    arguments = andi.inspect(page_cls.__init__)
-    kwargs_to_provide = andi.to_provide(arguments, can_provide=provider_funcs)
-    not_supported = arguments.keys() - kwargs_to_provide.keys()
-    if not_supported:
-        raise TypeError("Can't instantiate arguments: %s" % not_supported)
 
-    # instantiate all arguments
-    kwargs = {}
-    for argname, cls in kwargs_to_provide.items():
-        provider = provider_funcs[cls]
-        kwargs[argname] = yield maybeDeferred(provider)
-
-    # create and return WebPage object
-    page = page_cls(**kwargs)
-    raise returnValue(page)
+def can_provide_fn(providers):
+    """ A type is providable if it is a ``PageObject`` or if there exists
+    a provider for it. Also None is providable by default. """
+    def fn(argument_type):
+        return (argument_type == type(None) or
+                argument_type in providers or
+                issubclass(argument_type, PageObject))
+    return fn

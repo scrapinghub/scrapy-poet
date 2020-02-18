@@ -32,12 +32,6 @@ class PageObjectInputProvider(abc.ABC):
         pass
 
 
-@provides(None)
-class NoneProvider(PageObjectInputProvider):
-    def __call__(self):
-        return None
-
-
 @provides(ResponseData)
 class ResponseDataProvider(PageObjectInputProvider):
     def __call__(self):
