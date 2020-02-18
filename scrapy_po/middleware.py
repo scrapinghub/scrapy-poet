@@ -35,16 +35,16 @@ class InjectPageObjectsMiddleware:
         for cls, params in plan.items():
             if cls in providers:
                 instances[cls] = yield maybeDeferred(providers[cls])
+            elif cls == andi.FunctionArguments:
+                pass
             else:
                 kwargs = {param: instances[pcls]
                           for param, pcls in params.items()}
                 instances[cls] = cls(**kwargs)
 
         # Fill the callback arguments with the created instances
-        for argname, cls in andi.to_provide(
-                andi.inspect(callback), can_provide).items():
-            if cls in instances:
-                request.cb_kwargs[argname] = instances[cls]
+        for argname, cls in plan[andi.FunctionArguments].items():
+            request.cb_kwargs[argname] = instances[cls]
             # TODO: check if all arguments are fulfilled somehow?
 
         raise returnValue(response)
