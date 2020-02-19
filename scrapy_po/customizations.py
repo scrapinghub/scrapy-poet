@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+""" Customizations allows to choose the right PageObject based on the response """
 import abc
 from scrapy import Request, Spider
 from scrapy.http import Response
