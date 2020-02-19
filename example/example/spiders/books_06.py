@@ -48,6 +48,17 @@ class BookPage(WebPage, ItemPage):
         }
 
 
+@attr.s(auto_attribs=True)
+class AsimovFoundationBookPage(BookPage):
+    """ Example of a customization just for the single URL
+    http://books.toscrape.com/catalogue/foundation-foundation-publication-order-1_375/index.html """
+    def to_item(self):
+        item = super().to_item()
+        item['name'] = 'Foundation'  # Fixing title
+        item['price'] = self.css(".price_color::text").get()  # Adding price
+        return item
+
+
 class BooksSpider(scrapy.Spider):
     name = 'books_06'
     start_urls = ['http://books.toscrape.com/']

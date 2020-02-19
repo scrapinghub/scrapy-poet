@@ -1,16 +1,24 @@
 # -*- coding: utf-8 -*-
+from functools import partial
+
+from scrapy.utils.misc import load_object
 from typing import Dict, Callable
 
 import andi
 from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
 from scrapy import Request
 
+from .customizations import Customizations, IdentityCustomizations
 from .webpage import PageObject
 from .utils import get_callback
 from .page_input_providers import providers
 
 
 class InjectPageObjectsMiddleware:
+
+    def __init__(self, bindings: Customizations):
+        self.bindings = bindings
+
     """
     This downloader middleware instantiates all PageObject subclasses declared
     as request callback arguments and any other parameter with a provider
@@ -27,8 +35,9 @@ class InjectPageObjectsMiddleware:
         callback = get_callback(request, spider)
         providers = build_providers(response)
         can_provide = can_provide_fn(providers)
-        plan = andi.plan(callback, can_provide,
-                         providers.__contains__)
+        bindings = partial(self.bindings.__call__, request, response, spider)
+        plan = andi.plan(callback, can_provide, providers.__contains__,
+                         bindings)
 
         # Build all instances declared as dependencies
         instances = {}
@@ -48,6 +57,13 @@ class InjectPageObjectsMiddleware:
             # TODO: check if all arguments are fulfilled somehow?
 
         raise returnValue(response)
+
+    @classmethod
+    def from_crawler(cls, crawler, *args, **kwargs):
+        bnd_cls_str = crawler.settings.get("PAGEOBJECTS_BINDINGS")
+        bnd_cls = (load_object(bnd_cls_str) if bnd_cls_str else IdentityCustomizations)
+        bindings = bnd_cls(crawler, *args, **kwargs)
+        return cls(bindings)
 
 
 def build_providers(response) -> Dict[type, Callable]:
