@@ -60,10 +60,10 @@ class InjectPageObjectsMiddleware:
 
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
-        bnd_cls_str = crawler.settings.get("PAGEOBJECTS_CUSTOMIZATIONS")
-        bnd_cls = (load_object(bnd_cls_str) if bnd_cls_str else IdentityCustomizations)
-        bindings = bnd_cls(crawler, *args, **kwargs)
-        return cls(bindings)
+        cstm_cls_str = crawler.settings.get("PAGEOBJECTS_CUSTOMIZATIONS")
+        cstm_cls = (load_object(cstm_cls_str) if cstm_cls_str else IdentityCustomizations)
+        customizations = cstm_cls(crawler, *args, **kwargs)
+        return cls(customizations)
 
 
 def build_providers(response) -> Dict[type, Callable]:
