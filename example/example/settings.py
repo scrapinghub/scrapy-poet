@@ -56,7 +56,7 @@ DOWNLOADER_MIDDLEWARES = {
    'scrapy_po.InjectPageObjectsMiddleware': 543,
 }
 
-PAGEOBJECTS_BINDINGS = 'example.customizations.ExampleCustomizations'
+PAGEOBJECTS_CUSTOMIZATONS = 'example.customizations.ExampleCustomizations'
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html

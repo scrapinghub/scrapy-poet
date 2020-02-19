@@ -16,8 +16,8 @@ from .page_input_providers import providers
 
 class InjectPageObjectsMiddleware:
 
-    def __init__(self, bindings: Customizations):
-        self.bindings = bindings
+    def __init__(self, customizations: Customizations):
+        self.customizations = customizations
 
     """
     This downloader middleware instantiates all PageObject subclasses declared
@@ -35,7 +35,7 @@ class InjectPageObjectsMiddleware:
         callback = get_callback(request, spider)
         providers = build_providers(response)
         can_provide = can_provide_fn(providers)
-        bindings = partial(self.bindings.__call__, request, response, spider)
+        bindings = partial(self.customizations.__call__, request, response, spider)
         plan = andi.plan(callback, can_provide, providers.__contains__,
                          bindings)
 
@@ -60,7 +60,7 @@ class InjectPageObjectsMiddleware:
 
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
-        bnd_cls_str = crawler.settings.get("PAGEOBJECTS_BINDINGS")
+        bnd_cls_str = crawler.settings.get("PAGEOBJECTS_CUSTOMIZATIONS")
         bnd_cls = (load_object(bnd_cls_str) if bnd_cls_str else IdentityCustomizations)
         bindings = bnd_cls(crawler, *args, **kwargs)
         return cls(bindings)
