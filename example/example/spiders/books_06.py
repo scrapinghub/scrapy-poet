@@ -12,8 +12,7 @@ All links to search result pages are followed as well.
 import scrapy
 import attr
 
-from scrapy_po import WebPage, ItemPage
-from scrapy_po.webpage import PageComponent
+from scrapy_po import WebPage, ItemPage, PageComponent
 
 
 class ListingsComponent(PageComponent):
