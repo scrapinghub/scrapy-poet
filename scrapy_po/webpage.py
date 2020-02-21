@@ -66,6 +66,20 @@ class WebPage(PageObject, ResponseShortcutsMixin):
     response: ResponseData
 
 
+@attr.s(auto_attribs=True)
+class PageComponent(PageObject, ResponseShortcutsMixin):
+    """
+    Use it for implementing extractors for particular components of the
+    page (i.e. breadcrumbs) that can be reused across different page objects.
+
+    For example, a book page object can rely on breadcrumbs page component
+    to extract the book category and also a book listings page object could
+    rely in this component to extract the category a listings page
+    belongs to.
+    """
+    response: ResponseData
+
+
 def callback_for(page_cls):
     """ Helper for defining callbacks for pages with to_item methods """
     def parse(*args, page: page_cls):
