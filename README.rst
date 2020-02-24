@@ -40,7 +40,7 @@ Usage
 First, enable middleware in your settings.py::
 
     DOWNLOADER_MIDDLEWARES = {
-       'scrapy_po.InjectPageObjectsMiddleware': 543,
+       'scrapy_po.InjectionMiddleware': 543,
     }
 
 After that you can write spiders which use page object pattern to separate
