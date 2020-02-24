@@ -15,31 +15,31 @@ import attr
 from scrapy_po import WebPage, ItemWebPage, Injectable
 
 
-class ListingsComponent(WebPage):
+class ListingsExtractor(WebPage):
     def urls(self):
         return self.css('.image_container a::attr(href)').getall()
 
 
-class PaginationComponent(WebPage):
+class PaginationExtractor(WebPage):
     def urls(self):
         return self.css('.pager a::attr(href)').getall()
 
 
-class BreadcrumbsComponent(WebPage):
+class BreadcrumbsExtractor(WebPage):
     def urls(self):
         return self.css('.breadcrumb a::attr(href)').getall()
 
 
 @attr.s(auto_attribs=True)
 class ListingsPage(Injectable):
-    book_list: ListingsComponent
-    pagination: PaginationComponent
+    book_list: ListingsExtractor
+    pagination: PaginationExtractor
 
 
 @attr.s(auto_attribs=True)
 class BookPage(ItemWebPage):
-    recently_viewed: ListingsComponent
-    breadcrumbs: BreadcrumbsComponent
+    recently_viewed: ListingsExtractor
+    breadcrumbs: BreadcrumbsExtractor
 
     def to_item(self):
         return {
@@ -62,14 +62,14 @@ class BooksSpider(scrapy.Spider):
         yield from self.follow_breadcrumbs(response, page.breadcrumbs)
         yield page.to_item()
 
-    def follow_listing(self, response, item_list: ListingsComponent):
+    def follow_listing(self, response, item_list: ListingsExtractor):
         for url in item_list.urls():
             yield response.follow(url, self.parse_book)
 
-    def follow_pagination(self, response, pagination: PaginationComponent):
+    def follow_pagination(self, response, pagination: PaginationExtractor):
         for url in pagination.urls():
             yield response.follow(url, self.parse, priority=+10)
 
-    def follow_breadcrumbs(self, response, breadcrumbs: BreadcrumbsComponent):
+    def follow_breadcrumbs(self, response, breadcrumbs: BreadcrumbsExtractor):
         for url in breadcrumbs.urls():
             yield response.follow(url, self.parse)
