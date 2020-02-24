@@ -5,7 +5,7 @@ from pytest_twisted import inlineCallbacks
 
 import attr
 
-from scrapy_po import ItemPage, WebPage, callback_for
+from scrapy_po import WebPage, callback_for, ItemWebPage
 from tests.utils import HtmlResource, crawl_items, capture_exceptions
 
 
@@ -31,12 +31,12 @@ class Breadcrumbs(WebPage):
 
 
 @attr.s(auto_attribs=True)
-class Product(ItemPage, WebPage):
+class Product(ItemWebPage):
     breadcrumbs: Breadcrumbs
 
     def to_item(self):
         return {
-            'name': self.css(".name::texta").get(),
+            'name': self.css(".name::text").get(),
             'price': self.css(".price::text").get(),
             'description': self.css(".description").get(),
             'category': " / ".join(self.breadcrumbs.get().keys())

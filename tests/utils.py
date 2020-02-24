@@ -62,7 +62,7 @@ def capture_exceptions(callback):
     spider is closed on the first exception. """
     def parse(*args, **kwargs):
         try:
-            return callback(*args, **kwargs)
+            yield from callback(*args, **kwargs)
         except Exception as e:
             yield {'exception': e}
             raise CloseSpider("Exception in callback detected")

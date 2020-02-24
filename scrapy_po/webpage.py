@@ -78,6 +78,6 @@ class ItemWebPage(WebPage, ItemPage):
 def callback_for(page_cls):
     """ Helper for defining callbacks for pages with to_item methods """
     def parse(*args, page: page_cls):
-        return page.to_item()  # type: ignore
+        yield page.to_item()  # type: ignore
     return parse
 

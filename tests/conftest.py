@@ -12,7 +12,7 @@ def settings(request):
             'tests.utils.CollectorPipeline': 100,
         },
         DOWNLOADER_MIDDLEWARES={
-            'scrapy_po.InjectPageObjectsMiddleware': 543,
+            'scrapy_po.InjectionMiddleware': 543,
         },
     )
     return Settings(s)
