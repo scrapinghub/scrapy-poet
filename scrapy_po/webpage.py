@@ -10,7 +10,7 @@ from .page_inputs import ResponseData
 class PageObject(abc.ABC):
     """
     All web page objects should inherit from this class.
-    It is a marker for a middleware to pick anargument and populate it.
+    It is a marker for a middleware to pick an argument and populate it.
 
     Instead of inheriting you can also use ``PageObject.register(MyWebPage)``.
     """
