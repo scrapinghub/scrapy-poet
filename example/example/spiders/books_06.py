@@ -12,32 +12,32 @@ All links to search result pages are followed as well.
 import scrapy
 import attr
 
-from scrapy_po import WebPage, ItemPage, PageComponent
+from scrapy_po import WebPage, ItemWebPage, Injectable
 
 
-class ListingsComponent(PageComponent):
+class ListingsComponent(WebPage):
     def urls(self):
         return self.css('.image_container a::attr(href)').getall()
 
 
-class PaginationComponent(PageComponent):
+class PaginationComponent(WebPage):
     def urls(self):
         return self.css('.pager a::attr(href)').getall()
 
 
-class BreadcrumbsComponent(PageComponent):
+class BreadcrumbsComponent(WebPage):
     def urls(self):
         return self.css('.breadcrumb a::attr(href)').getall()
 
 
 @attr.s(auto_attribs=True)
-class ListingsPage(WebPage):
+class ListingsPage(Injectable):
     book_list: ListingsComponent
     pagination: PaginationComponent
 
 
 @attr.s(auto_attribs=True)
-class BookPage(WebPage, ItemPage):
+class BookPage(ItemWebPage):
     recently_viewed: ListingsComponent
     breadcrumbs: BreadcrumbsComponent
 

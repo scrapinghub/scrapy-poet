@@ -7,17 +7,18 @@ import parsel
 from .page_inputs import ResponseData
 
 
-class PageObject(abc.ABC):
+class Injectable(abc.ABC):
     """
-    All web page objects should inherit from this class.
-    It is a marker for a middleware to pick anargument and populate it.
+    Injectable objects are automatically built and passed as arguments to
+    callbacks that requires them. The ``InjectionMiddleware`` take care of it.
 
-    Instead of inheriting you can also use ``PageObject.register(MyWebPage)``.
+    Instead of inheriting you can also use ``Injectable.register(MyWebPage)``.
+    ``register`` can also be used as a decorator.
     """
     pass
 
 
-class ItemPage(PageObject):
+class ItemPage(Injectable):
     """ Page Object which requires to_item method to be implemented. """
     @abc.abstractmethod
     def to_item(self):
@@ -54,7 +55,7 @@ class ResponseShortcutsMixin:
 
 
 @attr.s(auto_attribs=True)
-class WebPage(PageObject, ResponseShortcutsMixin):
+class WebPage(Injectable, ResponseShortcutsMixin):
     """
     Default WebPage class. It uses basic response data (html, url),
     and provides xpath / css shortcuts.
@@ -67,17 +68,11 @@ class WebPage(PageObject, ResponseShortcutsMixin):
 
 
 @attr.s(auto_attribs=True)
-class PageComponent(PageObject, ResponseShortcutsMixin):
+class ItemWebPage(WebPage, ItemPage):
     """
-    Use it for implementing extractors for particular components of the
-    page (i.e. breadcrumbs) that can be reused across different page objects.
-
-    For example, a book page object can rely on breadcrumbs page component
-    to extract the book category and also a book listings page object could
-    rely in this component to extract the category a listings page
-    belongs to.
+    ``WebPage`` that implements the ``to_item`` method.
     """
-    response: ResponseData
+    pass
 
 
 def callback_for(page_cls):
