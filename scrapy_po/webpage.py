@@ -13,7 +13,7 @@ class Injectable(abc.ABC):
     callbacks that requires them. The ``InjectionMiddleware`` take care of it.
 
     Instead of inheriting you can also use ``Injectable.register(MyWebPage)``.
-    ``register`` can also be used as a decorator.
+    ``Injectable.register`` can also be used as a decorator.
     """
     pass
 
