@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
-from scrapy.utils.log import configure_logging
-from twisted.internet.task import deferLater
+from twisted.internet.defer import returnValue
+from twisted.internet.threads import deferToThread
 from typing import Optional, Union
 
 import scrapy
@@ -113,21 +113,23 @@ def test_optional_and_unions(settings):
 
 
 @attr.s(auto_attribs=True)
-class ProvidedTestCls:
+class ProvidedAsyncTest:
     msg: str
-    response: ResponseData  # it should be always None
+    response: ResponseData  # it should be None because this class is provided
 
 
-@provides(ProvidedTestCls)
+@provides(ProvidedAsyncTest)
 class ResponseDataProvider(PageObjectInputProvider):
+
+    @inlineCallbacks
     def __call__(self):
-        # TODO: test async
-        return ProvidedTestCls("Provided!", None)
+        five = yield deferToThread(lambda: 5)
+        raise returnValue(ProvidedAsyncTest(f"Provided {five}!", None))
 
 
 @attr.s(auto_attribs=True)
 class ProvidersPage(ItemWebPage):
-    provided: ProvidedTestCls
+    provided: ProvidedAsyncTest
 
     def to_item(self):
         return attr.asdict(self, recurse=False)
@@ -149,7 +151,7 @@ def test_providers(settings):
     if 'exception' in resp:
         raise resp['exception']
 
-    assert resp['provided'].msg == "Provided!"
+    assert resp['provided'].msg == "Provided 5!"
     assert resp['provided'].response == None
 
 
@@ -159,12 +161,13 @@ class MultiArgsCallbackSpider(scrapy.Spider):
     def start_requests(self):
         yield Request(self.url, self.parse, cb_kwargs=dict(cb_arg="arg!"))
 
-    def parse(self, response, product: ProductPage, provided: ProvidedTestCls,
-             cb_arg: str):
+    def parse(self, response, product: ProductPage, provided: ProvidedAsyncTest,
+              cb_arg: Optional[str], non_cb_arg: Optional[str]):
         yield {
             'product': product,
             'provided': provided,
-            'cb_arg': cb_arg
+            'cb_arg': cb_arg,
+            'non_cb_arg': non_cb_arg,
         }
 
 @inlineCallbacks
@@ -175,6 +178,6 @@ def test_multi_args_callbacks(settings):
     resp = items[0]
 
     assert type(resp['product']) == ProductPage
-    assert type(resp['provided']) == ProvidedTestCls
+    assert type(resp['provided']) == ProvidedAsyncTest
     assert resp['cb_arg'] == "arg!"
-
+    assert resp['non_cb_arg'] == None
