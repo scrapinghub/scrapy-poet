@@ -12,34 +12,34 @@ All links to search result pages are followed as well.
 import scrapy
 import attr
 
-from scrapy_po import WebPage, ItemWebPage, Injectable, add_requests_method
+from scrapy_po import WebPage, ItemWebPage, Injectable, RequestsFromUrlsMixin
 
 
-class ListingsExtractor(WebPage):
+class ListingsExtractor(WebPage, RequestsFromUrlsMixin):
     def urls(self):
         return self.css('.image_container a::attr(href)').getall()
 
 
-class PaginationExtractor(WebPage):
+class PaginationExtractor(WebPage, RequestsFromUrlsMixin):
     def urls(self):
         return self.css('.pager a::attr(href)').getall()
 
 
-class BreadcrumbsExtractor(WebPage):
+class BreadcrumbsExtractor(WebPage, RequestsFromUrlsMixin):
     def urls(self):
         return self.css('.breadcrumb a::attr(href)').getall()
 
 
 @attr.s(auto_attribs=True)
 class ListingsPage(Injectable):
-    book_list: add_requests_method(ListingsExtractor)
-    pagination: add_requests_method(PaginationExtractor)
+    book_list: ListingsExtractor
+    pagination: PaginationExtractor
 
 
 @attr.s(auto_attribs=True)
 class BookPage(ItemWebPage):
-    recently_viewed: add_requests_method(ListingsExtractor)
-    breadcrumbs: add_requests_method(BreadcrumbsExtractor)
+    recently_viewed: ListingsExtractor
+    breadcrumbs: BreadcrumbsExtractor
 
     def to_item(self):
         return {
@@ -49,7 +49,7 @@ class BookPage(ItemWebPage):
 
 
 class BooksSpider(scrapy.Spider):
-    name = 'books_06'
+    name = 'books_06_2'
     start_urls = ['http://books.toscrape.com/']
 
     def parse(self, response, page: ListingsPage):
