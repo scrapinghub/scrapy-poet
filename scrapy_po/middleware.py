@@ -44,7 +44,8 @@ class InjectionMiddleware:
 
         # Fill the callback arguments with the created instances
         for argname, cls in plan[andi.FunctionArguments].items():
-            request.cb_kwargs[argname] = instances[cls]
+            if argname not in request.cb_kwargs:
+                request.cb_kwargs[argname] = instances[cls]
             # TODO: check if all arguments are fulfilled somehow?
 
         raise returnValue(response)
