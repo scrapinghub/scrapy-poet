@@ -53,8 +53,9 @@ class ProductPage(ItemWebPage):
 
     def to_item(self):
         return {
+            'url': self.url,
             'name': self.css(".name::text").get(),
-            'price': self.css(".price::text").get(),
+            'price': self.xpath('//*[@class="price"]/text()').get(),
             'description': self.css(".description::text").get(),
             'category': " / ".join(self.breadcrumbs.get().keys()),
         }
@@ -62,9 +63,10 @@ class ProductPage(ItemWebPage):
 
 @inlineCallbacks
 def test_basic_case(settings):
-    item, _, _ = yield crawl_single_item(spider_for(ProductPage),
-                                         ProductHtml, settings)
+    item, url, _ = yield crawl_single_item(spider_for(ProductPage),
+                                           ProductHtml, settings)
     assert item == {
+        'url': url,
         'name': 'Chocolate',
         'price': '22€',
         'description': 'The best chocolate ever',
