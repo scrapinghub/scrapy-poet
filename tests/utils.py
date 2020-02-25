@@ -40,6 +40,20 @@ def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None):
     returnValue(result)
 
 
+@inlineCallbacks
+def crawl_single_item(spider_cls, resource_cls, settings, spider_kwargs=None):
+    """ Run a spider where a single item is expected. Use in combination with
+    ``capture_capture_exceptions`` and ``CollectorPipeline``
+    """
+    items, url, crawler = yield crawl_items(spider_cls, resource_cls, settings,
+                                            spider_kwargs=spider_kwargs)
+    assert len(items) == 1
+    resp = items[0]
+    if 'exception' in resp:
+        raise resp['exception']
+    returnValue((resp, url, crawler))
+
+
 def make_crawler(spider_cls, settings):
     if not getattr(spider_cls, 'name', None):
         class Spider(spider_cls):
