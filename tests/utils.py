@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import Dict
+
 from pytest_twisted import inlineCallbacks
 from scrapy.exceptions import CloseSpider
 from twisted.internet.defer import returnValue
@@ -12,7 +14,7 @@ class HtmlResource(Resource):
     isLeaf = True
     content_type = 'text/html'
     html = ''
-    extra_headers = {}
+    extra_headers: Dict[str, str] = {}
     status_code = 200
 
     def render_GET(self, request):
