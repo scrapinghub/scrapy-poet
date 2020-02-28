@@ -38,8 +38,10 @@ class ListingsPage(Injectable):
 
 @attr.s(auto_attribs=True)
 class BookPage(ItemWebPage):
-    recently_viewed: ListingsExtractor
     breadcrumbs: BreadcrumbsExtractor
+
+    def recently_viewed_urls(self):
+        return self.css('.image_container a::attr(href)').getall()
 
     def to_item(self):
         return {
@@ -58,7 +60,8 @@ class BooksSpider(scrapy.Spider):
         yield from self.follow_pagination(response, page.pagination)
 
     def parse_book(self, response, page: BookPage):
-        yield from self.follow_listing(response, page.recently_viewed)
+        for url in page.recently_viewed_urls():
+            yield response.follow(url, self.parse_book)
         yield from self.follow_breadcrumbs(response, page.breadcrumbs)
         yield page.to_item()
 
