@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Dict, Callable
+from typing import Dict, Callable, Type, Any, Tuple
 
 import andi
 from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
@@ -25,12 +25,7 @@ class InjectionMiddleware:
     def process_response(self, request: Request, response, spider):
         # find out the dependencies
         callback = get_callback(request, spider)
-        provider_instances = build_providers(response)
-        plan, fulfilled_args = andi.plan_for_func(
-            callback,
-            is_injectable=is_injectable,
-            externally_provided=provider_instances.keys()
-        )
+        plan, fulfilled_args, provider_instances = build_plan(callback, response)
 
         # Build all instances declared as dependencies
         instances = yield from build_instances(plan, provider_instances)
@@ -43,8 +38,21 @@ class InjectionMiddleware:
         raise returnValue(response)
 
 
+def build_plan(callback, response
+               ) -> Tuple[andi.Plan, Dict[str, Type], Dict[Type, Callable]]:
+    """ Build a plan for the injection in the callback """
+    provider_instances = build_providers(response)
+    plan, fulfilled_args = andi.plan_for_func(
+        callback,
+        is_injectable=is_injectable,
+        externally_provided=provider_instances.keys()
+    )
+    return plan, fulfilled_args, provider_instances
+
+
 @inlineCallbacks
-def build_instances(plan, providers):
+def build_instances(plan: andi.Plan, providers) -> Dict[Type, Any]:
+    """ Build the instances dict from a plan """
     instances = {}
     for cls, params in plan.items():
         if cls in providers:
@@ -56,13 +64,13 @@ def build_instances(plan, providers):
     raise returnValue(instances)
 
 
-def build_providers(response) -> Dict[type, Callable]:
+def build_providers(response) -> Dict[Type, Callable]:
     # find out what resources are available
     return {cls: provider(response)
             for cls, provider in providers.items()}
 
 
-def is_injectable(argument_type):
+def is_injectable(argument_type: Type) -> bool:
     """
     A type is injectable if inherits from ``Injectable``. None is also injectable
     by default.
