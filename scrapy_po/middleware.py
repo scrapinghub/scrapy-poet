@@ -32,7 +32,9 @@ class InjectionMiddleware:
 
         # Fill the callback arguments with the created instances
         for argname, cls in fulfilled_args.items():
-            request.cb_kwargs[argname] = instances[cls]
+            # Precedence of user callback arguments
+            if argname not in request.cb_kwargs:
+                request.cb_kwargs[argname] = instances[cls]
             # TODO: check if all arguments are fulfilled somehow?
 
         raise returnValue(response)
@@ -51,7 +53,7 @@ def build_plan(callback, response
 
 
 @inlineCallbacks
-def build_instances(plan: andi.Plan, providers) -> Dict[Type, Any]:
+def build_instances(plan: andi.Plan, providers):
     """ Build the instances dict from a plan """
     instances = {}
     for cls, params in plan.items():
