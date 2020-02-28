@@ -33,7 +33,7 @@ class InjectionMiddleware:
         )
 
         # Build all instances declared as dependencies
-        instances = yield from self.build_instances(plan, provider_instances)
+        instances = yield from build_instances(plan, provider_instances)
 
         # Fill the callback arguments with the created instances
         for argname, cls in fulfilled_args.items():
@@ -42,17 +42,18 @@ class InjectionMiddleware:
 
         raise returnValue(response)
 
-    @inlineCallbacks
-    def build_instances(self, plan, providers):
-        instances = {}
-        for cls, params in plan.items():
-            if cls in providers:
-                instances[cls] = yield maybeDeferred(providers[cls])
-            else:
-                kwargs = {param: instances[pcls]
-                          for param, pcls in params.items()}
-                instances[cls] = cls(**kwargs)
-        raise returnValue(instances)
+
+@inlineCallbacks
+def build_instances(plan, providers):
+    instances = {}
+    for cls, params in plan.items():
+        if cls in providers:
+            instances[cls] = yield maybeDeferred(providers[cls])
+        else:
+            kwargs = {param: instances[pcls]
+                      for param, pcls in params.items()}
+            instances[cls] = cls(**kwargs)
+    raise returnValue(instances)
 
 
 def build_providers(response) -> Dict[type, Callable]:
