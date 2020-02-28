@@ -5,14 +5,14 @@ import andi
 from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
 from scrapy import Request
 
-from .webpage import PageObject
+from .webpage import Injectable
 from .utils import get_callback
 from .page_input_providers import providers
 
 
-class InjectPageObjectsMiddleware:
+class InjectionMiddleware:
     """
-    This downloader middleware instantiates all PageObject subclasses declared
+    This downloader middleware instantiates all Injectable subclasses declared
     as request callback arguments and any other parameter with a provider
     for its type. Otherwise this middleware doesn't populate request.cb_kwargs
     for this argument.
@@ -57,10 +57,10 @@ def build_providers(response) -> Dict[type, Callable]:
 
 
 def can_provide_fn(providers):
-    """ A type is providable if it is a ``PageObject`` or if there exists
+    """ A type is providable if it is ``Injectable`` or if there exists
     a provider for it. Also None is providable by default. """
     def fn(argument_type):
         return (argument_type == type(None) or
                 argument_type in providers or
-                issubclass(argument_type, PageObject))
+                issubclass(argument_type, Injectable))
     return fn
