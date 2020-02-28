@@ -26,28 +26,33 @@ class InjectionMiddleware:
         # find out the dependencies
         callback = get_callback(request, spider)
         providers = build_providers(response)
-        can_provide = can_provide_fn(providers)
-        plan = andi.plan(callback, can_provide,
-                         providers.__contains__)
+        plan, fulfilled_args = andi.plan_for_func(
+            callback,
+            is_injectable=is_injectable,
+            externally_provided=providers.keys()
+        )
 
         # Build all instances declared as dependencies
-        instances = {}
-        for cls, params in plan.items():
-            if cls in providers:
-                instances[cls] = yield maybeDeferred(providers[cls])
-            elif cls == andi.FunctionArguments:
-                pass
-            else:
-                kwargs = {param: instances[pcls]
-                          for param, pcls in params.items()}
-                instances[cls] = cls(**kwargs)
+        instances = yield from self.build_instances(plan, providers)
 
         # Fill the callback arguments with the created instances
-        for argname, cls in plan[andi.FunctionArguments].items():
+        for argname, cls in fulfilled_args.items():
             request.cb_kwargs[argname] = instances[cls]
             # TODO: check if all arguments are fulfilled somehow?
 
         raise returnValue(response)
+
+    @inlineCallbacks
+    def build_instances(self, plan, providers):
+        instances = {}
+        for cls, params in plan.items():
+            if cls in providers:
+                instances[cls] = yield maybeDeferred(providers[cls])
+            else:
+                kwargs = {param: instances[pcls]
+                          for param, pcls in params.items()}
+                instances[cls] = cls(**kwargs)
+        raise returnValue(instances)
 
 
 def build_providers(response) -> Dict[type, Callable]:
@@ -56,11 +61,10 @@ def build_providers(response) -> Dict[type, Callable]:
             for cls, provider in providers.items()}
 
 
-def can_provide_fn(providers):
-    """ A type is providable if it is ``Injectable`` or if there exists
-    a provider for it. Also None is providable by default. """
-    def fn(argument_type):
-        return (argument_type == type(None) or
-                argument_type in providers or
-                issubclass(argument_type, Injectable))
-    return fn
+def is_injectable(argument_type):
+    """
+    A type is injectable if inherits from ``Injectable``. None is also injectable
+    by default.
+    """
+    return (argument_type == type(None) or
+            issubclass(argument_type, Injectable))
