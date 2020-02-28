@@ -25,15 +25,15 @@ class InjectionMiddleware:
     def process_response(self, request: Request, response, spider):
         # find out the dependencies
         callback = get_callback(request, spider)
-        providers = build_providers(response)
+        provider_instances = build_providers(response)
         plan, fulfilled_args = andi.plan_for_func(
             callback,
             is_injectable=is_injectable,
-            externally_provided=providers.keys()
+            externally_provided=provider_instances.keys()
         )
 
         # Build all instances declared as dependencies
-        instances = yield from self.build_instances(plan, providers)
+        instances = yield from self.build_instances(plan, provider_instances)
 
         # Fill the callback arguments with the created instances
         for argname, cls in fulfilled_args.items():
