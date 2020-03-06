@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from scrapy.utils.log import configure_logging
 from twisted.internet.defer import returnValue
 from twisted.internet.threads import deferToThread
 from typing import Optional, Union, Type
@@ -156,3 +157,16 @@ def test_multi_args_callbacks(settings):
     assert type(item['provided']) == ProvidedAsyncTest
     assert item['cb_arg'] == "arg!"
     assert item['non_cb_arg'] == None
+
+
+@attr.s(auto_attribs=True)
+class UnressolvableProductPage(ProductPage):
+    this_is_unresolvable: str
+
+
+@inlineCallbacks
+def test_injection_failure(settings):
+    configure_logging(settings)
+    items, url, crawler = yield crawl_items(
+        spider_for(UnressolvableProductPage), ProductHtml, settings)
+    assert items == []
