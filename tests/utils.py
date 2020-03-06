@@ -65,9 +65,11 @@ def make_crawler(spider_cls, settings):
 
 
 class CollectorPipeline:
+
+    def open_spider(self, spider):
+        spider.collected_items = []
+
     def process_item(self, item, spider):
-        if not hasattr(spider, 'collected_items'):
-            spider.collected_items = []
         spider.collected_items.append(item)
         return item
 
