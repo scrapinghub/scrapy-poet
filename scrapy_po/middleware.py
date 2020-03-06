@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Dict, Callable, Type, Any, Tuple
+from typing import Dict, Callable, Type, Any, Tuple, Generator
 
 import andi
 from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
@@ -25,36 +25,39 @@ class InjectionMiddleware:
     def process_response(self, request: Request, response, spider):
         # find out the dependencies
         callback = get_callback(request, spider)
-        plan, fulfilled_args, provider_instances = build_plan(callback, response)
+        plan, provider_instances = build_plan(callback, response)
 
         # Build all instances declared as dependencies
-        instances = yield from build_instances(plan, provider_instances)
+        instances = yield from build_instances(
+            plan.dependencies, provider_instances)
 
         # Fill the callback arguments with the created instances
-        for argname, cls in fulfilled_args.items():
-            request.cb_kwargs[argname] = instances[cls]
+        for argname, cls in plan.final_arguments.items():
+            # Precedence of user callback arguments
+            if argname not in request.cb_kwargs:
+                request.cb_kwargs[argname] = instances[cls]
             # TODO: check if all arguments are fulfilled somehow?
 
         raise returnValue(response)
 
 
 def build_plan(callback, response
-               ) -> Tuple[andi.Plan, Dict[str, Type], Dict[Type, Callable]]:
+               ) -> Tuple[andi.Plan, Dict[Type, Callable]]:
     """ Build a plan for the injection in the callback """
     provider_instances = build_providers(response)
-    plan, fulfilled_args = andi.plan_for_func(
+    plan = andi.plan(
         callback,
         is_injectable=is_injectable,
         externally_provided=provider_instances.keys()
     )
-    return plan, fulfilled_args, provider_instances
+    return plan, provider_instances
 
 
 @inlineCallbacks
-def build_instances(plan: andi.Plan, providers) -> Dict[Type, Any]:
+def build_instances(plan: andi.Plan, providers):
     """ Build the instances dict from a plan """
     instances = {}
-    for cls, params in plan.items():
+    for cls, params in plan:
         if cls in providers:
             instances[cls] = yield maybeDeferred(providers[cls])
         else:
