@@ -7,6 +7,8 @@ Scrapy spider with reusable components used for two types of pages:
 
 All links to detail book pages are found are followed.
 All links to search result pages are followed as well.
+
+Scrapy > 2.0 required
 """
 
 import scrapy
@@ -56,23 +58,11 @@ class BooksSpider(scrapy.Spider):
 
     def parse(self, response, page: ListingsPage):
         """ Callback for Listings pages """
-        yield from self.follow_listing(response, page.book_list)
-        yield from self.follow_pagination(response, page.pagination)
+        yield from response.follow_all(page.book_list.urls(), self.parse_book)
+        yield from response.follow_all(page.pagination.urls(), self.parse, priority=+10)
 
     def parse_book(self, response, page: BookPage):
-        for url in page.recently_viewed_urls():
-            yield response.follow(url, self.parse_book)
-        yield from self.follow_breadcrumbs(response, page.breadcrumbs)
+        yield from response.follow_all(page.recently_viewed_urls(), self.parse_book)
+        yield from response.follow_all(page.breadcrumbs.urls(), self.parse)
         yield page.to_item()
 
-    def follow_listing(self, response, item_list: ListingsExtractor):
-        for url in item_list.urls():
-            yield response.follow(url, self.parse_book)
-
-    def follow_pagination(self, response, pagination: PaginationExtractor):
-        for url in pagination.urls():
-            yield response.follow(url, self.parse, priority=+10)
-
-    def follow_breadcrumbs(self, response, breadcrumbs: BreadcrumbsExtractor):
-        for url in breadcrumbs.urls():
-            yield response.follow(url, self.parse)
