@@ -75,8 +75,6 @@ def build_providers(response) -> Dict[Type, Callable]:
 
 def is_injectable(argument_type: Type) -> bool:
     """
-    A type is injectable if inherits from ``Injectable``. None is also injectable
-    by default.
+    A type is injectable if inherits from ``Injectable``.
     """
-    return (argument_type == type(None) or
-            issubclass(argument_type, Injectable))
+    return issubclass(argument_type, Injectable)
