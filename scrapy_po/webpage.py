@@ -18,6 +18,10 @@ class Injectable(abc.ABC):
     pass
 
 
+# NoneType is considered as injectable. Required for Optionals to work
+Injectable.register(type(None))
+
+
 class ItemPage(Injectable):
     """ Page Object which requires to_item method to be implemented. """
     @abc.abstractmethod
