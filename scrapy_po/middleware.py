@@ -32,10 +32,10 @@ class InjectionMiddleware:
             plan.dependencies, provider_instances)
 
         # Fill the callback arguments with the created instances
-        for argname, cls in plan.final_arguments.items():
+        for arg, value in plan.final_kwargs(instances).items():
             # Precedence of user callback arguments
-            if argname not in request.cb_kwargs:
-                request.cb_kwargs[argname] = instances[cls]
+            if arg not in request.cb_kwargs:
+                request.cb_kwargs[arg] = value
             # TODO: check if all arguments are fulfilled somehow?
 
         raise returnValue(response)
