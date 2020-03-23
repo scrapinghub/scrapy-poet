@@ -57,13 +57,11 @@ def build_plan(callback, response
 def build_instances(plan: andi.Plan, providers):
     """ Build the instances dict from a plan """
     instances = {}
-    for cls, params in plan:
+    for cls, kwargs_spec in plan:
         if cls in providers:
             instances[cls] = yield maybeDeferred(providers[cls])
         else:
-            kwargs = {param: instances[pcls]
-                      for param, pcls in params.items()}
-            instances[cls] = cls(**kwargs)
+            instances[cls] = cls(**kwargs_spec.kwargs(instances))
     raise returnValue(instances)
 
 
