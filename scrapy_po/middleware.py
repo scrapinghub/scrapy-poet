@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-from typing import Dict, Callable, Type, Any, Tuple, Generator
+from typing import Dict, Callable, Type, Tuple
+
+from scrapy.utils.defer import maybeDeferred_coro
 
 import andi
-from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
+from twisted.internet.defer import inlineCallbacks, returnValue
 from scrapy import Request
 
 from .webpage import Injectable
@@ -59,7 +61,7 @@ def build_instances(plan: andi.Plan, providers):
     instances = {}
     for cls, kwargs_spec in plan:
         if cls in providers:
-            instances[cls] = yield maybeDeferred(providers[cls])
+            instances[cls] = yield maybeDeferred_coro(providers[cls])
         else:
             instances[cls] = cls(**kwargs_spec.kwargs(instances))
     raise returnValue(instances)
