@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
-from typing import Dict, Callable, Type, Any, Tuple, Generator
+from typing import Dict, Callable, Type, Tuple
+
+from scrapy.utils.defer import maybeDeferred_coro
 
 import andi
-from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
+from twisted.internet.defer import inlineCallbacks, returnValue
 from scrapy import Request
 
 from .webpage import Injectable
@@ -57,13 +59,11 @@ def build_plan(callback, response
 def build_instances(plan: andi.Plan, providers):
     """ Build the instances dict from a plan """
     instances = {}
-    for cls, params in plan:
+    for cls, kwargs_spec in plan:
         if cls in providers:
-            instances[cls] = yield maybeDeferred(providers[cls])
+            instances[cls] = yield maybeDeferred_coro(providers[cls])
         else:
-            kwargs = {param: instances[pcls]
-                      for param, pcls in params.items()}
-            instances[cls] = cls(**kwargs)
+            instances[cls] = cls(**kwargs_spec.kwargs(instances))
     raise returnValue(instances)
 
 
@@ -73,8 +73,9 @@ def build_providers(response) -> Dict[Type, Callable]:
             for cls, provider in providers.items()}
 
 
-def is_injectable(argument_type: Type) -> bool:
+def is_injectable(argument_type: Callable) -> bool:
     """
     A type is injectable if inherits from ``Injectable``.
     """
-    return issubclass(argument_type, Injectable)
+    return (isinstance(argument_type, type) and
+            issubclass(argument_type, Injectable))
