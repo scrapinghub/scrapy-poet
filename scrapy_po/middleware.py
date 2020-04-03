@@ -73,8 +73,9 @@ def build_providers(response) -> Dict[Type, Callable]:
             for cls, provider in providers.items()}
 
 
-def is_injectable(argument_type: Type) -> bool:
+def is_injectable(argument_type: Callable) -> bool:
     """
     A type is injectable if inherits from ``Injectable``.
     """
-    return issubclass(argument_type, Injectable)
+    return (isinstance(argument_type, type) and
+            issubclass(argument_type, Injectable))
