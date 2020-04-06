@@ -1,18 +1,22 @@
 # -*- coding: utf-8 -*-
+from typing import Dict, Callable, Type, Tuple
+
+from scrapy.utils.defer import maybeDeferred_coro
+
 import andi
-from twisted.internet.defer import inlineCallbacks, returnValue, maybeDeferred
+from twisted.internet.defer import inlineCallbacks, returnValue
 from scrapy import Request
 
-from .webpage import PageObject
+from .webpage import Injectable
 from .utils import get_callback
 from .page_input_providers import providers
 
 
-class InjectPageObjectsMiddleware:
+class InjectionMiddleware:
     """
-    This downloader middleware instantiates all PageObject subclasses declared
-    as request callback arguments. If an argument is not annotated
-    as PageObject, this middleware doesn't populate request.cb_kwargs
+    This downloader middleware instantiates all Injectable subclasses declared
+    as request callback arguments and any other parameter with a provider
+    for its type. Otherwise this middleware doesn't populate request.cb_kwargs
     for this argument.
 
     XXX: should it really be a downloader middleware?
@@ -21,45 +25,57 @@ class InjectPageObjectsMiddleware:
     """
     @inlineCallbacks
     def process_response(self, request: Request, response, spider):
-        # find out which arguments need to be created
+        # find out the dependencies
         callback = get_callback(request, spider)
-        kwargs_to_provide = andi.to_provide(callback,
-                                            can_provide=self.is_page_object)
+        plan, provider_instances = build_plan(callback, response)
 
-        # create WebPage objects and pass them to the callback
-        for argname, cls in kwargs_to_provide.items():
-            page = yield create_page_object(cls, response)
-            request.cb_kwargs[argname] = page
+        # Build all instances declared as dependencies
+        instances = yield from build_instances(
+            plan.dependencies, provider_instances)
+
+        # Fill the callback arguments with the created instances
+        for arg, value in plan.final_kwargs(instances).items():
+            # Precedence of user callback arguments
+            if arg not in request.cb_kwargs:
+                request.cb_kwargs[arg] = value
+            # TODO: check if all arguments are fulfilled somehow?
 
         raise returnValue(response)
 
-    @classmethod
-    def is_page_object(cls, argument_type) -> bool:
-        return issubclass(argument_type, PageObject)
+
+def build_plan(callback, response
+               ) -> Tuple[andi.Plan, Dict[Type, Callable]]:
+    """ Build a plan for the injection in the callback """
+    provider_instances = build_providers(response)
+    plan = andi.plan(
+        callback,
+        is_injectable=is_injectable,
+        externally_provided=provider_instances.keys()
+    )
+    return plan, provider_instances
 
 
 @inlineCallbacks
-def create_page_object(page_cls, response):
-    """
-    Create PageObject instances, resolving all constructor dependencies.
-    """
+def build_instances(plan: andi.Plan, providers):
+    """ Build the instances dict from a plan """
+    instances = {}
+    for cls, kwargs_spec in plan:
+        if cls in providers:
+            instances[cls] = yield maybeDeferred_coro(providers[cls])
+        else:
+            instances[cls] = cls(**kwargs_spec.kwargs(instances))
+    raise returnValue(instances)
+
+
+def build_providers(response) -> Dict[Type, Callable]:
     # find out what resources are available
-    provider_funcs = {cls: provider(response)
-                      for cls, provider in providers.items()}
+    return {cls: provider(response)
+            for cls, provider in providers.items()}
 
-    # find out which arguments page object needs.
-    arguments = andi.inspect(page_cls.__init__)
-    kwargs_to_provide = andi.to_provide(arguments, can_provide=provider_funcs)
-    not_supported = arguments.keys() - kwargs_to_provide.keys()
-    if not_supported:
-        raise TypeError("Can't instantiate arguments: %s" % not_supported)
 
-    # instantiate all arguments
-    kwargs = {}
-    for argname, cls in kwargs_to_provide.items():
-        provider = provider_funcs[cls]
-        kwargs[argname] = yield maybeDeferred(provider)
-
-    # create and return WebPage object
-    page = page_cls(**kwargs)
-    raise returnValue(page)
+def is_injectable(argument_type: Callable) -> bool:
+    """
+    A type is injectable if inherits from ``Injectable``.
+    """
+    return (isinstance(argument_type, type) and
+            issubclass(argument_type, Injectable))

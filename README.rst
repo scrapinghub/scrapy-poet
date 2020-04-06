@@ -32,7 +32,7 @@ Installation
 
     pip install scrapy-po
 
-scrapy-po requires Python >= 3.6 and Scrapy 1.7+.
+scrapy-po requires Python >= 3.6 and Scrapy 2.0.1+.
 
 Usage
 =====
@@ -40,7 +40,7 @@ Usage
 First, enable middleware in your settings.py::
 
     DOWNLOADER_MIDDLEWARES = {
-       'scrapy_po.InjectPageObjectsMiddleware': 543,
+       'scrapy_po.InjectionMiddleware': 543,
     }
 
 After that you can write spiders which use page object pattern to separate
