@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import inspect
 from typing import Dict, Callable, Type, Tuple
 
 from scrapy.utils.defer import maybeDeferred_coro
@@ -6,9 +7,11 @@ from scrapy.utils.defer import maybeDeferred_coro
 import andi
 from twisted.internet.defer import inlineCallbacks, returnValue
 from scrapy import Request
+from scrapy.http import Response, TextResponse
 
 from .webpage import Injectable
-from .utils import get_callback
+from .utils import get_callback, DummyResponse
+from.page_inputs import ResponseData
 from .page_input_providers import providers
 
 
@@ -20,9 +23,51 @@ class InjectionMiddleware:
     for this argument.
 
     XXX: should it really be a downloader middleware?
-    XXX: can this middleware allow to skip downloading
-    a page if it is not needed?
     """
+    def is_response_going_to_be_used(self, request, spider):
+        """Check whether the request's response is going to be used."""
+        callback = get_callback(request, spider)
+        plan, _ = build_plan(callback, {})
+        for obj, _ in plan:
+            spec = inspect.getfullargspec(obj)
+            if 'response' not in spec.args:
+                # There's not argument named response, let's continue.
+                continue
+
+            if 'response' not in spec.annotations:
+                # There's no type annotation for the response argument,
+                # so we cannot infer that it's not going to be used.
+                return True
+
+            if not issubclass(spec.annotations['response'], DummyResponse):
+                # The response is not a DummyResponse, so it's probably used.
+                return True
+
+        # The parser method is using a DummyResponse as a type annotation.
+        # This suggests that the response might not get used.
+        # Also, we were not able to find any evidence that the response is
+        # going to be used by any injected Page Object.
+        return False
+
+    def process_request(self, request: Request, spider):
+        """Check if the request is needed and if the download can be skipped.
+
+        Here we try to infer if the request's response is going to be used
+        by its designated parser or an injected Page Object.
+
+        If we evaluate that the request could be ignored, we return a
+        DummyResponse object linked to the original Request instance.
+
+        With this behavior we're able to optimize spider executions avoid
+        having to download URLs twice or when they're not needed, for example,
+        when a Page Object relies only on a third-party API like AutoExtract.
+        """
+        if self.is_response_going_to_be_used(request, spider):
+            return
+
+        spider.logger.debug(f'Skipping download of {request}')
+        return DummyResponse(url=request.url, request=request)
+
     @inlineCallbacks
     def process_response(self, request: Request, response, spider):
         # find out the dependencies
