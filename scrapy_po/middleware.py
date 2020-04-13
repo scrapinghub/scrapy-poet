@@ -11,7 +11,7 @@ from scrapy.http import Response, TextResponse
 
 from .webpage import Injectable
 from .utils import get_callback, DummyResponse
-from.page_inputs import ResponseData
+from .page_inputs import ResponseData
 from .page_input_providers import providers
 
 
