@@ -3,13 +3,20 @@ import attr
 from typing import Any, Dict
 
 import scrapy
+from scrapy.http import TextResponse
 
-from scrapy_po.page_input_providers import PageObjectInputProvider, provides
-from scrapy_po.webpage import Injectable, ItemPage
+from scrapy_po.page_input_providers import (
+    PageObjectInputProvider,
+    ResponseDataProvider,
+    provides,
+)
+from scrapy_po.webpage import ItemPage
 
 from scrapy_po import WebPage
 from scrapy_po.utils import (
     get_callback,
+    is_callback_using_response,
+    is_provider_using_response,
     is_response_going_to_be_used,
     DummyResponse,
 )
@@ -54,6 +61,12 @@ class FakeProductProvider(PageObjectInputProvider):
             },
         }
         return DummyProductResponse(data=data)
+
+
+class TextProductProvider(ResponseDataProvider):
+
+    def __init__(self, response: TextResponse):
+        self.response = response
 
 
 @attr.s(auto_attribs=True)
@@ -123,6 +136,12 @@ class MySpider(scrapy.Spider):
     def parse10(self, response: DummyResponse, book_page: FakeProductPage):
         pass
 
+    def parse11(self, response: TextResponse):
+        pass
+
+    def parse12(self, response: TextResponse, book_page: DummyProductPage):
+        pass
+
 
 def test_get_callback():
     spider = MySpider()
@@ -138,6 +157,30 @@ def test_get_callback():
 
     req = scrapy.Request("http://example.com", cb)
     assert get_callback(req, spider) == cb
+
+
+def test_is_provider_using_response():
+    assert is_provider_using_response(PageObjectInputProvider) is False
+    assert is_provider_using_response(ResponseDataProvider) is True
+    assert is_provider_using_response(TextProductProvider) is True
+    assert is_provider_using_response(DummyProductProvider) is False
+    assert is_provider_using_response(FakeProductProvider) is False
+
+
+def test_is_callback_using_response():
+    spider = MySpider()
+    assert is_callback_using_response(spider.parse) is True
+    assert is_callback_using_response(spider.parse2) is True
+    assert is_callback_using_response(spider.parse3) is False
+    assert is_callback_using_response(spider.parse4) is False
+    assert is_callback_using_response(spider.parse5) is True
+    assert is_callback_using_response(spider.parse6) is False
+    assert is_callback_using_response(spider.parse7) is True
+    assert is_callback_using_response(spider.parse8) is False
+    assert is_callback_using_response(spider.parse9) is True
+    assert is_callback_using_response(spider.parse10) is False
+    assert is_callback_using_response(spider.parse11) is True
+    assert is_callback_using_response(spider.parse12) is True
 
 
 def test_is_response_going_to_be_used():
@@ -172,3 +215,9 @@ def test_is_response_going_to_be_used():
 
     request = scrapy.Request("http://example.com", callback=spider.parse10)
     assert is_response_going_to_be_used(request, spider) is False
+
+    request = scrapy.Request("http://example.com", callback=spider.parse11)
+    assert is_response_going_to_be_used(request, spider) is True
+
+    request = scrapy.Request("http://example.com", callback=spider.parse12)
+    assert is_response_going_to_be_used(request, spider) is True
