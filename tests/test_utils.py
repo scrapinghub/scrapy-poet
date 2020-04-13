@@ -69,6 +69,12 @@ class TextProductProvider(ResponseDataProvider):
         self.response = response
 
 
+class StringProductProvider(ResponseDataProvider):
+
+    def __init__(self, response: str):
+        self.response = response
+
+
 @attr.s(auto_attribs=True)
 class DummyProductPage(ItemPage):
 
@@ -165,6 +171,7 @@ def test_is_provider_using_response():
     assert is_provider_using_response(TextProductProvider) is True
     assert is_provider_using_response(DummyProductProvider) is False
     assert is_provider_using_response(FakeProductProvider) is False
+    assert is_provider_using_response(StringProductProvider) is False
 
 
 def test_is_callback_using_response():
