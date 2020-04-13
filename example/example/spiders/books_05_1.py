@@ -2,8 +2,15 @@
 """
 Scrapy spider which uses Page Objects both for crawling and extraction.
 You can mix various page types freely.
+
+This example shows how to skip request downloads using DummyResponse type
+annotations. You should use this type annotation in your callback method
+and make sure that all of your providers don't require the use of a regular
+Response injection.
+
+Check the ``example.autoextract.AutoextractProductProvider.__init__`` method
+and the ``BooksSpider.parse_book`` callback for implementation details.
 """
-from typing import Optional
 
 import scrapy
 
