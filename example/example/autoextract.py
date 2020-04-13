@@ -35,7 +35,6 @@ class AutoextractProductProvider(PageObjectInputProvider):
 
 @inlineCallbacks
 def get_autoextract_product(url):
-    raise returnValue({'product': {'url': url, 'name': url}})
     # fixme: use async
     # fixme: rate limits?
     from autoextract.sync import request_batch
