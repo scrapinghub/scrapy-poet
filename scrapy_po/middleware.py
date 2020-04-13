@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from scrapy.utils.defer import maybeDeferred_coro
-
-import andi
 from twisted.internet.defer import inlineCallbacks, returnValue
 from scrapy import Request
 
@@ -44,7 +41,7 @@ class InjectionMiddleware:
         plan, provider_instances = utils.build_plan(callback, response)
 
         # Build all instances declared as dependencies
-        instances = yield from build_instances(
+        instances = yield from utils.build_instances(
             plan.dependencies, provider_instances)
 
         # Fill the callback arguments with the created instances
@@ -55,15 +52,3 @@ class InjectionMiddleware:
             # TODO: check if all arguments are fulfilled somehow?
 
         raise returnValue(response)
-
-
-@inlineCallbacks
-def build_instances(plan: andi.Plan, providers):
-    """ Build the instances dict from a plan """
-    instances = {}
-    for cls, kwargs_spec in plan:
-        if cls in providers:
-            instances[cls] = yield maybeDeferred_coro(providers[cls])
-        else:
-            instances[cls] = cls(**kwargs_spec.kwargs(instances))
-    raise returnValue(instances)

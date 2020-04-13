@@ -4,6 +4,8 @@ from typing import Tuple, Dict, Type, Callable
 
 import andi
 from scrapy.http import Response
+from scrapy.utils.defer import maybeDeferred_coro
+from twisted.internet.defer import inlineCallbacks, returnValue
 
 from scrapy_po.webpage import Injectable
 from scrapy_po.page_input_providers import providers
@@ -73,3 +75,15 @@ def is_injectable(argument_type: Callable) -> bool:
     """
     return (isinstance(argument_type, type) and
             issubclass(argument_type, Injectable))
+
+
+@inlineCallbacks
+def build_instances(plan: andi.Plan, providers):
+    """ Build the instances dict from a plan """
+    instances = {}
+    for cls, kwargs_spec in plan:
+        if cls in providers:
+            instances[cls] = yield maybeDeferred_coro(providers[cls])
+        else:
+            instances[cls] = cls(**kwargs_spec.kwargs(instances))
+    raise returnValue(instances)
