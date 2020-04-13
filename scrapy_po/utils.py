@@ -48,19 +48,19 @@ def is_callback_using_response(callback: Callable):
 
 def is_provider_using_response(provider):
     """Check whether injectable provider makes use of a valid Response."""
-    spec = inspect.getfullargspec(provider)
-    for cls in spec.annotations.values():
-        if not issubclass(cls, Response):
-            # Type annotation is not a sub-class of Response.
-            continue
+    for argument, possible_types in andi.inspect(provider.__init__).items():
+        for cls in possible_types:
+            if not issubclass(cls, Response):
+                # Type annotation is not a sub-class of Response.
+                continue
 
-        if issubclass(cls, DummyResponse):
-            # Type annotation is a DummyResponse.
-            continue
+            if issubclass(cls, DummyResponse):
+                # Type annotation is a DummyResponse.
+                continue
 
-        # Type annotation is a sub-class of Response, but not a sub-class
-        # of DummyResponse, so we're probably using it.
-        return True
+            # Type annotation is a sub-class of Response, but not a sub-class
+            # of DummyResponse, so we're probably using it.
+            return True
 
     # Could not find any Response type annotation in the used providers.
     return False
@@ -105,8 +105,7 @@ def build_providers(response) -> Dict[Type, Callable]:
     # find out what resources are available
     result = {}
     for cls, provider in providers.items():
-        spec = inspect.getfullargspec(provider)
-        if spec.args:
+        if andi.inspect(provider.__init__):
             result[cls] = provider(response)
         else:
             result[cls] = provider()
