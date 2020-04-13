@@ -103,8 +103,15 @@ def build_plan(callback, response
 
 def build_providers(response) -> Dict[Type, Callable]:
     # find out what resources are available
-    return {cls: provider(response)
-            for cls, provider in providers.items()}
+    result = {}
+    for cls, provider in providers.items():
+        spec = inspect.getfullargspec(provider)
+        if spec.args:
+            result[cls] = provider(response)
+        else:
+            result[cls] = provider()
+
+    return result
 
 
 def is_injectable(argument_type: Callable) -> bool:

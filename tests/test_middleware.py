@@ -112,6 +112,9 @@ class ProvidedAsyncTest:
 @provides(ProvidedAsyncTest)
 class ResponseDataProvider(PageObjectInputProvider):
 
+    def __init__(self, response: scrapy.http.Response):
+        self.response = response
+
     @inlineCallbacks
     def __call__(self):
         five = yield deferToThread(lambda: 5)

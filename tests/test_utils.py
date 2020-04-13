@@ -21,6 +21,12 @@ class DummyProductResponse:
     data: Dict[str, Any]
 
 
+@attr.s(auto_attribs=True)
+class FakeProductResponse:
+
+    data: Dict[str, Any]
+
+
 @provides(DummyProductResponse)
 class DummyProductProvider(PageObjectInputProvider):
 
@@ -30,7 +36,20 @@ class DummyProductProvider(PageObjectInputProvider):
     def __call__(self):
         data = {
             'product': {
-                'url': 'http://example.com',
+                'url': self.response.url,
+                'name': 'Sample',
+            },
+        }
+        return DummyProductResponse(data=data)
+
+
+@provides(FakeProductResponse)
+class FakeProductProvider(PageObjectInputProvider):
+
+    def __call__(self):
+        data = {
+            'product': {
+                'url': 'http://example.com/sample',
                 'name': 'Sample',
             },
         }
@@ -41,6 +60,20 @@ class DummyProductProvider(PageObjectInputProvider):
 class DummyProductPage(ItemPage):
 
     response: DummyProductResponse
+
+    @property
+    def url(self):
+        return self.response.data['product']['url']
+
+    def to_item(self):
+        product = self.response.data['product']
+        return product
+
+
+@attr.s(auto_attribs=True)
+class FakeProductPage(ItemPage):
+
+    response: FakeProductResponse
 
     @property
     def url(self):
@@ -82,6 +115,12 @@ class MySpider(scrapy.Spider):
         pass
 
     def parse8(self, response: DummyResponse, book_page: DummyProductPage):
+        pass
+
+    def parse9(self, response, book_page: FakeProductPage):
+        pass
+
+    def parse10(self, response: DummyResponse, book_page: FakeProductPage):
         pass
 
 
@@ -126,4 +165,10 @@ def test_is_response_going_to_be_used():
     assert is_response_going_to_be_used(request, spider) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse8)
+    assert is_response_going_to_be_used(request, spider) is False
+
+    request = scrapy.Request("http://example.com", callback=spider.parse9)
+    assert is_response_going_to_be_used(request, spider) is True
+
+    request = scrapy.Request("http://example.com", callback=spider.parse10)
     assert is_response_going_to_be_used(request, spider) is False

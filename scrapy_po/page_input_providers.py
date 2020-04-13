@@ -23,8 +23,6 @@ def provides(cls):
 
 
 class PageObjectInputProvider(abc.ABC):
-    def __init__(self, response: Response):
-        self.response = response
 
     @abc.abstractmethod
     def __call__(self):
@@ -33,6 +31,10 @@ class PageObjectInputProvider(abc.ABC):
 
 @provides(ResponseData)
 class ResponseDataProvider(PageObjectInputProvider):
+
+    def __init__(self, response: Response):
+        self.response = response
+
     def __call__(self):
         return ResponseData(
             url=self.response.url,
