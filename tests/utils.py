@@ -27,7 +27,7 @@ class HtmlResource(Resource):
 
 @inlineCallbacks
 def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None):
-    """ Use spider_cls to crawl resource_cls. URL of the resource is passed
+    """Use spider_cls to crawl resource_cls. URL of the resource is passed
     to the spider as ``url`` argument.
     Return ``(items, resource_url, crawler)`` tuple.
     """
@@ -42,7 +42,7 @@ def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None):
 
 @inlineCallbacks
 def crawl_single_item(spider_cls, resource_cls, settings, spider_kwargs=None):
-    """ Run a spider where a single item is expected. Use in combination with
+    """Run a spider where a single item is expected. Use in combination with
     ``capture_capture_exceptions`` and ``CollectorPipeline``
     """
     items, url, crawler = yield crawl_items(spider_cls, resource_cls, settings,

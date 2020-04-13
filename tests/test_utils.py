@@ -1,10 +1,60 @@
 # -*- coding: utf-8 -*-
+import attr
+from typing import Any, Dict
+
 import scrapy
+
+from scrapy_po.page_input_providers import PageObjectInputProvider, provides
+from scrapy_po.webpage import Injectable, ItemPage
+
+from scrapy_po import WebPage
 from scrapy_po.utils import (
     get_callback,
     is_response_going_to_be_used,
     DummyResponse,
 )
+
+
+@attr.s(auto_attribs=True)
+class DummyProductResponse:
+
+    data: Dict[str, Any]
+
+
+@provides(DummyProductResponse)
+class DummyProductProvider(PageObjectInputProvider):
+
+    def __init__(self, response: DummyResponse):
+        self.response = response
+
+    def __call__(self):
+        data = {
+            'product': {
+                'url': 'http://example.com',
+                'name': 'Sample',
+            },
+        }
+        return DummyProductResponse(data=data)
+
+
+@attr.s(auto_attribs=True)
+class DummyProductPage(ItemPage):
+
+    response: DummyProductResponse
+
+    @property
+    def url(self):
+        return self.response.data['product']['url']
+
+    def to_item(self):
+        product = self.response.data['product']
+        return product
+
+
+class BookPage(WebPage):
+
+    def to_item(self):
+        pass
 
 
 class MySpider(scrapy.Spider):
@@ -13,10 +63,25 @@ class MySpider(scrapy.Spider):
     def parse(self, response):
         pass
 
-    def parse2(self, response):
+    def parse2(self, res):
         pass
 
     def parse3(self, response: DummyResponse):
+        pass
+
+    def parse4(self, res: DummyResponse):
+        pass
+
+    def parse5(self, response, book_page: BookPage):
+        pass
+
+    def parse6(self, response: DummyResponse, book_page: BookPage):
+        pass
+
+    def parse7(self, response, book_page: DummyProductPage):
+        pass
+
+    def parse8(self, response: DummyResponse, book_page: DummyProductPage):
         pass
 
 
@@ -42,5 +107,23 @@ def test_is_response_going_to_be_used():
     request = scrapy.Request("http://example.com")
     assert is_response_going_to_be_used(request, spider) is True
 
+    request = scrapy.Request("http://example.com", callback=spider.parse2)
+    assert is_response_going_to_be_used(request, spider) is True
+
     request = scrapy.Request("http://example.com", callback=spider.parse3)
+    assert is_response_going_to_be_used(request, spider) is False
+
+    request = scrapy.Request("http://example.com", callback=spider.parse4)
+    assert is_response_going_to_be_used(request, spider) is False
+
+    request = scrapy.Request("http://example.com", callback=spider.parse5)
+    assert is_response_going_to_be_used(request, spider) is True
+
+    request = scrapy.Request("http://example.com", callback=spider.parse6)
+    assert is_response_going_to_be_used(request, spider) is True
+
+    request = scrapy.Request("http://example.com", callback=spider.parse7)
+    assert is_response_going_to_be_used(request, spider) is True
+
+    request = scrapy.Request("http://example.com", callback=spider.parse8)
     assert is_response_going_to_be_used(request, spider) is False

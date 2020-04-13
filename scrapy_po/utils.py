@@ -12,7 +12,7 @@ from scrapy_po.page_input_providers import providers
 
 
 def get_callback(request, spider):
-    """ Get request.callback of a scrapy.Request, as a callable """
+    """Get request.callback of a scrapy.Request, as a callable."""
     if request.callback is None:
         return getattr(spider, 'parse')
     return request.callback
@@ -24,36 +24,71 @@ class DummyResponse(Response):
         super(DummyResponse, self).__init__(url=url, request=request)
 
 
+def is_callback_using_response(callback: Callable):
+    """Check whether the request's callback method is going to use response."""
+    spec = inspect.getfullargspec(callback)
+    try:
+        arg_name = spec.args[1]  # first index is self, second is response
+    except IndexError:
+        # Parse method is probably using *args and **kwargs annotation.
+        # Let's assume response is going to be used.
+        return True
+
+    if arg_name not in spec.annotations:
+        # There's no type annotation, so we're probably using response here.
+        return True
+
+    if issubclass(spec.annotations[arg_name], DummyResponse):
+        # Type annotation is DummyResponse, so we're probably NOT using it.
+        return False
+
+    # Type annotation is not DummyResponse, so we're probably using it.
+    return True
+
+
+def are_dependencies_using_response(plan: andi.Plan):
+    """Check whether any injectable provider makes use of a valid Response."""
+    for obj, _ in plan:
+        provider = providers.get(obj)
+        if not provider:
+            # Provider not found.
+            continue
+
+        spec = inspect.getfullargspec(provider)
+        for cls in spec.annotations.values():
+            if not issubclass(cls, Response):
+                # Type annotation is not a sub-class of Response.
+                continue
+
+            if issubclass(cls, DummyResponse):
+                # Type annotation is a DummyResponse.
+                continue
+
+            # Type annotation is a sub-class of Response, but not a sub-class
+            # of DummyResponse, so we're probably using it.
+            return True
+
+    # Could not find any Response type annotation in the used providers.
+    return False
+
+
 def is_response_going_to_be_used(request, spider):
     """Check whether the request's response is going to be used."""
     callback = get_callback(request, spider)
     plan, _ = build_plan(callback, {})
 
-    for obj, _ in plan:
-        spec = inspect.getfullargspec(obj)
-        if 'response' not in spec.args:
-            # There's not argument named response, let's continue.
-            continue
+    if is_callback_using_response(callback):
+        return True
 
-        if 'response' not in spec.annotations:
-            # There's no type annotation for the response argument,
-            # so we cannot infer that it's not going to be used.
-            return True
+    if are_dependencies_using_response(plan):
+        return True
 
-        if not issubclass(spec.annotations['response'], DummyResponse):
-            # The response is not a DummyResponse, so it's probably used.
-            return True
-
-    # The parser method is using a DummyResponse as a type annotation.
-    # This suggests that the response might not get used.
-    # Also, we were not able to find any evidence that the response is
-    # going to be used by any injected Page Object.
     return False
 
 
 def build_plan(callback, response
                ) -> Tuple[andi.Plan, Dict[Type, Callable]]:
-    """ Build a plan for the injection in the callback """
+    """Build a plan for the injection in the callback."""
     provider_instances = build_providers(response)
     plan = andi.plan(
         callback,
@@ -70,16 +105,14 @@ def build_providers(response) -> Dict[Type, Callable]:
 
 
 def is_injectable(argument_type: Callable) -> bool:
-    """
-    A type is injectable if inherits from ``Injectable``.
-    """
+    """A type is injectable if inherits from ``Injectable``."""
     return (isinstance(argument_type, type) and
             issubclass(argument_type, Injectable))
 
 
 @inlineCallbacks
 def build_instances(plan: andi.Plan, providers):
-    """ Build the instances dict from a plan """
+    """Build the instances dict from a plan."""
     instances = {}
     for cls, kwargs_spec in plan:
         if cls in providers:
