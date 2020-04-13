@@ -72,7 +72,7 @@ def is_response_going_to_be_used(request, spider):
     if is_callback_using_response(callback):
         return True
 
-    plan, _ = build_plan(callback, {})
+    plan, _ = build_plan(callback, None)
     for provider in get_providers(plan):
         if is_provider_using_response(provider):
             return True
