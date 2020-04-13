@@ -46,27 +46,21 @@ def is_callback_using_response(callback: Callable):
     return True
 
 
-def are_dependencies_using_response(plan: andi.Plan):
-    """Check whether any injectable provider makes use of a valid Response."""
-    for obj, _ in plan:
-        provider = providers.get(obj)
-        if not provider:
-            # Provider not found.
+def is_provider_using_response(provider):
+    """Check whether injectable provider makes use of a valid Response."""
+    spec = inspect.getfullargspec(provider)
+    for cls in spec.annotations.values():
+        if not issubclass(cls, Response):
+            # Type annotation is not a sub-class of Response.
             continue
 
-        spec = inspect.getfullargspec(provider)
-        for cls in spec.annotations.values():
-            if not issubclass(cls, Response):
-                # Type annotation is not a sub-class of Response.
-                continue
+        if issubclass(cls, DummyResponse):
+            # Type annotation is a DummyResponse.
+            continue
 
-            if issubclass(cls, DummyResponse):
-                # Type annotation is a DummyResponse.
-                continue
-
-            # Type annotation is a sub-class of Response, but not a sub-class
-            # of DummyResponse, so we're probably using it.
-            return True
+        # Type annotation is a sub-class of Response, but not a sub-class
+        # of DummyResponse, so we're probably using it.
+        return True
 
     # Could not find any Response type annotation in the used providers.
     return False
@@ -75,15 +69,24 @@ def are_dependencies_using_response(plan: andi.Plan):
 def is_response_going_to_be_used(request, spider):
     """Check whether the request's response is going to be used."""
     callback = get_callback(request, spider)
-    plan, _ = build_plan(callback, {})
-
     if is_callback_using_response(callback):
         return True
 
-    if are_dependencies_using_response(plan):
-        return True
+    plan, _ = build_plan(callback, {})
+    for provider in get_providers(plan):
+        if is_provider_using_response(provider):
+            return True
 
     return False
+
+
+def get_providers(plan: andi.Plan):
+    for obj, _ in plan:
+        provider = providers.get(obj)
+        if not provider:
+            continue
+
+        yield provider
 
 
 def build_plan(callback, response
