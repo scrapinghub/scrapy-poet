@@ -6,6 +6,7 @@ from typing import Optional, Union, Type
 
 import scrapy
 from scrapy import Request
+from scrapy.http import Response
 from pytest_twisted import inlineCallbacks
 
 import attr
@@ -13,6 +14,7 @@ import attr
 from scrapy_po import WebPage, callback_for, ItemWebPage
 from scrapy_po.page_input_providers import provides, PageObjectInputProvider
 from scrapy_po.page_inputs import ResponseData
+from scrapy_po.utils import DummyResponse
 from tests.utils import HtmlResource, crawl_items, capture_exceptions, \
     crawl_single_item
 
@@ -152,6 +154,7 @@ class MultiArgsCallbackSpider(scrapy.Spider):
             'non_cb_arg': non_cb_arg,
         }
 
+
 @inlineCallbacks
 def test_multi_args_callbacks(settings):
     item, _, _ = yield crawl_single_item(MultiArgsCallbackSpider, ProductHtml,
@@ -173,3 +176,46 @@ def test_injection_failure(settings):
     items, url, crawler = yield crawl_items(
         spider_for(UnressolvableProductPage), ProductHtml, settings)
     assert items == []
+
+
+class MySpider(scrapy.Spider):
+
+    url = None
+
+    def start_requests(self):
+        yield Request(url=self.url, callback=self.parse)
+
+    def parse(self, response):
+        return {
+            'response': response,
+        }
+
+
+class SkipDownloadSpider(scrapy.Spider):
+
+    url = None
+
+    def start_requests(self):
+        yield Request(url=self.url, callback=self.parse)
+
+    def parse(self, response: DummyResponse):
+        return {
+            'response': response,
+        }
+
+
+@inlineCallbacks
+def test_skip_downloads(settings):
+    item, url, crawler = yield crawl_single_item(
+        MySpider, ProductHtml, settings)
+    assert isinstance(item['response'], Response) is True
+    assert isinstance(item['response'], DummyResponse) is False
+    assert crawler.stats.get_stats().get('downloader/request_count', 0) == 1
+    assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
+
+    item, url, crawler = yield crawl_single_item(
+        SkipDownloadSpider, ProductHtml, settings)
+    assert isinstance(item['response'], Response) is True
+    assert isinstance(item['response'], DummyResponse) is True
+    assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
+    assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
