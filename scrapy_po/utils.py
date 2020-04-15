@@ -3,6 +3,7 @@ import inspect
 from typing import Tuple, Dict, Type, Callable
 
 import andi
+from scrapy import Request
 from scrapy.http import Response
 from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -129,3 +130,11 @@ def build_instances(plan: andi.Plan, providers):
         else:
             instances[cls] = cls(**kwargs_spec.kwargs(instances))
     raise returnValue(instances)
+
+
+def callback_for(page_cls):
+    """Helper for defining callbacks for pages with to_item methods."""
+    def parse(response: DummyResponse, page: page_cls):
+        yield page.to_item()
+
+    return parse
