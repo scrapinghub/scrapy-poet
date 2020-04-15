@@ -2,16 +2,15 @@
 import abc
 
 from scrapy.http.response import Response
-from .page_inputs import ResponseData
+from scrapy_po.page_inputs import ResponseData
 
 # fixme: refactor _providers / provides / register,  make a nicer API
 providers = {}
 
 
 def register(provider, cls):
-    """
-    Register a class as providing a certain page object input
-    of type ``cls``
+    """Register a class as providing a certain page object input
+    of type ``cls``.
     """
     providers[cls] = provider
 
@@ -24,8 +23,6 @@ def provides(cls):
 
 
 class PageObjectInputProvider(abc.ABC):
-    def __init__(self, response: Response):
-        self.response = response
 
     @abc.abstractmethod
     def __call__(self):
@@ -34,6 +31,10 @@ class PageObjectInputProvider(abc.ABC):
 
 @provides(ResponseData)
 class ResponseDataProvider(PageObjectInputProvider):
+
+    def __init__(self, response: Response):
+        self.response = response
+
     def __call__(self):
         return ResponseData(
             url=self.response.url,
