@@ -1,6 +1,6 @@
 import scrapy
 import pytest
-from scrapy.utils.reqser import request_to_dict, request_from_dict
+from scrapy.utils.reqser import request_to_dict
 
 from scrapy_po.webpage import ItemPage, WebPage
 from scrapy_po.utils import callback_for, DummyResponse
@@ -29,32 +29,35 @@ def test_callback_for():
     assert list(cb(response=response, page=fake_page)) == ['it works!']
 
 
-def test_callback_serialization():
-    """Make sure callbacks are serializable."""
+def test_default_callback():
+    """Sample request not specifying callback."""
     spider = MySpider()
-
-    # Sample request without callback (fallback to default spider.parse)
     request = scrapy.Request('http://example.com/')
     request_dict = request_to_dict(request, spider)
     assert isinstance(request_dict, dict)
     assert request_dict['url'] == 'http://example.com/'
     assert request_dict['callback'] is None
 
-    # Sample request referencing callback on spider
+
+def test_instance_method_callback():
+    """Sample request specifying spider's instance method callback."""
+    spider = MySpider()
     request = scrapy.Request('http://example.com/', callback=spider.parse_item)
     request_dict = request_to_dict(request, spider)
     assert isinstance(request_dict, dict)
     assert request_dict['url'] == 'http://example.com/'
     assert request_dict['callback'] == 'parse_item'
 
-    # Sample request referencing callback on spider
     request = scrapy.Request('http://example.com/', callback=spider.parse_web)
     request_dict = request_to_dict(request, spider)
     assert isinstance(request_dict, dict)
     assert request_dict['url'] == 'http://example.com/'
     assert request_dict['callback'] == 'parse_web'
 
-    # Sample request referencing callback outside spider
+
+def test_inline_callback():
+    """Sample request with inline callback."""
+    spider = MySpider()
     cb = callback_for(FakePage)
     request = scrapy.Request('http://example.com/', callback=cb)
     with pytest.raises(ValueError) as exc:
