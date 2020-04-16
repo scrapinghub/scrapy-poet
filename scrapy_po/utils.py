@@ -28,18 +28,19 @@ class DummyResponse(Response):
 def is_callback_using_response(callback: Callable):
     """Check whether the request's callback method is going to use response."""
     spec = inspect.getfullargspec(callback)
+    args = [a for a in spec.args if a not in ('self', 'cls',)]
     try:
-        arg_name = spec.args[1]  # first index is self, second is response
+        first_arg_name = args[0]
     except IndexError:
         # Parse method is probably using *args and **kwargs annotation.
         # Let's assume response is going to be used.
         return True
 
-    if arg_name not in spec.annotations:
+    if first_arg_name not in spec.annotations:
         # There's no type annotation, so we're probably using response here.
         return True
 
-    if issubclass(spec.annotations[arg_name], DummyResponse):
+    if issubclass(spec.annotations[first_arg_name], DummyResponse):
         # Type annotation is DummyResponse, so we're probably NOT using it.
         return False
 

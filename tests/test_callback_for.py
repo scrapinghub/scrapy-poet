@@ -3,7 +3,11 @@ import pytest
 from scrapy.utils.reqser import request_to_dict
 
 from scrapy_po.webpage import ItemPage, WebPage
-from scrapy_po.utils import callback_for, DummyResponse
+from scrapy_po.utils import (
+    callback_for,
+    is_response_going_to_be_used,
+    DummyResponse,
+)
 
 
 class FakePage(ItemPage):
@@ -47,12 +51,14 @@ def test_instance_method_callback():
     assert isinstance(request_dict, dict)
     assert request_dict['url'] == 'http://example.com/'
     assert request_dict['callback'] == 'parse_item'
+    assert is_response_going_to_be_used(request, spider) is False
 
     request = scrapy.Request('http://example.com/', callback=spider.parse_web)
     request_dict = request_to_dict(request, spider)
     assert isinstance(request_dict, dict)
     assert request_dict['url'] == 'http://example.com/'
     assert request_dict['callback'] == 'parse_web'
+    assert is_response_going_to_be_used(request, spider) is True
 
 
 def test_inline_callback():
