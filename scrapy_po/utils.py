@@ -7,7 +7,7 @@ from scrapy.http import Response
 from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from scrapy_po.webpage import Injectable
+from scrapy_po.webpage import Injectable, ItemPage
 from scrapy_po.page_input_providers import providers
 
 
@@ -135,8 +135,15 @@ def build_instances(plan: andi.Plan, providers):
     raise returnValue(instances)
 
 
-def callback_for(page_cls):
-    """Helper for defining callbacks for pages with to_item methods."""
+def callback_for(page_cls: Type[ItemPage]) -> Callable:
+    """Helper for creating callbacks for ItemPage sub-classes."""
+    if not issubclass(page_cls, ItemPage):
+        raise TypeError(
+            f'{page_cls.__name__} should be a sub-class of ItemPage.')
+
+    if getattr(page_cls.to_item, '__isabstractmethod__', False):
+        raise NotImplementedError(
+            f'{page_cls.__name__} should implement to_item method.')
 
     # When the callback is used as an instance method of the spider, it expects
     # to receive 'self' as its first argument. When used as a simple inline
@@ -144,8 +151,8 @@ def callback_for(page_cls):
     #
     # To avoid a TypeError, we need to receive a list of unnamed arguments and
     # a dict of named arguments after our injectable.
-    def parse(*args, page: page_cls, **kwargs):
-        yield page.to_item()
+    def parse(*args, page: page_cls, **kwargs):  # type: ignore
+        yield page.to_item()  # type: ignore
 
     setattr(parse, '__scrapy_po_callback', True)
     return parse

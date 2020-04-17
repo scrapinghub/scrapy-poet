@@ -23,7 +23,7 @@ Injectable.register(type(None))
 
 
 class ItemPage(Injectable):
-    """ Page Object which requires to_item method to be implemented. """
+    """Page Object which requires to_item method to be implemented."""
     @abc.abstractmethod
     def to_item(self):
         pass
