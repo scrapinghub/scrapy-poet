@@ -3,7 +3,6 @@ import inspect
 from typing import Tuple, Dict, Type, Callable
 
 import andi
-from scrapy import Request
 from scrapy.http import Response
 from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -27,20 +26,23 @@ class DummyResponse(Response):
 
 def is_callback_using_response(callback: Callable):
     """Check whether the request's callback method is going to use response."""
-    spec = inspect.getfullargspec(callback)
-    args = [a for a in spec.args if a not in ('self', 'cls',)]
-    try:
-        first_arg_name = args[0]
-    except IndexError:
+    if getattr(callback, '__scrapy_po_callback', False) is True:
+        # The callback_for function was used to create this callback.
+        return False
+
+    signature = inspect.signature(callback)
+    first_parameter_key = next(iter(signature.parameters))
+    first_parameter = signature.parameters[first_parameter_key]
+    if str(first_parameter).startswith('*'):
         # Parse method is probably using *args and **kwargs annotation.
         # Let's assume response is going to be used.
         return True
 
-    if first_arg_name not in spec.annotations:
+    if isinstance(first_parameter.annotation, first_parameter.empty):
         # There's no type annotation, so we're probably using response here.
         return True
 
-    if issubclass(spec.annotations[first_arg_name], DummyResponse):
+    if issubclass(first_parameter.annotation, DummyResponse):
         # Type annotation is DummyResponse, so we're probably NOT using it.
         return False
 
@@ -135,7 +137,15 @@ def build_instances(plan: andi.Plan, providers):
 
 def callback_for(page_cls):
     """Helper for defining callbacks for pages with to_item methods."""
-    def parse(response: DummyResponse, page: page_cls):
+
+    # When the callback is used as an instance method of the spider, it expects
+    # to receive 'self' as its first argument. When used as a simple inline
+    # function, it expects to receive a response as its first argument.
+    #
+    # To avoid a TypeError, we need to receive a list of unnamed arguments and
+    # a dict of named arguments after our injectable.
+    def parse(*args, page: page_cls, **kwargs):
         yield page.to_item()
 
+    setattr(parse, '__scrapy_po_callback', True)
     return parse

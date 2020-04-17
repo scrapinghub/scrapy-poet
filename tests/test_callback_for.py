@@ -33,6 +33,20 @@ def test_callback_for():
     assert list(cb(response=response, page=fake_page)) == ['it works!']
 
 
+def test_callback_for_instance_method():
+    spider = MySpider()
+    response = DummyResponse('http://example.com/')
+    fake_page = FakePage()
+    assert spider.parse_item(response, page=fake_page)
+
+
+def test_callback_for_inline():
+    callback = callback_for(ItemPage)
+    response = DummyResponse('http://example.com/')
+    fake_page = FakePage()
+    assert callback(response, page=fake_page)
+
+
 def test_default_callback():
     """Sample request not specifying callback."""
     spider = MySpider()
