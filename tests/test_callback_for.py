@@ -13,13 +13,13 @@ from scrapy_po.utils import (
 class FakeItemPage(ItemPage):
 
     def to_item(self):
-        return 'it works!'
+        return 'fake item page'
 
 
 class FakeItemWebPage(ItemWebPage):
 
     def to_item(self):
-        return 'it works!'
+        return 'fake item web page'
 
 
 class MySpider(scrapy.Spider):
@@ -36,7 +36,7 @@ def test_callback_for():
 
     fake_page = FakeItemPage()
     response = DummyResponse('http://example.com/')
-    assert list(cb(response=response, page=fake_page)) == ['it works!']
+    assert list(cb(response=response, page=fake_page)) == ['fake item page']
 
 
 def test_callback_for_instance_method():
