@@ -36,21 +36,24 @@ def test_callback_for():
 
     fake_page = FakeItemPage()
     response = DummyResponse('http://example.com/')
-    assert list(cb(response=response, page=fake_page)) == ['fake item page']
+    result = cb(response=response, page=fake_page)
+    assert list(result) == ['fake item page']
 
 
 def test_callback_for_instance_method():
     spider = MySpider()
     response = DummyResponse('http://example.com/')
     fake_page = FakeItemPage()
-    assert spider.parse_item(response, page=fake_page)
+    result = spider.parse_item(response, page=fake_page)
+    assert list(result) == ['fake item page']
 
 
 def test_callback_for_inline():
     callback = callback_for(FakeItemPage)
     response = DummyResponse('http://example.com/')
     fake_page = FakeItemPage()
-    assert callback(response, page=fake_page)
+    result = callback(response, page=fake_page)
+    assert list(result) == ['fake item page']
 
 
 def test_default_callback():
