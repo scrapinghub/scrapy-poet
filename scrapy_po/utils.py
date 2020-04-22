@@ -7,8 +7,11 @@ from scrapy.http import Response
 from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from scrapy_po.webpage import Injectable
+from scrapy_po.webpage import Injectable, ItemPage
 from scrapy_po.page_input_providers import providers
+
+
+_CALLBACK_FOR_MARKER = '__scrapy_po_callback'
 
 
 def get_callback(request, spider):
@@ -26,19 +29,23 @@ class DummyResponse(Response):
 
 def is_callback_using_response(callback: Callable):
     """Check whether the request's callback method is going to use response."""
-    spec = inspect.getfullargspec(callback)
-    try:
-        arg_name = spec.args[1]  # first index is self, second is response
-    except IndexError:
+    if getattr(callback, _CALLBACK_FOR_MARKER, False) is True:
+        # The callback_for function was used to create this callback.
+        return False
+
+    signature = inspect.signature(callback)
+    first_parameter_key = next(iter(signature.parameters))
+    first_parameter = signature.parameters[first_parameter_key]
+    if str(first_parameter).startswith('*'):
         # Parse method is probably using *args and **kwargs annotation.
         # Let's assume response is going to be used.
         return True
 
-    if arg_name not in spec.annotations:
+    if isinstance(first_parameter.annotation, first_parameter.empty):
         # There's no type annotation, so we're probably using response here.
         return True
 
-    if issubclass(spec.annotations[arg_name], DummyResponse):
+    if issubclass(first_parameter.annotation, DummyResponse):
         # Type annotation is DummyResponse, so we're probably NOT using it.
         return False
 
@@ -129,3 +136,26 @@ def build_instances(plan: andi.Plan, providers):
         else:
             instances[cls] = cls(**kwargs_spec.kwargs(instances))
     raise returnValue(instances)
+
+
+def callback_for(page_cls: Type[ItemPage]) -> Callable:
+    """Helper for creating callbacks for ItemPage sub-classes."""
+    if not issubclass(page_cls, ItemPage):
+        raise TypeError(
+            f'{page_cls.__name__} should be a sub-class of ItemPage.')
+
+    if getattr(page_cls.to_item, '__isabstractmethod__', False):
+        raise NotImplementedError(
+            f'{page_cls.__name__} should implement to_item method.')
+
+    # When the callback is used as an instance method of the spider, it expects
+    # to receive 'self' as its first argument. When used as a simple inline
+    # function, it expects to receive a response as its first argument.
+    #
+    # To avoid a TypeError, we need to receive a list of unnamed arguments and
+    # a dict of named arguments after our injectable.
+    def parse(*args, page: page_cls, **kwargs):  # type: ignore
+        yield page.to_item()  # type: ignore
+
+    setattr(parse, _CALLBACK_FOR_MARKER, True)
+    return parse

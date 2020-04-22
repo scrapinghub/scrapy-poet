@@ -4,7 +4,7 @@ import abc
 import attr
 import parsel
 
-from .page_inputs import ResponseData
+from scrapy_po.page_inputs import ResponseData
 
 
 class Injectable(abc.ABC):
@@ -23,7 +23,7 @@ Injectable.register(type(None))
 
 
 class ItemPage(Injectable):
-    """ Page Object which requires to_item method to be implemented. """
+    """Page Object which requires to_item method to be implemented."""
     @abc.abstractmethod
     def to_item(self):
         pass
@@ -77,11 +77,3 @@ class ItemWebPage(WebPage, ItemPage):
     ``WebPage`` that implements the ``to_item`` method.
     """
     pass
-
-
-def callback_for(page_cls):
-    """ Helper for defining callbacks for pages with to_item methods """
-    def parse(*args, page: page_cls):
-        yield page.to_item()  # type: ignore
-    return parse
-
