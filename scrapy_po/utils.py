@@ -11,6 +11,9 @@ from scrapy_po.webpage import Injectable, ItemPage
 from scrapy_po.page_input_providers import providers
 
 
+_CALLBACK_FOR_MARKER = '__scrapy_po_callback'
+
+
 def get_callback(request, spider):
     """Get request.callback of a scrapy.Request, as a callable."""
     if request.callback is None:
@@ -26,7 +29,7 @@ class DummyResponse(Response):
 
 def is_callback_using_response(callback: Callable):
     """Check whether the request's callback method is going to use response."""
-    if getattr(callback, '__scrapy_po_callback', False) is True:
+    if getattr(callback, _CALLBACK_FOR_MARKER, False) is True:
         # The callback_for function was used to create this callback.
         return False
 
@@ -154,5 +157,5 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     def parse(*args, page: page_cls, **kwargs):  # type: ignore
         yield page.to_item()  # type: ignore
 
-    setattr(parse, '__scrapy_po_callback', True)
+    setattr(parse, _CALLBACK_FOR_MARKER, True)
     return parse
