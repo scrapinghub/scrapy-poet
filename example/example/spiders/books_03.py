@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
 """
 Scrapy spider which uses AutoExtract API, to extract books as products.
 """
 import scrapy
+
 from scrapy_po import callback_for
 
-from example.autoextract import ProductPage
+from example.autoextract import ProductPageObject
 
 
 class BooksSpider(scrapy.Spider):
@@ -14,4 +14,4 @@ class BooksSpider(scrapy.Spider):
 
     def parse(self, response):
         for url in response.css('.image_container a::attr(href)').getall():
-            yield response.follow(url, callback_for(ProductPage))
+            yield response.follow(url, callback_for(ProductPageObject))

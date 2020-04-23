@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Scrapy spider with reusable components used for two types of pages:
 * Listings page, with the components: book list and pagination
@@ -14,38 +13,43 @@ Scrapy > 2.0 required
 import scrapy
 import attr
 
-from scrapy_po import WebPage, WebPageObject, Injectable
+from core_po.objects import Injectable, WebPageObject
 
 
-class ListingsExtractor(WebPage):
-    def urls(self):
+class ListingsExtractor(WebPageObject):
+
+    def serialize(self):
         return self.css('.image_container a::attr(href)').getall()
 
 
-class PaginationExtractor(WebPage):
-    def urls(self):
+class PaginationExtractor(WebPageObject):
+
+    def serialize(self):
         return self.css('.pager a::attr(href)').getall()
 
 
-class BreadcrumbsExtractor(WebPage):
-    def urls(self):
+class BreadcrumbsExtractor(WebPageObject):
+
+    def serialize(self):
         return self.css('.breadcrumb a::attr(href)').getall()
 
 
 @attr.s(auto_attribs=True)
 class ListingsPage(Injectable):
+
     book_list: ListingsExtractor
     pagination: PaginationExtractor
 
 
 @attr.s(auto_attribs=True)
 class BookPage(WebPageObject):
+
     breadcrumbs: BreadcrumbsExtractor
 
     def recently_viewed_urls(self):
         return self.css('.image_container a::attr(href)').getall()
 
-    def to_item(self):
+    def serialize(self):
         return {
             'url': self.url,
             'name': self.css("title::text").get(),
@@ -53,16 +57,16 @@ class BookPage(WebPageObject):
 
 
 class BooksSpider(scrapy.Spider):
+
     name = 'books_06'
     start_urls = ['http://books.toscrape.com/']
 
-    def parse(self, response, page: ListingsPage):
+    def parse(self, response, page_object: ListingsPage):
         """ Callback for Listings pages """
-        yield from response.follow_all(page.book_list.urls(), self.parse_book)
-        yield from response.follow_all(page.pagination.urls(), self.parse, priority=+10)
+        yield from response.follow_all(page_object.book_list.serialize(), self.parse_book)
+        yield from response.follow_all(page_object.pagination.serialize(), self.parse, priority=+10)
 
-    def parse_book(self, response, page: BookPage):
-        yield from response.follow_all(page.recently_viewed_urls(), self.parse_book)
-        yield from response.follow_all(page.breadcrumbs.urls(), self.parse)
-        yield page.to_item()
-
+    def parse_book(self, response, page_object: BookPage):
+        yield from response.follow_all(page_object.recently_viewed_urls(), self.parse_book)
+        yield from response.follow_all(page_object.breadcrumbs.serialize(), self.parse)
+        yield page_object.serialize()
