@@ -14,7 +14,7 @@ Scrapy > 2.0 required
 import scrapy
 import attr
 
-from scrapy_po import WebPage, ItemWebPage, Injectable
+from scrapy_po import WebPage, WebPageObject, Injectable
 
 
 class ListingsExtractor(WebPage):
@@ -39,7 +39,7 @@ class ListingsPage(Injectable):
 
 
 @attr.s(auto_attribs=True)
-class BookPage(ItemWebPage):
+class BookPage(WebPageObject):
     breadcrumbs: BreadcrumbsExtractor
 
     def recently_viewed_urls(self):

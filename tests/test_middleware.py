@@ -1,22 +1,28 @@
-# -*- coding: utf-8 -*-
-from scrapy.utils.log import configure_logging
-from twisted.internet.defer import returnValue
-from twisted.internet.threads import deferToThread
+import attr
+
 from typing import Optional, Union, Type
 
 import scrapy
+
+from pytest_twisted import inlineCallbacks
+from core_po.objects import PageObject, WebPageObject
+from core_po.responses import HTMLResponse
 from scrapy import Request
 from scrapy.http import Response
-from pytest_twisted import inlineCallbacks
+from scrapy.utils.log import configure_logging
+from twisted.internet.defer import returnValue
+from twisted.internet.threads import deferToThread
 
-import attr
-
-from scrapy_po import WebPage, callback_for, ItemWebPage
-from scrapy_po.page_input_providers import provides, PageObjectInputProvider
-from scrapy_po.page_inputs import ResponseData
+from scrapy_po import callback_for
+from scrapy_po.providers import provides, PageObjectProvider
 from scrapy_po.utils import DummyResponse
-from tests.utils import HtmlResource, crawl_items, capture_exceptions, \
-    crawl_single_item
+
+from tests.utils import (
+    HtmlResource,
+    crawl_items,
+    capture_exceptions,
+    crawl_single_item,
+)
 
 
 class ProductHtml(HtmlResource):
@@ -34,33 +40,37 @@ class ProductHtml(HtmlResource):
 
 
 def spider_for(injectable: Type):
+
     class InjectableSpider(scrapy.Spider):
+
         url = None
 
         def start_requests(self):
-            yield Request(self.url, capture_exceptions(callback_for(injectable)))
+            yield Request(self.url,
+                          capture_exceptions(callback_for(injectable)))
 
     return InjectableSpider
 
 
 @attr.s(auto_attribs=True)
-class BreadcrumbsExtraction(WebPage):
-    def get(self):
+class BreadcrumbsExtraction(WebPageObject):
+
+    def serialize(self):
         return {a.css('::text').get(): a.attrib['href']
                 for a in self.css(".breadcrumbs a")}
 
 
 @attr.s(auto_attribs=True)
-class ProductPage(ItemWebPage):
+class ProductPage(WebPageObject):
     breadcrumbs: BreadcrumbsExtraction
 
-    def to_item(self):
+    def serialize(self):
         return {
             'url': self.url,
             'name': self.css(".name::text").get(),
             'price': self.xpath('//*[@class="price"]/text()').get(),
             'description': self.css(".description::text").get(),
-            'category': " / ".join(self.breadcrumbs.get().keys()),
+            'category': " / ".join(self.breadcrumbs.serialize().keys()),
         }
 
 
@@ -78,17 +88,17 @@ def test_basic_case(settings):
 
 
 @attr.s(auto_attribs=True)
-class OptionalAndUnionPage(ItemWebPage):
+class OptionalAndUnionPage(WebPageObject):
     breadcrumbs: BreadcrumbsExtraction
     opt_check_1: Optional[BreadcrumbsExtraction]
     opt_check_2: Optional[str]  # str is not Injectable, so None expected here
-    union_check_1: Union[BreadcrumbsExtraction, ResponseData]  # Breadcrumbs is injected
-    union_check_2: Union[str, ResponseData]  # ResponseData is injected
-    union_check_3: Union[Optional[str], ResponseData]  # None is injected
-    union_check_4: Union[None, str, ResponseData]  # None is injected
+    union_check_1: Union[BreadcrumbsExtraction, HTMLResponse]  # Breadcrumbs is injected
+    union_check_2: Union[str, HTMLResponse]  # HTMLResponse is injected
+    union_check_3: Union[Optional[str], HTMLResponse]  # None is injected
+    union_check_4: Union[None, str, HTMLResponse]  # None is injected
     union_check_5: Union[BreadcrumbsExtraction, None, str]  # Breadcrumbs is injected
 
-    def to_item(self):
+    def serialize(self):
         return attr.asdict(self, recurse=False)
 
 
@@ -96,23 +106,24 @@ class OptionalAndUnionPage(ItemWebPage):
 def test_optional_and_unions(settings):
     item, _, _ = yield crawl_single_item(spider_for(OptionalAndUnionPage),
                                          ProductHtml, settings)
-    assert item['breadcrumbs'].response is item['response']
+    assert item['breadcrumbs'].html_response is item['html_response']
     assert item['opt_check_1'] is item['breadcrumbs']
     assert item['opt_check_2'] is None
     assert item['union_check_1'] is item['breadcrumbs']
-    assert item['union_check_2'] is item['breadcrumbs'].response
+    assert item['union_check_2'] is item['breadcrumbs'].html_response
     assert item['union_check_3'] is None
     assert item['union_check_5'] is item['breadcrumbs']
 
 
 @attr.s(auto_attribs=True)
 class ProvidedAsyncTest:
+
     msg: str
-    response: ResponseData  # it should be None because this class is provided
+    html_response: HTMLResponse  # it should be None because this class is provided
 
 
 @provides(ProvidedAsyncTest)
-class ResponseDataProvider(PageObjectInputProvider):
+class AsyncHTMLResponseProvider(PageObjectProvider):
 
     def __init__(self, response: scrapy.http.Response):
         self.response = response
@@ -124,10 +135,11 @@ class ResponseDataProvider(PageObjectInputProvider):
 
 
 @attr.s(auto_attribs=True)
-class ProvidersPage(ItemWebPage):
+class ProvidersPage(WebPageObject):
+
     provided: ProvidedAsyncTest
 
-    def to_item(self):
+    def serialize(self):
         return attr.asdict(self, recurse=False)
 
 
@@ -136,10 +148,11 @@ def test_providers(settings):
     item, _, _ = yield crawl_single_item(spider_for(ProvidersPage),
                                          ProductHtml, settings)
     assert item['provided'].msg == "Provided 5!"
-    assert item['provided'].response == None
+    assert item['provided'].html_response is None
 
 
 class MultiArgsCallbackSpider(scrapy.Spider):
+
     url = None
 
     def start_requests(self):
@@ -162,7 +175,7 @@ def test_multi_args_callbacks(settings):
     assert type(item['product']) == ProductPage
     assert type(item['provided']) == ProvidedAsyncTest
     assert item['cb_arg'] == "arg!"
-    assert item['non_cb_arg'] == None
+    assert item['non_cb_arg'] is None
 
 
 @attr.s(auto_attribs=True)

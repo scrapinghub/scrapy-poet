@@ -1,40 +1,41 @@
-import scrapy
 import pytest
+import scrapy
+
+from core_po.objects import PageObject, WebPageObject
 from scrapy.utils.reqser import request_to_dict
 
-from scrapy_po.webpage import ItemPage, ItemWebPage
 from scrapy_po.utils import (
+    DummyResponse,
     callback_for,
     is_response_going_to_be_used,
-    DummyResponse,
 )
 
 
-class FakeItemPage(ItemPage):
+class FakePageObject(PageObject):
 
-    def to_item(self):
+    def serialize(self):
         return 'fake item page'
 
 
-class FakeItemWebPage(ItemWebPage):
+class FakeWebPageObject(WebPageObject):
 
-    def to_item(self):
+    def serialize(self):
         return 'fake item web page'
 
 
 class MySpider(scrapy.Spider):
 
     name = 'my_spider'
-    parse_item = callback_for(FakeItemPage)
-    parse_web = callback_for(FakeItemWebPage)
+    parse_item = callback_for(FakePageObject)
+    parse_web = callback_for(FakeWebPageObject)
 
 
 def test_callback_for():
     """Simple test case to ensure it works as expected."""
-    cb = callback_for(FakeItemPage)
+    cb = callback_for(FakePageObject)
     assert callable(cb)
 
-    fake_page = FakeItemPage()
+    fake_page = FakePageObject()
     response = DummyResponse('http://example.com/')
     result = cb(response=response, page=fake_page)
     assert list(result) == ['fake item page']
@@ -43,15 +44,15 @@ def test_callback_for():
 def test_callback_for_instance_method():
     spider = MySpider()
     response = DummyResponse('http://example.com/')
-    fake_page = FakeItemPage()
+    fake_page = FakePageObject()
     result = spider.parse_item(response, page=fake_page)
     assert list(result) == ['fake item page']
 
 
 def test_callback_for_inline():
-    callback = callback_for(FakeItemPage)
+    callback = callback_for(FakePageObject)
     response = DummyResponse('http://example.com/')
-    fake_page = FakeItemPage()
+    fake_page = FakePageObject()
     result = callback(response, page=fake_page)
     assert list(result) == ['fake item page']
 
@@ -87,7 +88,7 @@ def test_instance_method_callback():
 def test_inline_callback():
     """Sample request with inline callback."""
     spider = MySpider()
-    cb = callback_for(FakeItemPage)
+    cb = callback_for(FakePageObject)
     request = scrapy.Request('http://example.com/', callback=cb)
     with pytest.raises(ValueError) as exc:
         request_to_dict(request, spider)
@@ -97,7 +98,7 @@ def test_inline_callback():
 
 
 def test_invalid_subclass():
-    """Classes should inherit from ItemPage."""
+    """Classes should inherit from PageObject."""
 
     class MyClass(object):
         pass
@@ -105,18 +106,18 @@ def test_invalid_subclass():
     with pytest.raises(TypeError) as exc:
         callback_for(MyClass)
 
-    msg = 'MyClass should be a sub-class of ItemPage.'
+    msg = 'MyClass should be a sub-class of PageObject.'
     assert str(exc.value) == msg
 
 
 def test_not_implemented_method():
-    """Classes should implement to_item method."""
+    """Classes should implement serialize method."""
 
-    class MyClass(ItemPage):
+    class MyClass(PageObject):
         pass
 
     with pytest.raises(NotImplementedError) as exc:
         callback_for(MyClass)
 
-    msg = 'MyClass should implement to_item method.'
+    msg = 'MyClass should implement serialize method.'
     assert str(exc.value) == msg

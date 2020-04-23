@@ -15,9 +15,9 @@ class BookListPage(WebPage):
 
 
 class BookPage(ProductPage):
-    def to_item(self):
+    def serialize(self):
         # post-processing example: return only 2 fields
-        book = super().to_item()
+        book = super().serialize()
         return {
             'url': book['url'],
             'name': book['name'],
@@ -34,6 +34,6 @@ class BooksSpider(scrapy.Spider):
 
     def parse_book(self, response, page: BookPage):
         # you can also post-process data in a spider
-        book = page.to_item()
+        book = page.serialize()
         book['title'] = book.pop('name')
         yield book

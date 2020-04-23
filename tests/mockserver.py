@@ -1,7 +1,7 @@
-#!/usr/bin/env python
 import argparse, socket, sys, time
-from subprocess import Popen, PIPE
+
 from importlib import import_module
+from subprocess import Popen, PIPE
 
 from twisted.internet import reactor
 from twisted.web.server import Site
@@ -13,7 +13,8 @@ def get_ephemeral_port():
     return s.getsockname()[1]
 
 
-class MockServer():
+class MockServer:
+
     def __init__(self, resource, port=None):
         self.resource = '{}.{}'.format(resource.__module__, resource.__name__)
         self.proc = None
@@ -44,10 +45,12 @@ def main():
     sys.path.append('.')
     resource = getattr(import_module(module_name), name)()
     http_port = reactor.listenTCP(args.port, Site(resource))
+
     def print_listening():
         host = http_port.getHost()
         print('Mock server {} running at http://{}:{}'.format(
             resource, host.host, host.port))
+
     reactor.callWhenRunning(print_listening)
     reactor.run()
 

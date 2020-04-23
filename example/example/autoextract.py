@@ -9,8 +9,8 @@ import attr
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.threads import deferToThread
 
-from scrapy_po.page_input_providers import PageObjectInputProvider, provides
-from scrapy_po.webpage import ItemPage
+from scrapy_po.providers import PageObjectProvider, provides
+from scrapy_po.webpage import PageObject
 from scrapy_po.utils import DummyResponse
 
 
@@ -21,7 +21,7 @@ class AutoextractProductResponse:
 
 
 @provides(AutoextractProductResponse)
-class AutoextractProductProvider(PageObjectInputProvider):
+class AutoextractProductProvider(PageObjectProvider):
 
     def __init__(self, response: DummyResponse):
         self.response = response
@@ -43,7 +43,7 @@ def get_autoextract_product(url):
 
 
 @attr.s(auto_attribs=True)
-class ProductPage(ItemPage):
+class ProductPageObject(PageObject):
     """ Generic product page """
     autoextract_resp: AutoextractProductResponse
 

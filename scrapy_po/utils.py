@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import inspect
 from typing import Tuple, Dict, Type, Callable
 
@@ -7,8 +6,8 @@ from scrapy.http import Response
 from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from scrapy_po.webpage import Injectable, ItemPage
-from scrapy_po.page_input_providers import providers
+from core_po.objects import Injectable, PageObject
+from scrapy_po.providers import providers
 
 
 _CALLBACK_FOR_MARKER = '__scrapy_po_callback'
@@ -138,15 +137,15 @@ def build_instances(plan: andi.Plan, providers):
     raise returnValue(instances)
 
 
-def callback_for(page_cls: Type[ItemPage]) -> Callable:
-    """Helper for creating callbacks for ItemPage sub-classes."""
-    if not issubclass(page_cls, ItemPage):
+def callback_for(page_cls: Type[PageObject]) -> Callable:
+    """Helper for creating Scrapy callbacks for PageObjects."""
+    if not issubclass(page_cls, PageObject):
         raise TypeError(
-            f'{page_cls.__name__} should be a sub-class of ItemPage.')
+            f'{page_cls.__name__} should be a sub-class of PageObject.')
 
-    if getattr(page_cls.to_item, '__isabstractmethod__', False):
+    if getattr(page_cls.serialize, '__isabstractmethod__', False):
         raise NotImplementedError(
-            f'{page_cls.__name__} should implement to_item method.')
+            f'{page_cls.__name__} should implement serialize method.')
 
     # When the callback is used as an instance method of the spider, it expects
     # to receive 'self' as its first argument. When used as a simple inline
@@ -155,7 +154,7 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     # To avoid a TypeError, we need to receive a list of unnamed arguments and
     # a dict of named arguments after our injectable.
     def parse(*args, page: page_cls, **kwargs):  # type: ignore
-        yield page.to_item()  # type: ignore
+        yield page.serialize()  # type: ignore
 
     setattr(parse, _CALLBACK_FOR_MARKER, True)
     return parse

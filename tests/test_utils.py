@@ -1,18 +1,18 @@
-# -*- coding: utf-8 -*-
 import attr
+
 from typing import Any, Dict
 
 import scrapy
+
+from core_po.objects import PageObject, WebPageObject
 from scrapy.http import TextResponse
 
-from scrapy_po.page_input_providers import (
-    PageObjectInputProvider,
-    ResponseDataProvider,
+from scrapy_po.providers import (
+    PageObjectProvider,
+    HTMLResponseProvider,
     provides,
 )
-from scrapy_po.webpage import ItemPage
 
-from scrapy_po import WebPage
 from scrapy_po.utils import (
     get_callback,
     is_callback_using_response,
@@ -35,7 +35,7 @@ class FakeProductResponse:
 
 
 @provides(DummyProductResponse)
-class DummyProductProvider(PageObjectInputProvider):
+class DummyProductProvider(PageObjectProvider):
 
     def __init__(self, response: DummyResponse):
         self.response = response
@@ -51,7 +51,7 @@ class DummyProductProvider(PageObjectInputProvider):
 
 
 @provides(FakeProductResponse)
-class FakeProductProvider(PageObjectInputProvider):
+class FakeProductProvider(PageObjectProvider):
 
     def __call__(self):
         data = {
@@ -63,20 +63,20 @@ class FakeProductProvider(PageObjectInputProvider):
         return DummyProductResponse(data=data)
 
 
-class TextProductProvider(ResponseDataProvider):
+class TextProductProvider(HTMLResponseProvider):
 
     def __init__(self, response: TextResponse):
         self.response = response
 
 
-class StringProductProvider(ResponseDataProvider):
+class StringProductProvider(HTMLResponseProvider):
 
     def __init__(self, response: str):
         self.response = response
 
 
 @attr.s(auto_attribs=True)
-class DummyProductPage(ItemPage):
+class DummyProductPageObject(PageObject):
 
     response: DummyProductResponse
 
@@ -84,13 +84,13 @@ class DummyProductPage(ItemPage):
     def url(self):
         return self.response.data['product']['url']
 
-    def to_item(self):
+    def serialize(self):
         product = self.response.data['product']
         return product
 
 
 @attr.s(auto_attribs=True)
-class FakeProductPage(ItemPage):
+class FakeProductPageObject(PageObject):
 
     response: FakeProductResponse
 
@@ -98,14 +98,14 @@ class FakeProductPage(ItemPage):
     def url(self):
         return self.response.data['product']['url']
 
-    def to_item(self):
+    def serialize(self):
         product = self.response.data['product']
         return product
 
 
-class BookPage(WebPage):
+class BookPageObject(WebPageObject):
 
-    def to_item(self):
+    def serialize(self):
         pass
 
 
@@ -124,28 +124,28 @@ class MySpider(scrapy.Spider):
     def parse4(self, res: DummyResponse):
         pass
 
-    def parse5(self, response, book_page: BookPage):
+    def parse5(self, response, book_page: BookPageObject):
         pass
 
-    def parse6(self, response: DummyResponse, book_page: BookPage):
+    def parse6(self, response: DummyResponse, book_page: BookPageObject):
         pass
 
-    def parse7(self, response, book_page: DummyProductPage):
+    def parse7(self, response, book_page: DummyProductPageObject):
         pass
 
-    def parse8(self, response: DummyResponse, book_page: DummyProductPage):
+    def parse8(self, response: DummyResponse, book_page: DummyProductPageObject):
         pass
 
-    def parse9(self, response, book_page: FakeProductPage):
+    def parse9(self, response, book_page: FakeProductPageObject):
         pass
 
-    def parse10(self, response: DummyResponse, book_page: FakeProductPage):
+    def parse10(self, response: DummyResponse, book_page: FakeProductPageObject):
         pass
 
     def parse11(self, response: TextResponse):
         pass
 
-    def parse12(self, response: TextResponse, book_page: DummyProductPage):
+    def parse12(self, response: TextResponse, book_page: DummyProductPageObject):
         pass
 
 
@@ -166,8 +166,8 @@ def test_get_callback():
 
 
 def test_is_provider_using_response():
-    assert is_provider_using_response(PageObjectInputProvider) is False
-    assert is_provider_using_response(ResponseDataProvider) is True
+    assert is_provider_using_response(PageObjectProvider) is False
+    assert is_provider_using_response(HTMLResponseProvider) is True
     assert is_provider_using_response(TextProductProvider) is True
     assert is_provider_using_response(DummyProductProvider) is False
     assert is_provider_using_response(FakeProductProvider) is False
