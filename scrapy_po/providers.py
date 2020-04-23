@@ -1,6 +1,8 @@
 import abc
 
-from core_po.objects import PageObject
+from typing import Type
+
+from core_po.objects import Injectable
 from core_po.responses import HTMLResponse
 from scrapy.http.response import Response
 
@@ -8,10 +10,10 @@ from scrapy.http.response import Response
 providers = {}
 
 
-class PageObjectProvider(abc.ABC):
-    """Represents a ``PageObjectProvider`` interface.
+class InjectableProvider(abc.ABC):
+    """Represents a ``InjectableProvider`` interface.
 
-    Providers are used to build dependencies used by ``core_po.PageObjects``.
+    Providers are used to build dependencies used by ``core_po.Injectables``.
     """
 
     @abc.abstractmethod
@@ -20,8 +22,8 @@ class PageObjectProvider(abc.ABC):
         pass
 
 
-def register(provider: type(PageObjectProvider), cls: type(PageObject)):
-    """Register a ``PageObjectProvider`` for a given ``core_po.PageObject``.
+def register(provider: Type[InjectableProvider], cls: Type[Injectable]):
+    """Register a ``InjectableProvider`` for a given ``core_po.Injectable``.
 
     Providers are fetched by our custom Downloader Middleware when it's
     building callback arguments and their dependencies.
@@ -30,7 +32,7 @@ def register(provider: type(PageObjectProvider), cls: type(PageObject)):
 
 
 def provides(cls):
-    """Decorates a ``PageObjectProvider`` registering it as a provider."""
+    """Decorates a ``InjectableProvider`` registering it as a provider."""
 
     def decorator(provider):
         register(provider, cls)
@@ -40,7 +42,7 @@ def provides(cls):
 
 
 @provides(HTMLResponse)
-class HTMLResponseProvider(PageObjectProvider):
+class HTMLResponseProvider(InjectableProvider):
     """Provides a ``core_po.HTMLResponse`` based on a ``scrapy.http.Response``
     object.
     """

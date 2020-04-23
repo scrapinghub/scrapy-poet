@@ -8,7 +8,7 @@ import attr
 from typing import Dict, Any
 
 from core_po.objects import PageObject
-from scrapy_po.providers import PageObjectProvider, provides
+from scrapy_po.providers import InjectableProvider, provides
 from scrapy_po.utils import DummyResponse
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.threads import deferToThread
@@ -22,7 +22,7 @@ class AutoextractProductResponse:
 
 
 @provides(AutoextractProductResponse)
-class AutoextractProductProvider(PageObjectProvider):
+class AutoextractProductProvider(InjectableProvider):
 
     def __init__(self, response: DummyResponse):
         self.response = response

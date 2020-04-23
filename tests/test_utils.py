@@ -8,7 +8,7 @@ from core_po.objects import PageObject, WebPageObject
 from scrapy.http import TextResponse
 
 from scrapy_po.providers import (
-    PageObjectProvider,
+    InjectableProvider,
     HTMLResponseProvider,
     provides,
 )
@@ -35,7 +35,7 @@ class FakeProductResponse:
 
 
 @provides(DummyProductResponse)
-class DummyProductProvider(PageObjectProvider):
+class DummyProductProvider(InjectableProvider):
 
     def __init__(self, response: DummyResponse):
         self.response = response
@@ -51,7 +51,7 @@ class DummyProductProvider(PageObjectProvider):
 
 
 @provides(FakeProductResponse)
-class FakeProductProvider(PageObjectProvider):
+class FakeProductProvider(InjectableProvider):
 
     def __call__(self):
         data = {
@@ -166,7 +166,7 @@ def test_get_callback():
 
 
 def test_is_provider_using_response():
-    assert is_provider_using_response(PageObjectProvider) is False
+    assert is_provider_using_response(InjectableProvider) is False
     assert is_provider_using_response(HTMLResponseProvider) is True
     assert is_provider_using_response(TextProductProvider) is True
     assert is_provider_using_response(DummyProductProvider) is False

@@ -7,7 +7,7 @@ from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from core_po.objects import Injectable, PageObject
-from scrapy_po.providers import providers
+from scrapy_po.providers import InjectableProvider, providers
 
 
 _CALLBACK_FOR_MARKER = '__scrapy_po_callback'
@@ -88,7 +88,7 @@ def is_response_going_to_be_used(request, spider):
 
 def get_providers(plan: andi.Plan):
     for obj, _ in plan:
-        provider = providers.get(obj)
+        provider = providers.get(obj)  # type: ignore
         if not provider:
             continue
 
@@ -96,7 +96,7 @@ def get_providers(plan: andi.Plan):
 
 
 def build_plan(callback, response
-               ) -> Tuple[andi.Plan, Dict[Type, Callable]]:
+               ) -> Tuple[andi.Plan, Dict[Type, InjectableProvider]]:
     """Build a plan for the injection in the callback."""
     provider_instances = build_providers(response)
     plan = andi.plan(
@@ -107,18 +107,19 @@ def build_plan(callback, response
     return plan, provider_instances
 
 
-def build_providers(response) -> Dict[Type, Callable]:
+def build_providers(response) -> Dict[Type, InjectableProvider]:
     # find out what resources are available
     result = {}
     for cls, provider in providers.items():
         if andi.inspect(provider.__init__):
-            result[cls] = provider(response)
+            result[cls] = provider(response)  # type: ignore
         else:
             result[cls] = provider()
 
     return result
 
 
+# FIXME: replace with core_po.objects.is_injectable
 def is_injectable(argument_type: Callable) -> bool:
     """A type is injectable if inherits from ``Injectable``."""
     return (isinstance(argument_type, type) and

@@ -14,7 +14,7 @@ from twisted.internet.defer import returnValue
 from twisted.internet.threads import deferToThread
 
 from scrapy_po import callback_for
-from scrapy_po.providers import provides, PageObjectProvider
+from scrapy_po.providers import provides, InjectableProvider
 from scrapy_po.utils import DummyResponse
 
 from tests.utils import (
@@ -123,7 +123,7 @@ class ProvidedAsyncTest:
 
 
 @provides(ProvidedAsyncTest)
-class AsyncHTMLResponseProvider(PageObjectProvider):
+class AsyncHTMLResponseProvider(InjectableProvider):
 
     def __init__(self, response: scrapy.http.Response):
         self.response = response
