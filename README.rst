@@ -49,11 +49,13 @@ extraction code from a spider:
 .. code-block:: python
 
     import scrapy
-    from scrapy_po import WebPage
+
+    from core_po.objects import WebPageObject
 
 
-    class BookPage(WebPage):
-        def to_item(self):
+    class BookPageObject(WebPageObject):
+
+        def serialize(self):
             return {
                 'url': self.url,
                 'name': self.css("title::text").get(),
@@ -68,8 +70,8 @@ extraction code from a spider:
             for url in response.css('.image_container a::attr(href)').getall():
                 yield response.follow(url, self.parse_book)
 
-        def parse_book(self, response, book_page: BookPage):
-            yield book_page.to_item()
+        def parse_book(self, response, book_page_object: BookPageObject):
+            yield book_page_object.serialize()
 
 TODO: document motivation, the rest of the features, provide
 more usage examples, explain shortcuts, etc.

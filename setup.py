@@ -11,6 +11,7 @@ setup(
     author_email='kmike84@gmail.com',
     url='https://github.com/scrapinghub/scrapy-po',
     packages=find_packages(exclude=['tests', 'example']),
+    # FIXME: add core_po as a dependency
     install_requires=['andi>=0.3', 'attrs', 'parsel'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
