@@ -4,7 +4,7 @@ Scrapy spider which uses Page Objects to make extraction code more reusable.
 BookPage is now independent of Scrapy.
 """
 import scrapy
-from scrapy_po import WebPage
+from core_po.pages import WebPage
 
 
 class BookPage(WebPage):

@@ -2,7 +2,7 @@ import scrapy
 import pytest
 from scrapy.utils.reqser import request_to_dict
 
-from scrapy_po.webpage import ItemPage, ItemWebPage
+from core_po.pages import ItemPage, ItemWebPage
 from scrapy_po.utils import (
     callback_for,
     is_response_going_to_be_used,

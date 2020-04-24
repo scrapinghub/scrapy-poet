@@ -11,7 +11,8 @@ from pytest_twisted import inlineCallbacks
 
 import attr
 
-from scrapy_po import WebPage, callback_for, ItemWebPage
+from scrapy_po import callback_for
+from core_po.pages import WebPage, ItemWebPage
 from scrapy_po.page_input_providers import provides, PageObjectInputProvider
 from core_po.page_inputs import ResponseData
 from scrapy_po.utils import DummyResponse

@@ -7,7 +7,7 @@ from scrapy.http import Response
 from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from scrapy_po.webpage import Injectable, ItemPage
+from core_po.pages import Injectable, ItemPage
 from scrapy_po.page_input_providers import providers
 
 

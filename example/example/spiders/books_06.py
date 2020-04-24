@@ -14,7 +14,7 @@ Scrapy > 2.0 required
 import scrapy
 import attr
 
-from scrapy_po import WebPage, ItemWebPage, Injectable
+from core_po.pages import WebPage, ItemWebPage, Injectable
 
 
 class ListingsExtractor(WebPage):
