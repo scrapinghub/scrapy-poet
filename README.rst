@@ -32,7 +32,7 @@ Installation
 
     pip install scrapy-po
 
-scrapy-po requires Python >= 3.6 and Scrapy 2.0.1+.
+scrapy-po requires Python >= 3.6 and Scrapy 2.1.0+.
 
 Usage
 =====
