@@ -4,7 +4,7 @@ import abc
 import attr
 import parsel
 
-from scrapy_po.page_inputs import ResponseData
+from core_po.page_inputs import ResponseData
 
 
 class Injectable(abc.ABC):

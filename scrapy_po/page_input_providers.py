@@ -2,7 +2,7 @@
 import abc
 
 from scrapy.http.response import Response
-from scrapy_po.page_inputs import ResponseData
+from core_po.page_inputs import ResponseData
 
 # fixme: refactor _providers / provides / register,  make a nicer API
 providers = {}

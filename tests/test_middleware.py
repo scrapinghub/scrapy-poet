@@ -13,7 +13,7 @@ import attr
 
 from scrapy_po import WebPage, callback_for, ItemWebPage
 from scrapy_po.page_input_providers import provides, PageObjectInputProvider
-from scrapy_po.page_inputs import ResponseData
+from core_po.page_inputs import ResponseData
 from scrapy_po.utils import DummyResponse
 from tests.utils import HtmlResource, crawl_items, capture_exceptions, \
     crawl_single_item
