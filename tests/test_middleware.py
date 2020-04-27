@@ -11,9 +11,10 @@ from pytest_twisted import inlineCallbacks
 
 import attr
 
-from scrapy_po import WebPage, callback_for, ItemWebPage
+from scrapy_po import callback_for
+from web_poet.pages import WebPage, ItemWebPage
 from scrapy_po.page_input_providers import provides, PageObjectInputProvider
-from scrapy_po.page_inputs import ResponseData
+from web_poet.page_inputs import ResponseData
 from scrapy_po.utils import DummyResponse
 from tests.utils import HtmlResource, crawl_items, capture_exceptions, \
     crawl_single_item

@@ -10,7 +10,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.threads import deferToThread
 
 from scrapy_po.page_input_providers import PageObjectInputProvider, provides
-from scrapy_po.webpage import ItemPage
+from web_poet.pages import ItemPage
 from scrapy_po.utils import DummyResponse
 
 

@@ -2,7 +2,7 @@
 import abc
 
 from scrapy.http.response import Response
-from scrapy_po.page_inputs import ResponseData
+from web_poet.page_inputs import ResponseData
 
 # fixme: refactor _providers / provides / register,  make a nicer API
 providers = {}
@@ -26,7 +26,7 @@ class PageObjectInputProvider(abc.ABC):
 
     @abc.abstractmethod
     def __call__(self):
-        pass
+        """This method is responsible for building and returning inputs."""
 
 
 @provides(ResponseData)

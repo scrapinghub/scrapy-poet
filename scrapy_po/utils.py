@@ -7,7 +7,7 @@ from scrapy.http import Response
 from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from scrapy_po.webpage import Injectable, ItemPage
+from web_poet.pages import ItemPage, is_injectable
 from scrapy_po.page_input_providers import providers
 
 
@@ -41,7 +41,7 @@ def is_callback_using_response(callback: Callable):
         # Let's assume response is going to be used.
         return True
 
-    if isinstance(first_parameter.annotation, first_parameter.empty):
+    if first_parameter.annotation is first_parameter.empty:
         # There's no type annotation, so we're probably using response here.
         return True
 
@@ -118,12 +118,6 @@ def build_providers(response) -> Dict[Type, Callable]:
             result[cls] = provider()
 
     return result
-
-
-def is_injectable(argument_type: Callable) -> bool:
-    """A type is injectable if inherits from ``Injectable``."""
-    return (isinstance(argument_type, type) and
-            issubclass(argument_type, Injectable))
 
 
 @inlineCallbacks

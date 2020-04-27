@@ -5,7 +5,8 @@ BookPage is now independent of Scrapy. callback_for is used to reduce
 boilerplate.
 """
 import scrapy
-from scrapy_po import WebPage, callback_for
+from web_poet.pages import WebPage
+from scrapy_po import callback_for
 
 
 class BookPage(WebPage):
