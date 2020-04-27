@@ -2,7 +2,7 @@ language: python
 
 branches:
   only:
-    - master
+  - master
 
 matrix:
   include:
@@ -26,11 +26,10 @@ after_success:
 deploy:
   provider: pypi
   user: kmike
-  # FIXME: perhaps should be updated after package renaming
   password:
-    secure: QoxwMmM7NLNVxW8Fk0t0PJqXf7gv7FT7Jrk+VIQYIQSJ3aobLpeCuTIEZvMm7iTXBIF0g0zMpWQ1EoYUvoe2iJeP9sp4UuXZU6q9LxAUHFtP+nOYbMl+G6zhftSUhRO3v1yIvBPAtAx4ZXN/oRTSDU4Nfbk3t1sJ9GDcP82wDQhGgT/B87nSRXM6Pqdy3+myLaUS50QzBM1xPi20Z2rZTZgV9nCHWWVgr4CmjNIZcwl2CfEhnpyJX2I24sdtuc1xr4atzSWs3bgx3UOinLM9duV3fWgKPIx8mcbBt9CfjsNWyRgQR2c2+fOn2BgkiWWBUTF7C8FkVnvfwiUqfT3uDQ2LYE6fZ34+lRXhNHUVuSnWfgd590Jaum4CC7zfzKMUXV2S3OOG+kyhF6oJxGAvCBk7JWm3QMx2BPHVQ+802U9noxYDDedTwMgRKmdvY4GfPMeybKjzvQgRlVL7m6YM0RriJivJO99Nz8n/64etkKICcGQwkb7MwynK5SAqNVAJM5UsJnRK1NC7OYPbS396BnDeBc9LHgILJ9OyeOOy47a4tFLnQiPqJ0Fyhk5aT0wK3jxv1MGkWxQpB8FQpWqxlPIqY9lUTBgyx0xaeJoa6hcny6OACct9wF3GqlhduLiugD5tR/LZ3dwSx7Q+JBatM0vjGyxMPPHV2rsIp5cK0S0=
+    secure: cdEikDuOBG/ZIOeNhvzt/KNPJsgV7RMO6k2yRVFdz/UZmdVrdrPXrR+1a7ui302POCiRaFe1vh4ukyqQN5KBsOOlMMfnN4By7dernvne8DPYxM/UDlCOLtVJz0TOzCWDcJBiz/dHcXh49HFOj6StVSAc8dHGIP7RYIs0Hfqly7UyOF0bnJXpd8YGyURjY2gwJD0DAc5/GKbWF+xJeNtGKxB0BysB5x/2+icJTlfF3Y0WPzzaNDL1qgtHHjfEOUelb/S+Cgzf4Emj2376AEr6foiW+6s125rjXEtGul/qM1kgCzJgMHZC7PxKAbUb7mmiifoGpU+0HxoiWBDSntWcdqQFZ2+Sg4hdT2PAhf4mlJmZiop0nxom8C3opdNIkcyIIQcg7cse49f3d3AjmDmkoGteKPmnpuB+xmoxvVsYkMHrqAvMJwXhC+sKIYCD/d5khLXhlWMkuKZr43UyKGnrM2KI6dSVty+2iWStHGZvf2eRZ5KgQ2990iObgtC4uMtPjkyNaRyaDZfC3kOlS+OjIxkmtqWqJtnLaUwxMRCAdPdOHxKMdPRoLrh66zpmey2idJnYudIF+nR2FAwPiHRfbkJPFxFsaQcM6YsB0H7ULZIzQFlaZ3+z5Tq9jPUGz3xNaD4O3R2yQoOw9zj4psqp8ZYDWK44ej3MDleG3G0rt8o=
   on:
     tags: true
-    repo: scrapinghub/scrapy-poet
-    condition: $TOXENV == py37
-  distributions: "sdist bdist_wheel"
+    repo: scrapinghub/scrapy-po
+    condition: "$TOXENV == py37"
+  distributions: sdist bdist_wheel
