@@ -26,7 +26,7 @@ class PageObjectInputProvider(abc.ABC):
 
     @abc.abstractmethod
     def __call__(self):
-        pass
+        """This method is responsible for building and returning inputs."""
 
 
 @provides(ResponseData)
