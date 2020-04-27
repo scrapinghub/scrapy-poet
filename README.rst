@@ -49,7 +49,7 @@ extraction code from a spider:
 .. code-block:: python
 
     import scrapy
-    from core_po.pages import WebPage
+    from web_poet.pages import WebPage
 
 
     class BookPage(WebPage):
