@@ -20,10 +20,11 @@ after_success:
 deploy:
   provider: pypi
   user: kmike
+  # FIXME: perhaps should be updated after package renaming
   password:
     secure: QoxwMmM7NLNVxW8Fk0t0PJqXf7gv7FT7Jrk+VIQYIQSJ3aobLpeCuTIEZvMm7iTXBIF0g0zMpWQ1EoYUvoe2iJeP9sp4UuXZU6q9LxAUHFtP+nOYbMl+G6zhftSUhRO3v1yIvBPAtAx4ZXN/oRTSDU4Nfbk3t1sJ9GDcP82wDQhGgT/B87nSRXM6Pqdy3+myLaUS50QzBM1xPi20Z2rZTZgV9nCHWWVgr4CmjNIZcwl2CfEhnpyJX2I24sdtuc1xr4atzSWs3bgx3UOinLM9duV3fWgKPIx8mcbBt9CfjsNWyRgQR2c2+fOn2BgkiWWBUTF7C8FkVnvfwiUqfT3uDQ2LYE6fZ34+lRXhNHUVuSnWfgd590Jaum4CC7zfzKMUXV2S3OOG+kyhF6oJxGAvCBk7JWm3QMx2BPHVQ+802U9noxYDDedTwMgRKmdvY4GfPMeybKjzvQgRlVL7m6YM0RriJivJO99Nz8n/64etkKICcGQwkb7MwynK5SAqNVAJM5UsJnRK1NC7OYPbS396BnDeBc9LHgILJ9OyeOOy47a4tFLnQiPqJ0Fyhk5aT0wK3jxv1MGkWxQpB8FQpWqxlPIqY9lUTBgyx0xaeJoa6hcny6OACct9wF3GqlhduLiugD5tR/LZ3dwSx7Q+JBatM0vjGyxMPPHV2rsIp5cK0S0=
   on:
     tags: true
-    repo: scrapinghub/scrapy-po
+    repo: scrapinghub/scrapy-poet
     condition: $TOXENV == py37
   distributions: "sdist bdist_wheel"

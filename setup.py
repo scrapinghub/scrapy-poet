@@ -3,13 +3,13 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='scrapy-po',
+    name='scrapy-poet',
     version='0.0.1',
     description='Page Object pattern for Scrapy',
     long_description=open('README.rst').read() + "\n\n" + open('CHANGES.rst').read(),
     author='Mikhail Korobov',
     author_email='kmike84@gmail.com',
-    url='https://github.com/scrapinghub/scrapy-po',
+    url='https://github.com/scrapinghub/scrapy-poet',
     packages=find_packages(exclude=['tests', 'example']),
     install_requires=['andi>=0.3', 'attrs', 'parsel', 'web-poet'],
     classifiers=[

@@ -1,27 +1,27 @@
-=========
-scrapy-po
-=========
+===========
+scrapy-poet
+===========
 
-.. image:: https://img.shields.io/pypi/v/scrapy-po.svg
-   :target: https://pypi.python.org/pypi/scrapy-po
+.. image:: https://img.shields.io/pypi/v/scrapy-poet.svg
+   :target: https://pypi.python.org/pypi/scrapy-poet
    :alt: PyPI Version
 
-.. image:: https://img.shields.io/pypi/pyversions/scrapy-po.svg
-   :target: https://pypi.python.org/pypi/scrapy-po
+.. image:: https://img.shields.io/pypi/pyversions/scrapy-poet.svg
+   :target: https://pypi.python.org/pypi/scrapy-poet
    :alt: Supported Python Versions
 
-.. image:: https://travis-ci.com/scrapinghub/scrapy-po.svg?branch=master
-   :target: https://travis-ci.com/scrapinghub/scrapy-po
+.. image:: https://travis-ci.com/scrapinghub/scrapy-poet.svg?branch=master
+   :target: https://travis-ci.com/scrapinghub/scrapy-poet
    :alt: Build Status
 
-.. image:: https://codecov.io/github/scrapinghub/scrapy-po/coverage.svg?branch=master
-   :target: https://codecov.io/gh/scrapinghub/scrapy-po
+.. image:: https://codecov.io/github/scrapinghub/scrapy-poet/coverage.svg?branch=master
+   :target: https://codecov.io/gh/scrapinghub/scrapy-poet
    :alt: Coverage report
 
 .. warning::
     Current status is "experimental".
 
-``scrapy-po`` implements Page Object pattern for Scrapy.
+``scrapy-poet`` implements Page Object pattern for Scrapy.
 
 License is BSD 3-clause.
 
@@ -30,9 +30,9 @@ Installation
 
 ::
 
-    pip install scrapy-po
+    pip install scrapy-poet
 
-scrapy-po requires Python >= 3.6 and Scrapy 2.1.0+.
+scrapy-poet requires Python >= 3.6 and Scrapy 2.1.0+.
 
 Usage
 =====
@@ -40,7 +40,7 @@ Usage
 First, enable middleware in your settings.py::
 
     DOWNLOADER_MIDDLEWARES = {
-       'scrapy_po.InjectionMiddleware': 543,
+       'scrapy_poet.InjectionMiddleware': 543,
     }
 
 After that you can write spiders which use page object pattern to separate
@@ -74,13 +74,13 @@ extraction code from a spider:
 TODO: document motivation, the rest of the features, provide
 more usage examples, explain shortcuts, etc.
 For now, please check spiders in "example" folder:
-https://github.com/scrapinghub/scrapy-po/tree/master/example/example/spiders
+https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
 
 Contributing
 ============
 
-* Source code: https://github.com/scrapinghub/scrapy-po
-* Issue tracker: https://github.com/scrapinghub/scrapy-po/issues
+* Source code: https://github.com/scrapinghub/scrapy-poet
+* Issue tracker: https://github.com/scrapinghub/scrapy-poet/issues
 
 Use tox_ to run tests with different Python versions::
 

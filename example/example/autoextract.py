@@ -9,9 +9,9 @@ import attr
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.threads import deferToThread
 
-from scrapy_po.page_input_providers import PageObjectInputProvider, provides
+from scrapy_poet.page_input_providers import PageObjectInputProvider, provides
 from web_poet.pages import ItemPage
-from scrapy_po.utils import DummyResponse
+from scrapy_poet.utils import DummyResponse
 
 
 @attr.s(auto_attribs=True)

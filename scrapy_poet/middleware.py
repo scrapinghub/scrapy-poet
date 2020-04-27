@@ -3,7 +3,7 @@
 from twisted.internet.defer import inlineCallbacks, returnValue
 from scrapy import Request
 
-from scrapy_po import utils
+from scrapy_poet import utils
 
 
 class InjectionMiddleware:
