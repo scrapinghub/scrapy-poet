@@ -3,7 +3,7 @@ import pytest
 from scrapy.utils.reqser import request_to_dict
 
 from web_poet.pages import ItemPage, ItemWebPage
-from scrapy_po.utils import (
+from scrapy_poet.utils import (
     callback_for,
     is_response_going_to_be_used,
     DummyResponse,

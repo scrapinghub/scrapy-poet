@@ -6,7 +6,7 @@ boilerplate.
 """
 import scrapy
 from web_poet.pages import WebPage
-from scrapy_po import callback_for
+from scrapy_poet import callback_for
 
 
 class BookPage(WebPage):

@@ -5,14 +5,14 @@ from typing import Any, Dict
 import scrapy
 from scrapy.http import TextResponse
 
-from scrapy_po.page_input_providers import (
+from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
     ResponseDataProvider,
     provides,
 )
 from web_poet.pages import ItemPage, WebPage
 
-from scrapy_po.utils import (
+from scrapy_poet.utils import (
     get_callback,
     is_callback_using_response,
     is_provider_using_response,
