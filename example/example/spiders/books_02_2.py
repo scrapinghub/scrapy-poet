@@ -12,7 +12,7 @@ has problems now, it is used in the latter examples, because as an API
 it is better than defining callback explicitly.
 """
 import scrapy
-from core_po.pages import WebPage
+from web_poet.pages import WebPage
 from scrapy_po import callback_for
 
 

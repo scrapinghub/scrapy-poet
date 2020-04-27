@@ -3,7 +3,7 @@
 Scrapy spider which uses Page Objects both for crawling and extraction.
 """
 import scrapy
-from core_po.pages import WebPage
+from web_poet.pages import WebPage
 from scrapy_po import callback_for
 
 

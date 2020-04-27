@@ -10,7 +10,7 @@ from scrapy_po.page_input_providers import (
     ResponseDataProvider,
     provides,
 )
-from core_po.pages import ItemPage, WebPage
+from web_poet.pages import ItemPage, WebPage
 
 from scrapy_po.utils import (
     get_callback,
