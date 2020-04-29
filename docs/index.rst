@@ -17,6 +17,15 @@ Page Input Providers
 .. automodule:: scrapy_poet.page_input_providers
    :members:
 
+Utils
+=====
+
+.. autoclass:: scrapy_poet.utils.DummyResponse
+   :members:
+   :no-special-members:
+
+.. automethod:: scrapy_poet.utils.callback_for
+
 .. include:: ../CHANGES.rst
 
 .. toctree::
