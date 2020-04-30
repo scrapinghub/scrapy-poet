@@ -51,13 +51,14 @@ class DummyResponse(Response):
             def __init__(self, response: DummyResponse):
                 self.response = response
 
-            def __call__(self):
+            async def __call__(self):
+                data = await self.get_data()
                 return ResponseData(
                     url=self.response.url,
-                    html=self.get_data()
+                    html=data
                 )
 
-            def get_data(self):
+            async def get_data(self):
                 # make an api call
                 # make a database query
                 # read from disk
