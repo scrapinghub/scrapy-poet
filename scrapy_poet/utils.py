@@ -195,9 +195,8 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
             parse_book = callback_for(BookPage)
 
             def parse(self, response):
-                query = '.image_container a::attr(href)'
-                for url in response.css(query).getall():
-                    yield response.follow(url, self.parse_book)
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
     """
     if not issubclass(page_cls, ItemPage):
         raise TypeError(
