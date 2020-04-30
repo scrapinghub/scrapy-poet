@@ -67,9 +67,8 @@ extraction code from a spider:
         start_urls = ['http://books.toscrape.com/']
 
         def parse(self, response):
-            query = '.image_container a::attr(href)'
-            for url in response.css(query).getall():
-                yield response.follow(url, self.parse_book)
+            links = response.css('.image_container a')
+            yield from response.follow_all(links, self.parse_book)
 
         def parse_book(self, response, book_page: BookPage):
             yield book_page.to_item()
