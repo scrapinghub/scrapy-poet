@@ -192,14 +192,12 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
 
             name = 'books'
             start_urls = ['http://books.toscrape.com/']
+            parse_book = callback_for(BookPage)
 
             def parse(self, response):
                 query = '.image_container a::attr(href)'
                 for url in response.css(query).getall():
                     yield response.follow(url, self.parse_book)
-
-            def parse_book(self, response, book_page: BookPage):
-                yield book_page.to_item()
     """
     if not issubclass(page_cls, ItemPage):
         raise TypeError(
