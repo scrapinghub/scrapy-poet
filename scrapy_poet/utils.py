@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 import inspect
-from typing import Tuple, Dict, Type, Callable
+from typing import Tuple, Dict, Type, Callable, Optional
 
 import andi
-from scrapy.http import Response
+from scrapy.http import Request, Response
 from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from web_poet.pages import ItemPage, is_injectable
-from scrapy_poet.page_input_providers import providers
+from scrapy_poet.page_input_providers import providers, PageObjectInputProvider
 
 
 _CALLBACK_FOR_MARKER = '__scrapy_poet_callback'
@@ -22,8 +22,51 @@ def get_callback(request, spider):
 
 
 class DummyResponse(Response):
+    """This class is returned by the ``InjectionMiddleware`` when it detects
+    that the download could be skipped. It inherits from Scrapy ``Response``
+    and signals and stores the URL and references the original ``Request``.
 
-    def __init__(self, url, request=None):
+    If you want to skip downloads, you can type annotate your parse method
+    with this class.
+
+    .. code-block:: python
+
+        def parse(self, response: DummyResponse):
+            pass
+
+    If there's no Page Input that depends on a Scrapy ``Response``, the
+    ``InjectionMiddleware`` is going to skip download and provide a
+    ``DummyResponse`` to your parser instead.
+
+    If your ``PageObjectInputProvider`` doesn't need a request, you simply
+    don't need to list it as a dependency. But if you need, for example, the
+    original request's URL, you can use ``DummyResponse`` instead of
+    ``Response``:
+
+    .. code-block:: python
+
+        @provides(ResponseData)
+        class ResponseDataProvider(PageObjectInputProvider):
+
+            def __init__(self, response: DummyResponse):
+                self.response = response
+
+            async def __call__(self):
+                data = await self.get_data()
+                return ResponseData(
+                    url=self.response.url,
+                    html=data
+                )
+
+            async def get_data(self):
+                # make an api call
+                # make a database query
+                # read from disk
+                # ...
+                pass
+    """
+
+    def __init__(self, url: str, request=Optional[Request]):
         super(DummyResponse, self).__init__(url=url, request=request)
 
 
@@ -89,7 +132,7 @@ def is_response_going_to_be_used(request, spider):
 
 def get_providers(plan: andi.Plan):
     for obj, _ in plan:
-        provider = providers.get(obj)
+        provider = providers.get(obj)  # type: ignore
         if not provider:
             continue
 
@@ -97,7 +140,7 @@ def get_providers(plan: andi.Plan):
 
 
 def build_plan(callback, response
-               ) -> Tuple[andi.Plan, Dict[Type, Callable]]:
+               ) -> Tuple[andi.Plan, Dict[Type, PageObjectInputProvider]]:
     """Build a plan for the injection in the callback."""
     provider_instances = build_providers(response)
     plan = andi.plan(
@@ -108,12 +151,12 @@ def build_plan(callback, response
     return plan, provider_instances
 
 
-def build_providers(response) -> Dict[Type, Callable]:
+def build_providers(response) -> Dict[Type, PageObjectInputProvider]:
     # find out what resources are available
     result = {}
     for cls, provider in providers.items():
         if andi.inspect(provider.__init__):
-            result[cls] = provider(response)
+            result[cls] = provider(response)  # type: ignore
         else:
             result[cls] = provider()
 
@@ -133,7 +176,29 @@ def build_instances(plan: andi.Plan, providers):
 
 
 def callback_for(page_cls: Type[ItemPage]) -> Callable:
-    """Helper for creating callbacks for ItemPage sub-classes."""
+    """This function is a helper for creating callbacks for ``ItemPage``
+    sub-classes. The generated callback should return the result of the
+    call to the ``ItemPage.to_item`` method.
+
+    The generated callback could be used as a spider instance method or passed
+    as an inline/anonymous argument. Make sure to define it as a spider
+    argument if you're planning to use disk queues because in this case,
+    Scrapy should be able to serialize your request object.
+
+    Example:
+
+    .. code-block:: python
+
+        class BooksSpider(scrapy.Spider):
+
+            name = 'books'
+            start_urls = ['http://books.toscrape.com/']
+            parse_book = callback_for(BookPage)
+
+            def parse(self, response):
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
+    """
     if not issubclass(page_cls, ItemPage):
         raise TypeError(
             f'{page_cls.__name__} should be a sub-class of ItemPage.')

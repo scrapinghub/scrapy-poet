@@ -1,32 +1,34 @@
-# -*- coding: utf-8 -*-
+"""An important part of scrapy-poet is the Injection Middleware. It's
+responsible for injecting Page Input dependencies before the request callbacks
+are executed.
+"""
 
+from scrapy import Spider
+from scrapy.http import Request, Response
 from twisted.internet.defer import inlineCallbacks, returnValue
-from scrapy import Request
 
 from scrapy_poet import utils
 
 
 class InjectionMiddleware:
+    """This is a Downloader Middleware that's supposed to:
+
+    * check if request downloads could be skipped
+    * inject dependencies before request callbacks are executed
     """
-    This downloader middleware instantiates all Injectable subclasses declared
-    as request callback arguments and any other parameter with a provider
-    for its type. Otherwise this middleware doesn't populate request.cb_kwargs
-    for this argument.
+    def process_request(self, request: Request, spider: Spider):
+        """This method checks if the request is really needed and if its
+        download could be skipped by trying to infer if a ``Response``
+        is going to be used by the callback or a Page Input.
 
-    XXX: should it really be a downloader middleware?
-    """
-    def process_request(self, request: Request, spider):
-        """Check if the request is needed and if the download can be skipped.
+        If the ``Response`` can be ignored, a ``utils.DummyResponse`` object is
+        returned on its place. This ``DummyResponse`` is linked to the original
+        ``Request`` instance.
 
-        Here we try to infer if the request's response is going to be used
-        by its designated parser or an injected Page Object.
-
-        If we evaluate that the request could be ignored, we return a
-        utils.DummyResponse object linked to the original Request instance.
-
-        With this behavior we're able to optimize spider executions avoid
-        having to download URLs twice or when they're not needed, for example,
-        when a Page Object relies only on a third-party API like AutoExtract.
+        With this behavior, we're able to optimize spider executions avoiding
+        unnecessary downloads. That could be the case when the callback is
+        actually using another source like external APIs such as Scrapinghub's
+        Auto Extract.
         """
         if utils.is_response_going_to_be_used(request, spider):
             return
@@ -35,8 +37,20 @@ class InjectionMiddleware:
         return utils.DummyResponse(url=request.url, request=request)
 
     @inlineCallbacks
-    def process_response(self, request: Request, response, spider):
-        # find out the dependencies
+    def process_response(self, request: Request, response: Response,
+                         spider: Spider):
+        """This method instantiates all ``Injectable`` sub-classes declared as
+        request callback arguments and any other parameter with a provider for
+        its type. Otherwise, this middleware doesn't populate
+        ``request.cb_kwargs`` for this argument.
+
+        .. warning::
+
+            Currently, we're able to inject any type that inherits from
+            Injectable, but the only external dependency that we're able to
+            build and inject is the ``scrapy.Response``.
+        """
+        # Find out the dependencies
         callback = utils.get_callback(request, spider)
         plan, provider_instances = utils.build_plan(callback, response)
 

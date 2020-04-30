@@ -53,6 +53,7 @@ extraction code from a spider:
 
 
     class BookPage(WebPage):
+
         def to_item(self):
             return {
                 'url': self.url,
@@ -61,12 +62,13 @@ extraction code from a spider:
 
 
     class BooksSpider(scrapy.Spider):
+
         name = 'books'
         start_urls = ['http://books.toscrape.com/']
 
         def parse(self, response):
-            for url in response.css('.image_container a::attr(href)').getall():
-                yield response.follow(url, self.parse_book)
+            links = response.css('.image_container a')
+            yield from response.follow_all(links, self.parse_book)
 
         def parse_book(self, response, book_page: BookPage):
             yield book_page.to_item()
