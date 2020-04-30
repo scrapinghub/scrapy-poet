@@ -5,11 +5,11 @@ BookPage is now independent of Scrapy. callback_for is used to reduce
 boilerplate.
 """
 import scrapy
-from web_poet.pages import WebPage
+from web_poet.pages import ItemWebPage
 from scrapy_poet import callback_for
 
 
-class BookPage(WebPage):
+class BookPage(ItemWebPage):
     def to_item(self):
         return {
             'url': self.url,
