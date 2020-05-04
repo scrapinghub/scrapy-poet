@@ -12,18 +12,7 @@ setup(
     author_email='kmike84@gmail.com',
     url='https://github.com/scrapinghub/scrapy-poet',
     packages=find_packages(exclude=['tests', 'example']),
-    install_requires=[
-        # We need to install pyasn1 before trying to install service_identity,
-        # one of Scrapy's dependencies. This is a bug related to setuptools.
-        #
-        # https://github.com/pypa/setuptools/issues/498
-        'pyasn1',
-        'andi>=0.3',
-        'attrs',
-        'parsel',
-        'scrapy>=2.1.0',
-        'web-poet',
-    ],
+    install_requires=['andi>=0.3', 'attrs', 'parsel', 'web-poet'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
