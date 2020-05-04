@@ -16,4 +16,7 @@
 .tox/
 .pytest_cache/
 .coverage
+_build/
+_static/
+_templates/
 htmlcov/
