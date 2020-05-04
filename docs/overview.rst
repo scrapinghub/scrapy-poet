@@ -23,6 +23,14 @@ Overview
 
 ``scrapy-poet`` is the `web-poet`_ Page Object pattern implementation for Scrapy.
 
+The goal of this project is to make reusable Page Objects that separates
+extraction logic from crawling. They could be easily tested and distributed
+across different projects. Also, they could make use of different backends,
+for example, acquiring data from Splash and Auto Extract API.
+
+This project easily integrates Page Objects created using `web-poet`_ with
+Scrapy through the configuration of a dependency injection middleware.
+
 License is BSD 3-clause.
 
 Installation
@@ -73,9 +81,7 @@ extraction code from a spider:
         def parse_book(self, response, book_page: BookPage):
             yield book_page.to_item()
 
-TODO: document motivation, the rest of the features, provide
-more usage examples, explain shortcuts, etc.
-For now, please check spiders in "example" folder:
+Please refer to spiders in "example" folder:
 https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
 
 Contributing
