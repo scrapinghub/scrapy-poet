@@ -46,9 +46,9 @@ class InjectionMiddleware:
 
         .. warning::
 
-            Currently, we're able to inject any type that inherits from
-            Injectable, but the only external dependency that we're able to
-            build and inject is the ``scrapy.Response``.
+            We should be able to inject any type into classes that inherit from
+            ``web_poet.pages.Injectable``, but currently, we're only able to
+            build and inject ``scrapy.Response`` instances.
         """
         # Find out the dependencies
         callback = utils.get_callback(request, spider)
