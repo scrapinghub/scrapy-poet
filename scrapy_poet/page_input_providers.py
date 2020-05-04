@@ -1,6 +1,9 @@
 """The Injection Middleware needs a standard way to build dependencies for
 the Page Inputs used by the request callbacks. That's why we have created a
 repository of ``PageObjectInputProviders``.
+
+You could implement different providers in order to acquire data from multiple
+external sources, for example, Splash or Auto Extract API.
 """
 import abc
 import typing
