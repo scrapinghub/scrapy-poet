@@ -25,8 +25,8 @@ scrapy-poet
 
 License is BSD 3-clause.
 
+* Documentation: http://scrapy-poet.readthedocs.io
 * Source code: https://github.com/scrapinghub/scrapy-poet
 * Issue tracker: https://github.com/scrapinghub/scrapy-poet/issues
-* Documentation: http://scrapy-poet.readthedocs.io
 
 .. _`web-poet`: https://github.com/scrapinghub/web-poet
