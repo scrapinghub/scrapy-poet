@@ -3,12 +3,30 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. include:: overview.rst
+=========================
+scrapy-poet documentation
+=========================
+
+scrapy-poet is the `web-poet`_ Page Object pattern implementation for Scrapy.
+
+First steps
+===========
+
+.. toctree::
+   :caption: Getting started
+   :hidden:
+
+   intro/overview
+   intro/install
+   intro/tutorial
+   intro/examples
+
+:doc:`intro/overview`
+    Understand what scrapy-poet is and how it can help you.
 
 .. toctree::
    :maxdepth: 2
    :hidden:
 
-   overview
    api_reference
    changelog
