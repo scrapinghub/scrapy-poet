@@ -19,14 +19,25 @@ First steps
    intro/overview
    intro/install
    intro/tutorial
-   intro/examples
 
 :doc:`intro/overview`
     Understand what scrapy-poet is and how it can help you.
 
+:doc:`intro/install`
+    Get scrapy-poet installed on your computer.
+
+:doc:`intro/tutorial`
+    Write your first Scrapy project using scrapy-poet.
+
+
 .. toctree::
+   :caption: Reference
    :maxdepth: 2
    :hidden:
 
+   advanced
    api_reference
+   contributing
    changelog
+
+.. _`web-poet`: https://github.com/scrapinghub/web-poet

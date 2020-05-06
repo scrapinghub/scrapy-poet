@@ -1,4 +1,4 @@
-.. include:: ../CHANGES.rst
+.. include:: ../CHANGELOG.rst
 
 .. toctree::
    :hidden:

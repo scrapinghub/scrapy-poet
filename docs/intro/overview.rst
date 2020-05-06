@@ -53,23 +53,4 @@ extraction code from a spider:
         def parse_book(self, response, book_page: BookPage):
             yield book_page.to_item()
 
-Please refer to spiders in "example" folder:
-https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
-
-Contributing
-============
-
-* Source code: https://github.com/scrapinghub/scrapy-poet
-* Issue tracker: https://github.com/scrapinghub/scrapy-poet/issues
-
-Use tox_ to run tests with different Python versions::
-
-    tox
-
-The command above also runs type checks; we use mypy.
-
-.. toctree::
-   :hidden:
-
-.. _tox: https://tox.readthedocs.io
 .. _`web-poet`: https://github.com/scrapinghub/web-poet

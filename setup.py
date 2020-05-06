@@ -6,7 +6,7 @@ setup(
     name='scrapy-poet',
     version='0.0.2',
     description='Page Object pattern for Scrapy',
-    long_description=open('README.rst').read() + "\n\n" + open('CHANGES.rst').read(),
+    long_description=open('README.rst').read() + "\n\n" + open('CHANGELOG.rst').read(),
     long_description_content_type="text/x-rst",
     author='Mikhail Korobov',
     author_email='kmike84@gmail.com',

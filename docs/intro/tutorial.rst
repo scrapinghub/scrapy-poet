@@ -200,4 +200,12 @@ At the end of our job, our spider should look like this:
             links = response.css('.image_container a')
             yield from response.follow_all(links, self.parse_book)
 
+Next steps
+==========
+
+Now that you know how scrapy-poet is supposed to work, what about trying to
+apply it to an existing or new Scrapy project?
+
+Also, please check :ref:`advanced` and refer to spiders in the "example" folder: https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
+
 .. _Scrapy Tutorial: https://docs.scrapy.org/en/latest/intro/tutorial.html
