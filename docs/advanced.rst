@@ -8,7 +8,7 @@ Creating providers
 ==================
 
 Providers are responsible for building dependencies needed by Injectors. A very
-good example would be the ``ResponseDataProvider``, which build and provides a
+good example would be the ``ResponseDataProvider``, which builds and provides a
 ``ResponseData`` instance for Injectors that need it, like the ``ItemWebPage``.
 
 .. code-block:: python
