@@ -147,8 +147,9 @@ DummyRequests are meant to skip downloads, so it makes sense not checking for
 concurrent requests, delays, or auto throttle settings since we won't be making
 any download at all.
 
-If your parser needs a regular Request, it will be downloaded and all of those
-Scrapy settings related to it are going to be respected. For example:
+By default, if your parser and its page inputs need a regular Request, it will
+be downloaded and all of those Scrapy settings related to it are going to be
+respected, for example:
 
 - ``CONCURRENT_REQUESTS``
 - ``CONCURRENT_REQUESTS_PER_DOMAIN``
@@ -164,10 +165,10 @@ Scrapy's mechanisms to do so — for example, making use of Requests to fetch it
 data instead of ignoring it with the use of ``DummyResponses`` in favor of its
 own internal solution.
 
-In the following versions of scrapy-poet, we're planning to include new Page
+In the following versions of scrapy-poet, we're planning to include a new Page
 Object type responsible for receiving spider-related settings. That could be
 the whole Scrapy settings or just a sub-set of it. It's yet to be defined and
-implemented.
+implemented but that will make it easier to enforce those Scrapy settings.
 
 .. note::
 
