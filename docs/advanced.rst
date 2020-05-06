@@ -7,7 +7,44 @@ Advanced Usage
 Creating providers
 ==================
 
-Blah
+Providers are responsible for building dependencies needed by Injectors. A very
+good example would be the ``ResponseDataProvider``, which build and provides a
+``ResponseData`` instance for Injectors that need it, like the ``ItemWebPage``.
+
+.. code-block:: python
+
+    @attr.s(auto_attribs=True)
+    class ResponseData:
+        """Represents a response containing its URL and HTML content."""
+        url: str
+        html: str
+
+
+    @provides(ResponseData)
+    class ResponseDataProvider(PageObjectInputProvider):
+        """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
+
+        def __init__(self, response: Response):
+            """This class receives a Scrapy ``Response`` as a dependency."""
+            self.response = response
+
+        def __call__(self):
+            """This method builds a ``ResponseData`` instance using a Scrapy
+            ``Response``.
+            """
+            return ResponseData(
+                url=self.response.url,
+                html=self.response.text
+            )
+
+You are able to implement your own providers in order to extend or override
+current scrapy-poet behavior.
+
+.. warning::
+
+    Currently, scrapy-poet is only able to inject ``Response`` instances as
+    provider dependencies. We should be able to overcome this limitation in the
+    future.
 
 Ignoring requests
 =================
