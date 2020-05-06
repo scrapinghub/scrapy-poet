@@ -206,7 +206,3 @@ In the following versions of scrapy-poet, we're planning to include a new Page
 Object type responsible for receiving spider-related settings. That could be
 the whole Scrapy settings or just a sub-set of it. It's yet to be defined and
 implemented but that will make it easier to enforce those Scrapy settings.
-
-.. note::
-
-    talk about issues with limits and concurrency
