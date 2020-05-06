@@ -134,15 +134,41 @@ processed, for example:
             # making use of its response, but MyPageObject seems like to be
             yield page.to_item()
 
-.. warning::
+.. note::
 
     The code above is just for example purposes. If you need to use ``Response``
     instances in your code, make use of ``ItemWebPage`` as it makes use of the
     built-ins ``ResponseData`` and ``ResponseDataProvider``.
 
-.. _`advanced-bar`:
+Requests concurrency
+--------------------
 
-Bar
-===
+DummyRequests are meant to skip downloads, so it makes sense not checking for
+concurrent requests, delays, or auto throttle settings since we won't be making
+any download at all.
 
-asd
+If your parser needs a regular Request, it will be downloaded and all of those
+Scrapy settings related to it are going to be respected. For example:
+
+- ``CONCURRENT_REQUESTS``
+- ``CONCURRENT_REQUESTS_PER_DOMAIN``
+- ``CONCURRENT_REQUESTS_PER_IP``
+- ``RANDOMIZE_DOWNLOAD_DELAY``
+- ``DownloaderAwarePriorityQueue``
+- ``AutoThrottle``
+
+But be aware when using third-party libraries to acquire content for a page
+object. The library needs to implement some kind of rate limit or delay between
+its requests, it must do it on its side of the source code or try to leverage
+Scrapy's mechanisms to do so — for example, making use of Requests to fetch its
+data instead of ignoring it with the use of ``DummyResponses`` in favor of its
+own internal solution.
+
+In the following versions of scrapy-poet, we're planning to include new Page
+Object type responsible for receiving spider-related settings. That could be
+the whole Scrapy settings or just a sub-set of it. It's yet to be defined and
+implemented.
+
+.. note::
+
+    talk about issues with limits and concurrency
