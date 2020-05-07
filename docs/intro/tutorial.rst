@@ -7,8 +7,8 @@ Tutorial
 In this tutorial, we’ll assume that scrapy-poet is already installed on your
 system. If that’s not the case, see :ref:`intro-install`.
 
-We are going to scrape `quotes.toscrape.com <http://quotes.toscrape.com/>`_,
-a website that lists quotes from famous authors.
+We are going to scrape `books.toscrape.com <http://books.toscrape.com/>`_,
+a website that lists books from famous authors.
 
 This tutorial will walk you through these tasks:
 
