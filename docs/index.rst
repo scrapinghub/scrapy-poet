@@ -7,30 +7,29 @@
 scrapy-poet documentation
 =========================
 
-scrapy-poet is the `web-poet`_ Page Object pattern implementation for Scrapy.
+scrapy-poet easily integrates Page Objects created using `web-poet`_ with
+Scrapy through the configuration of a dependency injection middleware.
 
-First steps
-===========
+The goal of this project is to make reusable Page Objects that separates
+extraction logic from crawling. They could be easily tested and distributed
+across different projects. Also, they could make use of different backends,
+for example, acquiring data from `Splash`_ and `AutoExtract`_ API.
+
+Please, see also our :ref:`intro-install` and our :ref:`intro-tutorial`
+for a quick start.
+
+:ref:`license` is BSD 3-clause.
+
+.. _`AutoExtract`: https://scrapinghub.com/autoextract
+.. _`Splash`: https://scrapinghub.com/splash
+.. _`web-poet`: https://github.com/scrapinghub/web-poet
 
 .. toctree::
    :caption: Getting started
    :hidden:
 
-   intro/overview
    intro/install
    intro/tutorial
-
-:doc:`intro/overview`
-    Understand what scrapy-poet is and how it can help you.
-
-:doc:`intro/install`
-    Get scrapy-poet installed on your computer.
-
-:doc:`intro/tutorial`
-    Write your first Scrapy project using scrapy-poet.
-
-Going further
-=============
 
 .. toctree::
    :caption: Reference
@@ -42,20 +41,3 @@ Going further
    contributing
    changelog
    license
-
-:doc:`advanced`
-    Understand advanced use cases and tricky behaviors.
-
-:doc:`api_reference`
-    Important parts of the source code explained.
-
-:doc:`contributing`
-    Understand how you can help scrapy-poet.
-
-:doc:`changelog`
-    List of versions and their changes.
-
-:doc:`license`
-    License is BSD 3-clause.
-
-.. _`web-poet`: https://github.com/scrapinghub/web-poet
