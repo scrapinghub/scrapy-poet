@@ -76,7 +76,7 @@ outside our spider file.
         """
 
         def to_item(self):
-            """Converts page into an item"""
+            """Convert page into an item"""
             return {
                 'url': self.url,
                 'name': self.css("title::text").get(),
