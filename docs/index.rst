@@ -29,6 +29,8 @@ First steps
 :doc:`intro/tutorial`
     Write your first Scrapy project using scrapy-poet.
 
+Going further
+=============
 
 .. toctree::
    :caption: Reference
@@ -39,5 +41,21 @@ First steps
    api_reference
    contributing
    changelog
+   license
+
+:doc:`advanced`
+    Understand advanced use cases and tricky behaviors.
+
+:doc:`api_reference`
+    Important parts of the source code explained.
+
+:doc:`contributing`
+    Understand how you can help scrapy-poet.
+
+:doc:`changelog`
+    List of versions and their changes.
+
+:doc:`license`
+    License is BSD 3-clause.
 
 .. _`web-poet`: https://github.com/scrapinghub/web-poet
