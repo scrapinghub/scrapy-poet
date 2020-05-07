@@ -1,3 +1,5 @@
+.. _`intro-tutorial`:
+
 ========
 Tutorial
 ========
