@@ -160,8 +160,11 @@ returning the result of the ``to_item`` method call. We could make use of the
             links = response.css('.image_container a')
             yield from response.follow_all(links, self.parse_book)
 
-This helper could be used as an inline callback, but it would not work with
-disk-based request queues. To be safe, we're defining it as an attribute.
+.. note::
+
+    You can also write something like ``Request(url, callback_for(BookPage))``,
+    without creating an attribute, but currently it won't work with Scrapy disk
+    queues.
 
 Final result
 ============
