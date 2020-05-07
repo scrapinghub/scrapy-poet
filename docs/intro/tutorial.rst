@@ -141,7 +141,7 @@ The spider should be looking like this:
 
 You might have noticed that our parser method is quite simples and it's just
 returning the result of the ``to_item`` method call. We could make use of the
-``callback_for`` helper to reduce source code here.
+``callback_for`` helper to reduce boilerplate.
 
 .. code-block:: python
 
