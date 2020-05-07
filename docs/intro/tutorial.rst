@@ -71,7 +71,9 @@ outside our spider file.
 
 
     class BookPage(ItemWebPage):
-        """Extracts data from a book page"""
+        """Individual book page on books.toscrape.com website, e.g.
+        http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html
+        """
 
         def to_item(self):
             """Converts page into an item"""
