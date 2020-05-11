@@ -21,7 +21,7 @@ Utils
    :members:
    :no-special-members:
 
-.. automethod:: scrapy_poet.utils.callback_for
+.. autofunction:: scrapy_poet.callback_for
 
 .. toctree::
    :hidden:
