@@ -7,9 +7,10 @@ Advanced Usage
 Creating providers
 ==================
 
-Providers are responsible for building dependencies needed by Injectors. A very
-good example would be the ``ResponseDataProvider``, which builds and provides a
-``ResponseData`` instance for Injectors that need it, like the ``ItemWebPage``.
+Providers are responsible for building dependencies needed by Injectable
+objects. A good example would be the ``ResponseDataProvider``,
+which builds and provides a ``ResponseData`` instance for Injectables
+that need it, like the ``ItemWebPage``.
 
 .. code-block:: python
 
@@ -42,9 +43,8 @@ current scrapy-poet behavior.
 
 .. warning::
 
-    Currently, scrapy-poet is only able to inject ``Response`` instances as
-    provider dependencies. We should be able to overcome this limitation in the
-    future.
+    Currently, scrapy-poet is only able to inject ``Response`` and
+    ``DummyResponse`` instances as *provider* dependencies.
 
 Ignoring requests
 =================
@@ -64,13 +64,16 @@ That could be done in the spider's parser method:
     def parser(self, response: DummyRequest, page: MyPageObject):
         pass
 
-Spiders that annotate its first argument as ``DummyResponse`` are signaling that
-they're not going to make use of it, so it should be safe to skip it from our
-downloader middleware. This type annotation is already applied when you use the
-``callback_for`` helper.
+Spider method that has its first argument annotated as :class:`~.DummyResponse`
+is signaling that it is not going to use the response, so it should be safe
+to not download scrapy Response as usual.
 
-If neither spider callback or any of the input providers are going to make use
-of a ``Response``, our Injection Middleware skips download returning a
+This type annotation is already applied when you use the :func:`~.callback_for`
+helper: the callback which is created by ``callback_for`` doesn't use Response,
+it just calls page object's to_item method.
+
+If neither spider callback nor any of the input providers are using
+``Response``, InjectionMiddleware skips the download, returning a
 ``DummyResponse`` instead. For example:
 
 .. code-block:: python
@@ -120,9 +123,8 @@ of a ``Response``, our Injection Middleware skips download returning a
             # not MyPageObject seem like to be making use of its response
             yield page.to_item()
 
-Although, if the spider callback is not going to use the ``Response``, but the
-Page Object makes use of it, the request is not going to be ignored and will be
-processed, for example:
+Although, if the spider callback is not using ``Response``, but the
+Page Object uses it, the request is not ignored, for example:
 
 .. code-block:: python
 
@@ -174,8 +176,10 @@ processed, for example:
 .. note::
 
     The code above is just for example purposes. If you need to use ``Response``
-    instances in your code, make use of ``ItemWebPage`` as it makes use of the
-    built-ins ``ResponseData`` and ``ResponseDataProvider``.
+    instances in your Page Objects, use built-in ``ItemWebPage`` - it has
+    ``response`` attribute with ``ResponseData``; no additional configuration
+    is needed, as there is ``ResponseDataProvider`` enabled in scrapy-poet
+    by default.
 
 Requests concurrency
 --------------------
@@ -184,32 +188,22 @@ DummyRequests are meant to skip downloads, so it makes sense not checking for
 concurrent requests, delays, or auto throttle settings since we won't be making
 any download at all.
 
-By default, if your parser or its page inputs need a regular Request, it will
-be downloaded through Scrapy and all settings related to it are going to be
+By default, if your parser or its page inputs need a regular Request,
+this request is downloaded through Scrapy, and all the settings and limits are
 respected, for example:
 
 - ``CONCURRENT_REQUESTS``
 - ``CONCURRENT_REQUESTS_PER_DOMAIN``
 - ``CONCURRENT_REQUESTS_PER_IP``
 - ``RANDOMIZE_DOWNLOAD_DELAY``
-- ``DownloaderAwarePriorityQueue``
-- ``AutoThrottle``
+- all AutoThrottle settings
+- ``DownloaderAwarePriorityQueue`` logic
 
 But be aware when using third-party libraries to acquire content for a page
 object. If you make an HTTP request in a provider using some third-party async
 library (aiohttp, treq, etc.), ``CONCURRENT_REQUESTS`` option will be respected,
-but not the other settings.
+but not the others.
 
 To have other settings respected, in addition to ``CONCURRENT_REQUESTS``, you'd
 need to use ``crawler.engine.download`` or something like that. Alternatively,
 you could implement those limits in the library itself.
-
-In the future, it should be also possible to make use of
-``DownloaderAwarePriorityQueue`` in such cases, but it will require a
-refactoring on Scrapy (this is a separate task).
-
-In the following versions of scrapy-poet, we're planning to include a new Page
-Object type responsible for receiving spider-related settings. That could be
-the whole Scrapy settings or just a sub-set of it. It's yet to be defined and
-implemented, but that will make it easier to enforce those Scrapy settings on
-providers.
