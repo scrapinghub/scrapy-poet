@@ -2,6 +2,15 @@
 API Reference
 =============
 
+Utils
+=====
+
+.. autofunction:: scrapy_poet.callback_for
+
+.. autoclass:: scrapy_poet.utils.DummyResponse
+   :members:
+   :no-special-members:
+
 Injection Middleware
 ====================
 
@@ -14,14 +23,6 @@ Page Input Providers
 .. automodule:: scrapy_poet.page_input_providers
    :members:
 
-Utils
-=====
-
-.. autoclass:: scrapy_poet.utils.DummyResponse
-   :members:
-   :no-special-members:
-
-.. autofunction:: scrapy_poet.callback_for
-
 .. toctree::
    :hidden:
+
