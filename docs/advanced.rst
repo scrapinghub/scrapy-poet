@@ -44,7 +44,7 @@ current scrapy-poet behavior.
 .. warning::
 
     Currently, scrapy-poet is only able to inject ``Response`` and
-    ``DummyResponse`` instances as *provider* dependencies.
+    :class:`~.DummyResponse` instances as *provider* dependencies.
 
 Ignoring requests
 =================
@@ -54,7 +54,7 @@ using a third-party API such as Auto Extract or querying a database.
 
 In cases like that, it makes no sense to send the request to Scrapy's downloader
 as it will only waste network resources. But there's an alternative to avoid
-making such requests, you could use ``DummyRequests`` type to annotate
+making such requests, you could use :class:`~.DummyResponse` type to annotate
 your response arguments.
 
 That could be done in the spider's parser method:
@@ -70,11 +70,11 @@ to not download scrapy Response as usual.
 
 This type annotation is already applied when you use the :func:`~.callback_for`
 helper: the callback which is created by ``callback_for`` doesn't use Response,
-it just calls page object's to_item method.
+it just calls page object's ``to_item`` method.
 
 If neither spider callback nor any of the input providers are using
-``Response``, InjectionMiddleware skips the download, returning a
-``DummyResponse`` instead. For example:
+``Response``, :class:`~.InjectionMiddleware` skips the download, returning a
+:class:`~.DummyResponse` instead. For example:
 
 .. code-block:: python
 
