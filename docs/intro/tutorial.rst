@@ -12,10 +12,10 @@ a website that lists books from famous authors.
 
 This tutorial will walk you through these tasks:
 
-1. Writing a :ref:`spider <scrapy:topics-spiders>` to crawl a site and extract data
-3. Separating extraction logic from the spider
-3. Configuring Scrapy project to use scrapy-poet
-4. Changing spider to make use of our extraction logic
+#. Writing a :ref:`spider <scrapy:topics-spiders>` to crawl a site and extract data
+#. Separating extraction logic from the spider
+#. Configuring Scrapy project to use scrapy-poet
+#. Changing spider to make use of our extraction logic
 
 If you're not already familiar with Scrapy, and want to learn it quickly,
 the `Scrapy Tutorial`_ is a good resource.
@@ -139,6 +139,9 @@ a BookPage instance is created and passed to the callback.
 The full spider code would be looking like this:
 
 .. code-block:: python
+
+    import scrapy
+
 
     class BooksSpider(scrapy.Spider):
         """Crawl and extract books data"""
