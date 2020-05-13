@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Baseline: regular Scrapy spider, sweet & easy.
 """

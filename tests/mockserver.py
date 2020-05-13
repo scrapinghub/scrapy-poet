@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import argparse, socket, sys, time
 from subprocess import Popen, PIPE
 from importlib import import_module

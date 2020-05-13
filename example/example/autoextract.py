@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Example of how to create a PageObject with a very different input data,
 which even requires an API request.

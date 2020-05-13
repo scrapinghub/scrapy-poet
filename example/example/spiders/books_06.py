@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Scrapy spider with reusable components used for two types of pages:
 * Listings page, with the components: book list and pagination

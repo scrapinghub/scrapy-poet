@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Scrapy spider which uses AutoExtract API, to extract books as products.
 """

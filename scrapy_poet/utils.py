@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import inspect
 from typing import Tuple, Dict, Type, Callable, Optional
 
