@@ -18,6 +18,10 @@ scrapy-poet
    :target: https://codecov.io/gh/scrapinghub/scrapy-poet
    :alt: Coverage report
 
+.. image:: https://readthedocs.org/projects/scrapy-poet/badge/?version=latest
+   :target: https://scrapy-poet.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
 .. warning::
     Current status is "experimental".
 
