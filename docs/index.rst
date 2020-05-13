@@ -10,10 +10,13 @@ scrapy-poet documentation
 scrapy-poet easily integrates Page Objects created using `web-poet`_ with
 Scrapy through the configuration of a dependency injection middleware.
 
-The goal of this project is to make reusable Page Objects that separates
+`web-poet`_ is used to make reusable Page Objects that separates
 extraction logic from crawling. They could be easily tested and distributed
 across different projects. Also, they could make use of different backends,
 for example, acquiring data from `Splash`_ and `AutoExtract`_ API.
+
+The goal of this project is to provide a bridge between 
+:ref:`Scrapy Spiders <scrapy:topics-spiders>` and Page Objects.
 
 Please, see also our :ref:`intro-install` and our :ref:`intro-tutorial`
 for a quick start.
