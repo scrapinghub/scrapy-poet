@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Scrapy spider which uses Page Objects both for crawling and extraction.
 You can mix various page types freely.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import attr
 from typing import Any, Dict
 

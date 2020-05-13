@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Scrapy spider which uses Page Objects to make extraction code more reusable.
 BookPage is now independent of Scrapy. callback_for is used to reduce
