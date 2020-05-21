@@ -72,19 +72,9 @@ def is_provider_using_response(provider):
     """Check whether injectable provider makes use of a valid Response."""
     for argument, possible_types in andi.inspect(provider.__init__).items():
         for cls in possible_types:
-            if not issubclass(cls, Response):
-                # Type annotation is not a subclass of Response.
-                continue
+            if issubclass(cls, Response):
+                return True
 
-            if issubclass(cls, DummyResponse):
-                # Type annotation is a DummyResponse.
-                continue
-
-            # Type annotation is a subclass of Response, but not a subclass
-            # of DummyResponse, so we're probably using it.
-            return True
-
-    # Could not find any Response type annotation in the used providers.
     return False
 
 
