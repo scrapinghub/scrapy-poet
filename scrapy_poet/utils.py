@@ -39,7 +39,7 @@ class DummyResponse(Response):
     """
 
     def __init__(self, url: str, request=Optional[Request]):
-        super(DummyResponse, self).__init__(url=url, request=request)
+        super().__init__(url=url, request=request)
 
 
 def is_callback_using_response(callback: Callable):
