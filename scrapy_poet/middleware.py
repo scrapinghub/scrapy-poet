@@ -5,6 +5,7 @@ are executed.
 
 from scrapy import Spider
 from scrapy.http import Request, Response
+from scrapy.settings import Settings
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from scrapy_poet import utils
@@ -16,6 +17,10 @@ class InjectionMiddleware:
     * check if request downloads could be skipped
     * inject dependencies before request callbacks are executed
     """
+    @staticmethod
+    def get_dummy_response(request: Request):
+        return utils.DummyResponse(url=request.url, request=request)
+
     def process_request(self, request: Request, spider: Spider):
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a ``Response``
@@ -34,7 +39,7 @@ class InjectionMiddleware:
             return
 
         spider.logger.debug(f'Skipping download of {request}')
-        return utils.DummyResponse(url=request.url, request=request)
+        return self.get_dummy_response(request)
 
     @inlineCallbacks
     def process_response(self, request: Request, response: Response,
@@ -44,15 +49,23 @@ class InjectionMiddleware:
         its type. Otherwise, this middleware doesn't populate
         ``request.cb_kwargs`` for this argument.
 
-        .. warning::
+        Currently, we are able to inject instances of the following
+        classes as *provider* dependencies:
 
-            We should be able to inject any type into classes that inherit from
-            ``web_poet.pages.Injectable``, but currently, we're only able to
-            build and inject ``scrapy.Response`` instances.
+        - :class:`~.DummyResponse`
+        - :class:`~scrapy.http.Request`
+        - :class:`~scrapy.http.Response`
+        - :class:`~scrapy.settings.Settings`
         """
         # Find out the dependencies
         callback = utils.get_callback(request, spider)
-        plan, provider_instances = utils.build_plan(callback, response)
+        dependencies = {
+            Request: request,
+            Response: response,
+            Settings: spider.settings,
+            utils.DummyResponse: self.get_dummy_response(request),
+        }
+        plan, provider_instances = utils.build_plan(callback, dependencies)
 
         # Build all instances declared as dependencies
         instances = yield from utils.build_instances(

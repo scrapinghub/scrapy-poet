@@ -121,27 +121,31 @@ def is_response_going_to_be_used(request, spider):
     if is_callback_using_response(callback):
         return True
 
-    plan, _ = build_plan(callback, None)
-    for provider in get_providers(plan):
+    for provider in get_providers(callback):
         if is_provider_using_response(provider):
             return True
 
     return False
 
 
-def get_providers(plan: andi.Plan):
-    for obj, _ in plan:
-        provider = providers.get(obj)  # type: ignore
-        if not provider:
-            continue
+def get_providers(callback):
+    for argument, possible_types in andi.inspect(callback).items():
+        for cls in possible_types:
+            if is_injectable(cls):
+                yield from get_providers(cls)
+                continue
 
-        yield provider
+            provider = providers.get(cls)
+            if not provider:
+                continue
+
+            yield provider
 
 
-def build_plan(callback, response
+def build_plan(callback, instances
                ) -> Tuple[andi.Plan, Dict[Type, PageObjectInputProvider]]:
     """Build a plan for the injection in the callback."""
-    provider_instances = build_providers(response)
+    provider_instances = build_providers(instances)
     plan = andi.plan(
         callback,
         is_injectable=is_injectable,
@@ -150,14 +154,15 @@ def build_plan(callback, response
     return plan, provider_instances
 
 
-def build_providers(response) -> Dict[Type, PageObjectInputProvider]:
-    # find out what resources are available
+def build_providers(instances) -> Dict[Type, PageObjectInputProvider]:
     result = {}
     for cls, provider in providers.items():
-        if andi.inspect(provider.__init__):
-            result[cls] = provider(response)  # type: ignore
-        else:
-            result[cls] = provider()
+        kwargs = andi.plan(
+            provider.__init__,
+            is_injectable=is_injectable,
+            externally_provided=list(instances.keys())
+        ).final_kwargs(instances)
+        result[cls] = provider(**kwargs)  # type: ignore
 
     return result
 

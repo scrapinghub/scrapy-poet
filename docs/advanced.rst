@@ -43,8 +43,13 @@ current scrapy-poet behavior.
 
 .. warning::
 
-    Currently, scrapy-poet is only able to inject ``Response`` and
-    :class:`~.DummyResponse` instances as *provider* dependencies.
+    Currently, scrapy-poet is able to inject instances of the following
+    classes as *provider* dependencies:
+
+    - :class:`~.DummyResponse`
+    - :class:`~scrapy.http.Request`
+    - :class:`~scrapy.http.Response`
+    - :class:`~.scrapy.settings.Settings`
 
 Ignoring requests
 =================
