@@ -4,8 +4,10 @@ are executed.
 """
 
 from scrapy import Spider
+from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from scrapy.settings import Settings
+from scrapy.statscollectors import StatsCollector
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from scrapy_poet import utils
@@ -50,14 +52,18 @@ class InjectionMiddleware:
 
         - :class:`~scrapy.http.Request`
         - :class:`~scrapy.http.Response`
+        - :class:`~scrapy.crawler.Crawler`
         - :class:`~scrapy.settings.Settings`
+        - :class:`~scrapy.statscollectors.StatsCollector`
         """
         # Find out the dependencies
         callback = utils.get_callback(request, spider)
         dependencies = {
             Request: request,
             Response: response,
+            Crawler: spider.crawler,
             Settings: spider.settings,
+            StatsCollector: spider.crawler.stats,
         }
         plan, provider_instances = utils.build_plan(callback, dependencies)
 

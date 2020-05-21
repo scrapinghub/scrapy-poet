@@ -46,7 +46,9 @@ classes as *provider* dependencies:
 
 - :class:`~scrapy.http.Request`
 - :class:`~scrapy.http.Response`
+- :class:`~scrapy.crawler.Crawler`
 - :class:`~scrapy.settings.Settings`
+- :class:`~scrapy.statscollectors.StatsCollector`
 
 .. warning::
 
