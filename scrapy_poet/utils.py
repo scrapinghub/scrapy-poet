@@ -36,33 +36,6 @@ class DummyResponse(Response):
     If there's no Page Input that depends on a Scrapy ``Response``, the
     ``InjectionMiddleware`` is going to skip download and provide a
     ``DummyResponse`` to your parser instead.
-
-    If your ``PageObjectInputProvider`` doesn't need a request, you simply
-    don't need to list it as a dependency. But if you need, for example, the
-    original request's URL, you can use ``Request`` instead of
-    ``Response``:
-
-    .. code-block:: python
-
-        @provides(ResponseData)
-        class ResponseDataProvider(PageObjectInputProvider):
-
-            def __init__(self, request: Request):
-                self.request = request
-
-            async def __call__(self):
-                data = await self.get_data()
-                return ResponseData(
-                    url=self.request.url,
-                    html=data
-                )
-
-            async def get_data(self):
-                # make an api call
-                # make a database query
-                # read from disk
-                # ...
-                pass
     """
 
     def __init__(self, url: str, request=Optional[Request]):
