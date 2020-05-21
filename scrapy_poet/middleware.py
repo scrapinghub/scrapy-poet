@@ -17,10 +17,6 @@ class InjectionMiddleware:
     * check if request downloads could be skipped
     * inject dependencies before request callbacks are executed
     """
-    @staticmethod
-    def get_dummy_response(request: Request):
-        return utils.DummyResponse(url=request.url, request=request)
-
     def process_request(self, request: Request, spider: Spider):
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a ``Response``
@@ -39,12 +35,12 @@ class InjectionMiddleware:
             return
 
         spider.logger.debug(f'Skipping download of {request}')
-        return self.get_dummy_response(request)
+        return utils.DummyResponse(url=request.url, request=request)
 
     @inlineCallbacks
     def process_response(self, request: Request, response: Response,
                          spider: Spider):
-        """This method instantiates all ``Injectable`` sub-classes declared as
+        """This method instantiates all ``Injectable`` subclasses declared as
         request callback arguments and any other parameter with a provider for
         its type. Otherwise, this middleware doesn't populate
         ``request.cb_kwargs`` for this argument.
@@ -52,7 +48,6 @@ class InjectionMiddleware:
         Currently, we are able to inject instances of the following
         classes as *provider* dependencies:
 
-        - :class:`~.DummyResponse`
         - :class:`~scrapy.http.Request`
         - :class:`~scrapy.http.Response`
         - :class:`~scrapy.settings.Settings`
@@ -63,7 +58,6 @@ class InjectionMiddleware:
             Request: request,
             Response: response,
             Settings: spider.settings,
-            utils.DummyResponse: self.get_dummy_response(request),
         }
         plan, provider_instances = utils.build_plan(callback, dependencies)
 

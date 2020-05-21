@@ -41,15 +41,54 @@ that need it, like the ``ItemWebPage``.
 You are able to implement your own providers in order to extend or override
 current scrapy-poet behavior.
 
+Currently, scrapy-poet is able to inject instances of the following
+classes as *provider* dependencies:
+
+- :class:`~scrapy.http.Request`
+- :class:`~scrapy.http.Response`
+- :class:`~scrapy.settings.Settings`
+
 .. warning::
 
-    Currently, scrapy-poet is able to inject instances of the following
-    classes as *provider* dependencies:
+    If your provider needs to use a subclass of Response,
+    for example, TextResponse,
+    make sure to annotate your response argument with the parent class type.
 
-    - :class:`~.DummyResponse`
-    - :class:`~scrapy.http.Request`
-    - :class:`~scrapy.http.Response`
-    - :class:`~.scrapy.settings.Settings`
+    Our dependency injection strategy respects covariance.
+    In simple words,
+    this means a subclass could replace a parent class
+    but a parent class could not substitute its subclasses.
+    Example:
+
+    .. code-block:: python
+
+        class Animal:
+            pass
+
+        class Cat(Animal):
+            def meow(self):
+                pass
+
+    If our provider needs an Animal instance,
+    we could provide either an Animal or a Cat
+    (a more specific Animal subtype).
+    On the other hand,
+    if our provider needs a Cat instance
+    (probably because meow is a requirement),
+    it wouldn't be okay to pass it an Animal instance.
+
+    Our Injection Middleware makes no distinction between Responses and TextResponses,
+    so you need to validate the response type by yourself.
+    Example:
+
+    .. code-block:: python
+
+        @provides(MyCustomResponseData)
+        class MyCustomResponseDataProvider(PageObjectInputProvider):
+
+            def __init__(self, response: Response):
+                assert issubclass(response, TextResponse)
+                self.response = response
 
 Ignoring requests
 =================
@@ -98,13 +137,13 @@ If neither spider callback nor any of the input providers are using
     @provides(CachedData)
     class CachedDataProvider(PageObjectInputProvider):
 
-        def __init__(self, response: DummyResponse):
-            self.response = response
+        def __init__(self, request: scrapy.Request):
+            self.request = request
 
         def __call__(self):
             return CachedData(
-                key=self.response.url,
-                value=get_cached_content(self.response.url)
+                key=self.request.url,
+                value=get_cached_content(self.request.url)
             )
 
 

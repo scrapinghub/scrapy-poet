@@ -39,7 +39,7 @@ class DummyResponse(Response):
 
     If your ``PageObjectInputProvider`` doesn't need a request, you simply
     don't need to list it as a dependency. But if you need, for example, the
-    original request's URL, you can use ``DummyResponse`` instead of
+    original request's URL, you can use ``Request`` instead of
     ``Response``:
 
     .. code-block:: python
@@ -47,13 +47,13 @@ class DummyResponse(Response):
         @provides(ResponseData)
         class ResponseDataProvider(PageObjectInputProvider):
 
-            def __init__(self, response: DummyResponse):
-                self.response = response
+            def __init__(self, request: Request):
+                self.request = request
 
             async def __call__(self):
                 data = await self.get_data()
                 return ResponseData(
-                    url=self.response.url,
+                    url=self.request.url,
                     html=data
                 )
 
@@ -100,14 +100,14 @@ def is_provider_using_response(provider):
     for argument, possible_types in andi.inspect(provider.__init__).items():
         for cls in possible_types:
             if not issubclass(cls, Response):
-                # Type annotation is not a sub-class of Response.
+                # Type annotation is not a subclass of Response.
                 continue
 
             if issubclass(cls, DummyResponse):
                 # Type annotation is a DummyResponse.
                 continue
 
-            # Type annotation is a sub-class of Response, but not a sub-class
+            # Type annotation is a subclass of Response, but not a subclass
             # of DummyResponse, so we're probably using it.
             return True
 
@@ -181,7 +181,7 @@ def build_instances(plan: andi.Plan, providers):
 
 def callback_for(page_cls: Type[ItemPage]) -> Callable:
     """This function is a helper for creating callbacks for ``ItemPage``
-    sub-classes. The generated callback should return the result of the
+    subclasses. The generated callback should return the result of the
     call to the ``ItemPage.to_item`` method.
 
     The generated callback could be used as a spider instance method or passed
@@ -205,7 +205,7 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     """
     if not issubclass(page_cls, ItemPage):
         raise TypeError(
-            f'{page_cls.__name__} should be a sub-class of ItemPage.')
+            f'{page_cls.__name__} should be a subclass of ItemPage.')
 
     if getattr(page_cls.to_item, '__isabstractmethod__', False):
         raise NotImplementedError(
