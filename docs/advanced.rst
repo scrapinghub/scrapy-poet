@@ -54,7 +54,7 @@ classes as *provider* dependencies:
 
     If your provider needs to use a subclass of Response,
     for example, TextResponse,
-    make sure to annotate your response argument with the parent class type.
+    make sure to annotate your response argument with Response class type.
 
     This behavior is related to covariance.
     In simple words,
