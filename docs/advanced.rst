@@ -56,7 +56,7 @@ classes as *provider* dependencies:
     for example, TextResponse,
     make sure to annotate your response argument with the parent class type.
 
-    Our dependency injection strategy respects covariance.
+    This behavior is related to covariance.
     In simple words,
     this means a subclass could replace a parent class
     but a parent class could not substitute its subclasses.
