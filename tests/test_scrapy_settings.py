@@ -1,7 +1,9 @@
 import attr
+import pytest
 from pytest_twisted import inlineCallbacks
 from scrapy import Request, Spider
 from scrapy.settings import Settings
+from web_poet.pages import Injectable, ItemWebPage
 
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
@@ -26,53 +28,94 @@ class ProductHtml(HtmlResource):
     """
 
 
-@attr.s(auto_attribs=True)
-class MySettings:
-
-    robotstxt_obey: bool
-
-
-@provides(MySettings)
-class MySettingsProvider(PageObjectInputProvider):
+@provides(Settings)
+class SettingsProvider(PageObjectInputProvider):
 
     def __init__(self, settings: Settings):
         self.settings = settings
 
     def __call__(self):
-        return MySettings(self.settings.getbool("ROBOTSTXT_OBEY"))
+        return self.settings
 
 
-class MySpider(Spider):
+@attr.s(auto_attribs=True)
+class ProductPage(ItemWebPage):
 
-    name = "my_spider"
+    settings: Settings
+
+    @property
+    def name(self):
+        name = self.css(".name::text").get()
+        if self.settings.getbool("UPPERCASE_NAME"):
+            name = name.upper()
+
+        return name
+
+    def to_item(self):
+        return {
+            "name": self.name,
+        }
+
+
+class ProductSettings(Injectable):
+
+    def __init__(self, settings: Settings):
+        self.uppercase_name = settings.getbool("UPPERCASE_NAME")
+
+
+@attr.s(auto_attribs=True)
+class ProductPageWithDependency(ItemWebPage):
+
+    settings: ProductSettings
+
+    @property
+    def name(self):
+        name = self.css(".name::text").get()
+        if self.settings.uppercase_name:
+            name = name.upper()
+
+        return name
+
+    def to_item(self):
+        return {
+            "name": self.name,
+        }
+
+
+class ProductSpider(Spider):
+
+    name = "product_spider"
     url = None
 
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
 
-    def parse(self, response, my_settings: MySettings):
-        return {
-            "name": response.css(".name::text").get(),
-            "robotstxt_obey": my_settings.robotstxt_obey,
-        }
+    def parse(self, response, page: ProductPage):
+        return page.to_item()
+
+
+class ProductWithDependencySpider(Spider):
+
+    name = "product_with_dependency_spider"
+    url = None
+
+    def start_requests(self):
+        yield Request(url=self.url, callback=self.parse)
+
+    def parse(self, response, page: ProductPageWithDependency):
+        return page.to_item()
 
 
 @inlineCallbacks
-def test_providers_can_access_scrapy_settings(settings):
+@pytest.mark.parametrize('spider_class,uppercase_name,expected_name', [
+    (ProductSpider, True, "CHOCOLATE"),
+    (ProductSpider, False, "Chocolate"),
+    (ProductWithDependencySpider, True, "CHOCOLATE"),
+    (ProductWithDependencySpider, False, "Chocolate"),
+])
+def test_settings(spider_class, uppercase_name, expected_name, settings):
     my_settings = settings.copy()
-    my_settings["ROBOTSTXT_OBEY"] = True
+    my_settings["UPPERCASE_NAME"] = uppercase_name
     item, url, crawler = yield crawl_single_item(
-        MySpider, ProductHtml, my_settings)
-    assert item == {
-        "name": "Chocolate",
-        "robotstxt_obey": True,
-    }
-
-    my_settings = settings.copy()
-    my_settings["ROBOTSTXT_OBEY"] = False
-    item, url, crawler = yield crawl_single_item(
-        MySpider, ProductHtml, my_settings)
-    assert item == {
-        "name": "Chocolate",
-        "robotstxt_obey": False,
-    }
+        spider_class, ProductHtml, my_settings)
+    assert item == {"name": expected_name}
