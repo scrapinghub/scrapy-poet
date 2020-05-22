@@ -17,20 +17,6 @@ from scrapy_poet.page_input_providers import (
 _CALLBACK_FOR_MARKER = '__scrapy_poet_callback'
 
 
-def make_and_register_provider(cls):
-    """Create an identity provider for a given class and register it."""
-
-    class Provider(PageObjectInputProvider):
-
-        def __init__(self, obj: cls):
-            self.obj = obj
-
-        def __call__(self):
-            return self.obj
-
-    register(Provider, cls)
-
-
 def get_callback(request, spider):
     """Get request.callback of a scrapy.Request, as a callable."""
     if request.callback is None:
