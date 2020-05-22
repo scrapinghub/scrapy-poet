@@ -79,7 +79,8 @@ classes as *provider* dependencies:
     (probably because meow is a requirement),
     it wouldn't be okay to pass it an Animal instance.
 
-    Our Injection Middleware makes no distinction between Responses and TextResponses,
+    The same happens with Response and TextResponse.
+    Our Injection Middleware makes no distinction between those classes,
     so you need to validate the response type by yourself.
     Example:
 
