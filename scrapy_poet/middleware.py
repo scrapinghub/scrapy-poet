@@ -22,9 +22,6 @@ SCRAPY_PROVIDED_CLASSES = {
     StatsCollector,
 }
 
-# for cls in SCRAPY_PROVIDED_CLASSES:
-#     utils.make_and_register_provider(cls)
-
 
 class InjectionMiddleware:
     """This is a Downloader Middleware that's supposed to:
