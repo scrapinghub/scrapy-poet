@@ -84,18 +84,18 @@ def is_response_going_to_be_used(request, spider):
     if is_callback_using_response(callback):
         return True
 
-    for provider in get_providers(callback):
+    for provider in discover_callback_providers(callback):
         if is_provider_using_response(provider):
             return True
 
     return False
 
 
-def get_providers(callback):
+def discover_callback_providers(callback):
     for argument, possible_types in andi.inspect(callback).items():
         for cls in possible_types:
             if is_injectable(cls):
-                yield from get_providers(cls)
+                yield from discover_callback_providers(cls)
                 continue
 
             provider = providers.get(cls)
