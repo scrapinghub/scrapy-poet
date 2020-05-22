@@ -5,11 +5,6 @@ from scrapy import Request, Spider
 from scrapy.settings import Settings
 from web_poet.pages import Injectable, ItemWebPage
 
-from scrapy_poet.page_input_providers import (
-    PageObjectInputProvider,
-    provides,
-)
-
 from tests.utils import crawl_single_item, HtmlResource
 
 
@@ -26,16 +21,6 @@ class ProductHtml(HtmlResource):
         <p class="description">The best chocolate ever</p>
     </html>
     """
-
-
-@provides(Settings)
-class SettingsProvider(PageObjectInputProvider):
-
-    def __init__(self, settings: Settings):
-        self.settings = settings
-
-    def __call__(self):
-        return self.settings
 
 
 @attr.s(auto_attribs=True)

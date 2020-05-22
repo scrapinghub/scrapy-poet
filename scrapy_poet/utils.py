@@ -7,10 +7,28 @@ from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from web_poet.pages import ItemPage, is_injectable
-from scrapy_poet.page_input_providers import providers, PageObjectInputProvider
+from scrapy_poet.page_input_providers import (
+    providers,
+    PageObjectInputProvider,
+    register,
+)
 
 
 _CALLBACK_FOR_MARKER = '__scrapy_poet_callback'
+
+
+def make_and_register_provider(cls):
+    """Create an identity provider for a given class and register it."""
+
+    class Provider(PageObjectInputProvider):
+
+        def __init__(self, obj: cls):
+            self.obj = obj
+
+        def __call__(self):
+            return self.obj
+
+    register(Provider, cls)
 
 
 def get_callback(request, spider):

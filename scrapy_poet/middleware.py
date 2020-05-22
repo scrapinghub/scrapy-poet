@@ -13,6 +13,14 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from scrapy_poet import utils
 
 
+utils.make_and_register_provider(Spider)
+utils.make_and_register_provider(Request)
+utils.make_and_register_provider(Response)
+utils.make_and_register_provider(Crawler)
+utils.make_and_register_provider(Settings)
+utils.make_and_register_provider(StatsCollector)
+
+
 class InjectionMiddleware:
     """This is a Downloader Middleware that's supposed to:
 
@@ -50,6 +58,7 @@ class InjectionMiddleware:
         Currently, we are able to inject instances of the following
         classes as *provider* dependencies:
 
+        - :class:`~scrapy.Spider`
         - :class:`~scrapy.http.Request`
         - :class:`~scrapy.http.Response`
         - :class:`~scrapy.crawler.Crawler`
@@ -59,6 +68,7 @@ class InjectionMiddleware:
         # Find out the dependencies
         callback = utils.get_callback(request, spider)
         dependencies = {
+            Spider: spider,
             Request: request,
             Response: response,
             Crawler: spider.crawler,
