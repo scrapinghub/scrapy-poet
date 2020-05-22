@@ -13,12 +13,17 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from scrapy_poet import utils
 
 
-utils.make_and_register_provider(Spider)
-utils.make_and_register_provider(Request)
-utils.make_and_register_provider(Response)
-utils.make_and_register_provider(Crawler)
-utils.make_and_register_provider(Settings)
-utils.make_and_register_provider(StatsCollector)
+SCRAPY_PROVIDED_CLASSES = {
+    Spider,
+    Request,
+    Response,
+    Crawler,
+    Settings,
+    StatsCollector,
+}
+
+for cls in SCRAPY_PROVIDED_CLASSES:
+    utils.make_and_register_provider(cls)
 
 
 class InjectionMiddleware:
@@ -75,6 +80,7 @@ class InjectionMiddleware:
             Settings: spider.settings,
             StatsCollector: spider.crawler.stats,
         }
+        assert set(dependencies.keys()) == SCRAPY_PROVIDED_CLASSES
         plan, provider_instances = utils.build_plan(callback, dependencies)
 
         # Build all instances declared as dependencies

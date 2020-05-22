@@ -1,10 +1,9 @@
 import pytest
 from pytest_twisted import inlineCallbacks
 from scrapy import Spider
-from scrapy.http import Request, Response
-from scrapy.crawler import Crawler
-from scrapy.settings import Settings
-from scrapy.statscollectors import StatsCollector
+from scrapy.http import Request
+
+from scrapy_poet.middleware import SCRAPY_PROVIDED_CLASSES
 
 from tests.utils import crawl_single_item, HtmlResource
 
@@ -41,14 +40,7 @@ def make_spider(scrapy_class):
 
 
 @inlineCallbacks
-@pytest.mark.parametrize('scrapy_class', [
-    Spider,
-    Request,
-    Response,
-    Crawler,
-    Settings,
-    StatsCollector,
-])
+@pytest.mark.parametrize('scrapy_class', SCRAPY_PROVIDED_CLASSES)
 def test_scrapy_providers(scrapy_class, settings):
     item, url, crawler = yield crawl_single_item(
         make_spider(scrapy_class), ProductHtml, settings)
