@@ -105,8 +105,7 @@ def discover_callback_providers(callback):
             yield provider
 
 
-def build_plan(callback, instances
-               ) -> Tuple[andi.Plan, Dict[Type, PageObjectInputProvider]]:
+def build_plan(callback, instances) -> Tuple[andi.Plan, Dict[Type, PageObjectInputProvider]]:
     """Build a plan for the injection in the callback."""
     provider_instances = build_providers(instances)
     plan = andi.plan(
