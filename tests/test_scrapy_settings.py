@@ -5,6 +5,8 @@ from scrapy import Request, Spider
 from scrapy.settings import Settings
 from web_poet.pages import Injectable, ItemWebPage
 
+from scrapy_poet.page_input_providers import provides, PageObjectInputProvider
+
 from tests.utils import crawl_single_item, HtmlResource
 
 
@@ -24,32 +26,25 @@ class ProductHtml(HtmlResource):
 
 
 @attr.s(auto_attribs=True)
-class ProductPage(ItemWebPage):
+class ProductSettings:
 
-    settings: Settings
-
-    @property
-    def name(self):
-        name = self.css(".name::text").get()
-        if self.settings.getbool("UPPERCASE_NAME"):
-            name = name.upper()
-
-        return name
-
-    def to_item(self):
-        return {
-            "name": self.name,
-        }
+    uppercase_name: bool
 
 
-class ProductSettings(Injectable):
+@provides(ProductSettings)
+class ProductSettingsProvider(PageObjectInputProvider):
 
     def __init__(self, settings: Settings):
-        self.uppercase_name = settings.getbool("UPPERCASE_NAME")
+        self.settings = settings
+
+    def __call__(self):
+        return ProductSettings(
+            uppercase_name=self.settings.getbool("UPPERCASE_NAME"),
+        )
 
 
 @attr.s(auto_attribs=True)
-class ProductPageWithDependency(ItemWebPage):
+class ProductPage(ItemWebPage):
 
     settings: ProductSettings
 
@@ -79,24 +74,10 @@ class ProductSpider(Spider):
         return page.to_item()
 
 
-class ProductWithDependencySpider(Spider):
-
-    name = "product_with_dependency_spider"
-    url = None
-
-    def start_requests(self):
-        yield Request(url=self.url, callback=self.parse)
-
-    def parse(self, response, page: ProductPageWithDependency):
-        return page.to_item()
-
-
 @inlineCallbacks
 @pytest.mark.parametrize('spider_class,uppercase_name,expected_name', [
     (ProductSpider, True, "CHOCOLATE"),
     (ProductSpider, False, "Chocolate"),
-    (ProductWithDependencySpider, True, "CHOCOLATE"),
-    (ProductWithDependencySpider, False, "Chocolate"),
 ])
 def test_settings(spider_class, uppercase_name, expected_name, settings):
     my_settings = settings.copy()
