@@ -10,7 +10,6 @@ from web_poet.pages import ItemPage, is_injectable
 from scrapy_poet.page_input_providers import (
     providers,
     PageObjectInputProvider,
-    register,
     SCRAPY_PROVIDED_CLASSES,
 )
 
