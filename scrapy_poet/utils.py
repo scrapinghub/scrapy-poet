@@ -2,7 +2,11 @@ import inspect
 from typing import Tuple, Dict, Type, Callable, Optional
 
 import andi
+from scrapy import Spider
+from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
+from scrapy.settings import Settings
+from scrapy.statscollectors import StatsCollector
 from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -10,11 +14,19 @@ from web_poet.pages import ItemPage, is_injectable
 from scrapy_poet.page_input_providers import (
     providers,
     PageObjectInputProvider,
-    SCRAPY_PROVIDED_CLASSES,
 )
 
 
 _CALLBACK_FOR_MARKER = '__scrapy_poet_callback'
+
+SCRAPY_PROVIDED_CLASSES = {
+    Spider,
+    Request,
+    Response,
+    Crawler,
+    Settings,
+    StatsCollector,
+}
 
 
 def get_callback(request, spider):

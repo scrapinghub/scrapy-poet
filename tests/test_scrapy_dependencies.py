@@ -5,7 +5,7 @@ from scrapy import Spider
 from scrapy.http import Request
 from web_poet.pages import ItemWebPage
 
-from scrapy_poet.middleware import SCRAPY_PROVIDED_CLASSES
+from scrapy_poet.utils import SCRAPY_PROVIDED_CLASSES
 from scrapy_poet.page_input_providers import (
     provides,
     PageObjectInputProvider,

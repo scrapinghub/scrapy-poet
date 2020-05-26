@@ -11,7 +11,7 @@ from scrapy.statscollectors import StatsCollector
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from scrapy_poet import utils
-from scrapy_poet.page_input_providers import SCRAPY_PROVIDED_CLASSES
+from scrapy_poet.utils import SCRAPY_PROVIDED_CLASSES
 
 
 class InjectionMiddleware:

@@ -8,24 +8,11 @@ external sources, for example, Splash or Auto Extract API.
 import abc
 import typing
 
-from scrapy import Spider
-from scrapy.http import Request, Response
-from scrapy.crawler import Crawler
-from scrapy.statscollectors import StatsCollector
-from scrapy.settings import Settings
+from scrapy.http import Response
 from web_poet.page_inputs import ResponseData
 
 # FIXME: refactor _providers / provides / register,  make a nicer API
 providers = {}
-
-SCRAPY_PROVIDED_CLASSES = {
-    Spider,
-    Request,
-    Response,
-    Crawler,
-    Settings,
-    StatsCollector,
-}
 
 
 class PageObjectInputProvider(abc.ABC):
