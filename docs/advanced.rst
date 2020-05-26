@@ -52,36 +52,15 @@ classes as *provider* dependencies:
 
 .. warning::
 
-    If your provider needs to use a subclass of Response,
-    for example, TextResponse,
-    make sure to annotate your response argument with Response class type.
-
-    This behavior is related to covariance.
-    In simple words,
-    this means a subclass could replace a parent class
-    but a parent class could not substitute its subclasses.
-    Example:
-
-    .. code-block:: python
-
-        class Animal:
-            pass
-
-        class Cat(Animal):
-            def meow(self):
-                pass
-
-    If our provider needs an Animal instance,
-    we could provide either an Animal or a Cat
-    (a more specific Animal subtype).
-    On the other hand,
-    if our provider needs a Cat instance
-    (probably because meow is a requirement),
-    it wouldn't be okay to pass it an Animal instance.
-
-    The same happens with Response and TextResponse.
-    Our Injection Middleware makes no distinction between those classes,
-    so you need to validate the response type by yourself.
+    Scrapy doesn't know when a Request is going to generate
+    a Response, a TextResponse, an HtmlResponse,
+    or any other type that inherits from Response.
+    Because of this,
+    you should always annotate your provider's response argument
+    with the Response type.
+    If your provider needs a TextResponse,
+    you need to validate it by yourself,
+    the same way you would need to do when using Scrapy callbacks.
     Example:
 
     .. code-block:: python
