@@ -18,7 +18,6 @@ from web_poet.page_inputs import ResponseData
 # FIXME: refactor _providers / provides / register,  make a nicer API
 providers = {}
 
-
 SCRAPY_PROVIDED_CLASSES = {
     Spider,
     Request,
