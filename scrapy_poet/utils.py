@@ -19,7 +19,7 @@ from scrapy_poet.page_input_providers import (
 
 _CALLBACK_FOR_MARKER = '__scrapy_poet_callback'
 
-SCRAPY_PROVIDED_CLASSES = {
+_SCRAPY_PROVIDED_CLASSES = {
     Spider,
     Request,
     Response,
@@ -89,7 +89,7 @@ def is_provider_using_response(provider):
     plan = andi.plan(
         provider,
         is_injectable=is_injectable,
-        externally_provided=SCRAPY_PROVIDED_CLASSES,
+        externally_provided=_SCRAPY_PROVIDED_CLASSES,
     )
     for possible_type, _ in plan:
         if issubclass(possible_type, Response):

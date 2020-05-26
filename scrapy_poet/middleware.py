@@ -11,7 +11,7 @@ from scrapy.statscollectors import StatsCollector
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from scrapy_poet import utils
-from scrapy_poet.utils import SCRAPY_PROVIDED_CLASSES
+from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES
 
 
 class InjectionMiddleware:
@@ -68,7 +68,7 @@ class InjectionMiddleware:
             Settings: spider.settings,
             StatsCollector: spider.crawler.stats,
         }
-        assert set(dependencies.keys()) == SCRAPY_PROVIDED_CLASSES
+        assert set(dependencies.keys()) == _SCRAPY_PROVIDED_CLASSES
         plan, provider_instances = utils.build_plan(callback, dependencies)
 
         # Build all instances declared as dependencies
