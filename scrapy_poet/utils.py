@@ -11,6 +11,7 @@ from scrapy_poet.page_input_providers import (
     providers,
     PageObjectInputProvider,
     register,
+    SCRAPY_PROVIDED_CLASSES,
 )
 
 
@@ -74,10 +75,14 @@ def is_callback_using_response(callback: Callable):
 
 def is_provider_using_response(provider):
     """Check whether injectable provider makes use of a valid Response."""
-    for argument, possible_types in andi.inspect(provider.__init__).items():
-        for cls in possible_types:
-            if issubclass(cls, Response):
-                return True
+    plan = andi.plan(
+        provider,
+        is_injectable=is_injectable,
+        externally_provided=SCRAPY_PROVIDED_CLASSES,
+    )
+    for possible_type, _ in plan:
+        if issubclass(possible_type, Response):
+            return True
 
     return False
 
