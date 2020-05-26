@@ -48,6 +48,10 @@ class InjectionMiddleware:
         its type. Otherwise, this middleware doesn't populate
         ``request.cb_kwargs`` for this argument.
 
+        If there's a collision between an already set ``cb_kwargs``
+        and an injectable attribute,
+        the user-defined ``cb_kwargs`` takes precedence.
+
         Currently, we are able to inject instances of the following
         classes as *provider* dependencies:
 
