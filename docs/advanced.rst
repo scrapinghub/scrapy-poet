@@ -58,7 +58,7 @@ classes as *provider* dependencies:
     Because of this,
     you should always annotate your provider's response argument
     with the Response type.
-    If your provider needs a TextResponse,
+    If your provider only supports TextResponse,
     you need to validate it by yourself,
     the same way you would need to do when using Scrapy callbacks.
     Example:
