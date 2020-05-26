@@ -126,7 +126,7 @@ def build_providers(instances) -> Dict[Type, PageObjectInputProvider]:
         kwargs = andi.plan(
             provider,
             is_injectable=is_injectable,
-            externally_provided=list(instances.keys()),
+            externally_provided=instances.keys(),
             full_final_kwargs=True,
         ).final_kwargs(instances)
         result[cls] = provider(**kwargs)  # type: ignore
