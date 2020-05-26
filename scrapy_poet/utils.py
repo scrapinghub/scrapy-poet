@@ -96,17 +96,17 @@ def is_response_going_to_be_used(request, spider):
 
 
 def discover_callback_providers(callback):
-    for argument, possible_types in andi.inspect(callback).items():
-        for cls in possible_types:
-            if is_injectable(cls):
-                yield from discover_callback_providers(cls)
-                continue
+    plan = andi.plan(
+        callback,
+        is_injectable=is_injectable,
+        externally_provided=providers.keys(),
+    )
+    for obj, _ in plan:
+        provider = providers.get(obj)
+        if not provider:
+            continue
 
-            provider = providers.get(cls)
-            if not provider:
-                continue
-
-            yield provider
+        yield provider
 
 
 def build_plan(callback, instances) -> Tuple[andi.Plan, Dict[Type, PageObjectInputProvider]]:
