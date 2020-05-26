@@ -82,19 +82,6 @@ def is_provider_using_response(provider):
     return False
 
 
-def is_response_going_to_be_used(request, spider):
-    """Check whether the request's response is going to be used."""
-    callback = get_callback(request, spider)
-    if is_callback_using_response(callback):
-        return True
-
-    for provider in discover_callback_providers(callback):
-        if is_provider_using_response(provider):
-            return True
-
-    return False
-
-
 def discover_callback_providers(callback):
     plan = andi.plan(
         callback,
@@ -107,6 +94,19 @@ def discover_callback_providers(callback):
             continue
 
         yield provider
+
+
+def is_response_going_to_be_used(request, spider):
+    """Check whether the request's response is going to be used."""
+    callback = get_callback(request, spider)
+    if is_callback_using_response(callback):
+        return True
+
+    for provider in discover_callback_providers(callback):
+        if is_provider_using_response(provider):
+            return True
+
+    return False
 
 
 def build_plan(callback, instances) -> Tuple[andi.Plan, Dict[Type, PageObjectInputProvider]]:
