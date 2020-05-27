@@ -49,7 +49,7 @@ class PageObjectInputProvider(abc.ABC):
                 class MyCustomResponseDataProvider(PageObjectInputProvider):
 
                     def __init__(self, response: Response):
-                        assert issubclass(response, TextResponse)
+                        assert isinstance(response, TextResponse)
                         self.response = response
         """
 
