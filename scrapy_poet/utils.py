@@ -2,15 +2,31 @@ import inspect
 from typing import Tuple, Dict, Type, Callable, Optional
 
 import andi
+from scrapy import Spider
+from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
+from scrapy.settings import Settings
+from scrapy.statscollectors import StatsCollector
 from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from web_poet.pages import ItemPage, is_injectable
-from scrapy_poet.page_input_providers import providers, PageObjectInputProvider
+from scrapy_poet.page_input_providers import (
+    providers,
+    PageObjectInputProvider,
+)
 
 
 _CALLBACK_FOR_MARKER = '__scrapy_poet_callback'
+
+_SCRAPY_PROVIDED_CLASSES = {
+    Spider,
+    Request,
+    Response,
+    Crawler,
+    Settings,
+    StatsCollector,
+}
 
 
 def get_callback(request, spider):
@@ -36,37 +52,10 @@ class DummyResponse(Response):
     If there's no Page Input that depends on a Scrapy ``Response``, the
     ``InjectionMiddleware`` is going to skip download and provide a
     ``DummyResponse`` to your parser instead.
-
-    If your ``PageObjectInputProvider`` doesn't need a request, you simply
-    don't need to list it as a dependency. But if you need, for example, the
-    original request's URL, you can use ``DummyResponse`` instead of
-    ``Response``:
-
-    .. code-block:: python
-
-        @provides(ResponseData)
-        class ResponseDataProvider(PageObjectInputProvider):
-
-            def __init__(self, response: DummyResponse):
-                self.response = response
-
-            async def __call__(self):
-                data = await self.get_data()
-                return ResponseData(
-                    url=self.response.url,
-                    html=data
-                )
-
-            async def get_data(self):
-                # make an api call
-                # make a database query
-                # read from disk
-                # ...
-                pass
     """
 
     def __init__(self, url: str, request=Optional[Request]):
-        super(DummyResponse, self).__init__(url=url, request=request)
+        super().__init__(url=url, request=request)
 
 
 def is_callback_using_response(callback: Callable):
@@ -97,22 +86,30 @@ def is_callback_using_response(callback: Callable):
 
 def is_provider_using_response(provider):
     """Check whether injectable provider makes use of a valid Response."""
-    for argument, possible_types in andi.inspect(provider.__init__).items():
-        for cls in possible_types:
-            if not issubclass(cls, Response):
-                # Type annotation is not a sub-class of Response.
-                continue
-
-            if issubclass(cls, DummyResponse):
-                # Type annotation is a DummyResponse.
-                continue
-
-            # Type annotation is a sub-class of Response, but not a sub-class
-            # of DummyResponse, so we're probably using it.
+    plan = andi.plan(
+        provider,
+        is_injectable=is_injectable,
+        externally_provided=_SCRAPY_PROVIDED_CLASSES,
+    )
+    for possible_type, _ in plan:
+        if issubclass(possible_type, Response):
             return True
 
-    # Could not find any Response type annotation in the used providers.
     return False
+
+
+def discover_callback_providers(callback):
+    plan = andi.plan(
+        callback,
+        is_injectable=is_injectable,
+        externally_provided=providers.keys(),
+    )
+    for obj, _ in plan:
+        provider = providers.get(obj)
+        if not provider:
+            continue
+
+        yield provider
 
 
 def is_response_going_to_be_used(request, spider):
@@ -121,27 +118,16 @@ def is_response_going_to_be_used(request, spider):
     if is_callback_using_response(callback):
         return True
 
-    plan, _ = build_plan(callback, None)
-    for provider in get_providers(plan):
+    for provider in discover_callback_providers(callback):
         if is_provider_using_response(provider):
             return True
 
     return False
 
 
-def get_providers(plan: andi.Plan):
-    for obj, _ in plan:
-        provider = providers.get(obj)  # type: ignore
-        if not provider:
-            continue
-
-        yield provider
-
-
-def build_plan(callback, response
-               ) -> Tuple[andi.Plan, Dict[Type, PageObjectInputProvider]]:
+def build_plan(callback, instances) -> Tuple[andi.Plan, Dict[Type, PageObjectInputProvider]]:
     """Build a plan for the injection in the callback."""
-    provider_instances = build_providers(response)
+    provider_instances = build_providers(instances)
     plan = andi.plan(
         callback,
         is_injectable=is_injectable,
@@ -150,14 +136,16 @@ def build_plan(callback, response
     return plan, provider_instances
 
 
-def build_providers(response) -> Dict[Type, PageObjectInputProvider]:
-    # find out what resources are available
+def build_providers(instances) -> Dict[Type, PageObjectInputProvider]:
     result = {}
     for cls, provider in providers.items():
-        if andi.inspect(provider.__init__):
-            result[cls] = provider(response)  # type: ignore
-        else:
-            result[cls] = provider()
+        kwargs = andi.plan(
+            provider,
+            is_injectable=is_injectable,
+            externally_provided=instances.keys(),
+            full_final_kwargs=True,
+        ).final_kwargs(instances)
+        result[cls] = provider(**kwargs)  # type: ignore
 
     return result
 
@@ -176,7 +164,7 @@ def build_instances(plan: andi.Plan, providers):
 
 def callback_for(page_cls: Type[ItemPage]) -> Callable:
     """This function is a helper for creating callbacks for ``ItemPage``
-    sub-classes. The generated callback should return the result of the
+    subclasses. The generated callback should return the result of the
     call to the ``ItemPage.to_item`` method.
 
     The generated callback could be used as a spider instance method or passed
@@ -200,7 +188,7 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     """
     if not issubclass(page_cls, ItemPage):
         raise TypeError(
-            f'{page_cls.__name__} should be a sub-class of ItemPage.')
+            f'{page_cls.__name__} should be a subclass of ItemPage.')
 
     if getattr(page_cls.to_item, '__isabstractmethod__', False):
         raise NotImplementedError(

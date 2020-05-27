@@ -4,10 +4,14 @@ are executed.
 """
 
 from scrapy import Spider
+from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
+from scrapy.settings import Settings
+from scrapy.statscollectors import StatsCollector
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from scrapy_poet import utils
+from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES
 
 
 class InjectionMiddleware:
@@ -39,20 +43,37 @@ class InjectionMiddleware:
     @inlineCallbacks
     def process_response(self, request: Request, response: Response,
                          spider: Spider):
-        """This method instantiates all ``Injectable`` sub-classes declared as
+        """This method instantiates all ``Injectable`` subclasses declared as
         request callback arguments and any other parameter with a provider for
         its type. Otherwise, this middleware doesn't populate
         ``request.cb_kwargs`` for this argument.
 
-        .. warning::
+        If there's a collision between an already set ``cb_kwargs``
+        and an injectable attribute,
+        the user-defined ``cb_kwargs`` takes precedence.
 
-            We should be able to inject any type into classes that inherit from
-            ``web_poet.pages.Injectable``, but currently, we're only able to
-            build and inject ``scrapy.Response`` instances.
+        Currently, we are able to inject instances of the following
+        classes as *provider* dependencies:
+
+        - :class:`~scrapy.Spider`
+        - :class:`~scrapy.http.Request`
+        - :class:`~scrapy.http.Response`
+        - :class:`~scrapy.crawler.Crawler`
+        - :class:`~scrapy.settings.Settings`
+        - :class:`~scrapy.statscollectors.StatsCollector`
         """
         # Find out the dependencies
         callback = utils.get_callback(request, spider)
-        plan, provider_instances = utils.build_plan(callback, response)
+        dependencies = {
+            Spider: spider,
+            Request: request,
+            Response: response,
+            Crawler: spider.crawler,
+            Settings: spider.settings,
+            StatsCollector: spider.crawler.stats,
+        }
+        assert set(dependencies.keys()) == _SCRAPY_PROVIDED_CLASSES
+        plan, provider_instances = utils.build_plan(callback, dependencies)
 
         # Build all instances declared as dependencies
         instances = yield from utils.build_instances(

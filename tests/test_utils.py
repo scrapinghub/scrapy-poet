@@ -35,13 +35,13 @@ class FakeProductResponse:
 @provides(DummyProductResponse)
 class DummyProductProvider(PageObjectInputProvider):
 
-    def __init__(self, response: DummyResponse):
-        self.response = response
+    def __init__(self, request: scrapy.Request):
+        self.request = request
 
     def __call__(self):
         data = {
             'product': {
-                'url': self.response.url,
+                'url': self.request.url,
                 'name': 'Sample',
             },
         }
@@ -63,6 +63,8 @@ class FakeProductProvider(PageObjectInputProvider):
 
 class TextProductProvider(ResponseDataProvider):
 
+    # This is wrong. You should not annotate provider dependencies with classes
+    # like TextResponse or HtmlResponse, you should use Response instead.
     def __init__(self, response: TextResponse):
         self.response = response
 
@@ -166,7 +168,9 @@ def test_get_callback():
 def test_is_provider_using_response():
     assert is_provider_using_response(PageObjectInputProvider) is False
     assert is_provider_using_response(ResponseDataProvider) is True
-    assert is_provider_using_response(TextProductProvider) is True
+    # TextProductProvider wrongly annotates response dependency as
+    # TextResponse, instead of using the Response type.
+    assert is_provider_using_response(TextProductProvider) is False
     assert is_provider_using_response(DummyProductProvider) is False
     assert is_provider_using_response(FakeProductProvider) is False
     assert is_provider_using_response(StringProductProvider) is False

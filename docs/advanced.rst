@@ -40,11 +40,7 @@ that need it, like the ``ItemWebPage``.
 
 You are able to implement your own providers in order to extend or override
 current scrapy-poet behavior.
-
-.. warning::
-
-    Currently, scrapy-poet is only able to inject ``Response`` and
-    :class:`~.DummyResponse` instances as *provider* dependencies.
+Please, check :class:`PageObjectInputProvider` for more details.
 
 Ignoring requests
 =================
@@ -93,13 +89,13 @@ If neither spider callback nor any of the input providers are using
     @provides(CachedData)
     class CachedDataProvider(PageObjectInputProvider):
 
-        def __init__(self, response: DummyResponse):
-            self.response = response
+        def __init__(self, request: scrapy.Request):
+            self.request = request
 
         def __call__(self):
             return CachedData(
-                key=self.response.url,
-                value=get_cached_content(self.response.url)
+                key=self.request.url,
+                value=get_cached_content(self.request.url)
             )
 
 

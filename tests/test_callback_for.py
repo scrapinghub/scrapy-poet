@@ -105,7 +105,7 @@ def test_invalid_subclass():
     with pytest.raises(TypeError) as exc:
         callback_for(MyClass)
 
-    msg = 'MyClass should be a sub-class of ItemPage.'
+    msg = 'MyClass should be a subclass of ItemPage.'
     assert str(exc.value) == msg
 
 
