@@ -1,8 +1,8 @@
 .. _`intro-install`:
 
-==================
-Installation guide
-==================
+============
+Installation
+============
 
 Installing scrapy-poet
 ======================

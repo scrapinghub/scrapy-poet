@@ -7,6 +7,12 @@ Tutorial
 In this tutorial, we’ll assume that scrapy-poet is already installed on your
 system. If that’s not the case, see :ref:`intro-install`.
 
+.. note::
+
+    This tutorial can be followed without reading `web-poet docs`_, but
+    for the better understanding it is highly recommended to check them first.
+
+
 We are going to scrape `books.toscrape.com <http://books.toscrape.com/>`_,
 a website that lists books from famous authors.
 
@@ -19,6 +25,8 @@ This tutorial will walk you through these tasks:
 
 If you're not already familiar with Scrapy, and want to learn it quickly,
 the `Scrapy Tutorial`_ is a good resource.
+
+.. _web-poet docs: https://web-poet.readthedocs.io/en/latest/
 
 Creating a spider
 =================
@@ -76,7 +84,8 @@ Now we have a ``BookPage`` class that implements the ``to_item`` method.
 This class contains all logic necessary for extracting an item from
 an individual book page like
 http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html,
-and nothing else.
+and nothing else. In particular, ``BookPage`` is now independent of Scrapy,
+and and is not doing any I/O.
 
 If we want, we can organize code in a different way, and e.g.
 extract a property from the ``to_item`` method:
@@ -112,7 +121,7 @@ To use scrapy-poet, enable its downloader middleware in ``settings.py``:
     }
 
 
-BookPage class we created previously can be used without scrapy-poet,
+``BookPage`` class we created previously can be used without scrapy-poet,
 and even without Scrapy (note that imports were from ``web_poet`` so far).
 
 ``scrapy-poet`` makes it easy to use ``web-poet`` Page Objects
