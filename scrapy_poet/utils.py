@@ -163,28 +163,47 @@ def build_instances(plan: andi.Plan, providers):
 
 
 def callback_for(page_cls: Type[ItemPage]) -> Callable:
-    """This function is a helper for creating callbacks for ``ItemPage``
-    subclasses. The generated callback should return the result of the
-    call to the ``ItemPage.to_item`` method.
+    """Create a callback for an :class:`web_poet.pages.ItemPage` subclass.
 
-    The generated callback could be used as a spider instance method or passed
-    as an inline/anonymous argument. Make sure to define it as a spider
-    argument if you're planning to use disk queues because in this case,
-    Scrapy should be able to serialize your request object.
+    The generated callback returns the output of the
+    ``ItemPage.to_item()`` method, i.e. extracts a single item
+    from a web page, using a Page Object.
 
-    Example:
+    This helper allows to reduce the boilerplate when working
+    with Page Objects. For example, instead of this:
 
     .. code-block:: python
 
         class BooksSpider(scrapy.Spider):
-
             name = 'books'
             start_urls = ['http://books.toscrape.com/']
-            parse_book = callback_for(BookPage)
 
             def parse(self, response):
                 links = response.css('.image_container a')
                 yield from response.follow_all(links, self.parse_book)
+
+            def parse_book(self, response: DummyResponse, page: BookPage):
+                return page.to_item()
+
+    It allows to write this:
+
+    .. code-block:: python
+
+        class BooksSpider(scrapy.Spider):
+            name = 'books'
+            start_urls = ['http://books.toscrape.com/']
+
+            def parse(self, response):
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
+
+            parse_book = callback_for(BookPage)
+
+    The generated callback could be used as a spider instance method or passed
+    as an inline/anonymous argument. Make sure to define it as a spider
+    attribute (as shown in the example above) if you're planning to use
+    disk queues, because in this case Scrapy is able to serialize
+    your request object.
     """
     if not issubclass(page_cls, ItemPage):
         raise TypeError(
