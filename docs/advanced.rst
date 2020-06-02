@@ -4,6 +4,18 @@
 Advanced Usage
 ==============
 
+.. note::
+
+    This document assumes a good familiarity with ``web-poet`` concepts;
+    make sure you've read ``web-poet`` docs_.
+
+    This page is mostly aimed at developers who want to extend scrapy-poet,
+    not to developers who're writing extraction and crawling code using
+    scrapy-poet.
+
+
+.. _docs: https://web-poet.readthedocs.io/en/latest/
+
 Creating providers
 ==================
 
