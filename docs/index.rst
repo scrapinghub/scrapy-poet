@@ -1,43 +1,42 @@
-.. scrapy-poet documentation master file, created by
-   sphinx-quickstart on Tue Apr 28 16:45:10 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 =========================
 scrapy-poet documentation
 =========================
 
-scrapy-poet easily integrates Page Objects created using `web-poet`_ with
-Scrapy through the configuration of a dependency injection middleware.
+scrapy-poet allows to use `web-poet`_ Page Objects with Scrapy.
 
-`web-poet`_ is used to make reusable Page Objects that separates
-extraction logic from crawling. They could be easily tested and distributed
-across different projects. Also, they could make use of different backends,
-for example, acquiring data from `Splash`_ and `AutoExtract`_ API.
+web-poet_ defines a standard for writing reusable and portable
+extraction and crawling code; please check its docs_ to learn more.
 
-The goal of this project is to provide a bridge between 
-:ref:`Scrapy Spiders <scrapy:topics-spiders>` and Page Objects.
+By using ``scrapy-poet`` you'll be organizing the spider code in a different
+way, which separates extraction and crawling logic from the I/O,
+and from the Scrapy implementation details as well.
+It makes the code more testable and reusable.
 
-Please, see also our :ref:`intro-install` and our :ref:`intro-tutorial`
-for a quick start.
+``scrapy-poet`` also provides a way to integrate third-party APIs
+(like `Splash`_ and `AutoExtract`_) with the spider, without losing
+testability and reusability.
+Concrete integrations are not provided by ``scrapy-poet``, but
+``scrapy-poet`` makes them possbile.
+
+To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
 
 :ref:`license` is BSD 3-clause.
 
 .. _`AutoExtract`: https://scrapinghub.com/autoextract
 .. _`Splash`: https://scrapinghub.com/splash
 .. _`web-poet`: https://github.com/scrapinghub/web-poet
+.. _docs: https://web-poet.readthedocs.io/en/latest/
 
 .. toctree::
    :caption: Getting started
-   :hidden:
+   :maxdepth: 1
 
    intro/install
    intro/tutorial
 
 .. toctree::
    :caption: Reference
-   :maxdepth: 2
-   :hidden:
+   :maxdepth: 1
 
    advanced
    api_reference
