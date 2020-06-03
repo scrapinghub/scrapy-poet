@@ -8,16 +8,17 @@ web-poet_ defines a standard for writing reusable and portable
 extraction and crawling code; please check its docs_ to learn more.
 
 By using ``scrapy-poet`` you'll be organizing the spider code in a different
-way, which allows to separate extraction and crawling logic from the I/O,
-and from the Scrapy implementation details as well. It makes the code
-more testable and reusable.
+way, which separates extraction and crawling logic from the I/O,
+and from the Scrapy implementation details as well.
+It makes the code more testable and reusable.
 
 ``scrapy-poet`` also provides a way to integrate third-party APIs
 (like `Splash`_ and `AutoExtract`_) with the spider, without losing
-testability & reusability. Concrete integrations are not provided by
-``scrapy-poet``, but ``scrapy-poet`` makes them possbile.
+testability and reusability.
+Concrete integrations are not provided by ``scrapy-poet``, but
+``scrapy-poet`` makes them possbile.
 
-To get started, see :ref:`intro-install` and the :ref:`intro-tutorial`.
+To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
 
 :ref:`license` is BSD 3-clause.
 

@@ -10,7 +10,7 @@ system. If that’s not the case, see :ref:`intro-install`.
 .. note::
 
     This tutorial can be followed without reading `web-poet docs`_, but
-    for the better understanding it is highly recommended to check them first.
+    for a better understanding it is highly recommended to check them first.
 
 
 We are going to scrape `books.toscrape.com <http://books.toscrape.com/>`_,
@@ -84,8 +84,9 @@ Now we have a ``BookPage`` class that implements the ``to_item`` method.
 This class contains all logic necessary for extracting an item from
 an individual book page like
 http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html,
-and nothing else. In particular, ``BookPage`` is now independent of Scrapy,
-and and is not doing any I/O.
+and nothing else.
+In particular, ``BookPage`` is now independent of Scrapy,
+and is not doing any I/O.
 
 If we want, we can organize code in a different way, and e.g.
 extract a property from the ``to_item`` method:
