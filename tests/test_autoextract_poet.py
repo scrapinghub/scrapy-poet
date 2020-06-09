@@ -14,8 +14,6 @@ def test_autoextract_responses():
 
 
 def test_query_level_error_exception():
-    exc = QueryLevelError("my_url", "myPageType", ["query", "args"], "error")
-    assert exc.url == "my_url"
-    assert exc.page_type == "myPageType"
-    assert exc.query == ["query", "args"]
+    exc = QueryLevelError(["my_url", "myPageType"], "error")
+    assert exc.query == ["my_url", "myPageType"]
     assert exc.msg == "error"
