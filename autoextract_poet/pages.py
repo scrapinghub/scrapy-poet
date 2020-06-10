@@ -25,8 +25,12 @@ class ProductListPage(ItemPage):
 
     autoextract_response: ProductListResponseData
 
+    @property
+    def _product_list(self):
+        return self.autoextract_response.data.get("productList", {})
+
     def breadcrumbs(self):
-        return self.autoextract_response.data.get("productList", {}).get("breadcrumbs", [])
+        return self._product_list.get("breadcrumbs", [])
 
     def urls(self):
         urls = [item.get("url") for item in self.to_items()]
@@ -34,4 +38,4 @@ class ProductListPage(ItemPage):
         return urls
 
     def to_items(self):
-        return self.autoextract_response.data.get("productList", {}).get("products", [])
+        return self._product_list.get("products", [])
