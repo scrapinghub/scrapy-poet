@@ -18,5 +18,4 @@ async def request(url: str, page_type: str, full_html=True):
 
         return response
 
-    # FIXME: move retry logic to this lib
     return await autoextract_retry(_request)()
