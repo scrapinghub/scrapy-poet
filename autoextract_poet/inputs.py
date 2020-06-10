@@ -3,18 +3,18 @@ from typing import Any, Dict, Optional
 
 
 @dataclass
-class AutoExtractResponseData:
+class ResponseData:
     """Represent an AutoExtract API response containing returned data."""
     data: Optional[Dict[str, Any]]
 
 
 @dataclass
-class AutoExtractProductResponseData(AutoExtractResponseData):
+class ProductResponseData(ResponseData):
     """Represent an AutoExtract Product response."""
     pass
 
 
 @dataclass
-class AutoExtractProductListResponseData(AutoExtractResponseData):
+class ProductListResponseData(ResponseData):
     """Represent an AutoExtract Product List response."""
     pass

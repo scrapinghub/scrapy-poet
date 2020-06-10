@@ -2,18 +2,18 @@ from dataclasses import dataclass
 
 from web_poet.pages import ItemPage
 
-from autoextract_poet.mixins import AutoExtractResponseShortcutsMixin
+from autoextract_poet.mixins import ResponseShortcutsMixin
 from autoextract_poet.inputs import (
-    AutoExtractProductResponseData,
-    AutoExtractProductListResponseData,
+    ProductResponseData,
+    ProductListResponseData,
 )
 
 
 @dataclass
-class AutoExtractProductPage(ItemPage, AutoExtractResponseShortcutsMixin):
+class ProductPage(ItemPage, ResponseShortcutsMixin):
     """Generic product page."""
 
-    autoextract_response: AutoExtractProductResponseData
+    autoextract_response: ProductResponseData
 
     def to_item(self):
         product = self.autoextract_response.data.get("product", {})
@@ -21,10 +21,10 @@ class AutoExtractProductPage(ItemPage, AutoExtractResponseShortcutsMixin):
 
 
 @dataclass
-class AEProductListPage(ItemPage, AutoExtractResponseShortcutsMixin):
+class ProductListPage(ItemPage, ResponseShortcutsMixin):
     """Generic product list page."""
 
-    autoextract_response: AutoExtractProductListResponseData
+    autoextract_response: ProductListResponseData
 
     def breadcrumbs(self):
         return self.autoextract_response.data.get("productList", {}).get("breadcrumbs", [])

@@ -8,8 +8,8 @@ from scrapy_poet.page_input_providers import (
 )
 
 from autoextract_poet.inputs import (
-    AutoExtractProductResponseData,
-    AutoExtractProductListResponseData,
+    ProductResponseData,
+    ProductListResponseData,
 )
 from autoextract_poet.utils import request
 
@@ -35,15 +35,15 @@ class AutoExtractProvider(PageObjectInputProvider):
         return self.page_input_class(data=data)
 
 
-@provides(AutoExtractProductResponseData)
+@provides(ProductResponseData)
 class AutoExtractProductResponseDataProvider(AutoExtractProvider):
 
     page_type = "product"
-    page_input_class = AutoExtractProductResponseData
+    page_input_class = ProductResponseData
 
 
-@provides(AutoExtractProductListResponseData)
+@provides(ProductListResponseData)
 class AutoExtractProductListResponseDataProvider(AutoExtractProvider):
 
     page_type = "productList"
-    page_input_class = AutoExtractProductListResponseData
+    page_input_class = ProductListResponseData

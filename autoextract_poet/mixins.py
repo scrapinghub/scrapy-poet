@@ -2,7 +2,7 @@ from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.page_inputs import ResponseData
 
 
-class AutoExtractResponseShortcutsMixin(ResponseShortcutsMixin):
+class ResponseShortcutsMixin(ResponseShortcutsMixin):
 
     @property
     def response(self):
