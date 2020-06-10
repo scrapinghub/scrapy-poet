@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from web_poet.pages import ItemPage
 
-from autoextract_poet.mixins import ResponseShortcutsMixin
 from autoextract_poet.inputs import (
     ProductResponseData,
     ProductListResponseData,
@@ -10,7 +9,7 @@ from autoextract_poet.inputs import (
 
 
 @dataclass
-class ProductPage(ItemPage, ResponseShortcutsMixin):
+class ProductPage(ItemPage):
     """Generic product page."""
 
     autoextract_response: ProductResponseData
@@ -21,7 +20,7 @@ class ProductPage(ItemPage, ResponseShortcutsMixin):
 
 
 @dataclass
-class ProductListPage(ItemPage, ResponseShortcutsMixin):
+class ProductListPage(ItemPage):
     """Generic product list page."""
 
     autoextract_response: ProductListResponseData
