@@ -1,4 +1,21 @@
+import sys
 from setuptools import setup, find_packages
+
+
+def get_requirements():
+    requirements = [
+        'andi>=0.3',
+        'attrs',
+        'parsel',
+        'tenacity',
+        'web-poet',
+    ]
+
+    if not sys.version_info >= (3, 7):
+        requirements.append('dataclasses')
+
+    return requirements
+
 
 setup(
     name='scrapy-poet',
@@ -10,7 +27,7 @@ setup(
     author_email='kmike84@gmail.com',
     url='https://github.com/scrapinghub/scrapy-poet',
     packages=find_packages(exclude=['tests', 'example']),
-    install_requires=['andi>=0.3', 'attrs', 'parsel', 'tenacity', 'web-poet'],
+    install_requires=get_requirements(),
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
