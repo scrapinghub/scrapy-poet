@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
 from autoextract.aio import request_raw
-from autocrawl.autoextract_retry import autoextract_retry
+
+from autoextract_poet.retry import autoextract_retry
 
 
 @dataclass
