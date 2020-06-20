@@ -24,6 +24,8 @@ class AutoExtractProvider(PageObjectInputProvider):
         self.stats = stats
 
     async def __call__(self):
+        self.stats.inc_value(f"autoextract/{self.page_type}/total")
+
         try:
             # FIXME: how to configure if you want full HTML or not?
             data = await request(self.request.url, self.page_type)
