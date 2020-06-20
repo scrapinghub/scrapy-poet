@@ -1,18 +1,38 @@
+from dataclasses import dataclass
+
 from autoextract.aio import request_raw
 from autocrawl.autoextract_retry import autoextract_retry
 
-from autoextract_poet.exceptions import QueryLevelError
+
+@dataclass
+class Query:
+
+    url: str
+    page_type: str
+    full_html: bool = True
+
+    @property
+    def autoextract_query(self):
+        return [
+            {
+                "url": self.url,
+                "pageType": self.page_type,
+                "fullHtml": self.full_html,
+            },
+        ]
 
 
-async def request(url: str, page_type: str, full_html=True):
-    query = [dict(url=url, pageType=page_type, fullHtml=full_html)]
+@dataclass
+class QueryLevelError(Exception):
+
+    query: Query
+    msg: str
+
+
+async def request(query: Query):
 
     async def _request():
-        response_per_url = await request_raw(query)
-
-        # A single url send, so a single element in the response
-        response = response_per_url[0]
-
+        response = await request_raw(query.autoextract_query)[0]
         if "error" in response:
             raise QueryLevelError(query, response)
 
