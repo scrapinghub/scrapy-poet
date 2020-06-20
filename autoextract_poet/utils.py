@@ -3,31 +3,7 @@ from dataclasses import dataclass
 from autoextract.aio import request_raw
 
 from autoextract_poet.retry import autoextract_retry
-
-
-@dataclass
-class Query:
-
-    url: str
-    page_type: str
-    full_html: bool = True
-
-    @property
-    def autoextract_query(self):
-        return [
-            {
-                "url": self.url,
-                "pageType": self.page_type,
-                "fullHtml": self.full_html,
-            },
-        ]
-
-
-@dataclass
-class QueryLevelError(Exception):
-
-    query: Query
-    msg: str
+from autoextract_poet.exceptions import QueryLevelError
 
 
 async def request(query: Query):

@@ -3,7 +3,8 @@ from autoextract_poet.inputs import (
     ProductResponseData,
     ProductListResponseData,
 )
-from autoextract_poet.utils import Query, QueryLevelError
+from autoextract_poet.query import Query
+from autoextract_poet.exceptions import QueryLevelError
 
 
 def test_autoextract_responses():
