@@ -1,7 +1,6 @@
-from dataclasses import dataclass
-
 from autoextract.aio import request_raw
 
+from autoextract_poet.query import Query
 from autoextract_poet.retry import autoextract_retry
 from autoextract_poet.exceptions import QueryLevelError
 
