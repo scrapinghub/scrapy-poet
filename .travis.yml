@@ -1,9 +1,7 @@
 language: python
-
 branches:
   only:
   - master
-
 matrix:
   include:
   - python: 3.6
@@ -16,20 +14,16 @@ matrix:
     env: TOXENV=mypy
   - python: 3.7
     env: TOXENV=docs
-
 install:
 - pip install -U tox codecov
-
 script: tox
-
 after_success:
 - codecov
-
 deploy:
   provider: pypi
-  user: kmike
+  user: scrapinghub
   password:
-    secure: cdEikDuOBG/ZIOeNhvzt/KNPJsgV7RMO6k2yRVFdz/UZmdVrdrPXrR+1a7ui302POCiRaFe1vh4ukyqQN5KBsOOlMMfnN4By7dernvne8DPYxM/UDlCOLtVJz0TOzCWDcJBiz/dHcXh49HFOj6StVSAc8dHGIP7RYIs0Hfqly7UyOF0bnJXpd8YGyURjY2gwJD0DAc5/GKbWF+xJeNtGKxB0BysB5x/2+icJTlfF3Y0WPzzaNDL1qgtHHjfEOUelb/S+Cgzf4Emj2376AEr6foiW+6s125rjXEtGul/qM1kgCzJgMHZC7PxKAbUb7mmiifoGpU+0HxoiWBDSntWcdqQFZ2+Sg4hdT2PAhf4mlJmZiop0nxom8C3opdNIkcyIIQcg7cse49f3d3AjmDmkoGteKPmnpuB+xmoxvVsYkMHrqAvMJwXhC+sKIYCD/d5khLXhlWMkuKZr43UyKGnrM2KI6dSVty+2iWStHGZvf2eRZ5KgQ2990iObgtC4uMtPjkyNaRyaDZfC3kOlS+OjIxkmtqWqJtnLaUwxMRCAdPdOHxKMdPRoLrh66zpmey2idJnYudIF+nR2FAwPiHRfbkJPFxFsaQcM6YsB0H7ULZIzQFlaZ3+z5Tq9jPUGz3xNaD4O3R2yQoOw9zj4psqp8ZYDWK44ej3MDleG3G0rt8o=
+    secure: MunaE0D2sEkNOrtBcp5adZueImdXmn9Wobd6XnKwaEhA/v6aNDwXAUjUvgrFLpidQm4OI0wORPiArnOht2sGxKltILOVXK630vtwNna3FpJCZd4EGa/KGCR6AMtJW6UlopzyXkIXzEHta0HbPRgFKVTjeeRMh+SygP0Vba0eKIF2AgzAitl4GCRj9oOhNfZQjktCFV1euG49TLoqWdYpedxBu8KpJGC/6wk2Q1DiPTclE28xNZ1imjBtVuUIqsoRlLxMBhxCkAyuCs2a5C9mm8AsCXE5RnZc/8KakdI32Cqgk5XnZjFAmCDfrwDqNHoiBb+aT1kuY+P62E99kU1GxchqSQ+COLktBbsJrpBXQx2UBQ0yuu/ZozFR82nRxiDtvwzhRqVE4LbTihekEMy+OBIk+JcD3FtWYX4oFyuW1rMlo7CvIaFEHOsUpov60KrJMQ44LrASW2Fp6InQL8Jjwr6nceeIVgpB2CQsuUCJxwKSjY9b13fsEM27OcxhTrj6o7X2yIhnR6fPlmtYjFvXe5OtM8Op/CzpUim+/TG7Bi0gP9RvS3FvHeGwbnebyQw7jZhD/QU7WVThuHjyhTOkTJLN1SteMv4bFBKNrdW70COotArP2NdWFIwWb9SVoRuMUNtvb91mIyOGoZ0Ojh8QGcQRGQjkJoAlrAgQhdaatjM=
   on:
     tags: true
     repo: scrapinghub/scrapy-poet
