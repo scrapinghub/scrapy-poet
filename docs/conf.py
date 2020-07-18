@@ -24,7 +24,7 @@ author = u'Scrapinghub'
 # The short X.Y version
 version = u''
 # The full version, including alpha/beta/rc tags
-release = u'0.0.2'
+release = u'0.0.3'
 
 
 # -- General configuration ---------------------------------------------------
