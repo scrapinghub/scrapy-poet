@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.0.3 (TBA)
+0.0.3 (2020-07-19)
 ------------------
 
 * Documentation improvements
