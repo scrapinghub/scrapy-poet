@@ -2,6 +2,13 @@
 Changelog
 =========
 
+0.0.3 (TBA)
+------------------
+
+* Documentation improvements
+* providers can now access various Scrapy objects:
+  Crawler, Settings, Spider, Request, Response, StatsCollector
+
 0.0.2 (2020-04-28)
 ------------------
 
