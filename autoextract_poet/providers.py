@@ -7,11 +7,12 @@ from scrapy_poet.page_input_providers import (
     provides,
 )
 
+from autoextract.aio.client import request_raw
 from autoextract_poet.inputs import (
     ProductResponseData,
     ProductListResponseData,
 )
-from autoextract_poet.utils import request
+from autoextract_poet.query import Query
 
 
 class AutoExtractProvider(PageObjectInputProvider):
@@ -28,13 +29,17 @@ class AutoExtractProvider(PageObjectInputProvider):
 
         try:
             # FIXME: how to configure if you want full HTML or not?
-            data = await request(self.request.url, self.page_type)
+            data = request_raw(self.query, max_query_error_retries=3)[0]
         except Exception:
             self.stats.inc_value(f"autoextract/{self.page_type}/error")
             raise
 
         self.stats.inc_value(f"autoextract/{self.page_type}/success")
         return self.page_input_class(data=data)
+
+    @property
+    def query(self):
+        return Query(url=self.request.url, page_type=self.page_type)
 
 
 @provides(ProductResponseData)

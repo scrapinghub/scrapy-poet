@@ -4,7 +4,6 @@ from autoextract_poet.inputs import (
     ProductListResponseData,
 )
 from autoextract_poet.query import Query
-from autoextract_poet.exceptions import QueryLevelError
 
 
 def test_autoextract_responses():
@@ -36,10 +35,3 @@ def test_autoextract_query():
             'fullHtml': False,
         },
     ]
-
-
-def test_query_level_error_exception():
-    query = Query("example.com", "myPageType")
-    exc = QueryLevelError(query, "error")
-    assert exc.query == query
-    assert exc.msg == "error"
