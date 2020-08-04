@@ -8,7 +8,8 @@ import attr
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.threads import deferToThread
 
-from scrapy_poet.providers import PageObjectInputProvider, provides
+from scrapy_poet.providers import provides
+from scrapy_poet.page_input_provider import PageObjectInputProvider
 from web_poet.pages import ItemPage
 from scrapy_poet.utils import DummyResponse
 

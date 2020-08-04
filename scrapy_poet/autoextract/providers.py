@@ -3,9 +3,9 @@ from typing import Type
 from scrapy.http import Request
 from scrapy.statscollectors import StatsCollector
 from scrapy_poet.providers import (
-    PageObjectInputProvider,
     provides,
 )
+from scrapy_poet.page_input_provider import PageObjectInputProvider
 
 from autoextract.aio.client import request_raw
 from scrapy_poet.autoextract.inputs import (
