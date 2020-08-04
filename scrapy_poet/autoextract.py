@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 from typing import ClassVar
 
+import attr
 from scrapy.http import Request
 from scrapy.statscollectors import StatsCollector
 
@@ -13,7 +13,7 @@ from autoextract_poet.page_inputs import (
 )
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class Query:
 
     url: str

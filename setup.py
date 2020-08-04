@@ -17,8 +17,6 @@ setup(
         'parsel',
         'tenacity',
         'web-poet',
-        # FIXME: remove after movig autoextract_poet
-        'dataclasses;python_version<"3.7"',
         'scrapinghub-autoextract>=0.3.0',
     ],
     classifiers=[
