@@ -1,8 +1,14 @@
 import abc
+from typing import ClassVar, Optional, Type
+
+from scrapy.http import Response
+from web_poet.page_inputs import ResponseData
 
 
 class PageObjectInputProvider(abc.ABC):
     """This is an abstract class for describing Page Object Input Providers."""
+
+    provided_class: ClassVar[Optional[Type]]
 
     def __init__(self):
         """You can override this method to receive external dependencies.
@@ -42,3 +48,22 @@ class PageObjectInputProvider(abc.ABC):
     @abc.abstractmethod
     def __call__(self):
         """This method is responsible for building Page Input dependencies."""
+
+
+class ResponseDataProvider(PageObjectInputProvider):
+    """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
+
+    provided_class = ResponseData
+
+    def __init__(self, response: Response):
+        """This class receives a Scrapy ``Response`` as a dependency."""
+        self.response = response
+
+    def __call__(self):
+        """This method builds a ``ResponseData`` instance using a Scrapy
+        ``Response``.
+        """
+        return self.provided_class(
+            url=self.response.url,
+            html=self.response.text
+        )

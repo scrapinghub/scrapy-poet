@@ -5,10 +5,12 @@ import scrapy
 from scrapy.http import TextResponse
 
 from scrapy_poet.providers import (
-    ResponseDataProvider,
     provides,
 )
-from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.page_input_providers import (
+    PageObjectInputProvider,
+    ResponseDataProvider,
+)
 from web_poet.pages import ItemPage, WebPage
 
 from scrapy_poet.utils import (
