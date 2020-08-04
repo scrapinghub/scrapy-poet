@@ -9,7 +9,7 @@ from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES
 from scrapy_poet.providers import (
     provides,
 )
-from scrapy_poet.page_input_provider import PageObjectInputProvider
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 
 from tests.utils import crawl_items, crawl_single_item, HtmlResource
 

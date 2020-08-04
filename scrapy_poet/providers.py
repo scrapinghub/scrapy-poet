@@ -10,7 +10,7 @@ import typing
 from scrapy.http import Response
 from web_poet.page_inputs import ResponseData
 
-from scrapy_poet.page_input_provider import PageObjectInputProvider
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 
 # FIXME: refactor _providers / provides / register,  make a nicer API
 

@@ -17,10 +17,10 @@ Injection Middleware
 .. automodule:: scrapy_poet.middleware
    :members:
 
-Page Input Provider
-===================
+Page Input Providers
+====================
 
-.. automodule:: scrapy_poet.page_input_provider
+.. automodule:: scrapy_poet.page_input_providers
    :members:
 
 .. toctree::

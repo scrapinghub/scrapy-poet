@@ -5,7 +5,7 @@ from scrapy.statscollectors import StatsCollector
 from scrapy_poet.providers import (
     provides,
 )
-from scrapy_poet.page_input_provider import PageObjectInputProvider
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 
 from autoextract.aio.client import request_raw
 from scrapy_poet.autoextract.inputs import (
