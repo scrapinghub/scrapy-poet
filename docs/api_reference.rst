@@ -26,10 +26,10 @@ Page Input Providers
 .. toctree::
    :hidden:
 
-Providers
-=========
+Repository
+==========
 
-.. automodule:: scrapy_poet.providers
+.. automodule:: scrapy_poet.repository
    :members:
 
 .. toctree::
