@@ -5,7 +5,7 @@ import scrapy
 from scrapy.http import TextResponse
 
 from scrapy_poet.repository import provides
-from scrapy_poet.page_input_providers import (
+from scrapy_poet.providers import (
     PageObjectInputProvider,
     ResponseDataProvider,
 )

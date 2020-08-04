@@ -7,7 +7,7 @@ from web_poet.pages import ItemWebPage
 
 from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES
 from scrapy_poet.repository import provides
-from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.providers import PageObjectInputProvider
 
 from tests.utils import crawl_items, crawl_single_item, HtmlResource
 

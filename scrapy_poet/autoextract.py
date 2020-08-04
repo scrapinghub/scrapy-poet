@@ -4,7 +4,7 @@ from typing import ClassVar
 from scrapy.http import Request
 from scrapy.statscollectors import StatsCollector
 
-from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.providers import PageObjectInputProvider
 
 from autoextract.aio.client import request_raw
 from autoextract_poet.page_inputs import (

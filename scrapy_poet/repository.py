@@ -8,7 +8,7 @@ external sources, for example, Splash or Auto Extract API.
 import typing
 
 from scrapy_poet import autoextract
-from scrapy_poet.page_input_providers import (
+from scrapy_poet.providers import (
     PageObjectInputProvider,
     ResponseDataProvider,
 )
