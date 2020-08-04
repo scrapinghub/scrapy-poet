@@ -1,24 +1,21 @@
-from typing import Type
+from typing import ClassVar
 
 from scrapy.http import Request
 from scrapy.statscollectors import StatsCollector
-from scrapy_poet.providers import (
-    provides,
-)
-from scrapy_poet.page_input_providers import PageObjectInputProvider
 
-from autoextract.aio.client import request_raw
-from scrapy_poet.autoextract.inputs import (
-    ProductResponseData,
-    ProductListResponseData,
-)
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.autoextract.query import Query
 
+from autoextract.aio.client import request_raw
+from autoextract_poet.page_inputs import (
+    ProductResponseData,
+    ArticleResponseData,
+)
 
-class AutoExtractProvider(PageObjectInputProvider):
 
-    page_type: str
-    page_input_class: Type
+class Provider(PageObjectInputProvider):
+
+    page_type: ClassVar[str]
 
     def __init__(self, request: Request, stats: StatsCollector):
         self.request = request
@@ -35,22 +32,20 @@ class AutoExtractProvider(PageObjectInputProvider):
             raise
 
         self.stats.inc_value(f"autoextract/{self.page_type}/success")
-        return self.page_input_class(data=data)
+        return self.provided_class(data=data)
 
     @property
     def query(self):
         return Query(url=self.request.url, page_type=self.page_type)
 
 
-@provides(ProductResponseData)
-class AutoExtractProductResponseDataProvider(AutoExtractProvider):
+class ProductResponseDataProvider(Provider):
 
     page_type = "product"
-    page_input_class = ProductResponseData
+    provided_class = ProductResponseData
 
 
-@provides(ProductListResponseData)
-class AutoExtractProductListResponseDataProvider(AutoExtractProvider):
+class ArticleResponseDataProvider(Provider):
 
-    page_type = "productList"
-    page_input_class = ProductListResponseData
+    page_type = "article"
+    provided_class = ArticleResponseData
