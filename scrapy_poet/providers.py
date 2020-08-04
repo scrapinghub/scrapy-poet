@@ -7,11 +7,11 @@ external sources, for example, Splash or Auto Extract API.
 """
 import typing
 
+from scrapy_poet import autoextract
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
     ResponseDataProvider,
 )
-
 # FIXME: refactor _providers / provides / register,  make a nicer API
 
 providers = {}
@@ -51,3 +51,5 @@ def provides(provided_class: typing.Type):
 
 
 register(ResponseDataProvider)
+register(autoextract.ArticleResponseDataProvider)
+register(autoextract.ProductResponseDataProvider)

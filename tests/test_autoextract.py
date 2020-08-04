@@ -1,4 +1,4 @@
-from scrapy_poet.autoextract.query import Query
+from scrapy_poet.autoextract import Query
 
 
 def test_autoextract_query():

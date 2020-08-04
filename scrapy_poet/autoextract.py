@@ -1,16 +1,36 @@
+from dataclasses import dataclass
 from typing import ClassVar
 
 from scrapy.http import Request
 from scrapy.statscollectors import StatsCollector
 
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from scrapy_poet.autoextract.query import Query
 
 from autoextract.aio.client import request_raw
 from autoextract_poet.page_inputs import (
     ProductResponseData,
     ArticleResponseData,
 )
+
+
+@dataclass
+class Query:
+
+    url: str
+    page_type: str
+    # FIXME: is this resource available for everyone?
+    # FIXME: decide if this should be True or False by default
+    full_html: bool = True
+
+    @property
+    def autoextract_query(self):
+        return [
+            {
+                "url": self.url,
+                "pageType": self.page_type,
+                "fullHtml": self.full_html,
+            },
+        ]
 
 
 class Provider(PageObjectInputProvider):
