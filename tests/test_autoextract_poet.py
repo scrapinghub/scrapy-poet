@@ -1,9 +1,9 @@
-from autoextract_poet.inputs import (
+from scrapy_poet.autoextract.inputs import (
     ResponseData,
     ProductResponseData,
     ProductListResponseData,
 )
-from autoextract_poet.query import Query
+from scrapy_poet.autoextract.query import Query
 
 
 def test_autoextract_responses():

@@ -8,11 +8,11 @@ from scrapy_poet.page_input_providers import (
 )
 
 from autoextract.aio.client import request_raw
-from autoextract_poet.inputs import (
+from scrapy_poet.autoextract.inputs import (
     ProductResponseData,
     ProductListResponseData,
 )
-from autoextract_poet.query import Query
+from scrapy_poet.autoextract.query import Query
 
 
 class AutoExtractProvider(PageObjectInputProvider):
