@@ -1,16 +1,4 @@
-from scrapy_poet.autoextract.inputs import (
-    ResponseData,
-    ProductResponseData,
-    ProductListResponseData,
-)
 from scrapy_poet.autoextract.query import Query
-
-
-def test_autoextract_responses():
-    data = {"foo": "bar"}
-    assert ResponseData(data=data).data == data
-    assert ProductResponseData(data=data).data == data
-    assert ProductListResponseData(data=data).data == data
 
 
 def test_autoextract_query():
