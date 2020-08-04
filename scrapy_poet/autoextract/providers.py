@@ -2,7 +2,7 @@ from typing import Type
 
 from scrapy.http import Request
 from scrapy.statscollectors import StatsCollector
-from scrapy_poet.page_input_providers import (
+from scrapy_poet.providers import (
     PageObjectInputProvider,
     provides,
 )

@@ -12,7 +12,7 @@ import attr
 
 from scrapy_poet import callback_for
 from web_poet.pages import WebPage, ItemWebPage
-from scrapy_poet.page_input_providers import provides, PageObjectInputProvider
+from scrapy_poet.providers import provides, PageObjectInputProvider
 from web_poet.page_inputs import ResponseData
 from scrapy_poet.utils import DummyResponse
 from tests.utils import HtmlResource, crawl_items, capture_exceptions, \

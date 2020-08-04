@@ -6,7 +6,7 @@ from scrapy.http import Request
 from web_poet.pages import ItemWebPage
 
 from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES
-from scrapy_poet.page_input_providers import (
+from scrapy_poet.providers import (
     provides,
     PageObjectInputProvider,
 )
