@@ -17,18 +17,12 @@ from autoextract_poet.page_inputs import (
 class Query:
 
     url: str
-    page_type: str
-    full_html: bool = False
+    pageType: str
+    fullHtml: bool = False
 
     @property
     def autoextract_query(self):
-        return [
-            {
-                "url": self.url,
-                "pageType": self.page_type,
-                "fullHtml": self.full_html,
-            },
-        ]
+        return [attr.asdict(self)]
 
 
 class Provider(PageObjectInputProvider):
