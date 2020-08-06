@@ -21,10 +21,14 @@ class Query:
     articleBodyRaw: bool = False
     fullHtml: bool = False
     meta: Optional[str] = None
+    extra: Optional[dict] = None
 
     @property
     def autoextract_query(self):
-        return [attr.asdict(self)]
+        query = attr.asdict(self)
+        query.update(**self.extra or {})
+        del query["extra"]
+        return [query]
 
 
 class Provider(PageObjectInputProvider):
