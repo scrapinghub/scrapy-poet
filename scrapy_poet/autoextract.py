@@ -15,6 +15,13 @@ from autoextract_poet.page_inputs import (
 
 @attr.s(auto_attribs=True, slots=True)
 class Query:
+    """Represent an AutoExtract Query.
+
+    There are some basic parameters such as `url` and `pageType` that could be
+    defined during initialization. If you need to specify additional params,
+    you can do it using the `extra` argument, an optional dictionary that
+    will be expanded to update the final query object.
+    """
 
     url: str
     pageType: str
