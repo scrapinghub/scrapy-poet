@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import attr
 from scrapy.http import Request
@@ -18,7 +18,9 @@ class Query:
 
     url: str
     pageType: str
+    articleBodyRaw: bool = False
     fullHtml: bool = False
+    meta: Optional[str] = None
 
     @property
     def autoextract_query(self):

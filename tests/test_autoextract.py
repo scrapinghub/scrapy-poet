@@ -11,15 +11,19 @@ def test_autoextract_query():
             'url': 'example.com',
             'pageType': 'myPageType',
             'fullHtml': False,
+            'articleBodyRaw': False,
+            'meta': None,
         },
     ]
 
-    query = Query("example.com", "myPageType", True)
+    query = Query("example.com", "myPageType", fullHtml=True)
     assert query.fullHtml is True
     assert query.autoextract_query == [
         {
             'url': 'example.com',
             'pageType': 'myPageType',
             'fullHtml': True,
+            'articleBodyRaw': False,
+            'meta': None,
         },
     ]
