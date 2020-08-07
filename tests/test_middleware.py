@@ -12,7 +12,7 @@ import attr
 
 from scrapy_poet import callback_for
 from web_poet.pages import WebPage, ItemWebPage
-from scrapy_poet.repository import provides
+from scrapy_poet.repository import provider
 from scrapy_poet.providers import PageObjectInputProvider
 from web_poet.page_inputs import ResponseData
 from scrapy_poet.utils import DummyResponse
@@ -112,8 +112,10 @@ class ProvidedAsyncTest:
     response: ResponseData  # it should be None because this class is provided
 
 
-@provides(ProvidedAsyncTest)
+@provider
 class ResponseDataProvider(PageObjectInputProvider):
+
+    provided_class = ProvidedAsyncTest
 
     def __init__(self, response: scrapy.http.Response):
         self.response = response
@@ -126,6 +128,7 @@ class ResponseDataProvider(PageObjectInputProvider):
 
 @attr.s(auto_attribs=True)
 class ProvidersPage(ItemWebPage):
+
     provided: ProvidedAsyncTest
 
     def to_item(self):

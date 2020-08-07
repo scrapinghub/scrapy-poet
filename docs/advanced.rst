@@ -33,9 +33,11 @@ that need it, like the ``ItemWebPage``.
         html: str
 
 
-    @provides(ResponseData)
+    @provider
     class ResponseDataProvider(PageObjectInputProvider):
         """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
+
+        provided_class = ResponseData
 
         def __init__(self, response: Response):
             """This class receives a Scrapy ``Response`` as a dependency."""
@@ -98,8 +100,10 @@ If neither spider callback nor any of the input providers are using
         value: str
 
 
-    @provides(CachedData)
+    @provider
     class CachedDataProvider(PageObjectInputProvider):
+
+        provided_class = CachedData
 
         def __init__(self, request: scrapy.Request):
             self.request = request
@@ -148,8 +152,10 @@ Page Object uses it, the request is not ignored, for example:
         html: str
 
 
-    @provides(MyResponseData)
+    @provider
     class MyResponseDataProvider(PageObjectInputProvider):
+
+        provided_class = MyResponseData
 
         def __init__(self, response: Response):
             self.response = response

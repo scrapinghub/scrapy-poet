@@ -4,7 +4,7 @@ from typing import Any, Dict
 import scrapy
 from scrapy.http import TextResponse
 
-from scrapy_poet.repository import provides
+from scrapy_poet.repository import provider
 from scrapy_poet.providers import (
     PageObjectInputProvider,
     ResponseDataProvider,
@@ -32,8 +32,10 @@ class FakeProductResponse:
     data: Dict[str, Any]
 
 
-@provides(DummyProductResponse)
+@provider
 class DummyProductProvider(PageObjectInputProvider):
+
+    provided_class = DummyProductResponse
 
     def __init__(self, request: scrapy.Request):
         self.request = request
@@ -48,8 +50,10 @@ class DummyProductProvider(PageObjectInputProvider):
         return DummyProductResponse(data=data)
 
 
-@provides(FakeProductResponse)
+@provider
 class FakeProductProvider(PageObjectInputProvider):
+
+    provided_class = FakeProductResponse
 
     def __call__(self):
         data = {

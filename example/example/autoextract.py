@@ -8,7 +8,7 @@ import attr
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.threads import deferToThread
 
-from scrapy_poet.repository import provides
+from scrapy_poet.repository import provider
 from scrapy_poet.providers import PageObjectInputProvider
 from web_poet.pages import ItemPage
 from scrapy_poet.utils import DummyResponse
@@ -20,8 +20,10 @@ class AutoextractProductResponse:
     data: Dict[str, Any]
 
 
-@provides(AutoextractProductResponse)
+@provider
 class AutoextractProductProvider(PageObjectInputProvider):
+
+    provided_class = AutoextractProductResponse
 
     def __init__(self, response: DummyResponse):
         self.response = response
