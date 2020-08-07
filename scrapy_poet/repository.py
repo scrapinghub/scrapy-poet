@@ -21,7 +21,7 @@ def register(provider_class: typing.Type[PageObjectInputProvider]):
     """This method registers a Page Object Input Provider in the providers
     registry.
 
-    It could be replaced by the use of the ``provides`` decorator but you need
+    It could be replaced by the use of the ``provider`` decorator but you need
     to make sure the module containing those classes are imported during
     runtime.
     """
