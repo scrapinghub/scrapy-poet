@@ -22,7 +22,7 @@ def register(provider_class: typing.Type[PageObjectInputProvider]):
     registry.
 
     It could be replaced by the use of the ``provider`` decorator but you need
-    to make sure the module containing those classes are imported during
+    to make sure the module containing those classes is imported at
     runtime.
     """
     providers[provider_class.provided_class] = provider_class
