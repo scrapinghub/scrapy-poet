@@ -59,7 +59,7 @@ class Provider(PageObjectInputProvider):
         try:
             # FIXME: how to configure if you want full HTML or not?
             data = request_raw(
-                self.query,
+                self.query.autoextract_query,
                 api_key=self.settings.get('SCRAPINGHUB_AUTOEXTRACT_KEY'),
                 max_query_error_retries=3
             )[0]
