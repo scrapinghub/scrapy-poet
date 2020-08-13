@@ -25,6 +25,7 @@ def register(provider_class: typing.Type[PageObjectInputProvider]):
     to make sure the module containing those classes is imported at
     runtime.
     """
+    assert issubclass(provider_class, PageObjectInputProvider)
     providers[provider_class.provided_class] = provider_class
 
 
