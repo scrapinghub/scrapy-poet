@@ -2,6 +2,7 @@ from typing import ClassVar, Optional
 
 import attr
 from scrapy.http import Request
+from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
 
 from scrapy_poet.providers import PageObjectInputProvider
@@ -42,16 +43,26 @@ class Provider(PageObjectInputProvider):
 
     page_type: ClassVar[str]
 
-    def __init__(self, request: Request, stats: StatsCollector):
+    def __init__(
+            self,
+            request: Request,
+            settings: Settings,
+            stats: StatsCollector,
+    ):
         self.request = request
         self.stats = stats
+        self.settings = settings
 
     async def __call__(self):
         self.stats.inc_value(f"autoextract/{self.page_type}/total")
 
         try:
             # FIXME: how to configure if you want full HTML or not?
-            data = request_raw(self.query, max_query_error_retries=3)[0]
+            data = request_raw(
+                self.query,
+                api_key=self.settings.get('SCRAPINGHUB_AUTOEXTRACT_KEY'),
+                max_query_error_retries=3
+            )[0]
         except Exception:
             self.stats.inc_value(f"autoextract/{self.page_type}/error")
             raise
