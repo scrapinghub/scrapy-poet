@@ -69,7 +69,7 @@ That could be done in the spider's parser method:
 
 .. code-block:: python
 
-    def parser(self, response: DummyRequest, page: MyPageObject):
+    def parser(self, response: DummyResponse, page: MyPageObject):
         pass
 
 Spider method that has its first argument annotated as :class:`~.DummyResponse`
