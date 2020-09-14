@@ -111,6 +111,12 @@ class ProvidedAsyncTest:
     response: ResponseData  # it should be None because this class is provided
 
 
+@attr.s(auto_attribs=True)
+class ProvidedAsyncTestWithHooks:
+    msg: str
+    response: ResponseData  # it should be None because this class is provided
+
+
 @provides(ProvidedAsyncTest)
 class ResponseDataProvider(PageObjectInputProvider):
 
@@ -123,9 +129,40 @@ class ResponseDataProvider(PageObjectInputProvider):
         raise returnValue(ProvidedAsyncTest(f"Provided {five}!", None))
 
 
+@provides(ProvidedAsyncTestWithHooks)
+class ResponseDataProviderWithHooks(PageObjectInputProvider):
+
+    call_count = {
+        "__before__": 0,
+        "__after__": 0,
+    }
+
+    def __init__(self, response: scrapy.http.Response):
+        self.response = response
+
+    @inlineCallbacks
+    def __call__(self):
+        five = yield deferToThread(lambda: 5)
+        raise returnValue(ProvidedAsyncTest(f"Provided {five}!", None))
+
+    def __before__(self):
+        self.call_count["__before__"] += 1
+
+    def __after__(self):
+        self.call_count["__after__"] += 1
+
+
 @attr.s(auto_attribs=True)
 class ProvidersPage(ItemWebPage):
     provided: ProvidedAsyncTest
+
+    def to_item(self):
+        return attr.asdict(self, recurse=False)
+
+
+@attr.s(auto_attribs=True)
+class ProvidersPageWithHooks(ItemWebPage):
+    provided: ProvidedAsyncTestWithHooks
 
     def to_item(self):
         return attr.asdict(self, recurse=False)
@@ -135,6 +172,21 @@ class ProvidersPage(ItemWebPage):
 def test_providers(settings):
     item, _, _ = yield crawl_single_item(spider_for(ProvidersPage),
                                          ProductHtml, settings)
+    assert item['provided'].msg == "Provided 5!"
+    assert item['provided'].response == None
+
+
+@inlineCallbacks
+def test_providers_with_hooks(settings):
+    assert ResponseDataProviderWithHooks.call_count["__before__"] == 0
+    assert ResponseDataProviderWithHooks.call_count["__after__"] == 0
+
+    item, _, _ = yield crawl_single_item(spider_for(ProvidersPageWithHooks),
+                                         ProductHtml, settings)
+
+    assert ResponseDataProviderWithHooks.call_count["__before__"] == 1
+    assert ResponseDataProviderWithHooks.call_count["__after__"] == 1
+
     assert item['provided'].msg == "Provided 5!"
     assert item['provided'].response == None
 

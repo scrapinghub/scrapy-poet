@@ -154,11 +154,23 @@ def build_providers(instances) -> Dict[Type, PageObjectInputProvider]:
 def build_instances(plan: andi.Plan, providers):
     """Build the instances dict from a plan."""
     instances = {}
+
+    for cls, kwargs_spec in plan:
+        provider = providers.get(cls)
+        if provider and hasattr(provider, "__before__"):
+            provider.__before__()
+
     for cls, kwargs_spec in plan:
         if cls in providers:
             instances[cls] = yield maybeDeferred_coro(providers[cls])
         else:
             instances[cls] = cls(**kwargs_spec.kwargs(instances))
+
+    for cls, kwargs_spec in plan:
+        provider = providers.get(cls)
+        if provider and hasattr(provider, "__after__"):
+            provider.__after__()
+
     raise returnValue(instances)
 
 
