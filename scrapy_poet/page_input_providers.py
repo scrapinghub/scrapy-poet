@@ -11,12 +11,13 @@ import typing
 from scrapy.http import Response
 from web_poet.page_inputs import ResponseData
 
-# FIXME: refactor _providers / provides / register,  make a nicer API
-providers = {}
+providers = set()
 
 
 class PageObjectInputProvider(abc.ABC):
     """This is an abstract class for describing Page Object Input Providers."""
+
+    provided_classes: typing.Set[typing.Type]
 
     def __init__(self):
         """You can override this method to receive external dependencies.
@@ -54,23 +55,11 @@ class PageObjectInputProvider(abc.ABC):
         """
 
     @abc.abstractmethod
-    def __call__(self):
+    def __call__(self, provided_classes: typing.Set[typing.Type]) -> typing.Dict[typing.Type, typing.Any]:
         """This method is responsible for building Page Input dependencies."""
 
 
-def register(provider_class: typing.Type[PageObjectInputProvider],
-             provided_class: typing.Type):
-    """This method registers a Page Object Input Provider in the providers
-    registry. It could be replaced by the use of the ``provides`` decorator.
-
-    Example:
-
-        register(ResponseDataProvider, ResponseData)
-    """
-    providers[provided_class] = provider_class
-
-
-def provides(provided_class: typing.Type):
+def provides():
     """This decorator should be used with classes that inherits from
     ``PageObjectInputProvider`` in order to automatically register them as
     providers.
@@ -78,25 +67,27 @@ def provides(provided_class: typing.Type):
     See ``ResponseDataProvider``'s implementation for an example.
     """
     def decorator(provider_class: typing.Type[PageObjectInputProvider]):
-        register(provider_class, provided_class)
+        providers.add(provider_class)
         return provider_class
 
     return decorator
 
 
-@provides(ResponseData)
+@provides()
 class ResponseDataProvider(PageObjectInputProvider):
     """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
+
+    provided_classes = {ResponseData}
 
     def __init__(self, response: Response):
         """This class receives a Scrapy ``Response`` as a dependency."""
         self.response = response
 
-    def __call__(self):
-        """This method builds a ``ResponseData`` instance using a Scrapy
-        ``Response``.
-        """
-        return ResponseData(
-            url=self.response.url,
-            html=self.response.text
-        )
+    def __call__(self, *args, **kwargs):
+        """Builds a ``ResponseData`` instance using a Scrapy ``Response``."""
+        return {
+            ResponseData: ResponseData(
+                url=self.response.url,
+                html=self.response.text
+            )
+        }
