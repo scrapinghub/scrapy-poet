@@ -38,16 +38,20 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
     class PageData:
         scrapy_class: str
 
-    @provides(PageData)
+    @provides()
     class PageDataProvider(PageObjectInputProvider):
+
+        provided_classes = {PageData}
 
         def __init__(self, obj: scrapy_class):
             self.obj = obj
 
-        def __call__(self):
-            return PageData(
-                scrapy_class=scrapy_class.__name__,
-            )
+        def __call__(self, *args, **kwargs):
+            return {
+                PageData: PageData(
+                    scrapy_class=scrapy_class.__name__,
+                )
+            }
 
     @attr.s(auto_attribs=True)
     class Page(ItemWebPage):

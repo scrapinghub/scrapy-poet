@@ -32,33 +32,41 @@ class FakeProductResponse:
     data: Dict[str, Any]
 
 
-@provides(DummyProductResponse)
+@provides()
 class DummyProductProvider(PageObjectInputProvider):
+
+    provided_classes = {DummyProductResponse}
 
     def __init__(self, request: scrapy.Request):
         self.request = request
 
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         data = {
             'product': {
                 'url': self.request.url,
                 'name': 'Sample',
             },
         }
-        return DummyProductResponse(data=data)
+        return {
+            DummyProductResponse: DummyProductResponse(data=data)
+        }
 
 
-@provides(FakeProductResponse)
+@provides()
 class FakeProductProvider(PageObjectInputProvider):
 
-    def __call__(self):
+    provided_classes = {FakeProductResponse}
+
+    def __call__(self, *args, **kwargs):
         data = {
             'product': {
                 'url': 'http://example.com/sample',
                 'name': 'Sample',
             },
         }
-        return DummyProductResponse(data=data)
+        return {
+            DummyProductResponse: DummyProductResponse(data=data)
+        }
 
 
 class TextProductProvider(ResponseDataProvider):

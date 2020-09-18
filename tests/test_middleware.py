@@ -111,16 +111,20 @@ class ProvidedAsyncTest:
     response: ResponseData  # it should be None because this class is provided
 
 
-@provides(ProvidedAsyncTest)
+@provides()
 class ResponseDataProvider(PageObjectInputProvider):
+
+    provided_classes = {ProvidedAsyncTest}
 
     def __init__(self, response: scrapy.http.Response):
         self.response = response
 
     @inlineCallbacks
-    def __call__(self):
+    def __call__(self, *args, **kwargs):
         five = yield deferToThread(lambda: 5)
-        raise returnValue(ProvidedAsyncTest(f"Provided {five}!", None))
+        raise returnValue({
+            ProvidedAsyncTest: ProvidedAsyncTest(f"Provided {five}!", None)
+        })
 
 
 @attr.s(auto_attribs=True)
