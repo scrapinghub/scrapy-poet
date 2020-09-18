@@ -73,11 +73,12 @@ class InjectionMiddleware:
             StatsCollector: spider.crawler.stats,
         }
         assert set(dependencies.keys()) == _SCRAPY_PROVIDED_CLASSES
-        plan, provider_instances = utils.build_plan(callback, dependencies)
+
+        plan = utils.build_plan(callback)
+        provider_instances = utils.build_providers(dependencies)
 
         # Build all instances declared as dependencies
-        instances = yield from utils.build_instances(
-            plan.dependencies, provider_instances)
+        instances = yield from utils.build_instances(plan, provider_instances)
 
         # Fill the callback arguments with the created instances
         for arg, value in plan.final_kwargs(instances).items():

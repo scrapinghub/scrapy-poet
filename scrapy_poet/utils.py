@@ -1,5 +1,5 @@
 import inspect
-from typing import Tuple, Dict, Type, Callable, Optional
+from typing import Set, Type, Callable, Optional
 
 import andi
 from scrapy import Spider
@@ -102,14 +102,12 @@ def discover_callback_providers(callback):
     plan = andi.plan(
         callback,
         is_injectable=is_injectable,
-        externally_provided=providers.keys(),
+        externally_provided=set.union(*(p.provided_classes for p in providers)),
     )
     for obj, _ in plan:
-        provider = providers.get(obj)
-        if not provider:
-            continue
-
-        yield provider
+        for provider in providers:
+            if obj in provider.provided_classes:
+                yield provider
 
 
 def is_response_going_to_be_used(request, spider):
@@ -125,40 +123,56 @@ def is_response_going_to_be_used(request, spider):
     return False
 
 
-def build_plan(callback, instances) -> Tuple[andi.Plan, Dict[Type, PageObjectInputProvider]]:
+def build_plan(callback) -> andi.Plan:
     """Build a plan for the injection in the callback."""
-    provider_instances = build_providers(instances)
-    plan = andi.plan(
+    return andi.plan(
         callback,
         is_injectable=is_injectable,
-        externally_provided=provider_instances.keys()
+        externally_provided=set.union(*(p.provided_classes for p in providers))
     )
-    return plan, provider_instances
 
 
-def build_providers(instances) -> Dict[Type, PageObjectInputProvider]:
-    result = {}
-    for cls, provider in providers.items():
+def build_providers(instances) -> Set[PageObjectInputProvider]:
+    result = set()
+    for provider in providers:
         kwargs = andi.plan(
             provider,
             is_injectable=is_injectable,
             externally_provided=instances.keys(),
             full_final_kwargs=True,
         ).final_kwargs(instances)
-        result[cls] = provider(**kwargs)  # type: ignore
+        result.add(provider(**kwargs))  # type: ignore
 
     return result
 
 
 @inlineCallbacks
-def build_instances(plan: andi.Plan, providers):
+def build_instances(plan: andi.Plan, provider_instances: Set[PageObjectInputProvider]):
     """Build the instances dict from a plan."""
     instances = {}
-    for cls, kwargs_spec in plan:
-        if cls in providers:
-            instances[cls] = yield maybeDeferred_coro(providers[cls])
-        else:
+
+    dependencies = dict(plan.dependencies)
+
+    for provider in provider_instances:
+        # Discover classes being provided by this provider
+        provided_classes = set()
+        for cls in dependencies.keys():
+            if cls in provider.provided_classes:
+                provided_classes.add(cls)
+
+        if provided_classes:
+            # Create a single instance of this provider and associate it
+            # with all classes being currently provided by it
+            instance = yield maybeDeferred_coro(provider, provided_classes)
+
+        for provided_class in provided_classes:
+            instances[provided_class] = instance[provided_class]
+
+    # Build missing dependencies not addressed by previous step
+    for cls, kwargs_spec in dependencies.items():
+        if cls not in instances.keys():
             instances[cls] = cls(**kwargs_spec.kwargs(instances))
+
     raise returnValue(instances)
 
 
