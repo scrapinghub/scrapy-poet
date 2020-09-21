@@ -1,5 +1,5 @@
 import inspect
-from typing import Set, Type, Callable, Optional
+from typing import Any, Callable, Dict, Optional, Set, Type
 
 import andi
 from scrapy import Spider
@@ -140,42 +140,35 @@ def build_plan(callback) -> andi.Plan:
     )
 
 
-def build_providers(instances) -> Set[PageObjectInputProvider]:
-    result = set()
-    for provider in providers:
-        kwargs = andi.plan(
-            provider,
-            is_injectable=is_injectable,
-            externally_provided=instances.keys(),
-            full_final_kwargs=True,
-        ).final_kwargs(instances)
-        result.add(provider(**kwargs))  # type: ignore
-
-    return result
+def build_provider(provider: Type[PageObjectInputProvider],
+                   external_dependencies: Dict[Type, Any]) -> PageObjectInputProvider:
+    kwargs = andi.plan(
+        provider,
+        is_injectable=is_injectable,
+        externally_provided=external_dependencies.keys(),
+        full_final_kwargs=True,
+    ).final_kwargs(external_dependencies)
+    return provider(**kwargs)  # type: ignore
 
 
 @inlineCallbacks
-def build_instances(plan: andi.Plan, provider_instances: Set[PageObjectInputProvider]):
-    """Build the instances dict from a plan."""
+def build_instances(plan: andi.Plan, external_dependencies: Dict[Type, Any]) -> Dict[Type, Any]:
+    """Build the instances dict from a plan including external dependencies."""
     instances = {}
 
-    for provider in provider_instances:
-        # Discover classes being provided by this provider
-        provided_classes = set()
-        for cls, kwargs_spec in plan.dependencies:
-            if cls in provider.provided_classes:
-                provided_classes.add(cls)
+    # Build dependencies handled by registered providers
+    plan_dependencies = dict(plan.dependencies)
+    for provider in providers:
+        provided_classes = plan_dependencies.keys() & provider.provided_classes
+        if not provided_classes:
+            continue
 
-        if provided_classes:
-            # Create a single instance of this provider and associate it
-            # with all classes being currently provided by it
-            instance = yield maybeDeferred_coro(provider, provided_classes)
+        provider_instance = build_provider(provider, external_dependencies)
+        results = yield maybeDeferred_coro(provider_instance, provided_classes)
+        instances.update(results)
 
-        for provided_class in provided_classes:
-            instances[provided_class] = instance[provided_class]
-
-    # Build missing dependencies not addressed by previous step
-    for cls, kwargs_spec in plan.dependencies:
+    # Build remaining dependencies
+    for cls, kwargs_spec in plan_dependencies.items():
         if cls not in instances.keys():
             instances[cls] = cls(**kwargs_spec.kwargs(instances))
 

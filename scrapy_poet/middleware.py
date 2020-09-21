@@ -64,7 +64,7 @@ class InjectionMiddleware:
         """
         # Find out the dependencies
         callback = utils.get_callback(request, spider)
-        dependencies = {
+        external_dependencies = {
             Spider: spider,
             Request: request,
             Response: response,
@@ -72,13 +72,11 @@ class InjectionMiddleware:
             Settings: spider.settings,
             StatsCollector: spider.crawler.stats,
         }
-        assert set(dependencies.keys()) == _SCRAPY_PROVIDED_CLASSES
-
-        plan = utils.build_plan(callback)
-        provider_instances = utils.build_providers(dependencies)
+        assert set(external_dependencies.keys()) == _SCRAPY_PROVIDED_CLASSES
 
         # Build all instances declared as dependencies
-        instances = yield from utils.build_instances(plan, provider_instances)
+        plan = utils.build_plan(callback)
+        instances = yield from utils.build_instances(plan, external_dependencies)
 
         # Fill the callback arguments with the created instances
         for arg, value in plan.final_kwargs(instances).items():
