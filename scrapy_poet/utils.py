@@ -104,10 +104,13 @@ def discover_callback_providers(callback):
         is_injectable=is_injectable,
         externally_provided=set.union(*(p.provided_classes for p in providers)),
     )
+    result = set()
     for obj, _ in plan:
         for provider in providers:
             if obj in provider.provided_classes:
-                yield provider
+                result.add(provider)
+
+    return result
 
 
 def is_response_going_to_be_used(request, spider):
