@@ -42,7 +42,7 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
         def __init__(self, obj: scrapy_class):
             self.obj = obj
 
-        def __call__(self, *args, **kwargs):
+        def __call__(self, provided_classes):
             return {
                 PageData: PageData(
                     scrapy_class=scrapy_class.__name__,
