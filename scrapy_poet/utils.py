@@ -29,6 +29,11 @@ _SCRAPY_PROVIDED_CLASSES = {
 }
 
 
+def get_provided_classes_from_providers() -> Set[Type]:
+    provided_classes = (p.provided_classes for p in providers)
+    return set.union(*provided_classes)
+
+
 def get_callback(request, spider):
     """Get request.callback of a scrapy.Request, as a callable."""
     if request.callback is None:
@@ -102,7 +107,7 @@ def discover_callback_providers(callback):
     plan = andi.plan(
         callback,
         is_injectable=is_injectable,
-        externally_provided=set.union(*(p.provided_classes for p in providers)),
+        externally_provided=get_provided_classes_from_providers(),
     )
     result = set()
     for obj, _ in plan:
@@ -131,7 +136,7 @@ def build_plan(callback) -> andi.Plan:
     return andi.plan(
         callback,
         is_injectable=is_injectable,
-        externally_provided=set.union(*(p.provided_classes for p in providers))
+        externally_provided=get_provided_classes_from_providers(),
     )
 
 
