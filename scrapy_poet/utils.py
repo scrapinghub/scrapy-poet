@@ -141,7 +141,7 @@ def build_plan(callback) -> andi.Plan:
 
 
 def build_provider(provider: Type[PageObjectInputProvider],
-                   external_dependencies: Dict[Type, Any]) -> PageObjectInputProvider:
+                   external_dependencies: Dict[Callable, Any]) -> PageObjectInputProvider:
     kwargs = andi.plan(
         provider,
         is_injectable=is_injectable,
@@ -152,7 +152,7 @@ def build_provider(provider: Type[PageObjectInputProvider],
 
 
 @inlineCallbacks
-def build_instances(plan: andi.Plan, external_dependencies: Dict[Type, Any]) -> Dict[Type, Any]:
+def build_instances(plan: andi.Plan, external_dependencies: Dict[Callable, Any]):
     """Build the instances dict from a plan including external dependencies."""
     instances = {}
 
