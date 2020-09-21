@@ -11,6 +11,7 @@ from scrapy_poet.page_input_providers import (
 from web_poet.pages import ItemPage, WebPage
 
 from scrapy_poet.utils import (
+    callback_for,
     get_callback,
     is_callback_using_response,
     is_provider_using_response,
@@ -121,7 +122,9 @@ class BookPage(WebPage):
 
 
 class MySpider(scrapy.Spider):
+
     name = 'foo'
+    callback_for_parse = callback_for(DummyProductPage)
 
     def parse(self, response):
         pass
@@ -201,6 +204,9 @@ def test_is_callback_using_response():
     assert is_callback_using_response(spider.parse10) is False
     assert is_callback_using_response(spider.parse11) is True
     assert is_callback_using_response(spider.parse12) is True
+    # Callbacks created with the callback_for function won't make use of
+    # the response, but their providers might use them.
+    assert is_callback_using_response(spider.callback_for_parse) is False
 
 
 def test_is_response_going_to_be_used():
