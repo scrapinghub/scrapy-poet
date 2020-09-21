@@ -58,22 +58,11 @@ class PageObjectInputProvider(abc.ABC):
     def __call__(self, provided_classes: typing.Set[typing.Type]) -> typing.Dict[typing.Type, typing.Any]:
         """This method is responsible for building Page Input dependencies."""
 
-
-def provides():
-    """This decorator should be used with classes that inherits from
-    ``PageObjectInputProvider`` in order to automatically register them as
-    providers.
-
-    See ``ResponseDataProvider``'s implementation for an example.
-    """
-    def decorator(provider_class: typing.Type[PageObjectInputProvider]):
-        providers.add(provider_class)
-        return provider_class
-
-    return decorator
+    @classmethod
+    def register(cls):
+        providers.add(cls)
 
 
-@provides()
 class ResponseDataProvider(PageObjectInputProvider):
     """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
 

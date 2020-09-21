@@ -7,7 +7,6 @@ from scrapy.http import TextResponse
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
     ResponseDataProvider,
-    provides,
 )
 from web_poet.pages import ItemPage, WebPage
 
@@ -32,7 +31,6 @@ class FakeProductResponse:
     data: Dict[str, Any]
 
 
-@provides()
 class DummyProductProvider(PageObjectInputProvider):
 
     provided_classes = {DummyProductResponse}
@@ -52,7 +50,9 @@ class DummyProductProvider(PageObjectInputProvider):
         }
 
 
-@provides()
+DummyProductProvider.register()
+
+
 class FakeProductProvider(PageObjectInputProvider):
 
     provided_classes = {FakeProductResponse}
@@ -67,6 +67,9 @@ class FakeProductProvider(PageObjectInputProvider):
         return {
             DummyProductResponse: DummyProductResponse(data=data)
         }
+
+
+FakeProductProvider.register()
 
 
 class TextProductProvider(ResponseDataProvider):
