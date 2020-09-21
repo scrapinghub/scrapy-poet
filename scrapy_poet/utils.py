@@ -159,12 +159,10 @@ def build_instances(plan: andi.Plan, provider_instances: Set[PageObjectInputProv
     """Build the instances dict from a plan."""
     instances = {}
 
-    dependencies = dict(plan.dependencies)
-
     for provider in provider_instances:
         # Discover classes being provided by this provider
         provided_classes = set()
-        for cls in dependencies.keys():
+        for cls, kwargs_spec in plan.dependencies:
             if cls in provider.provided_classes:
                 provided_classes.add(cls)
 
@@ -177,7 +175,7 @@ def build_instances(plan: andi.Plan, provider_instances: Set[PageObjectInputProv
             instances[provided_class] = instance[provided_class]
 
     # Build missing dependencies not addressed by previous step
-    for cls, kwargs_spec in dependencies.items():
+    for cls, kwargs_spec in plan.dependencies:
         if cls not in instances.keys():
             instances[cls] = cls(**kwargs_spec.kwargs(instances))
 
