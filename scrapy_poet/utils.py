@@ -1,5 +1,5 @@
 import inspect
-from typing import Any, Callable, Dict, Optional, Set, Type
+from typing import Any, Callable, Dict, List, Optional, Set, Type
 
 import andi
 from scrapy import Spider
@@ -11,11 +11,7 @@ from scrapy.utils.defer import maybeDeferred_coro
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from web_poet.pages import ItemPage, is_injectable
-from scrapy_poet.page_input_providers import (
-    providers,
-    PageObjectInputProvider,
-)
-
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 
 _CALLBACK_FOR_MARKER = '__scrapy_poet_callback'
 
@@ -29,7 +25,7 @@ _SCRAPY_PROVIDED_CLASSES = {
 }
 
 
-def get_provided_classes_from_providers() -> Set[Type]:
+def get_provided_classes_from_providers(providers: List[Type[PageObjectInputProvider]]) -> Set[Type]:
     provided_classes = (p.provided_classes for p in providers)
     return set.union(*provided_classes)
 
@@ -103,11 +99,11 @@ def is_provider_using_response(provider):
     return False
 
 
-def discover_callback_providers(callback):
+def discover_callback_providers(callback: Callable, providers: List[Type[PageObjectInputProvider]]):
     plan = andi.plan(
         callback,
         is_injectable=is_injectable,
-        externally_provided=get_provided_classes_from_providers(),
+        externally_provided=get_provided_classes_from_providers(providers),
     )
     result = set()
     for obj, _ in plan:
@@ -124,19 +120,20 @@ def is_response_going_to_be_used(request, spider):
     if is_callback_using_response(callback):
         return True
 
-    for provider in discover_callback_providers(callback):
+    providers = spider.settings["SCRAPY_POET_PROVIDERS"]
+    for provider in discover_callback_providers(callback, providers):
         if is_provider_using_response(provider):
             return True
 
     return False
 
 
-def build_plan(callback) -> andi.Plan:
+def build_plan(callback: Callable, providers: List[Type[PageObjectInputProvider]]) -> andi.Plan:
     """Build a plan for the injection in the callback."""
     return andi.plan(
         callback,
         is_injectable=is_injectable,
-        externally_provided=get_provided_classes_from_providers(),
+        externally_provided=get_provided_classes_from_providers(providers),
     )
 
 
@@ -152,7 +149,8 @@ def build_provider(provider: Type[PageObjectInputProvider],
 
 
 @inlineCallbacks
-def build_instances(plan: andi.Plan, external_dependencies: Dict[Callable, Any]):
+def build_instances(plan: andi.Plan, providers: List[Type[PageObjectInputProvider]],
+                    external_dependencies: Dict[Callable, Any]):
     """Build the instances dict from a plan including external dependencies."""
     instances = {}
 

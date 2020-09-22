@@ -11,8 +11,6 @@ import typing
 from scrapy.http import Response
 from web_poet.page_inputs import ResponseData
 
-providers = set()
-
 
 class PageObjectInputProvider(abc.ABC):
     """This is an abstract class for describing Page Object Input Providers."""
@@ -57,10 +55,6 @@ class PageObjectInputProvider(abc.ABC):
     @abc.abstractmethod
     def __call__(self, provided_classes: typing.Set[typing.Type]) -> typing.Dict[typing.Type, typing.Any]:
         """This method is responsible for building Page Input dependencies."""
-
-    @classmethod
-    def register(cls):
-        providers.add(cls)
 
 
 class ResponseDataProvider(PageObjectInputProvider):

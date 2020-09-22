@@ -12,7 +12,10 @@ import attr
 
 from scrapy_poet import callback_for
 from web_poet.pages import WebPage, ItemWebPage
-from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.page_input_providers import (
+    PageObjectInputProvider,
+    ResponseDataProvider,
+)
 from web_poet.page_inputs import ResponseData
 from scrapy_poet.utils import DummyResponse
 from tests.utils import HtmlResource, crawl_items, capture_exceptions, \
@@ -34,8 +37,16 @@ class ProductHtml(HtmlResource):
 
 
 def spider_for(injectable: Type):
+
     class InjectableSpider(scrapy.Spider):
+
         url = None
+        custom_settings = {
+            "SCRAPY_POET_PROVIDERS": [
+                CustomResponseDataProvider,
+                ResponseDataProvider,
+            ]
+        }
 
         def start_requests(self):
             yield Request(self.url, capture_exceptions(callback_for(injectable)))
@@ -111,7 +122,7 @@ class ProvidedAsyncTest:
     response: ResponseData  # it should be None because this class is provided
 
 
-class ResponseDataProvider(PageObjectInputProvider):
+class CustomResponseDataProvider(PageObjectInputProvider):
 
     provided_classes = {ProvidedAsyncTest}
 
@@ -124,9 +135,6 @@ class ResponseDataProvider(PageObjectInputProvider):
         raise returnValue({
             ProvidedAsyncTest: ProvidedAsyncTest(f"Provided {five}!", None)
         })
-
-
-ResponseDataProvider.register()
 
 
 @attr.s(auto_attribs=True)
@@ -146,7 +154,14 @@ def test_providers(settings):
 
 
 class MultiArgsCallbackSpider(scrapy.Spider):
+
     url = None
+    custom_settings = {
+        "SCRAPY_POET_PROVIDERS": [
+            CustomResponseDataProvider,
+            ResponseDataProvider,
+        ]
+    }
 
     def start_requests(self):
         yield Request(self.url, self.parse, cb_kwargs=dict(cb_arg="arg!"))

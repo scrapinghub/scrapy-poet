@@ -3,6 +3,7 @@ from typing import Any, Dict
 
 import scrapy
 from scrapy.http import TextResponse
+from scrapy.settings import Settings
 
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
@@ -51,9 +52,6 @@ class DummyProductProvider(PageObjectInputProvider):
         }
 
 
-DummyProductProvider.register()
-
-
 class FakeProductProvider(PageObjectInputProvider):
 
     provided_classes = {FakeProductResponse}
@@ -68,9 +66,6 @@ class FakeProductProvider(PageObjectInputProvider):
         return {
             DummyProductResponse: DummyProductResponse(data=data)
         }
-
-
-FakeProductProvider.register()
 
 
 class TextProductProvider(ResponseDataProvider):
@@ -124,6 +119,13 @@ class BookPage(WebPage):
 class MySpider(scrapy.Spider):
 
     name = 'foo'
+    custom_settings = {
+        "SCRAPY_POET_PROVIDERS": [
+            ResponseDataProvider,
+            DummyProductProvider,
+            FakeProductProvider,
+        ]
+    }
     callback_for_parse = callback_for(DummyProductPage)
 
     def parse(self, response):
@@ -211,6 +213,11 @@ def test_is_callback_using_response():
 
 def test_is_response_going_to_be_used():
     spider = MySpider()
+
+    # Spider settings are updated when it's initialized from a Crawler.
+    # Since we're manually initializing it, let's just copy custom settings
+    # and use them as our settings object.
+    spider.settings = Settings(spider.custom_settings)
 
     request = scrapy.Request("http://example.com")
     assert is_response_going_to_be_used(request, spider) is True

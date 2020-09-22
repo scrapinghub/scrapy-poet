@@ -6,7 +6,10 @@ from scrapy.http import Request
 from web_poet.pages import ItemWebPage
 
 from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES
-from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.page_input_providers import (
+    PageObjectInputProvider,
+    ResponseDataProvider,
+)
 
 from tests.utils import crawl_items, crawl_single_item, HtmlResource
 
@@ -49,8 +52,6 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
                 )
             }
 
-    PageDataProvider.register()
-
     @attr.s(auto_attribs=True)
     class Page(ItemWebPage):
 
@@ -65,6 +66,12 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
 
         name = "my_spider"
         url = None
+        custom_settings = {
+            "SCRAPY_POET_PROVIDERS": [
+                ResponseDataProvider,
+                PageDataProvider,
+            ]
+        }
 
         def start_requests(self):
             yield Request(url=self.url, callback=self.parse)

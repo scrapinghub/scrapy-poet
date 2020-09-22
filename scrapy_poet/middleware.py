@@ -74,9 +74,11 @@ class InjectionMiddleware:
         }
         assert set(external_dependencies.keys()) == _SCRAPY_PROVIDED_CLASSES
 
+        providers = spider.settings["SCRAPY_POET_PROVIDERS"]
+
         # Build all instances declared as dependencies
-        plan = utils.build_plan(callback)
-        instances = yield from utils.build_instances(plan, external_dependencies)
+        plan = utils.build_plan(callback, providers)
+        instances = yield from utils.build_instances(plan, providers, external_dependencies)
 
         # Fill the callback arguments with the created instances
         for arg, value in plan.final_kwargs(instances).items():
