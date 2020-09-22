@@ -53,7 +53,7 @@ class PageObjectInputProvider(abc.ABC):
         """
 
     @abc.abstractmethod
-    def __call__(self, provided_classes: typing.Set[typing.Type]) -> typing.Dict[typing.Type, typing.Any]:
+    def __call__(self, to_provide: typing.Set[typing.Type]) -> typing.Dict[typing.Type, typing.Any]:
         """This method is responsible for building Page Input dependencies."""
 
 
@@ -66,7 +66,7 @@ class ResponseDataProvider(PageObjectInputProvider):
         """This class receives a Scrapy ``Response`` as a dependency."""
         self.response = response
 
-    def __call__(self, provided_classes: typing.Set[typing.Type]):
+    def __call__(self, to_provide: typing.Set[typing.Type]):
         """Builds a ``ResponseData`` instance using a Scrapy ``Response``."""
         return {
             ResponseData: ResponseData(

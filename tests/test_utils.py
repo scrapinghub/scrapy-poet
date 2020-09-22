@@ -40,7 +40,7 @@ class DummyProductProvider(PageObjectInputProvider):
     def __init__(self, request: scrapy.Request):
         self.request = request
 
-    def __call__(self, provided_classes):
+    def __call__(self, to_provide):
         data = {
             'product': {
                 'url': self.request.url,
@@ -56,7 +56,7 @@ class FakeProductProvider(PageObjectInputProvider):
 
     provided_classes = {FakeProductResponse}
 
-    def __call__(self, provided_classes):
+    def __call__(self, to_provide):
         data = {
             'product': {
                 'url': 'http://example.com/sample',

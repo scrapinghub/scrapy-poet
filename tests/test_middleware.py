@@ -130,7 +130,7 @@ class CustomResponseDataProvider(PageObjectInputProvider):
         self.response = response
 
     @inlineCallbacks
-    def __call__(self, provided_classes):
+    def __call__(self, to_provide):
         five = yield deferToThread(lambda: 5)
         raise returnValue({
             ProvidedAsyncTest: ProvidedAsyncTest(f"Provided {five}!", None)
