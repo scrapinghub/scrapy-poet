@@ -155,9 +155,9 @@ def build_instances(plan: andi.Plan, providers: List[Type[PageObjectInputProvide
     instances = {}
 
     # Build dependencies handled by registered providers
-    plan_dependencies = dict(plan.dependencies)
+    dependencies_set = set(cls for cls, kwargs_spec in plan.dependencies)
     for provider in providers:
-        provided_classes = plan_dependencies.keys() & provider.provided_classes
+        provided_classes = dependencies_set & provider.provided_classes
         if not provided_classes:
             continue
 
@@ -166,7 +166,7 @@ def build_instances(plan: andi.Plan, providers: List[Type[PageObjectInputProvide
         instances.update(results)
 
     # Build remaining dependencies
-    for cls, kwargs_spec in plan_dependencies.items():
+    for cls, kwargs_spec in plan.dependencies:
         if cls not in instances.keys():
             instances[cls] = cls(**kwargs_spec.kwargs(instances))
 
