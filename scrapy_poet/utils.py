@@ -158,6 +158,7 @@ def build_instances(plan: andi.Plan, providers: List[Type[PageObjectInputProvide
     dependencies_set = set(cls for cls, kwargs_spec in plan.dependencies)
     for provider in providers:
         provided_classes = dependencies_set & provider.provided_classes
+        provided_classes -= instances.keys()
         if not provided_classes:
             continue
 
