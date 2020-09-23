@@ -152,7 +152,7 @@ def build_provider(provider: Type[PageObjectInputProvider],
 def build_instances(plan: andi.Plan, providers: List[Type[PageObjectInputProvider]],
                     external_dependencies: Dict[Callable, Any]):
     """Build the instances dict from a plan including external dependencies."""
-    instances = {}
+    instances = {}  # type: ignore
 
     # Build dependencies handled by registered providers
     dependencies_set = set(cls for cls, kwargs_spec in plan.dependencies)
