@@ -17,6 +17,7 @@ from scrapy_poet.utils import (
     is_callback_using_response,
     is_provider_using_response,
     is_response_going_to_be_used,
+    load_provider_classes,
     DummyResponse,
 )
 
@@ -37,13 +38,10 @@ class DummyProductProvider(PageObjectInputProvider):
 
     provided_classes = {DummyProductResponse}
 
-    def __init__(self, request: scrapy.Request):
-        self.request = request
-
-    def __call__(self, to_provide):
+    def __call__(self, to_provide, request: scrapy.Request):
         data = {
             'product': {
-                'url': self.request.url,
+                'url': request.url,
                 'name': 'Sample',
             },
         }
@@ -72,14 +70,14 @@ class TextProductProvider(ResponseDataProvider):
 
     # This is wrong. You should not annotate provider dependencies with classes
     # like TextResponse or HtmlResponse, you should use Response instead.
-    def __init__(self, response: TextResponse):
-        self.response = response
+    def __call__(self, to_provide, response: TextResponse):
+        return super().__call__(to_provide, response)
 
 
 class StringProductProvider(ResponseDataProvider):
 
-    def __init__(self, response: str):
-        self.response = response
+    def __call__(self, to_provide, response: str):
+        return super().__call__(to_provide, response)
 
 
 @attr.s(auto_attribs=True)
@@ -120,7 +118,7 @@ class MySpider(scrapy.Spider):
 
     name = 'foo'
     custom_settings = {
-        "SCRAPY_POET_PROVIDERS": [
+        "SCRAPY_POET_PROVIDER_CLASSES": [
             ResponseDataProvider,
             DummyProductProvider,
             FakeProductProvider,
@@ -218,39 +216,40 @@ def test_is_response_going_to_be_used():
     # Since we're manually initializing it, let's just copy custom settings
     # and use them as our settings object.
     spider.settings = Settings(spider.custom_settings)
+    providers = load_provider_classes(spider.settings)
 
     request = scrapy.Request("http://example.com")
-    assert is_response_going_to_be_used(request, spider) is True
+    assert is_response_going_to_be_used(request, spider, providers) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse2)
-    assert is_response_going_to_be_used(request, spider) is True
+    assert is_response_going_to_be_used(request, spider, providers) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse3)
-    assert is_response_going_to_be_used(request, spider) is False
+    assert is_response_going_to_be_used(request, spider, providers) is False
 
     request = scrapy.Request("http://example.com", callback=spider.parse4)
-    assert is_response_going_to_be_used(request, spider) is False
+    assert is_response_going_to_be_used(request, spider, providers) is False
 
     request = scrapy.Request("http://example.com", callback=spider.parse5)
-    assert is_response_going_to_be_used(request, spider) is True
+    assert is_response_going_to_be_used(request, spider, providers) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse6)
-    assert is_response_going_to_be_used(request, spider) is True
+    assert is_response_going_to_be_used(request, spider, providers) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse7)
-    assert is_response_going_to_be_used(request, spider) is True
+    assert is_response_going_to_be_used(request, spider, providers) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse8)
-    assert is_response_going_to_be_used(request, spider) is False
+    assert is_response_going_to_be_used(request, spider, providers) is False
 
     request = scrapy.Request("http://example.com", callback=spider.parse9)
-    assert is_response_going_to_be_used(request, spider) is True
+    assert is_response_going_to_be_used(request, spider, providers) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse10)
-    assert is_response_going_to_be_used(request, spider) is False
+    assert is_response_going_to_be_used(request, spider, providers) is False
 
     request = scrapy.Request("http://example.com", callback=spider.parse11)
-    assert is_response_going_to_be_used(request, spider) is True
+    assert is_response_going_to_be_used(request, spider, providers) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse12)
-    assert is_response_going_to_be_used(request, spider) is True
+    assert is_response_going_to_be_used(request, spider, providers) is True

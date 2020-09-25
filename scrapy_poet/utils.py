@@ -8,6 +8,7 @@ from scrapy.http import Request, Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.defer import maybeDeferred_coro
+from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from web_poet.pages import ItemPage, is_injectable
@@ -23,6 +24,17 @@ _SCRAPY_PROVIDED_CLASSES = {
     Settings,
     StatsCollector,
 }
+
+
+def load_provider_classes(settings: Settings):
+    result = []
+    for cls in settings.getlist('SCRAPY_POET_PROVIDER_CLASSES'):
+        if not callable(cls):
+            cls = load_object(cls)
+
+        result.append(cls)
+
+    return result
 
 
 def get_provided_classes_from_providers(providers: List[Type[PageObjectInputProvider]]) -> Set[Type]:
@@ -88,11 +100,11 @@ def is_callback_using_response(callback: Callable):
 def is_provider_using_response(provider):
     """Check whether injectable provider makes use of a valid Response."""
     plan = andi.plan(
-        provider,
+        provider.__call__,
         is_injectable=is_injectable,
         externally_provided=_SCRAPY_PROVIDED_CLASSES,
     )
-    for possible_type, _ in plan:
+    for possible_type, _ in plan.dependencies:
         if issubclass(possible_type, Response):
             return True
 
@@ -114,13 +126,12 @@ def discover_callback_providers(callback: Callable, providers: List[Type[PageObj
     return result
 
 
-def is_response_going_to_be_used(request, spider):
+def is_response_going_to_be_used(request, spider, providers):
     """Check whether the request's response is going to be used."""
     callback = get_callback(request, spider)
     if is_callback_using_response(callback):
         return True
 
-    providers = spider.settings["SCRAPY_POET_PROVIDERS"]
     for provider in discover_callback_providers(callback, providers):
         if is_provider_using_response(provider):
             return True
@@ -137,20 +148,9 @@ def build_plan(callback: Callable, providers: List[Type[PageObjectInputProvider]
     )
 
 
-def build_provider(provider: Type[PageObjectInputProvider],
-                   external_dependencies: Dict[Callable, Any]) -> PageObjectInputProvider:
-    kwargs = andi.plan(
-        provider,
-        is_injectable=is_injectable,
-        externally_provided=external_dependencies.keys(),
-        full_final_kwargs=True,
-    ).final_kwargs(external_dependencies)
-    return provider(**kwargs)  # type: ignore
-
-
 @inlineCallbacks
 def build_instances(plan: andi.Plan, providers: List[Type[PageObjectInputProvider]],
-                    external_dependencies: Dict[Callable, Any]):
+                    scrapy_provided_dependencies: Dict[Callable, Any]):
     """Build the instances dict from a plan including external dependencies."""
     instances: Dict[Callable, Any] = {}
 
@@ -162,8 +162,13 @@ def build_instances(plan: andi.Plan, providers: List[Type[PageObjectInputProvide
         if not provided_classes:
             continue
 
-        provider_instance = build_provider(provider, external_dependencies)
-        results = yield maybeDeferred_coro(provider_instance, provided_classes)
+        kwargs = andi.plan(
+            provider,
+            is_injectable=is_injectable,
+            externally_provided=scrapy_provided_dependencies,
+            full_final_kwargs=False,
+        ).final_kwargs(scrapy_provided_dependencies)
+        results = yield maybeDeferred_coro(provider, provided_classes, **kwargs)
         extra_classes = results.keys() - provider.provided_classes
         if extra_classes:
             raise RuntimeError(

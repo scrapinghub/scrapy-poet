@@ -43,7 +43,7 @@ def spider_for(injectable: Type):
 
         url = None
         custom_settings = {
-            "SCRAPY_POET_PROVIDERS": [
+            "SCRAPY_POET_PROVIDER_CLASSES": [
                 CustomResponseDataProvider,
                 ExtraClassDataProvider,
                 ResponseDataProvider,
@@ -128,11 +128,8 @@ class CustomResponseDataProvider(PageObjectInputProvider):
 
     provided_classes = {ProvidedAsyncTest}
 
-    def __init__(self, response: scrapy.http.Response):
-        self.response = response
-
     @inlineCallbacks
-    def __call__(self, to_provide):
+    def __call__(self, to_provide, response: scrapy.http.Response):
         five = yield deferToThread(lambda: 5)
         raise returnValue({
             ProvidedAsyncTest: ProvidedAsyncTest(f"Provided {five}!", None)
@@ -191,7 +188,7 @@ class MultiArgsCallbackSpider(scrapy.Spider):
 
     url = None
     custom_settings = {
-        "SCRAPY_POET_PROVIDERS": [
+        "SCRAPY_POET_PROVIDER_CLASSES": [
             CustomResponseDataProvider,
             ResponseDataProvider,
         ]

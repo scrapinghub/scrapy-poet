@@ -9,6 +9,7 @@ import abc
 import typing
 
 from scrapy.http import Response
+from scrapy.crawler import Crawler
 from web_poet.page_inputs import ResponseData
 
 
@@ -17,7 +18,7 @@ class PageObjectInputProvider(abc.ABC):
 
     provided_classes: typing.Set[typing.Type]
 
-    def __init__(self):
+    def __init__(self, crawler: Crawler):
         """You can override this method to receive external dependencies.
 
         Currently, scrapy-poet is able to inject instances of the following
@@ -51,6 +52,7 @@ class PageObjectInputProvider(abc.ABC):
                         assert isinstance(response, TextResponse)
                         self.response = response
         """
+        self.crawler = crawler
 
     @abc.abstractmethod
     def __call__(self, to_provide: typing.Set[typing.Type]) -> typing.Dict[typing.Type, typing.Any]:
@@ -62,15 +64,11 @@ class ResponseDataProvider(PageObjectInputProvider):
 
     provided_classes = {ResponseData}
 
-    def __init__(self, response: Response):
-        """This class receives a Scrapy ``Response`` as a dependency."""
-        self.response = response
-
-    def __call__(self, to_provide: typing.Set[typing.Type]):
+    def __call__(self, to_provide: typing.Set[typing.Type], response: Response):
         """Builds a ``ResponseData`` instance using a Scrapy ``Response``."""
         return {
             ResponseData: ResponseData(
-                url=self.response.url,
-                html=self.response.text
+                url=response.url,
+                html=response.text
             )
         }

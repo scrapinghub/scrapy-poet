@@ -42,10 +42,7 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
 
         provided_classes = {PageData}
 
-        def __init__(self, obj: scrapy_class):
-            self.obj = obj
-
-        def __call__(self, to_provide):
+        def __call__(self, to_provide, obj: scrapy_class):
             return {
                 PageData: PageData(
                     scrapy_class=scrapy_class.__name__,
@@ -67,7 +64,7 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
         name = "my_spider"
         url = None
         custom_settings = {
-            "SCRAPY_POET_PROVIDERS": [
+            "SCRAPY_POET_PROVIDER_CLASSES": [
                 ResponseDataProvider,
                 PageDataProvider,
             ]
