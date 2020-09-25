@@ -164,6 +164,13 @@ def build_instances(plan: andi.Plan, providers: List[Type[PageObjectInputProvide
 
         provider_instance = build_provider(provider, external_dependencies)
         results = yield maybeDeferred_coro(provider_instance, provided_classes)
+        extra_classes = results.keys() - provider.provided_classes
+        if extra_classes:
+            raise RuntimeError(
+                f"{provider} has returned {extra_classes} but they're not "
+                f"listed as provided classes {provider.provided_classes}"
+            )
+
         instances.update(results)
 
     # Build remaining dependencies

@@ -3,6 +3,7 @@ from twisted.internet.defer import returnValue
 from twisted.internet.threads import deferToThread
 from typing import Optional, Union, Type
 
+import pytest
 import scrapy
 from scrapy import Request
 from scrapy.http import Response
@@ -11,7 +12,7 @@ from pytest_twisted import inlineCallbacks
 import attr
 
 from scrapy_poet import callback_for
-from web_poet.pages import WebPage, ItemWebPage
+from web_poet.pages import WebPage, ItemPage, ItemWebPage
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
     ResponseDataProvider,
@@ -44,6 +45,7 @@ def spider_for(injectable: Type):
         custom_settings = {
             "SCRAPY_POET_PROVIDERS": [
                 CustomResponseDataProvider,
+                ExtraClassDataProvider,
                 ResponseDataProvider,
             ]
         }
@@ -138,6 +140,27 @@ class CustomResponseDataProvider(PageObjectInputProvider):
 
 
 @attr.s(auto_attribs=True)
+class ExtraClassData(ItemPage):
+    msg: str
+
+    def to_item(self):
+        return {"msg": self.msg}
+
+
+class ExtraClassDataProvider(PageObjectInputProvider):
+
+    provided_classes = {ExtraClassData}
+
+    def __call__(self, to_provide):
+        # This should generate a runtime error in Injection Middleware because
+        # we're returning a class that's not listed in self.provided_classes
+        return {
+            ExtraClassData: ExtraClassData("this should be returned"),
+            ResponseData: ResponseData("example.com", "this shouldn't"),
+        }
+
+
+@attr.s(auto_attribs=True)
 class ProvidersPage(ItemWebPage):
     provided: ProvidedAsyncTest
 
@@ -151,6 +174,17 @@ def test_providers(settings):
                                          ProductHtml, settings)
     assert item['provided'].msg == "Provided 5!"
     assert item['provided'].response == None
+
+
+@inlineCallbacks
+def test_providers_returning_wrong_classes(settings):
+    """Injection Middleware should raise a runtime error whenever a provider
+    returns instances of classes that they're not supposed to provide.
+    """
+    with pytest.raises(AssertionError):
+        yield crawl_single_item(
+            spider_for(ExtraClassData), ProductHtml, settings
+        )
 
 
 class MultiArgsCallbackSpider(scrapy.Spider):
