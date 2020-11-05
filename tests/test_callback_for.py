@@ -89,7 +89,7 @@ def test_inline_callback():
     with pytest.raises(ValueError) as exc:
         request_to_dict(request, spider)
 
-    msg = f'Function {cb} is not a method of: {spider}'
+    msg = f'Function {cb} is not an instance method in: {spider}'
     assert str(exc.value) == msg
 
 
