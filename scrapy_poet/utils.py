@@ -11,6 +11,7 @@ from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks, returnValue
 
+from scrapy_poet.errors import InjectionError
 from web_poet.pages import ItemPage, is_injectable
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 
@@ -37,9 +38,37 @@ def load_provider_classes(settings: Settings):
     return result
 
 
-def get_provided_classes_from_providers(providers: List[Type[PageObjectInputProvider]]) -> Set[Type]:
-    provided_classes = (p.provided_classes for p in providers)
-    return set.union(*provided_classes)
+def is_class_provided_by_any_provider_fn(providers: List[Type[PageObjectInputProvider]]
+                                         ) -> Callable[[Callable], bool]:
+    """
+    Return a function of type ``Callable[[Type], bool]`` that return
+    True if the given type is provided by any of the registered providers.
+
+    The attribute ``provided_classes`` from each provided is used.
+    This attribute can be a ``set`` or a ``Callable``. All sets are
+    joined together for efficiency.
+    """
+    sets_of_types: Set[Callable] = set()  # caching all sets found
+    individual_is_callable: List[Callable[[Callable], bool]] = [sets_of_types.__contains__]
+    for provider in providers:
+        provided_classes = provider.provided_classes
+
+        if isinstance(provided_classes, Set):
+            sets_of_types.update(provided_classes)
+        elif callable(provider.provided_classes):
+            individual_is_callable.append(provided_classes)
+        else:
+            raise InjectionError(
+                f"Unexpected type '{type(provided_classes)}' for "
+                f"'{type(provider)}.provided_classes'. Expected either 'set' or 'callable'")
+
+    def is_provided_fn(type: Callable) -> bool:
+        for is_provided in individual_is_callable:
+            if is_provided(type):
+                return True
+        return False
+
+    return is_provided_fn
 
 
 def get_callback(request, spider):
@@ -111,16 +140,17 @@ def is_provider_using_response(provider):
     return False
 
 
-def discover_callback_providers(callback: Callable, providers: List[Type[PageObjectInputProvider]]):
+def discover_callback_providers(callback: Callable,
+                                providers: List[Type[PageObjectInputProvider]]):
     plan = andi.plan(
         callback,
         is_injectable=is_injectable,
-        externally_provided=get_provided_classes_from_providers(providers),
+        externally_provided=is_class_provided_by_any_provider_fn(providers),
     )
     result = set()
-    for obj, _ in plan:
+    for cls, _ in plan:
         for provider in providers:
-            if obj in provider.provided_classes:
+            if provider.is_provided(cls):
                 result.add(provider)
 
     return result
@@ -144,12 +174,12 @@ def build_plan(callback: Callable, providers: List[Type[PageObjectInputProvider]
     return andi.plan(
         callback,
         is_injectable=is_injectable,
-        externally_provided=get_provided_classes_from_providers(providers),
+        externally_provided=is_class_provided_by_any_provider_fn(providers),
     )
 
 
 @inlineCallbacks
-def build_instances(plan: andi.Plan, providers: List[Type[PageObjectInputProvider]],
+def build_instances(plan: andi.Plan, providers: List[PageObjectInputProvider],
                     scrapy_provided_dependencies: Dict[Callable, Any]):
     """Build the instances dict from a plan including external dependencies."""
     instances: Dict[Callable, Any] = {}
@@ -157,19 +187,24 @@ def build_instances(plan: andi.Plan, providers: List[Type[PageObjectInputProvide
     # Build dependencies handled by registered providers
     dependencies_set = set(cls for cls, kwargs_spec in plan.dependencies)
     for provider in providers:
-        provided_classes = dependencies_set & provider.provided_classes
+        provided_classes = {cls for cls in dependencies_set if provider.is_provided(cls)}
         provided_classes -= instances.keys()  # ignore already provided types
         if not provided_classes:
             continue
 
+        if not callable(provider):
+            raise InjectionError(
+                f"The provider {type(provider)} is not callable. "
+                f"It must implement '__call__'  method"
+            )
         kwargs = andi.plan(
             provider,
             is_injectable=is_injectable,
             externally_provided=scrapy_provided_dependencies,
             full_final_kwargs=False,
         ).final_kwargs(scrapy_provided_dependencies)
-        results = yield maybeDeferred_coro(provider, provided_classes, **kwargs)
-        extra_classes = results.keys() - provider.provided_classes
+        results = yield maybeDeferred_coro(provider, set(provided_classes), **kwargs)
+        extra_classes = results.keys() - provided_classes
         if extra_classes:
             raise RuntimeError(
                 f"{provider} has returned {extra_classes} but they're not "

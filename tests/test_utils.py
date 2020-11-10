@@ -1,9 +1,14 @@
 import attr
 from typing import Any, Dict
 
+import pytest
+import pytest_twisted
+
+import andi
 import scrapy
 from scrapy.http import TextResponse
 from scrapy.settings import Settings
+from scrapy_poet.errors import InjectionError
 
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
@@ -18,7 +23,7 @@ from scrapy_poet.utils import (
     is_provider_using_response,
     is_response_going_to_be_used,
     load_provider_classes,
-    DummyResponse,
+    DummyResponse, build_instances,
 )
 
 
@@ -253,3 +258,23 @@ def test_is_response_going_to_be_used():
 
     request = scrapy.Request("http://example.com", callback=spider.parse12)
     assert is_response_going_to_be_used(request, spider, providers) is True
+
+
+@pytest_twisted.inlineCallbacks
+def test_non_callable_provider_error():
+    """Checks that a exception is raised when a provider is not callable"""
+    class NonCallableProviderResponse:
+        pass
+
+    class NonCallableProvider(PageObjectInputProvider):
+        provided_classes = {NonCallableProviderResponse}
+
+    def callback(response: NonCallableProviderResponse):
+        pass
+
+    with pytest.raises(InjectionError):
+        yield build_instances(
+            andi.plan(callback, is_injectable={NonCallableProviderResponse}),
+            [NonCallableProvider(None)],
+            {}
+        )

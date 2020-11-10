@@ -170,7 +170,7 @@ def test_providers(settings):
     item, _, _ = yield crawl_single_item(spider_for(ProvidersPage),
                                          ProductHtml, settings)
     assert item['provided'].msg == "Provided 5!"
-    assert item['provided'].response == None
+    assert item['provided'].response is None
 
 
 @inlineCallbacks
@@ -214,7 +214,7 @@ def test_multi_args_callbacks(settings):
     assert type(item['product']) == ProductPage
     assert type(item['provided']) == ProvidedAsyncTest
     assert item['cb_arg'] == "arg!"
-    assert item['non_cb_arg'] == None
+    assert item['non_cb_arg'] is None
 
 
 @attr.s(auto_attribs=True)

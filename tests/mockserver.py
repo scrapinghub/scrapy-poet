@@ -43,10 +43,12 @@ def main():
     sys.path.append('.')
     resource = getattr(import_module(module_name), name)()
     http_port = reactor.listenTCP(args.port, Site(resource))
+
     def print_listening():
         host = http_port.getHost()
         print('Mock server {} running at http://{}:{}'.format(
             resource, host.host, host.port))
+
     reactor.callWhenRunning(print_listening)
     reactor.run()
 
