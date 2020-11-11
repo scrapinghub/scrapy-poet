@@ -181,3 +181,9 @@ def test_is_class_provided_by_any_provider_fn():
     for cls in [bytes, Exception]:
         assert not is_provided(cls)
         assert not is_provided_empty(cls)
+
+    class WrongProvider(PageObjectInputProvider):
+        provided_classes = [str]
+
+    with pytest.raises(InjectionError):
+        is_class_provided_by_any_provider_fn([WrongProvider])
