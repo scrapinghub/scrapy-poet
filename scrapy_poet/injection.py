@@ -166,7 +166,7 @@ def check_all_providers_are_callable(providers):
             )
 
 
-def load_provider_classes(settings: Settings):
+def load_provider_classes(settings: Settings) -> List[PageObjectInputProvider]:
     result = []
     for cls in settings.getlist('SCRAPY_POET_PROVIDER_CLASSES') or PROVIDERS:
         if not callable(cls):
