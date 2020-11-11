@@ -7,7 +7,7 @@ Utils
 
 .. autofunction:: scrapy_poet.callback_for
 
-.. autoclass:: scrapy_poet.utils.DummyResponse
+.. autoclass:: scrapy_poet.DummyResponse
    :members:
    :no-special-members:
 
