@@ -2,8 +2,6 @@
 responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
-from typing import List
-
 from scrapy import Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
@@ -12,7 +10,6 @@ from scrapy.statscollectors import StatsCollector
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from scrapy_poet import utils
-from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES, load_provider_classes
 
 
@@ -21,7 +18,18 @@ class Injector:
     def __init__(self, crawler: Crawler):
         self.crawler = crawler
         self.spider = crawler.spider
-        self.providers = self.load_providers()
+        self.load_providers()
+
+    def load_providers(self):
+        self.providers = [
+            cls(self.crawler)
+            for cls in load_provider_classes(self.crawler.settings)
+        ]
+        # Caching whether each provider requires the scrapy response
+        self.is_provider_requiring_scrapy_response = {
+            id(provider): utils.is_provider_requiring_scrapy_response(provider)
+            for provider in self.providers
+        }
 
     def available_dependencies_for_providers(self,
                                              request: Request,
@@ -36,6 +44,20 @@ class Injector:
         }
         assert deps.keys() == _SCRAPY_PROVIDED_CLASSES
         return deps
+
+    def is_scrapy_response_required(self, request: Request):
+        """
+        Check whether the request's response is going to be used.
+        """
+        callback = utils.get_callback(request, self.spider)
+        if utils.is_callback_requiring_scrapy_response(callback):
+            return True
+
+        for provider in utils.discover_callback_providers(callback, self.providers):
+            if self.is_provider_requiring_scrapy_response[id(provider)]:
+                return True
+
+        return False
 
     @inlineCallbacks
     def build_callback_dependencies(self, request: Request, response: Response):
@@ -53,12 +75,6 @@ class Injector:
         )
         callback_kwargs = plan.final_kwargs(provider_instances)
         raise returnValue(callback_kwargs)
-
-    def load_providers(self) -> List[PageObjectInputProvider]:
-        return [
-            cls(self.crawler)
-            for cls in load_provider_classes(self.crawler.settings)
-        ]
 
 
 class InjectionMiddleware:
@@ -89,8 +105,7 @@ class InjectionMiddleware:
         actually using another source like external APIs such as Scrapinghub's
         Auto Extract.
         """
-        providers = self.injector.providers
-        if utils.is_response_going_to_be_used(request, spider, providers):
+        if self.injector.is_scrapy_response_required(request):
             return
 
         spider.logger.debug(f'Skipping download of {request}')

@@ -100,8 +100,12 @@ class DummyResponse(Response):
         super().__init__(url=url, request=request)
 
 
-def is_callback_using_response(callback: Callable):
-    """Check whether the request's callback method is going to use response."""
+def is_callback_requiring_scrapy_response(callback: Callable):
+    """
+    Check whether the request's callback method is going to use response.
+    Basically, it won't be required if the response argument in the
+    callback is annotated with ``DummyResponse``
+    """
     if getattr(callback, _CALLBACK_FOR_MARKER, False) is True:
         # The callback_for function was used to create this callback.
         return False
@@ -126,7 +130,7 @@ def is_callback_using_response(callback: Callable):
     return True
 
 
-def is_provider_using_response(provider):
+def is_provider_requiring_scrapy_response(provider):
     """Check whether injectable provider makes use of a valid Response."""
     plan = andi.plan(
         provider.__call__,
@@ -154,19 +158,6 @@ def discover_callback_providers(callback: Callable,
                 result.add(provider)
 
     return result
-
-
-def is_response_going_to_be_used(request, spider, providers):
-    """Check whether the request's response is going to be used."""
-    callback = get_callback(request, spider)
-    if is_callback_using_response(callback):
-        return True
-
-    for provider in discover_callback_providers(callback, providers):
-        if is_provider_using_response(provider):
-            return True
-
-    return False
 
 
 def build_plan(callback: Callable, providers: List[PageObjectInputProvider]) -> andi.Plan:

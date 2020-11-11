@@ -6,9 +6,11 @@ import pytest_twisted
 
 import andi
 import scrapy
+from scrapy.crawler import Crawler
 from scrapy.http import TextResponse
 from scrapy.settings import Settings
 from scrapy_poet.errors import InjectionError
+from scrapy_poet.middleware import Injector
 
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
@@ -19,10 +21,8 @@ from web_poet.pages import ItemPage, WebPage
 from scrapy_poet.utils import (
     callback_for,
     get_callback,
-    is_callback_using_response,
-    is_provider_using_response,
-    is_response_going_to_be_used,
-    load_provider_classes,
+    is_callback_requiring_scrapy_response,
+    is_provider_requiring_scrapy_response,
     DummyResponse, build_instances,
 )
 
@@ -185,79 +185,81 @@ def test_get_callback():
 
 
 def test_is_provider_using_response():
-    assert is_provider_using_response(PageObjectInputProvider) is False
-    assert is_provider_using_response(ResponseDataProvider) is True
+    assert is_provider_requiring_scrapy_response(PageObjectInputProvider) is False
+    assert is_provider_requiring_scrapy_response(ResponseDataProvider) is True
     # TextProductProvider wrongly annotates response dependency as
     # TextResponse, instead of using the Response type.
-    assert is_provider_using_response(TextProductProvider) is False
-    assert is_provider_using_response(DummyProductProvider) is False
-    assert is_provider_using_response(FakeProductProvider) is False
-    assert is_provider_using_response(StringProductProvider) is False
+    assert is_provider_requiring_scrapy_response(TextProductProvider) is False
+    assert is_provider_requiring_scrapy_response(DummyProductProvider) is False
+    assert is_provider_requiring_scrapy_response(FakeProductProvider) is False
+    assert is_provider_requiring_scrapy_response(StringProductProvider) is False
 
 
 def test_is_callback_using_response():
     spider = MySpider()
-    assert is_callback_using_response(spider.parse) is True
-    assert is_callback_using_response(spider.parse2) is True
-    assert is_callback_using_response(spider.parse3) is False
-    assert is_callback_using_response(spider.parse4) is False
-    assert is_callback_using_response(spider.parse5) is True
-    assert is_callback_using_response(spider.parse6) is False
-    assert is_callback_using_response(spider.parse7) is True
-    assert is_callback_using_response(spider.parse8) is False
-    assert is_callback_using_response(spider.parse9) is True
-    assert is_callback_using_response(spider.parse10) is False
-    assert is_callback_using_response(spider.parse11) is True
-    assert is_callback_using_response(spider.parse12) is True
+    assert is_callback_requiring_scrapy_response(spider.parse) is True
+    assert is_callback_requiring_scrapy_response(spider.parse2) is True
+    assert is_callback_requiring_scrapy_response(spider.parse3) is False
+    assert is_callback_requiring_scrapy_response(spider.parse4) is False
+    assert is_callback_requiring_scrapy_response(spider.parse5) is True
+    assert is_callback_requiring_scrapy_response(spider.parse6) is False
+    assert is_callback_requiring_scrapy_response(spider.parse7) is True
+    assert is_callback_requiring_scrapy_response(spider.parse8) is False
+    assert is_callback_requiring_scrapy_response(spider.parse9) is True
+    assert is_callback_requiring_scrapy_response(spider.parse10) is False
+    assert is_callback_requiring_scrapy_response(spider.parse11) is True
+    assert is_callback_requiring_scrapy_response(spider.parse12) is True
     # Callbacks created with the callback_for function won't make use of
     # the response, but their providers might use them.
-    assert is_callback_using_response(spider.callback_for_parse) is False
+    assert is_callback_requiring_scrapy_response(spider.callback_for_parse) is False
 
 
 def test_is_response_going_to_be_used():
+    crawler = Crawler(MySpider)
     spider = MySpider()
+    crawler.spider = spider
 
     # Spider settings are updated when it's initialized from a Crawler.
     # Since we're manually initializing it, let's just copy custom settings
     # and use them as our settings object.
     spider.settings = Settings(spider.custom_settings)
-    providers = load_provider_classes(spider.settings)
+    injector = Injector(crawler)
 
     request = scrapy.Request("http://example.com")
-    assert is_response_going_to_be_used(request, spider, providers) is True
+    assert injector.is_scrapy_response_required(request) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse2)
-    assert is_response_going_to_be_used(request, spider, providers) is True
+    assert injector.is_scrapy_response_required(request) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse3)
-    assert is_response_going_to_be_used(request, spider, providers) is False
+    assert injector.is_scrapy_response_required(request) is False
 
     request = scrapy.Request("http://example.com", callback=spider.parse4)
-    assert is_response_going_to_be_used(request, spider, providers) is False
+    assert injector.is_scrapy_response_required(request) is False
 
     request = scrapy.Request("http://example.com", callback=spider.parse5)
-    assert is_response_going_to_be_used(request, spider, providers) is True
+    assert injector.is_scrapy_response_required(request) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse6)
-    assert is_response_going_to_be_used(request, spider, providers) is True
+    assert injector.is_scrapy_response_required(request) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse7)
-    assert is_response_going_to_be_used(request, spider, providers) is True
+    assert injector.is_scrapy_response_required(request) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse8)
-    assert is_response_going_to_be_used(request, spider, providers) is False
+    assert injector.is_scrapy_response_required(request) is False
 
     request = scrapy.Request("http://example.com", callback=spider.parse9)
-    assert is_response_going_to_be_used(request, spider, providers) is True
+    assert injector.is_scrapy_response_required(request) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse10)
-    assert is_response_going_to_be_used(request, spider, providers) is False
+    assert injector.is_scrapy_response_required(request) is False
 
     request = scrapy.Request("http://example.com", callback=spider.parse11)
-    assert is_response_going_to_be_used(request, spider, providers) is True
+    assert injector.is_scrapy_response_required(request) is True
 
     request = scrapy.Request("http://example.com", callback=spider.parse12)
-    assert is_response_going_to_be_used(request, spider, providers) is True
+    assert injector.is_scrapy_response_required(request) is True
 
 
 @pytest_twisted.inlineCallbacks
