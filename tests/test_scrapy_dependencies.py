@@ -5,7 +5,7 @@ from scrapy import Spider
 from scrapy.http import Request
 from web_poet.pages import ItemWebPage
 
-from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES
+from scrapy_poet.injection import SCRAPY_PROVIDED_CLASSES
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
     ResponseDataProvider,
@@ -30,7 +30,7 @@ class ProductHtml(HtmlResource):
 
 
 @inlineCallbacks
-@pytest.mark.parametrize('scrapy_class', _SCRAPY_PROVIDED_CLASSES)
+@pytest.mark.parametrize('scrapy_class', SCRAPY_PROVIDED_CLASSES)
 def test_scrapy_dependencies_on_providers(scrapy_class, settings):
     """Scrapy dependencies should be injected into Providers."""
 
@@ -82,7 +82,7 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
 
 
 @inlineCallbacks
-@pytest.mark.parametrize('scrapy_class', _SCRAPY_PROVIDED_CLASSES)
+@pytest.mark.parametrize('scrapy_class', SCRAPY_PROVIDED_CLASSES)
 def test_scrapy_dependencies_on_page_objects(scrapy_class, settings):
     """Scrapy dependencies should not be injected into Page Objects."""
 

@@ -2,28 +2,24 @@ import attr
 from typing import Any, Dict
 
 import pytest
-import pytest_twisted
 
-import andi
 import scrapy
 from scrapy.crawler import Crawler
 from scrapy.http import TextResponse
 from scrapy.settings import Settings
-from scrapy_poet.errors import InjectionError
-from scrapy_poet.middleware import Injector
+from scrapy_poet.injection_errors import NonCallableProviderError
+from scrapy_poet.injection import Injector, get_callback, \
+    is_callback_requiring_scrapy_response, is_provider_requiring_scrapy_response
 
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
     ResponseDataProvider,
 )
-from web_poet.pages import ItemPage, WebPage
+from web_poet import ItemPage, WebPage
 
-from scrapy_poet.utils import (
+from scrapy_poet import (
     callback_for,
-    get_callback,
-    is_callback_requiring_scrapy_response,
-    is_provider_requiring_scrapy_response,
-    DummyResponse, build_instances,
+    DummyResponse,
 )
 
 
@@ -262,21 +258,16 @@ def test_is_response_going_to_be_used():
     assert injector.is_scrapy_response_required(request) is True
 
 
-@pytest_twisted.inlineCallbacks
 def test_non_callable_provider_error():
     """Checks that a exception is raised when a provider is not callable"""
-    class NonCallableProviderResponse:
-        pass
-
     class NonCallableProvider(PageObjectInputProvider):
-        provided_classes = {NonCallableProviderResponse}
-
-    def callback(response: NonCallableProviderResponse):
         pass
 
-    with pytest.raises(InjectionError):
-        yield build_instances(
-            andi.plan(callback, is_injectable={NonCallableProviderResponse}),
-            [NonCallableProvider(None)],
-            {}
-        )
+    crawler = Crawler(MySpider)
+    spider = MySpider()
+    crawler.spider = spider
+    spider.settings = Settings({
+        "SCRAPY_POET_PROVIDER_CLASSES": [NonCallableProvider]
+    })
+    with pytest.raises(NonCallableProviderError):
+        Injector(crawler)

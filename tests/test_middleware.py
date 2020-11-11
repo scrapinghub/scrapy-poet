@@ -18,9 +18,11 @@ from scrapy_poet.page_input_providers import (
     ResponseDataProvider,
 )
 from web_poet.page_inputs import ResponseData
-from scrapy_poet.utils import DummyResponse
-from tests.utils import HtmlResource, crawl_items, capture_exceptions, \
-    crawl_single_item
+from scrapy_poet import DummyResponse
+from tests.utils import (HtmlResource,
+                         crawl_items,
+                         capture_exceptions,
+                         crawl_single_item)
 
 
 class ProductHtml(HtmlResource):

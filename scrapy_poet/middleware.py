@@ -2,79 +2,13 @@
 responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
+
 from scrapy import Spider
-from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
-from scrapy.settings import Settings
-from scrapy.statscollectors import StatsCollector
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from scrapy_poet import utils
-from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES, load_provider_classes
-
-
-class Injector:
-
-    def __init__(self, crawler: Crawler):
-        self.crawler = crawler
-        self.spider = crawler.spider
-        self.load_providers()
-
-    def load_providers(self):
-        self.providers = [
-            cls(self.crawler)
-            for cls in load_provider_classes(self.crawler.settings)
-        ]
-        # Caching whether each provider requires the scrapy response
-        self.is_provider_requiring_scrapy_response = {
-            id(provider): utils.is_provider_requiring_scrapy_response(provider)
-            for provider in self.providers
-        }
-
-    def available_dependencies_for_providers(self,
-                                             request: Request,
-                                             response: Response):
-        deps = {
-            Crawler: self.crawler,
-            Spider: self.spider,
-            Settings: self.spider.settings,
-            StatsCollector: self.crawler.stats,
-            Request: request,
-            Response: response,
-        }
-        assert deps.keys() == _SCRAPY_PROVIDED_CLASSES
-        return deps
-
-    def is_scrapy_response_required(self, request: Request):
-        """
-        Check whether the request's response is going to be used.
-        """
-        callback = utils.get_callback(request, self.spider)
-        if utils.is_callback_requiring_scrapy_response(callback):
-            return True
-
-        for provider in utils.discover_callback_providers(callback, self.providers):
-            if self.is_provider_requiring_scrapy_response[id(provider)]:
-                return True
-
-        return False
-
-    @inlineCallbacks
-    def build_callback_dependencies(self, request: Request, response: Response):
-        """
-        Scan the configured callback for this response looking for the
-        dependencies and build the instances for them. Return a kwargs
-        dictionary with the built instances.
-        """
-        callback = utils.get_callback(request, self.spider)
-        plan = utils.build_plan(callback, self.providers)
-        provider_instances = yield from utils.build_instances(
-            plan,
-            self.providers,
-            self.available_dependencies_for_providers(request, response)
-        )
-        callback_kwargs = plan.final_kwargs(provider_instances)
-        raise returnValue(callback_kwargs)
+from scrapy_poet import api
+from scrapy_poet.injection import Injector
 
 
 class InjectionMiddleware:
@@ -109,7 +43,7 @@ class InjectionMiddleware:
             return
 
         spider.logger.debug(f'Skipping download of {request}')
-        return utils.DummyResponse(url=request.url, request=request)
+        return api.DummyResponse(url=request.url, request=request)
 
     @inlineCallbacks
     def process_response(self, request: Request, response: Response,

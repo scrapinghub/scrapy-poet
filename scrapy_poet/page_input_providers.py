@@ -9,7 +9,7 @@ from typing import Set, Type, Union, Callable
 
 from scrapy.http import Response
 from scrapy.crawler import Crawler
-from scrapy_poet.errors import InjectionError
+from scrapy_poet.injection_errors import InjectionError
 from web_poet.page_inputs import ResponseData
 
 
@@ -117,3 +117,6 @@ class ResponseDataProvider(PageObjectInputProvider):
                 html=response.text
             )
         }
+
+
+PROVIDERS = [ResponseDataProvider]
