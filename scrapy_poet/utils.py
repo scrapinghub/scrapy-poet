@@ -38,7 +38,7 @@ def load_provider_classes(settings: Settings):
     return result
 
 
-def is_class_provided_by_any_provider_fn(providers: List[Type[PageObjectInputProvider]]
+def is_class_provided_by_any_provider_fn(providers: List[PageObjectInputProvider]
                                          ) -> Callable[[Callable], bool]:
     """
     Return a function of type ``Callable[[Type], bool]`` that return
@@ -141,7 +141,7 @@ def is_provider_using_response(provider):
 
 
 def discover_callback_providers(callback: Callable,
-                                providers: List[Type[PageObjectInputProvider]]):
+                                providers: List[PageObjectInputProvider]):
     plan = andi.plan(
         callback,
         is_injectable=is_injectable,
@@ -169,7 +169,7 @@ def is_response_going_to_be_used(request, spider, providers):
     return False
 
 
-def build_plan(callback: Callable, providers: List[Type[PageObjectInputProvider]]) -> andi.Plan:
+def build_plan(callback: Callable, providers: List[PageObjectInputProvider]) -> andi.Plan:
     """Build a plan for the injection in the callback."""
     return andi.plan(
         callback,
@@ -182,12 +182,27 @@ def build_plan(callback: Callable, providers: List[Type[PageObjectInputProvider]
 def build_instances(plan: andi.Plan, providers: List[PageObjectInputProvider],
                     scrapy_provided_dependencies: Dict[Callable, Any]):
     """Build the instances dict from a plan including external dependencies."""
-    instances: Dict[Callable, Any] = {}
+    instances = yield from build_instances_from_providers(
+        plan, providers, scrapy_provided_dependencies)
 
-    # Build dependencies handled by registered providers
-    dependencies_set = set(cls for cls, kwargs_spec in plan.dependencies)
+    # Build remaining dependencies
+    for cls, kwargs_spec in plan.dependencies:
+        if cls not in instances.keys():
+            instances[cls] = cls(**kwargs_spec.kwargs(instances))
+
+    raise returnValue(instances)
+
+
+@inlineCallbacks
+def build_instances_from_providers(plan: andi.Plan,
+                                   providers: List[PageObjectInputProvider],
+                                   scrapy_provided_dependencies: Dict[Callable, Any]):
+    """"Build dependencies handled by registered providers"""
+    instances: Dict[Callable, Any] = {}
+    dependencies_set = {cls for cls, _ in plan.dependencies}
     for provider in providers:
-        provided_classes = {cls for cls in dependencies_set if provider.is_provided(cls)}
+        provided_classes = {cls for cls in dependencies_set if
+                            provider.is_provided(cls)}
         provided_classes -= instances.keys()  # ignore already provided types
         if not provided_classes:
             continue
@@ -203,7 +218,8 @@ def build_instances(plan: andi.Plan, providers: List[PageObjectInputProvider],
             externally_provided=scrapy_provided_dependencies,
             full_final_kwargs=False,
         ).final_kwargs(scrapy_provided_dependencies)
-        results = yield maybeDeferred_coro(provider, set(provided_classes), **kwargs)
+        results = yield maybeDeferred_coro(provider, set(provided_classes),
+                                           **kwargs)
         extra_classes = results.keys() - provided_classes
         if extra_classes:
             raise RuntimeError(
@@ -212,11 +228,6 @@ def build_instances(plan: andi.Plan, providers: List[PageObjectInputProvider],
             )
 
         instances.update(results)
-
-    # Build remaining dependencies
-    for cls, kwargs_spec in plan.dependencies:
-        if cls not in instances.keys():
-            instances[cls] = cls(**kwargs_spec.kwargs(instances))
 
     raise returnValue(instances)
 

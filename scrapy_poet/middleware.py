@@ -2,6 +2,8 @@
 responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
+from typing import List
+
 from scrapy import Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
@@ -10,6 +12,7 @@ from scrapy.statscollectors import StatsCollector
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 from scrapy_poet import utils
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES, load_provider_classes
 
 
@@ -39,10 +42,10 @@ class ProviderManager:
             self.providers,
             scrapy_provided_dependencies
         )
-        final_kwargs = plan.final_kwargs(provider_instances)
-        raise returnValue(final_kwargs)
+        callback_kwargs = plan.final_kwargs(provider_instances)
+        raise returnValue(callback_kwargs)
 
-    def load_providers(self):
+    def load_providers(self) -> List[PageObjectInputProvider]:
         return [
             cls(self.crawler)
             for cls in load_provider_classes(self.crawler.settings)
