@@ -16,14 +16,16 @@ from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES, load_provider_classes
 
 
-class ProviderManager:
+class Injector:
 
     def __init__(self, crawler: Crawler):
         self.crawler = crawler
         self.spider = crawler.spider
         self.providers = self.load_providers()
 
-    def available_dependencies_for_providers(self, request: Request, response: Response):
+    def available_dependencies_for_providers(self,
+                                             request: Request,
+                                             response: Response):
         deps = {
             Crawler: self.crawler,
             Spider: self.spider,
@@ -36,7 +38,12 @@ class ProviderManager:
         return deps
 
     @inlineCallbacks
-    def __call__(self, request: Request, response: Response):
+    def build_callback_dependencies(self, request: Request, response: Response):
+        """
+        Scan the configured callback for this response looking for the
+        dependencies and build the instances for them. Return a kwargs
+        dictionary with the built instances.
+        """
         callback = utils.get_callback(request, self.spider)
         plan = utils.build_plan(callback, self.providers)
         provider_instances = yield from utils.build_instances(
@@ -62,7 +69,7 @@ class InjectionMiddleware:
     """
     def __init__(self, crawler):
         self.crawler = crawler
-        self.provider_manager = ProviderManager(crawler)
+        self.injector = Injector(crawler)
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -82,7 +89,7 @@ class InjectionMiddleware:
         actually using another source like external APIs such as Scrapinghub's
         Auto Extract.
         """
-        providers = self.provider_manager.providers
+        providers = self.injector.providers
         if utils.is_response_going_to_be_used(request, spider, providers):
             return
 
@@ -112,7 +119,7 @@ class InjectionMiddleware:
         - :class:`~scrapy.statscollectors.StatsCollector`
         """
         # Find out the dependencies
-        final_kwargs = yield from self.provider_manager(
+        final_kwargs = yield from self.injector.build_callback_dependencies(
             request,
             response
         )
