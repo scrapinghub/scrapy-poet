@@ -256,18 +256,3 @@ def test_is_response_going_to_be_used():
 
     request = scrapy.Request("http://example.com", callback=spider.parse12)
     assert injector.is_scrapy_response_required(request) is True
-
-
-def test_non_callable_provider_error():
-    """Checks that a exception is raised when a provider is not callable"""
-    class NonCallableProvider(PageObjectInputProvider):
-        pass
-
-    crawler = Crawler(MySpider)
-    spider = MySpider()
-    crawler.spider = spider
-    spider.settings = Settings({
-        "SCRAPY_POET_PROVIDER_CLASSES": [NonCallableProvider]
-    })
-    with pytest.raises(NonCallableProviderError):
-        Injector(crawler)

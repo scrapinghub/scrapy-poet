@@ -20,7 +20,10 @@ from web_poet.pages import is_injectable
 
 
 class Injector:
-
+    """
+    Keep all the logic required to do dependency injection in Scrapy callbacks.
+    Initializes the providers from the spider settings at initialization.
+    """
     def __init__(self, crawler: Crawler):
         self.crawler = crawler
         self.spider = crawler.spider
@@ -117,7 +120,6 @@ class Injector:
         instances: Dict[Callable, Any] = {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response)
-        assert scrapy_provided_dependencies.keys() == SCRAPY_PROVIDED_CLASSES
         dependencies_set = {cls for cls, _ in plan.dependencies}
         for provider in self.providers:
             provided_classes = {cls for cls in dependencies_set if
