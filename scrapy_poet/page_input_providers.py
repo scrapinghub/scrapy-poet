@@ -9,7 +9,7 @@ from typing import Set, Type, Union, Callable
 
 from scrapy.http import Response
 from scrapy.crawler import Crawler
-from scrapy_poet.injection_errors import InjectionError
+from scrapy_poet.injection_errors import MalformedProvidedClassesError
 from web_poet.page_inputs import ResponseData
 
 
@@ -85,9 +85,9 @@ class PageObjectInputProvider:
         elif callable(cls.provided_classes):
             return cls.provided_classes(type_)
         else:
-            raise InjectionError(
-                f"Unexpected type '{type(cls.provided_classes)}' for "
-                f"'{cls}.provided_classes'. Expected either 'set' or 'callable'")
+            raise MalformedProvidedClassesError(
+                f"Unexpected type '{type_}' for 'provided_classes' attribute of"
+                f"'{cls}.'. Expected either 'set' or 'callable'")
 
     def __init__(self, crawler: Crawler):
         pass

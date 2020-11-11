@@ -1,11 +1,11 @@
 class InjectionError(Exception):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    pass
 
 class NonCallableProviderError(InjectionError):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    pass
 
-class UnexpectedTypeError(InjectionError):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class UndeclaredProvidedTypeError(InjectionError):
+    pass
+
+class MalformedProvidedClassesError(InjectionError):
+    pass

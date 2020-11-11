@@ -11,7 +11,7 @@ from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import load_object
-from scrapy_poet.injection_errors import (UnexpectedTypeError,
+from scrapy_poet.injection_errors import (UndeclaredProvidedTypeError,
                                           NonCallableProviderError,
                                           InjectionError)
 from scrapy_poet.page_input_providers import PageObjectInputProvider, PROVIDERS
@@ -136,7 +136,7 @@ class Injector:
                                                **kwargs)
             extra_classes = results.keys() - provided_classes
             if extra_classes:
-                raise UnexpectedTypeError(
+                raise UndeclaredProvidedTypeError(
                     f"{provider} has returned {extra_classes} but they're not "
                     f"listed as provided classes {provider.provided_classes}"
                 )
