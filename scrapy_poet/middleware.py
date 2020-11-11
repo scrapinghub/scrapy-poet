@@ -20,27 +20,29 @@ class ProviderManager:
 
     def __init__(self, crawler: Crawler):
         self.crawler = crawler
+        self.spider = crawler.spider
         self.providers = self.load_providers()
 
-    @inlineCallbacks
-    def __call__(self, spider: Spider, request: Request, response: Response):
-        callback = utils.get_callback(request, spider)
-        plan = utils.build_plan(callback, self.providers)
-
-        scrapy_provided_dependencies = {
-            Spider: spider,
+    def available_dependencies_for_providers(self, request: Request, response: Response):
+        deps = {
+            Crawler: self.crawler,
+            Spider: self.spider,
+            Settings: self.spider.settings,
+            StatsCollector: self.crawler.stats,
             Request: request,
             Response: response,
-            Crawler: spider.crawler,
-            Settings: spider.settings,
-            StatsCollector: spider.crawler.stats,
         }
-        assert scrapy_provided_dependencies.keys() == _SCRAPY_PROVIDED_CLASSES
+        assert deps.keys() == _SCRAPY_PROVIDED_CLASSES
+        return deps
 
+    @inlineCallbacks
+    def __call__(self, request: Request, response: Response):
+        callback = utils.get_callback(request, self.spider)
+        plan = utils.build_plan(callback, self.providers)
         provider_instances = yield from utils.build_instances(
             plan,
             self.providers,
-            scrapy_provided_dependencies
+            self.available_dependencies_for_providers(request, response)
         )
         callback_kwargs = plan.final_kwargs(provider_instances)
         raise returnValue(callback_kwargs)
@@ -111,7 +113,6 @@ class InjectionMiddleware:
         """
         # Find out the dependencies
         final_kwargs = yield from self.provider_manager(
-            spider,
             request,
             response
         )
