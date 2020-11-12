@@ -1,13 +1,10 @@
 import attr
 from typing import Any, Dict
 
-import pytest
-
 import scrapy
 from scrapy.crawler import Crawler
 from scrapy.http import TextResponse
 from scrapy.settings import Settings
-from scrapy_poet.injection_errors import NonCallableProviderError
 from scrapy_poet.injection import Injector, get_callback, \
     is_callback_requiring_scrapy_response, is_provider_requiring_scrapy_response
 

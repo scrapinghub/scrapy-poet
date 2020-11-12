@@ -23,7 +23,8 @@ class TestProvider:
             def provided_classes(cls):
                 return issubclass(cls, str)
 
-        class SubStr(str): pass
+        class SubStr(str):
+            pass
 
         provider = Provider(None)
         assert provider.is_provided(str)
