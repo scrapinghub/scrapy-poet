@@ -8,7 +8,7 @@ Page object is used instead of callback below. It doesn't work now,
 but it can be implemented, with Scrapy support.
 """
 import scrapy
-from web_poet.pages import ItemWebPage
+from web_poet import ItemWebPage
 
 
 class BookPage(ItemWebPage):

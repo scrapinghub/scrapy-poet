@@ -13,8 +13,8 @@ and the ``BooksSpider.parse_book`` callback for implementation details.
 
 import scrapy
 
-from web_poet.pages import WebPage
-from scrapy_poet.api import DummyResponse
+from web_poet import WebPage
+from scrapy_poet import DummyResponse
 from example.autoextract import ProductPage
 
 

@@ -11,7 +11,7 @@ has problems now, it is used in the latter examples, because as an API
 it is better than defining callback explicitly.
 """
 import scrapy
-from web_poet.pages import ItemWebPage
+from web_poet import ItemWebPage
 from scrapy_poet import callback_for
 
 
