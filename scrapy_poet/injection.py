@@ -1,4 +1,5 @@
 import inspect
+import logging
 from typing import Dict, Callable, Any, List, Set
 
 from twisted.internet.defer import inlineCallbacks, returnValue
@@ -17,6 +18,9 @@ from scrapy_poet.injection_errors import (UndeclaredProvidedTypeError,
 from scrapy_poet.page_input_providers import PageObjectInputProvider, PROVIDERS
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from web_poet.pages import is_injectable
+
+
+logger = logging.getLogger(__name__)
 
 
 class Injector:
@@ -169,6 +173,8 @@ def check_all_providers_are_callable(providers):
 
 
 def load_provider_classes(settings: Settings) -> List[PageObjectInputProvider]:
+    providers = settings.getlist('SCRAPY_POET_PROVIDER_CLASSES') or PROVIDERS
+    logger.info(f"Loading providers {providers}")
     result = []
     for cls in settings.getlist('SCRAPY_POET_PROVIDER_CLASSES') or PROVIDERS:
         if not callable(cls):

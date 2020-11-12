@@ -8,9 +8,9 @@ import attr
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet.threads import deferToThread
 
+from scrapy import Request
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from web_poet import ItemPage
-from scrapy_poet import DummyResponse
 
 
 @attr.s(auto_attribs=True)
@@ -23,8 +23,8 @@ class AutoextractProductProvider(PageObjectInputProvider):
     provided_classes = {AutoextractProductResponse}
 
     @inlineCallbacks
-    def __call__(self, to_provide, response: DummyResponse):
-        data = (yield get_autoextract_product(response.url))
+    def __call__(self, to_provide, request: Request):
+        data = (yield get_autoextract_product(request.url))
         res = {AutoextractProductResponse: AutoextractProductResponse(data=data)}
         raise returnValue(res)
 
