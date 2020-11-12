@@ -1,16 +1,19 @@
-"""The Injection Middleware needs a standard way to build dependencies for
-the Page Inputs used by the request callbacks. That's why we have created a
-repository of ``PageObjectInputProviders``.
+"""The Injection Middleware needs a standard way to build the Page Inputs dependencies
+that the Page Objects uses to get external data (e.g. the HTML). That's why we
+have created a repository of ``PageObjectInputProviders``.
 
-You could implement different providers in order to acquire data from multiple
-external sources, for example, Splash or Auto Extract API.
+The current module implements a ``PageObjectInputProviders`` for
+:class:`web_poet.page_inputs.ResponseData`, which is in charge of providing the response
+HTML from Scrapy. You could also implement different providers in order to
+acquire data from multiple external sources, for example,
+Splash or Auto Extract API.
 """
 from typing import Set, Type, Union, Callable
 
 from scrapy.http import Response
 from scrapy.crawler import Crawler
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
-from web_poet.page_inputs import ResponseData
+from web_poet import ResponseData
 
 
 class PageObjectInputProvider:
@@ -18,10 +21,10 @@ class PageObjectInputProvider:
     This is the base class for creating Page Object Input Providers.
 
     A Page Object Input Provider (POIP) takes responsibility for providing
-    instances of some types to Scrapy callbacks. The types a POIP provide must
+    instances of some types to Scrapy callbacks. The types a POIP provides must
     be declared in the class attribute ``provided_classes``.
 
-    POIPs are initialized at the spider start by invoking the ``__init__`` method,
+    POIPs are initialized when the spider starts by invoking the ``__init__`` method,
     which receives the crawler instance as argument.
 
     The ``__call__`` method must be overridden, and it is inside this method
@@ -30,10 +33,11 @@ class PageObjectInputProvider:
 
     .. code-block:: python
 
-        def __call__(self, to_provide: Set[Type]) -> Dict[Type, Any]:
+        def __call__(self, to_provide: Set[Callable]) -> Dict[Callable, Any]:
 
     Therefore, it receives a list of types to be provided and return a dictionary
-    with the instances created indexed by type.
+    with the instances created indexed by its type (don't get confused by the
+    ``Callable`` annotation. Think on it as a synonym of ``Type``).
 
     Additional dependencies can be declared in the ``__call__`` signature
     that will be automatically injected. Currently, scrapy-poet is able
@@ -50,7 +54,7 @@ class PageObjectInputProvider:
     ``@inlineCallbacks`` depending on how Scrapy ``TWISTED_REACTOR``
     is configured.
 
-    The available POIPs are configured in the spider settings
+    The available POIPs should be declared in the spider settings
     ``SCRAPY_POET_PROVIDER_CLASSES``
 
     A simple example of a provider:
@@ -77,7 +81,7 @@ class PageObjectInputProvider:
     @classmethod
     def is_provided(cls, type_: Callable):
         """
-        Return ``True`` if the given type is provided by this provider, based
+        Return ``True`` if the given type is provided by this provider based
         on the value of the attribute ``provided_classes``
         """
         if isinstance(cls.provided_classes, Set):
@@ -90,6 +94,7 @@ class PageObjectInputProvider:
                 f"'{cls}.'. Expected either 'set' or 'callable'")
 
     def __init__(self, crawler: Crawler):
+        """Initializes the provider. Invoked only at spider start up."""
         pass
 
     # Remember that is expected for all children to implement the ``__call__``
@@ -109,8 +114,8 @@ class ResponseDataProvider(PageObjectInputProvider):
 
     provided_classes = {ResponseData}
 
-    def __call__(self, to_provide: Set[Type], response: Response):
-        """Builds a ``ResponseData`` instance using a Scrapy ``Response``."""
+    def __call__(self, to_provide: Set[Callable], response: Response):
+        """Builds a ``ResponseData`` instance using a Scrapy ``Response``"""
         return {
             ResponseData: ResponseData(
                 url=response.url,

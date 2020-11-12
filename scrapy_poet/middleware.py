@@ -4,6 +4,7 @@ are executed.
 """
 
 from scrapy import Spider
+from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -17,7 +18,8 @@ class InjectionMiddleware:
     * check if request downloads could be skipped
     * inject dependencies before request callbacks are executed
     """
-    def __init__(self, crawler):
+    def __init__(self, crawler: Crawler):
+        """Initialize the middleware"""
         self.crawler = crawler
         self.injector = Injector(crawler)
 
@@ -37,7 +39,7 @@ class InjectionMiddleware:
         With this behavior, we're able to optimize spider executions avoiding
         unnecessary downloads. That could be the case when the callback is
         actually using another source like external APIs such as Scrapinghub's
-        Auto Extract.
+        AutoExtract.
         """
         if self.injector.is_scrapy_response_required(request):
             return
@@ -48,24 +50,17 @@ class InjectionMiddleware:
     @inlineCallbacks
     def process_response(self, request: Request, response: Response,
                          spider: Spider):
-        """This method instantiates all ``Injectable`` subclasses declared as
-        request callback arguments and any other parameter with a provider for
-        its type. Otherwise, this middleware doesn't populate
-        ``request.cb_kwargs`` for this argument.
+        """This method fills ``request.cb_kwargs`` with instances for
+        the required Page Objects found in the callback signature.
+
+        In other words, this method instantiates all ``Injectable``
+        subclasses declared as request callback arguments and
+        any other parameter with a ``PageObjectInputProvider`` configured for
+        its type.
 
         If there's a collision between an already set ``cb_kwargs``
         and an injectable attribute,
         the user-defined ``cb_kwargs`` takes precedence.
-
-        Currently, we are able to inject instances of the following
-        classes as *provider* dependencies:
-
-        - :class:`~scrapy.Spider`
-        - :class:`~scrapy.http.Request`
-        - :class:`~scrapy.http.Response`
-        - :class:`~scrapy.crawler.Crawler`
-        - :class:`~scrapy.settings.Settings`
-        - :class:`~scrapy.statscollectors.StatsCollector`
         """
         # Find out the dependencies
         final_kwargs = yield from self.injector.build_callback_dependencies(

@@ -2,8 +2,8 @@
 API Reference
 =============
 
-Utils
-=====
+API
+===
 
 .. autofunction:: scrapy_poet.callback_for
 
@@ -26,3 +26,14 @@ Page Input Providers
 .. toctree::
    :hidden:
 
+Injection
+=========
+
+.. automodule:: scrapy_poet.injection
+   :members:
+
+Injection errors
+================
+
+.. automodule:: scrapy_poet.injection_errors
+   :members:

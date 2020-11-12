@@ -60,7 +60,7 @@ class Injector:
 
     def discover_callback_providers(self, callback: Callable
                                     ) -> Set[PageObjectInputProvider]:
-        """Discover which providers are required to fulfil the callback dependencies"""
+        """Discover the providers that are required to fulfil the callback dependencies"""
         plan = andi.plan(
             callback,
             is_injectable=is_injectable,
@@ -89,7 +89,7 @@ class Injector:
         return False
 
     def build_plan(self, request: Request) -> andi.Plan:
-        """Build a plan for building the dependencies required by the callback"""
+        """Create a plan for building the dependencies required by the callback"""
         callback = get_callback(request, self.spider)
         return andi.plan(
             callback,
@@ -116,7 +116,7 @@ class Injector:
     @inlineCallbacks
     def build_instances_from_providers(
             self, request: Request, response: Response, plan: andi.Plan):
-        """"Build dependencies handled by registered providers"""
+        """Build dependencies handled by registered providers"""
         instances: Dict[Callable, Any] = {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response)
@@ -214,7 +214,7 @@ def is_class_provided_by_any_provider_fn(providers: List[PageObjectInputProvider
 
 
 def get_callback(request, spider):
-    """Get request.callback of a scrapy.Request, as a callable."""
+    """Get ``request.callback`` of a :class:`scrapy.Request`"""
     if request.callback is None:
         return getattr(spider, 'parse')
     return request.callback
