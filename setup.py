@@ -10,7 +10,7 @@ setup(
     author_email='kmike84@gmail.com',
     url='https://github.com/scrapinghub/scrapy-poet',
     packages=find_packages(exclude=['tests', 'example']),
-    install_requires=['andi>=0.3', 'attrs', 'parsel', 'web-poet', 'scrapy'],
+    install_requires=['andi>=0.3', 'attrs', 'parsel', 'web-poet'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
