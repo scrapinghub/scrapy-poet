@@ -2,15 +2,13 @@ import attr
 import pytest
 from pytest_twisted import inlineCallbacks
 
-from scrapy import Spider, Request
-from scrapy.crawler import Crawler
 from scrapy.http import Response
 from scrapy.settings import Settings
 from scrapy_poet import ResponseDataProvider, PageObjectInputProvider, \
     DummyResponse
 from scrapy_poet.injection import load_provider_classes, \
     check_all_providers_are_callable, is_class_provided_by_any_provider_fn, \
-    Injector
+    get_injector_for_testing, get_response_for_testing
 from scrapy_poet.injection_errors import NonCallableProviderError, \
     InjectionError, UndeclaredProvidedTypeError
 from web_poet import Injectable
@@ -44,17 +42,6 @@ def get_provider_requiring_response(classes):
     return Provider
 
 
-def get_crawler(settings):
-    class MySpider(Spider):
-        name = "my_spider"
-
-    crawler = Crawler(MySpider)
-    spider = MySpider()
-    spider.settings = Settings(settings)
-    crawler.spider = spider
-    return crawler
-
-
 class ClsReqResponse(str):
     pass
 
@@ -76,16 +63,6 @@ class ClsNoProviderRequired(Injectable, str):
 
 
 @pytest.fixture
-def request_():
-    return Request("http://example.com")
-
-
-@pytest.fixture
-def response():
-    return Response("http://example.com", 200, None, b"response")
-
-
-@pytest.fixture
 def providers():
     # Duplicating them because they should work even in this situation
     return [get_provider_requiring_response({ClsReqResponse}),
@@ -94,8 +71,7 @@ def providers():
 
 @pytest.fixture
 def injector(providers):
-    crawler = get_crawler({"SCRAPY_POET_PROVIDER_CLASSES": providers})
-    return Injector(crawler)
+    return get_injector_for_testing(providers)
 
 
 @attr.s(auto_attribs=True, eq=True, order=True)
@@ -119,11 +95,8 @@ class TestInjector:
         class NonCallableProvider(PageObjectInputProvider):
             pass
 
-        crawler = get_crawler({
-            "SCRAPY_POET_PROVIDER_CLASSES": [NonCallableProvider]
-        })
         with pytest.raises(NonCallableProviderError):
-            Injector(crawler)
+            get_injector_for_testing([NonCallableProvider])
 
     def test_discover_callback_providers(self, injector, providers):
         discover_fn = injector.discover_callback_providers
@@ -148,28 +121,28 @@ class TestInjector:
 
         assert set(map(type, discover_fn(callback_3))) == {providers[0]}
 
-    def test_is_scrapy_response_required(self, injector, request_):
+    def test_is_scrapy_response_required(self, injector):
 
         def callback_no_1(response: DummyResponse, a: Cls1):
             pass
 
-        request_.callback = callback_no_1
-        assert not injector.is_scrapy_response_required(request_)
+        response = get_response_for_testing(callback_no_1)
+        assert not injector.is_scrapy_response_required(response.request)
 
         def callback_yes_1(response, a: Cls1):
             pass
 
-        request_.callback = callback_yes_1
-        assert injector.is_scrapy_response_required(request_)
+        response = get_response_for_testing(callback_yes_1)
+        assert injector.is_scrapy_response_required(response.request)
 
         def callback_yes_2(response: DummyResponse, a: ClsReqResponse):
             pass
 
-        request_.callback = callback_yes_2
-        assert injector.is_scrapy_response_required(request_)
+        response = get_response_for_testing(callback_yes_2)
+        assert injector.is_scrapy_response_required(response.request)
 
     @inlineCallbacks
-    def test_build_instances_methods(self, injector, request_, response):
+    def test_build_instances_methods(self, injector):
 
         def callback(response: DummyResponse,
                      a: Cls1,
@@ -178,9 +151,10 @@ class TestInjector:
                      d: ClsNoProviderRequired):
             pass
 
-        request_.callback = callback
-        plan = injector.build_plan(request_)
-        instances = yield from injector.build_instances(request_, response, plan)
+        response = get_response_for_testing(callback)
+        request = response.request
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances(request, response, plan)
         assert instances == {
             Cls1: Cls1(),
             Cls2: Cls2(),
@@ -190,7 +164,7 @@ class TestInjector:
         }
 
         instances = yield from injector.build_instances_from_providers(
-            request_, response, plan)
+            request, response, plan)
         assert instances == {
             Cls1: Cls1(),
             Cls2: Cls2(),
@@ -198,8 +172,7 @@ class TestInjector:
         }
 
     @inlineCallbacks
-    def test_build_instances_from_providers_unexpected_return(
-            self, request_, response):
+    def test_build_instances_from_providers_unexpected_return(self):
 
         class WrongProvider(get_provider({Cls1})):
             def __call__(self, to_provide):
@@ -208,17 +181,16 @@ class TestInjector:
                     **super().__call__(to_provide)
                 }
 
-        crawler = get_crawler({"SCRAPY_POET_PROVIDER_CLASSES": [WrongProvider]})
-        injector = Injector(crawler)
+        injector = get_injector_for_testing([WrongProvider])
 
         def callback(response: DummyResponse, a: Cls1):
             pass
 
-        request_.callback = callback
-        plan = injector.build_plan(request_)
+        response = get_response_for_testing(callback)
+        plan = injector.build_plan(response.request)
         with pytest.raises(UndeclaredProvidedTypeError) as exinf:
             yield from injector.build_instances_from_providers(
-            request_, response, plan)
+            response.request, response, plan)
 
         assert "Provider" in str(exinf.value)
         assert "Cls2" in str(exinf.value)
@@ -231,23 +203,22 @@ class TestInjector:
     ])
     @inlineCallbacks
     def test_build_instances_from_providers_respect_providers_order(
-            self, str_list, request_, response):
+            self, str_list):
         providers = [get_provider({str}, text) for text in str_list]
-        crawler = get_crawler({"SCRAPY_POET_PROVIDER_CLASSES": providers})
-        injector = Injector(crawler)
+        injector = get_injector_for_testing(providers)
 
         def callback(response: DummyResponse, arg: str):
             pass
 
-        request_.callback = callback
-        plan = injector.build_plan(request_)
+        response = get_response_for_testing(callback)
+        plan = injector.build_plan(response.request)
         instances = yield from injector.build_instances_from_providers(
-            request_, response, plan)
+            response.request, response, plan)
 
         assert instances[str] == str_list[0]
 
     @inlineCallbacks
-    def test_build_callback_dependencies(self, injector, request_, response):
+    def test_build_callback_dependencies(self, injector):
         def callback(response: DummyResponse,
                      a: Cls1,
                      b: Cls2,
@@ -255,8 +226,9 @@ class TestInjector:
                      d: ClsNoProviderRequired):
             pass
 
-        request_.callback = callback
-        kwargs = yield from injector.build_callback_dependencies(request_, response)
+        response = get_response_for_testing(callback)
+        kwargs = yield from injector.build_callback_dependencies(
+            response.request, response)
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
         assert kwargs_types == {
             "a": Cls1,

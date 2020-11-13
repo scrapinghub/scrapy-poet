@@ -278,3 +278,44 @@ def is_provider_requiring_scrapy_response(provider):
             return True
 
     return False
+
+
+def get_injector_for_testing(
+        providers: List[PageObjectInputProvider]
+) -> Injector:
+    """
+    Return an :class:`Injector` using a fake crawler.
+    Useful for testing providers
+    """
+    class MySpider(Spider):
+        name = "my_spider"
+
+    crawler = Crawler(MySpider)
+    spider = MySpider()
+    spider.settings = Settings({"SCRAPY_POET_PROVIDER_CLASSES": providers})
+    crawler.spider = spider
+    return Injector(crawler)
+
+
+def get_response_for_testing(callback: Callable) -> Response:
+    """
+    Return a response with fake content with the configured callback.
+    It is useful for testing providers.
+    """
+    url = "http://example.com"
+    html = """
+        <html>
+            <body>
+                <div class="breadcrumbs">
+                    <a href="/food">Food</a> / 
+                    <a href="/food/sweets">Sweets</a>
+                </div>
+                <h1 class="name">Chocolate</h1>
+                <p>Price: <span class="price">22€</span></p>
+                <p class="description">The best chocolate ever</p>
+            </body>
+        </html>
+        """.encode("utf-8")
+    request = Request(url, callback=callback)
+    response = Response(url, 200, None, html, request=request)
+    return response
