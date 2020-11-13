@@ -8,7 +8,7 @@ HTML from Scrapy. You could also implement different providers in order to
 acquire data from multiple external sources, for example,
 Splash or Auto Extract API.
 """
-from typing import Set, Type, Union, Callable
+from typing import Set, Type, Union, Callable, ClassVar
 
 from scrapy.http import Response
 from scrapy.crawler import Crawler
@@ -76,7 +76,7 @@ class PageObjectInputProvider:
     is provided by this provider.
     """
 
-    provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
+    provided_classes: ClassVar[Union[Set[Callable], Callable[[Callable], bool]]]
 
     @classmethod
     def is_provided(cls, type_: Callable):
