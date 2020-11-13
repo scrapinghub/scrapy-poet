@@ -100,7 +100,7 @@ class PageObjectInputProvider:
     # Remember that is expected for all children to implement the ``__call__``
     # method. The simplest signature for it is:
     #
-    #   def __call__(self, to_provide: Set[Type]) -> Dict[Type, Any]:
+    #   def __call__(self, to_provide: Set[Callable]) -> Dict[Callable, Any]:
     #
     # But some adding some other injectable attributes are possible
     # (see the class docstring)
