@@ -281,7 +281,8 @@ def is_provider_requiring_scrapy_response(provider):
 
 
 def get_injector_for_testing(
-        providers: List[PageObjectInputProvider]
+        providers: List[PageObjectInputProvider],
+        additional_settings: Dict = None
 ) -> Injector:
     """
     Return an :class:`Injector` using a fake crawler.
@@ -292,7 +293,8 @@ def get_injector_for_testing(
 
     crawler = Crawler(MySpider)
     spider = MySpider()
-    spider.settings = Settings({"SCRAPY_POET_PROVIDER_CLASSES": providers})
+    spider.settings = Settings({**(additional_settings or {}),
+                                "SCRAPY_POET_PROVIDER_CLASSES": providers})
     crawler.spider = spider
     return Injector(crawler)
 
