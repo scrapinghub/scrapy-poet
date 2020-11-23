@@ -200,7 +200,7 @@ def is_class_provided_by_any_provider_fn(providers: List[PageObjectInputProvider
     for provider in providers:
         provided_classes = provider.provided_classes
 
-        if isinstance(provided_classes, Set):
+        if isinstance(provided_classes, (Set, frozenset)):
             sets_of_types.update(provided_classes)
         elif callable(provider.provided_classes):
             individual_is_callable.append(provided_classes)

@@ -258,7 +258,7 @@ def test_check_all_providers_are_callable():
 def test_is_class_provided_by_any_provider_fn():
     providers = [get_provider({str}),
                  get_provider(lambda x: issubclass(x, InjectionError)),
-                 get_provider({int, float}),
+                 get_provider(frozenset({int, float})),
                  ]
     is_provided = is_class_provided_by_any_provider_fn(providers)
     is_provided_empty = is_class_provided_by_any_provider_fn([])
