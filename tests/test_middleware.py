@@ -46,7 +46,8 @@ def spider_for(injectable: Type):
         url = None
         custom_settings = {
             "SCRAPY_POET_PROVIDER_CLASSES": [
-                CustomResponseDataProvider,
+                WithFuturesProvider,
+                WithDeferredProvider,
                 ExtraClassDataProvider,
                 ResponseDataProvider,
             ]
@@ -121,21 +122,40 @@ def test_optional_and_unions(settings):
 
 
 @attr.s(auto_attribs=True)
-class ProvidedAsyncTest:
+class ProvidedWithDeferred:
     msg: str
     response: ResponseData  # it should be None because this class is provided
 
 
-class CustomResponseDataProvider(PageObjectInputProvider):
+@attr.s(auto_attribs=True)
+class ProvidedWithFutures(ProvidedWithDeferred):
+    pass
 
-    provided_classes = {ProvidedAsyncTest}
+
+class WithDeferredProvider(PageObjectInputProvider):
+
+    provided_classes = {ProvidedWithDeferred}
 
     @inlineCallbacks
     def __call__(self, to_provide, response: scrapy.http.Response):
         five = yield deferToThread(lambda: 5)
         raise returnValue({
-            ProvidedAsyncTest: ProvidedAsyncTest(f"Provided {five}!", None)
+            ProvidedWithDeferred: ProvidedWithDeferred(f"Provided {five}!", None)
         })
+
+
+class WithFuturesProvider(PageObjectInputProvider):
+
+    provided_classes = {ProvidedWithFutures}
+
+    async def async_fn(self):
+        return 5
+
+    async def __call__(self, to_provide):
+        five = await self.async_fn()
+        return {
+            ProvidedWithFutures: ProvidedWithFutures(f"Provided {five}!", None)
+        }
 
 
 @attr.s(auto_attribs=True)
@@ -160,16 +180,21 @@ class ExtraClassDataProvider(PageObjectInputProvider):
 
 
 @attr.s(auto_attribs=True)
-class ProvidersPage(ItemWebPage):
-    provided: ProvidedAsyncTest
+class ProvidedWithDeferredPage(ItemWebPage):
+    provided: ProvidedWithDeferred
 
     def to_item(self):
         return attr.asdict(self, recurse=False)
 
+@attr.s(auto_attribs=True)
+class ProvidedWithFuturesPage(ProvidedWithDeferredPage):
+    provided: ProvidedWithFutures
 
+
+@pytest.mark.parametrize("type_", [ProvidedWithDeferredPage, ProvidedWithFuturesPage])
 @inlineCallbacks
-def test_providers(settings):
-    item, _, _ = yield crawl_single_item(spider_for(ProvidersPage),
+def test_providers(settings, type_):
+    item, _, _ = yield crawl_single_item(spider_for(type_),
                                          ProductHtml, settings)
     assert item['provided'].msg == "Provided 5!"
     assert item['provided'].response is None
@@ -191,7 +216,7 @@ class MultiArgsCallbackSpider(scrapy.Spider):
     url = None
     custom_settings = {
         "SCRAPY_POET_PROVIDER_CLASSES": [
-            CustomResponseDataProvider,
+            WithDeferredProvider,
             ResponseDataProvider,
         ]
     }
@@ -199,7 +224,7 @@ class MultiArgsCallbackSpider(scrapy.Spider):
     def start_requests(self):
         yield Request(self.url, self.parse, cb_kwargs=dict(cb_arg="arg!"))
 
-    def parse(self, response, product: ProductPage, provided: ProvidedAsyncTest,
+    def parse(self, response, product: ProductPage, provided: ProvidedWithDeferred,
               cb_arg: Optional[str], non_cb_arg: Optional[str]):
         yield {
             'product': product,
@@ -214,7 +239,7 @@ def test_multi_args_callbacks(settings):
     item, _, _ = yield crawl_single_item(MultiArgsCallbackSpider, ProductHtml,
                                          settings)
     assert type(item['product']) == ProductPage
-    assert type(item['provided']) == ProvidedAsyncTest
+    assert type(item['provided']) == ProvidedWithDeferred
     assert item['cb_arg'] == "arg!"
     assert item['non_cb_arg'] is None
 
