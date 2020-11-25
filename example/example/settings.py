@@ -6,7 +6,6 @@
 #     https://docs.scrapy.org/en/latest/topics/settings.html
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-import scrapy_poet
 from example.autoextract import AutoextractProductProvider
 
 BOT_NAME = 'example'
@@ -14,7 +13,7 @@ BOT_NAME = 'example'
 SPIDER_MODULES = ['example.spiders']
 NEWSPIDER_MODULE = 'example.spiders'
 
-SCRAPY_POET_PROVIDER_CLASSES = scrapy_poet.PROVIDERS + [AutoextractProductProvider]
+SCRAPY_POET_PROVIDERS = {AutoextractProductProvider: 500}
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True

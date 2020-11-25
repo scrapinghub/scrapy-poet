@@ -116,11 +116,11 @@ class MySpider(scrapy.Spider):
 
     name = 'foo'
     custom_settings = {
-        "SCRAPY_POET_PROVIDER_CLASSES": [
-            ResponseDataProvider,
-            DummyProductProvider,
-            FakeProductProvider,
-        ]
+        "SCRAPY_POET_PROVIDERS": {
+            ResponseDataProvider: 1,
+            DummyProductProvider: 2,
+            FakeProductProvider: 3,
+        }
     }
     callback_for_parse = callback_for(DummyProductPage)
 

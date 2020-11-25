@@ -64,10 +64,10 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
         name = "my_spider"
         url = None
         custom_settings = {
-            "SCRAPY_POET_PROVIDER_CLASSES": [
-                ResponseDataProvider,
-                PageDataProvider,
-            ]
+            "SCRAPY_POET_PROVIDERS": {
+                ResponseDataProvider: 1,
+                PageDataProvider: 2,
+            }
         }
 
         def start_requests(self):

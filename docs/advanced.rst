@@ -59,11 +59,18 @@ the following configuration should be included in the settings to enable a new p
 
 .. code-block:: python
 
-    "SCRAPY_POET_PROVIDER_CLASSES": scrapy_poet.PROVIDERS + [MyProvider]
+    "SCRAPY_POET_PROVIDERS": {MyProvider: 500}
+
+The number used as value (`500`) defines the provider priority. See
+:ref:`Scrapy Middlewares <scrapy:topics-downloader-middleware-ref>`
+configuration dictionaries for more information.
 
 .. note::
 
-    ``scrapy_poet.PROVIDERS`` is included to preserve the provider for ``ResponseData``
+    The providers in :const:`scrapy_poet.DEFAULT_PROVIDERS`,
+    which includes a provider for :class:`~ResponseData`, are always
+    included by default. You can disable any of them by listing it
+    in the configuration with the priority `None`.
 
 Ignoring requests
 =================

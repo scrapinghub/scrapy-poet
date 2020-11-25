@@ -8,7 +8,7 @@ HTML from Scrapy. You could also implement different providers in order to
 acquire data from multiple external sources, for example,
 Splash or Auto Extract API.
 """
-from typing import Set, Type, Union, Callable, ClassVar
+from typing import Set, Union, Callable, ClassVar
 
 from scrapy.http import Response
 from scrapy.crawler import Crawler
@@ -55,8 +55,11 @@ class PageObjectInputProvider:
     might want to configure Scrapy ``TWISTED_REACTOR`` to support ``asyncio``
     libraries.
 
-    The available POIPs should be declared in the spider settings
-    ``SCRAPY_POET_PROVIDER_CLASSES``
+    The available POIPs should be declared in the spider setting using the key
+    ``SCRAPY_POET_PROVIDERS``. It must be a dictionary that follows same
+    structure than the
+    :ref:`Scrapy Middlewares <scrapy:topics-downloader-middleware-ref>`
+    configuration dictionaries.
 
     A simple example of a provider:
 
@@ -123,6 +126,3 @@ class ResponseDataProvider(PageObjectInputProvider):
                 html=response.text
             )
         }
-
-
-PROVIDERS = [ResponseDataProvider]

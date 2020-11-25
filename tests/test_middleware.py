@@ -14,8 +14,7 @@ import attr
 from scrapy_poet import callback_for
 from web_poet.pages import WebPage, ItemPage, ItemWebPage
 from scrapy_poet.page_input_providers import (
-    PageObjectInputProvider,
-    ResponseDataProvider,
+    PageObjectInputProvider
 )
 from web_poet.page_inputs import ResponseData
 from scrapy_poet import DummyResponse
@@ -45,12 +44,11 @@ def spider_for(injectable: Type):
 
         url = None
         custom_settings = {
-            "SCRAPY_POET_PROVIDER_CLASSES": [
-                WithFuturesProvider,
-                WithDeferredProvider,
-                ExtraClassDataProvider,
-                ResponseDataProvider,
-            ]
+            "SCRAPY_POET_PROVIDERS": {
+                WithFuturesProvider: 1,
+                WithDeferredProvider: 2,
+                ExtraClassDataProvider: 3,
+            }
         }
 
         def start_requests(self):
@@ -215,10 +213,9 @@ class MultiArgsCallbackSpider(scrapy.Spider):
 
     url = None
     custom_settings = {
-        "SCRAPY_POET_PROVIDER_CLASSES": [
-            WithDeferredProvider,
-            ResponseDataProvider,
-        ]
+        "SCRAPY_POET_PROVIDERS": {
+            WithDeferredProvider: 1
+        }
     }
 
     def start_requests(self):

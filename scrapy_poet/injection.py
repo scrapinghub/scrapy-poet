@@ -1,6 +1,6 @@
 import inspect
 import logging
-from typing import Dict, Callable, Any, List, Set
+from typing import Dict, Callable, Any, List, Set, Mapping
 
 from twisted.internet.defer import inlineCallbacks, returnValue
 
@@ -10,12 +10,13 @@ from scrapy.crawler import Crawler
 from scrapy.http import Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
+from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import load_object
 from scrapy_poet.injection_errors import (UndeclaredProvidedTypeError,
                                           NonCallableProviderError,
                                           InjectionError)
-from scrapy_poet.page_input_providers import PageObjectInputProvider, PROVIDERS
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from web_poet.pages import is_injectable
 
@@ -28,15 +29,19 @@ class Injector:
     Keep all the logic required to do dependency injection in Scrapy callbacks.
     Initializes the providers from the spider settings at initialization.
     """
-    def __init__(self, crawler: Crawler):
+    def __init__(self, crawler: Crawler, default_providers: Mapping = None):
         self.crawler = crawler
         self.spider = crawler.spider
-        self.load_providers()
+        self.load_providers(default_providers)
 
-    def load_providers(self):
+    def load_providers(self, default_providers: Mapping = None):
+        providers_dict = {**(default_providers or {}),
+                          **self.spider.settings.getdict("SCRAPY_POET_PROVIDERS")}
+        provider_classes = build_component_list(providers_dict)
+        logger.info(f"Loading providers {provider_classes}")
         self.providers = [
-            cls(self.crawler)
-            for cls in load_provider_classes(self.spider.settings)
+            load_object(cls)(self.crawler)
+            for cls in provider_classes
         ]
         check_all_providers_are_callable(self.providers)
         # Caching whether each provider requires the scrapy response
@@ -172,19 +177,6 @@ def check_all_providers_are_callable(providers):
             )
 
 
-def load_provider_classes(settings: Settings) -> List[PageObjectInputProvider]:
-    providers = settings.getlist('SCRAPY_POET_PROVIDER_CLASSES') or PROVIDERS
-    logger.info(f"Loading providers {providers}")
-    result = []
-    for cls in settings.getlist('SCRAPY_POET_PROVIDER_CLASSES') or PROVIDERS:
-        if not callable(cls):
-            cls = load_object(cls)
-
-        result.append(cls)
-
-    return result
-
-
 def is_class_provided_by_any_provider_fn(providers: List[PageObjectInputProvider]
                                          ) -> Callable[[Callable], bool]:
     """
@@ -281,7 +273,7 @@ def is_provider_requiring_scrapy_response(provider):
 
 
 def get_injector_for_testing(
-        providers: List[PageObjectInputProvider],
+        providers: Mapping,
         additional_settings: Dict = None
 ) -> Injector:
     """
@@ -294,7 +286,7 @@ def get_injector_for_testing(
     crawler = Crawler(MySpider)
     spider = MySpider()
     spider.settings = Settings({**(additional_settings or {}),
-                                "SCRAPY_POET_PROVIDER_CLASSES": providers})
+                                "SCRAPY_POET_PROVIDERS": providers})
     crawler.spider = spider
     return Injector(crawler)
 

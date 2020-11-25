@@ -77,10 +77,10 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
 
     url = None
     custom_settings = {
-        "SCRAPY_POET_PROVIDER_CLASSES": [
-            PriceHtmlDataProvider,
-            NameHtmlDataProvider,
-        ]
+        "SCRAPY_POET_PROVIDERS": {
+            PriceHtmlDataProvider: 1,
+            NameHtmlDataProvider: 2,
+        }
     }
 
     def start_requests(self):
@@ -100,10 +100,10 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
 class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
 
     custom_settings = {
-        "SCRAPY_POET_PROVIDER_CLASSES": [
-            NameHtmlDataProvider,
-            PriceHtmlDataProvider,
-        ]
+        "SCRAPY_POET_PROVIDERS": {
+            NameHtmlDataProvider: 1,
+            PriceHtmlDataProvider: 2,
+        }
     }
 
 

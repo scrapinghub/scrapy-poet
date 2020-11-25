@@ -8,8 +8,14 @@ from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from scrapy_poet import api
-from scrapy_poet.injection import Injector
+from . import api
+from .page_input_providers import ResponseDataProvider
+from .injection import Injector
+
+
+DEFAULT_PROVIDERS = {
+    ResponseDataProvider: 500
+}
 
 
 class InjectionMiddleware:
@@ -21,7 +27,7 @@ class InjectionMiddleware:
     def __init__(self, crawler: Crawler):
         """Initialize the middleware"""
         self.crawler = crawler
-        self.injector = Injector(crawler)
+        self.injector = Injector(crawler, default_providers=DEFAULT_PROVIDERS)
 
     @classmethod
     def from_crawler(cls, crawler):

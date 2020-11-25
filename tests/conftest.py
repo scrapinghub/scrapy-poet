@@ -14,9 +14,6 @@ def settings(request):
         },
         DOWNLOADER_MIDDLEWARES={
             'scrapy_poet.InjectionMiddleware': 543,
-        },
-        SCRAPY_POET_PROVIDER_CLASSES=[
-            ResponseDataProvider,
-        ],
+        }
     )
     return Settings(s)
