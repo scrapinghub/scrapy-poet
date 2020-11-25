@@ -43,11 +43,7 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
         provided_classes = {PageData}
 
         def __call__(self, to_provide, obj: scrapy_class):
-            return {
-                PageData: PageData(
-                    scrapy_class=scrapy_class.__name__,
-                )
-            }
+            return [PageData(scrapy_class=scrapy_class.__name__)]
 
     @attr.s(auto_attribs=True)
     class Page(ItemWebPage):

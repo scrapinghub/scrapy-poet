@@ -1,4 +1,4 @@
-from typing import Dict, Type, Any
+from typing import Dict, Type, Any, List
 
 import attr
 from pytest_twisted import inlineCallbacks
@@ -51,11 +51,11 @@ class PriceHtmlDataProvider(PageObjectInputProvider):
 
     def __call__(self, to_provide, response: scrapy.http.Response, spider: scrapy.Spider):
         assert isinstance(spider, scrapy.Spider)
-        ret: Dict[Type, Any] = {}
+        ret: List[Any] = []
         if Price in to_provide:
-            ret[Price] = response.css(".price::text").get()
+            ret.append(Price(response.css(".price::text").get()))
         if Html in to_provide:
-            ret[Html] = "Price Html!"
+            ret.append(Html("Price Html!"))
         return ret
 
 
@@ -65,11 +65,11 @@ class NameHtmlDataProvider(PageObjectInputProvider):
 
     def __call__(self, to_provide, response: scrapy.http.Response, settings: Settings):
         assert isinstance(settings, Settings)
-        ret: Dict[Type, Any] = {}
+        ret: List[Any] = []
         if Name in to_provide:
-            ret[Name] = response.css(".name::text").get()
+            ret.append(Name(response.css(".name::text").get()))
         if Html in to_provide:
-            ret[Html] = "Name Html!"
+            ret.append(Html("Name Html!"))
         return ret
 
 
@@ -111,15 +111,19 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
 def test_name_first_spider(settings):
     item, _, _ = yield crawl_single_item(NameFirstMultiProviderSpider, ProductHtml,
                                          settings)
-    assert item[Price] == "22€"
-    assert item[Name] == "Chocolate"
-    assert item[Html] == "Name Html!"
+    assert item == {
+        Price: Price("22€"),
+        Name: Name("Chocolate"),
+        Html: Html("Name Html!"),
+    }
 
 
 @inlineCallbacks
 def test_price_first_spider(settings):
     item, _, _ = yield crawl_single_item(PriceFirstMultiProviderSpider, ProductHtml,
                                          settings)
-    assert item[Price] == "22€"
-    assert item[Name] == "Chocolate"
-    assert item[Html] == "Price Html!"
+    assert item == {
+        Price: Price("22€"),
+        Name: Name("Chocolate"),
+        Html: Html("Price Html!"),
+    }

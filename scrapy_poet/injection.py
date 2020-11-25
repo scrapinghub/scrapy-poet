@@ -143,15 +143,16 @@ class Injector:
                 externally_provided=scrapy_provided_dependencies,
                 full_final_kwargs=False,
             ).final_kwargs(scrapy_provided_dependencies)
-            results = yield maybeDeferred_coro(provider, set(provided_classes),
+            objs = yield maybeDeferred_coro(provider, set(provided_classes),
                                                **kwargs)
-            extra_classes = results.keys() - provided_classes
+            objs_by_type: Dict[Callable, Any] = {type(obj): obj for obj in objs}
+            extra_classes = objs_by_type.keys() - provided_classes
             if extra_classes:
                 raise UndeclaredProvidedTypeError(
                     f"{provider} has returned {extra_classes} but they're not "
                     f"listed as provided classes {provider.provided_classes}"
                 )
-            instances.update(results)
+            instances.update(objs_by_type)
 
         raise returnValue(instances)
 

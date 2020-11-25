@@ -39,12 +39,7 @@ that need it, like the ``ItemWebPage``.
 
         def __call__(self, to_provide: Set[Callable], response: Response):
             """Builds a ``ResponseData`` instance using a Scrapy ``Response``"""
-            return {
-                ResponseData: ResponseData(
-                    url=response.url,
-                    html=response.text
-                )
-            }
+            return [ResponseData(url=response.url,html=response.text)]
 
 You can implement your own providers in order to extend or override
 current scrapy-poet behavior.
@@ -119,12 +114,12 @@ If neither spider callback nor any of the input providers are using
         provided_classes = {CachedData}
 
         def __call__(self, to_provide: List[Callable], request: scrapy.Request):
-            return {
-                CachedData: CachedData(
+            return [
+                CachedData(
                     key=request.url,
                     value=get_cached_content(request.url)
                 )
-            }
+            ]
 
 
     class MyPageObject(ItemPage):
@@ -165,12 +160,12 @@ Page Object uses it, the request is not ignored, for example:
         provided_classes = {MyResponseData}
 
         def __call__(self, to_provide: Set[Callable], response: Response):
-            return {
-                MyResponseData: MyResponseData(
+            return [
+                MyResponseData(
                     url=response.url,
                     html=response.content,
                 )
-            }
+            ]
 
 
     class MyPageObject(ItemPage):

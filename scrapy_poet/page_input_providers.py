@@ -33,10 +33,10 @@ class PageObjectInputProvider:
 
     .. code-block:: python
 
-        def __call__(self, to_provide: Set[Callable]) -> Dict[Callable, Any]:
+        def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]:
 
-    Therefore, it receives a list of types to be provided and return a dictionary
-    with the instances created indexed by its type (don't get confused by the
+    Therefore, it receives a list of types to be provided and return a list
+    with the instances created (don't get confused by the
     ``Callable`` annotation. Think on it as a synonym of ``Type``).
 
     Additional dependencies can be declared in the ``__call__`` signature
@@ -71,7 +71,7 @@ class PageObjectInputProvider:
             provided_classes = {BodyHtml}
 
             def __call__(self, to_provide, response: Response):
-                return {BodyHtml: BodyHtml(response.css("html body").get())}
+                return [BodyHtml(response.css("html body").get())]
 
     The **provided_classes** class attribute is the ``set`` of classes
     that this provider provides.
@@ -104,7 +104,7 @@ class PageObjectInputProvider:
     # Remember that is expected for all children to implement the ``__call__``
     # method. The simplest signature for it is:
     #
-    #   def __call__(self, to_provide: Set[Callable]) -> Dict[Callable, Any]:
+    #   def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]:
     #
     # But some adding some other injectable attributes are possible
     # (see the class docstring)
@@ -120,9 +120,4 @@ class ResponseDataProvider(PageObjectInputProvider):
 
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``ResponseData`` instance using a Scrapy ``Response``"""
-        return {
-            ResponseData: ResponseData(
-                url=response.url,
-                html=response.text
-            )
-        }
+        return [ResponseData(url=response.url, html=response.text)]

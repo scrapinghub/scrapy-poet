@@ -22,7 +22,7 @@ def get_provider(classes, content=None):
             self.crawler = crawler
 
         def __call__(self, to_provide):
-            return {cls: cls(content) if content else cls() for cls in classes}
+            return [cls(content) if content else cls() for cls in classes]
 
     return Provider
 
@@ -36,7 +36,7 @@ def get_provider_requiring_response(classes):
             self.crawler = crawler
 
         def __call__(self, to_provide, response: Response):
-            return {cls: cls() for cls in classes}
+            return [cls() for cls in classes]
 
     return Provider
 
@@ -81,7 +81,7 @@ def injector(providers):
     return get_injector_for_testing(providers)
 
 
-@attr.s(auto_attribs=True, eq=True, order=True)
+@attr.s(auto_attribs=True, frozen=True, eq=True, order=True)
 class WrapCls(Injectable):
     a: ClsReqResponse
 
@@ -191,10 +191,7 @@ class TestInjector:
 
         class WrongProvider(get_provider({Cls1})):
             def __call__(self, to_provide):
-                return {
-                    Cls2: Cls2(),
-                    **super().__call__(to_provide)
-                }
+                return super().__call__(to_provide) + [Cls2()]
 
         injector = get_injector_for_testing({WrongProvider: 0})
 

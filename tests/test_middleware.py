@@ -137,9 +137,7 @@ class WithDeferredProvider(PageObjectInputProvider):
     @inlineCallbacks
     def __call__(self, to_provide, response: scrapy.http.Response):
         five = yield deferToThread(lambda: 5)
-        raise returnValue({
-            ProvidedWithDeferred: ProvidedWithDeferred(f"Provided {five}!", None)
-        })
+        raise returnValue([ProvidedWithDeferred(f"Provided {five}!", None)])
 
 
 class WithFuturesProvider(PageObjectInputProvider):
@@ -151,9 +149,7 @@ class WithFuturesProvider(PageObjectInputProvider):
 
     async def __call__(self, to_provide):
         five = await self.async_fn()
-        return {
-            ProvidedWithFutures: ProvidedWithFutures(f"Provided {five}!", None)
-        }
+        return [ProvidedWithFutures(f"Provided {five}!", None)]
 
 
 @attr.s(auto_attribs=True)
