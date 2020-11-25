@@ -52,8 +52,8 @@ class PageObjectInputProvider:
     Finally, ``__call__`` function can execute asynchronous code. Just
     either prepend the declaration with ``async`` to use futures or annotate it with
     ``@inlineCallbacks`` for deferred execution. Additionally, you
-     might want to configure Scrapy ``TWISTED_REACTOR`` to support ``asyncio``
-     libraries.
+    might want to configure Scrapy ``TWISTED_REACTOR`` to support ``asyncio``
+    libraries.
 
     The available POIPs should be declared in the spider settings
     ``SCRAPY_POET_PROVIDER_CLASSES``

@@ -41,7 +41,7 @@ class Injector:
         check_all_providers_are_callable(self.providers)
         # Caching whether each provider requires the scrapy response
         self.is_provider_requiring_scrapy_response = {
-            id(provider): is_provider_requiring_scrapy_response(provider)
+            provider: is_provider_requiring_scrapy_response(provider)
             for provider in self.providers
         }
         # Caching the function for faster execution
@@ -87,7 +87,7 @@ class Injector:
             return True
 
         for provider in self.discover_callback_providers(callback):
-            if self.is_provider_requiring_scrapy_response[id(provider)]:
+            if self.is_provider_requiring_scrapy_response[provider]:
                 return True
 
         return False

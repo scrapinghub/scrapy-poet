@@ -1,6 +1,7 @@
 import attr
 import pytest
 from pytest_twisted import inlineCallbacks
+import weakref
 
 from scrapy.http import Response
 from scrapy.settings import Settings
@@ -62,11 +63,15 @@ class ClsNoProviderRequired(Injectable, str):
     pass
 
 
-@pytest.fixture
-def providers():
+def get_providers_for_testing():
     # Duplicating them because they should work even in this situation
     return [get_provider_requiring_response({ClsReqResponse}),
             get_provider({Cls1, Cls2})] * 2
+
+
+@pytest.fixture
+def providers():
+    return get_providers_for_testing()
 
 
 @pytest.fixture
@@ -81,14 +86,21 @@ class WrapCls(Injectable):
 
 class TestInjector:
 
-    def test_constructor(self, injector):
+    def test_constructor(self):
+        injector = get_injector_for_testing(get_providers_for_testing())
         assert injector.is_class_provided_by_any_provider(ClsReqResponse)
         assert injector.is_class_provided_by_any_provider(Cls1)
         assert not injector.is_class_provided_by_any_provider(ClsNoProvided)
 
         for provider in injector.providers:
-            assert (injector.is_provider_requiring_scrapy_response[id(provider)] ==
+            assert (injector.is_provider_requiring_scrapy_response[provider] ==
                     provider.require_response)
+
+        # Asserting that we are not leaking providers references
+        weak_ref = weakref.ref(injector.providers[0])
+        assert weak_ref()
+        del injector
+        assert weak_ref() is None
 
     def test_non_callable_provider_error(self):
         """Checks that a exception is raised when a provider is not callable"""
