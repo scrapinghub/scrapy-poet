@@ -57,9 +57,7 @@ class FakeProductProvider(PageObjectInputProvider):
                 'name': 'Sample',
             },
         }
-        return {
-            DummyProductResponse: DummyProductResponse(data=data)
-        }
+        return [DummyProductResponse(data=data)]
 
 
 class TextProductProvider(ResponseDataProvider):
