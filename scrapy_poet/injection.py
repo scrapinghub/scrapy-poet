@@ -1,5 +1,6 @@
 import inspect
 import logging
+import pprint
 from typing import Dict, Callable, Any, List, Set, Mapping
 
 from twisted.internet.defer import inlineCallbacks
@@ -38,7 +39,7 @@ class Injector:
         providers_dict = {**(default_providers or {}),
                           **self.spider.settings.getdict("SCRAPY_POET_PROVIDERS")}
         provider_classes = build_component_list(providers_dict)
-        logger.info(f"Loading providers {provider_classes}")
+        logger.info(f"Loading providers:\n {pprint.pformat(provider_classes)}")
         self.providers = [
             load_object(cls)(self.crawler)
             for cls in provider_classes
