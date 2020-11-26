@@ -38,8 +38,8 @@ that need it, like the ``ItemWebPage``.
         provided_classes = {ResponseData}
 
         def __call__(self, to_provide: Set[Callable], response: Response):
-            """Builds a ``ResponseData`` instance using a Scrapy ``Response``"""
-            return [ResponseData(url=response.url,html=response.text)]
+            """Build a ``ResponseData`` instance using a Scrapy ``Response``"""
+            return [ResponseData(url=response.url, html=response.text)]
 
 You can implement your own providers in order to extend or override
 current scrapy-poet behavior.
