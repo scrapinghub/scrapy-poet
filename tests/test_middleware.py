@@ -137,7 +137,7 @@ class WithDeferredProvider(PageObjectInputProvider):
     @inlineCallbacks
     def __call__(self, to_provide, response: scrapy.http.Response):
         five = yield deferToThread(lambda: 5)
-        raise returnValue([ProvidedWithDeferred(f"Provided {five}!", None)])
+        return [ProvidedWithDeferred(f"Provided {five}!", None)]
 
 
 class WithFuturesProvider(PageObjectInputProvider):
