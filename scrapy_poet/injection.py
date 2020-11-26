@@ -120,7 +120,7 @@ class Injector:
             if cls not in instances.keys():
                 instances[cls] = cls(**kwargs_spec.kwargs(instances))
 
-        raise returnValue(instances)
+        return instances
 
     @inlineCallbacks
     def build_instances_from_providers(
