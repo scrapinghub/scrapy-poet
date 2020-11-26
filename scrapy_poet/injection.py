@@ -165,8 +165,7 @@ class Injector:
         """
         plan = self.build_plan(request)
         provider_instances = yield from self.build_instances(request, response, plan)
-        callback_kwargs = plan.final_kwargs(provider_instances)
-        raise returnValue(callback_kwargs)
+        return plan.final_kwargs(provider_instances)
 
 
 def check_all_providers_are_callable(providers):
