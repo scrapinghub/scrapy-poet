@@ -154,7 +154,7 @@ class Injector:
                 )
             instances.update(objs_by_type)
 
-        raise returnValue(instances)
+        return instances
 
     @inlineCallbacks
     def build_callback_dependencies(self, request: Request, response: Response):
