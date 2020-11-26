@@ -1,4 +1,4 @@
-from typing import Dict, Type, Any, List
+from typing import Any, List
 
 import attr
 from pytest_twisted import inlineCallbacks

@@ -1,4 +1,7 @@
-import argparse, socket, sys, time
+import argparse
+import socket
+import sys
+import time
 from subprocess import Popen, PIPE
 from importlib import import_module
 

@@ -2,7 +2,7 @@ import inspect
 import logging
 from typing import Dict, Callable, Any, List, Set, Mapping
 
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 import andi
 from scrapy import Request, Spider
@@ -149,8 +149,9 @@ class Injector:
             extra_classes = objs_by_type.keys() - provided_classes
             if extra_classes:
                 raise UndeclaredProvidedTypeError(
-                    f"{provider} has returned {extra_classes} but they're not "
-                    f"listed as provided classes {provider.provided_classes}"
+                    f"{provider} has returned instances of types {extra_classes} "
+                    "that are not among the declared supported classes in the "
+                    f"provider: {provider.provided_classes}"
                 )
             instances.update(objs_by_type)
 

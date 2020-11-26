@@ -1,5 +1,4 @@
 from scrapy.utils.log import configure_logging
-from twisted.internet.defer import returnValue
 from twisted.internet.threads import deferToThread
 from typing import Optional, Union, Type
 

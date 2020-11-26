@@ -1,9 +1,11 @@
 import attr
 from typing import Any, Dict
 
+from pytest_twisted import inlineCallbacks
+
 import scrapy
 from scrapy.crawler import Crawler
-from scrapy.http import TextResponse
+from scrapy.http import TextResponse, HtmlResponse
 from scrapy.settings import Settings
 from scrapy_poet.injection import Injector, get_callback, \
     is_callback_requiring_scrapy_response, is_provider_requiring_scrapy_response
@@ -57,7 +59,7 @@ class FakeProductProvider(PageObjectInputProvider):
                 'name': 'Sample',
             },
         }
-        return [DummyProductResponse(data=data)]
+        return [FakeProductResponse(data=data)]
 
 
 class TextProductProvider(ResponseDataProvider):
@@ -203,10 +205,14 @@ def test_is_callback_using_response():
     assert is_callback_requiring_scrapy_response(spider.callback_for_parse) is False
 
 
+@inlineCallbacks
 def test_is_response_going_to_be_used():
     crawler = Crawler(MySpider)
     spider = MySpider()
     crawler.spider = spider
+
+    def response(request):
+        return HtmlResponse(request.url, request=request, body=b"<html></html>")
 
     # Spider settings are updated when it's initialized from a Crawler.
     # Since we're manually initializing it, let's just copy custom settings
@@ -214,38 +220,21 @@ def test_is_response_going_to_be_used():
     spider.settings = Settings(spider.custom_settings)
     injector = Injector(crawler)
 
-    request = scrapy.Request("http://example.com")
-    assert injector.is_scrapy_response_required(request) is True
+    @inlineCallbacks
+    def check_response_required(expected, callback):
+        request = scrapy.Request("http://example.com", callback=callback)
+        assert injector.is_scrapy_response_required(request) is expected
+        yield injector.build_callback_dependencies(request, response(request))
 
-    request = scrapy.Request("http://example.com", callback=spider.parse2)
-    assert injector.is_scrapy_response_required(request) is True
-
-    request = scrapy.Request("http://example.com", callback=spider.parse3)
-    assert injector.is_scrapy_response_required(request) is False
-
-    request = scrapy.Request("http://example.com", callback=spider.parse4)
-    assert injector.is_scrapy_response_required(request) is False
-
-    request = scrapy.Request("http://example.com", callback=spider.parse5)
-    assert injector.is_scrapy_response_required(request) is True
-
-    request = scrapy.Request("http://example.com", callback=spider.parse6)
-    assert injector.is_scrapy_response_required(request) is True
-
-    request = scrapy.Request("http://example.com", callback=spider.parse7)
-    assert injector.is_scrapy_response_required(request) is True
-
-    request = scrapy.Request("http://example.com", callback=spider.parse8)
-    assert injector.is_scrapy_response_required(request) is False
-
-    request = scrapy.Request("http://example.com", callback=spider.parse9)
-    assert injector.is_scrapy_response_required(request) is True
-
-    request = scrapy.Request("http://example.com", callback=spider.parse10)
-    assert injector.is_scrapy_response_required(request) is False
-
-    request = scrapy.Request("http://example.com", callback=spider.parse11)
-    assert injector.is_scrapy_response_required(request) is True
-
-    request = scrapy.Request("http://example.com", callback=spider.parse12)
-    assert injector.is_scrapy_response_required(request) is True
+    yield from check_response_required(True, None)
+    yield from check_response_required(True, spider.parse2)
+    yield from check_response_required(False, spider.parse3)
+    yield from check_response_required(False, spider.parse4)
+    yield from check_response_required(True, spider.parse5)
+    yield from check_response_required(True, spider.parse6)
+    yield from check_response_required(True, spider.parse7)
+    yield from check_response_required(False, spider.parse8)
+    yield from check_response_required(True, spider.parse9)
+    yield from check_response_required(False, spider.parse10)
+    yield from check_response_required(True, spider.parse11)
+    yield from check_response_required(True, spider.parse12)
