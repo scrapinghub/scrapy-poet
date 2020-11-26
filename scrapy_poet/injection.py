@@ -1,7 +1,7 @@
 import inspect
 import logging
 import pprint
-from typing import Dict, Callable, Any, List, Set, Mapping
+from typing import Dict, Callable, Any, List, Set, Mapping, Optional
 
 from twisted.internet.defer import inlineCallbacks
 
@@ -30,12 +30,12 @@ class Injector:
     Keep all the logic required to do dependency injection in Scrapy callbacks.
     Initializes the providers from the spider settings at initialization.
     """
-    def __init__(self, crawler: Crawler, default_providers: Mapping = None):
+    def __init__(self, crawler: Crawler, default_providers: Optional[Mapping] = None):
         self.crawler = crawler
         self.spider = crawler.spider
         self.load_providers(default_providers)
 
-    def load_providers(self, default_providers: Mapping = None):
+    def load_providers(self, default_providers: Optional[Mapping] = None):
         providers_dict = {**(default_providers or {}),
                           **self.spider.settings.getdict("SCRAPY_POET_PROVIDERS")}
         provider_classes = build_component_list(providers_dict)
