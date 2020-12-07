@@ -13,7 +13,7 @@ Scrapy > 2.0 required
 import scrapy
 import attr
 
-from web_poet.pages import WebPage, ItemWebPage, Injectable
+from web_poet import WebPage, ItemWebPage, Injectable
 
 
 class ListingsExtractor(WebPage):

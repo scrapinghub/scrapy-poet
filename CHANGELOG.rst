@@ -2,6 +2,15 @@
 Changelog
 =========
 
+X.Y.Z (YYYY-MM-DD)
+------------------
+
+* New providers interface
+
+  * One provider can provide many types at once
+  * Single instance during the whole spider lifespan
+  * Registration is now explicit and done in the spider settings
+
 0.0.3 (2020-07-19)
 ------------------
 

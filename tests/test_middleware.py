@@ -1,8 +1,8 @@
 from scrapy.utils.log import configure_logging
-from twisted.internet.defer import returnValue
 from twisted.internet.threads import deferToThread
 from typing import Optional, Union, Type
 
+import pytest
 import scrapy
 from scrapy import Request
 from scrapy.http import Response
@@ -11,12 +11,16 @@ from pytest_twisted import inlineCallbacks
 import attr
 
 from scrapy_poet import callback_for
-from web_poet.pages import WebPage, ItemWebPage
-from scrapy_poet.page_input_providers import provides, PageObjectInputProvider
+from web_poet.pages import WebPage, ItemPage, ItemWebPage
+from scrapy_poet.page_input_providers import (
+    PageObjectInputProvider
+)
 from web_poet.page_inputs import ResponseData
-from scrapy_poet.utils import DummyResponse
-from tests.utils import HtmlResource, crawl_items, capture_exceptions, \
-    crawl_single_item
+from scrapy_poet import DummyResponse
+from tests.utils import (HtmlResource,
+                         crawl_items,
+                         capture_exceptions,
+                         crawl_single_item)
 
 
 class ProductHtml(HtmlResource):
@@ -34,8 +38,17 @@ class ProductHtml(HtmlResource):
 
 
 def spider_for(injectable: Type):
+
     class InjectableSpider(scrapy.Spider):
+
         url = None
+        custom_settings = {
+            "SCRAPY_POET_PROVIDERS": {
+                WithFuturesProvider: 1,
+                WithDeferredProvider: 2,
+                ExtraClassDataProvider: 3,
+            }
+        }
 
         def start_requests(self):
             yield Request(self.url, capture_exceptions(callback_for(injectable)))
@@ -106,46 +119,104 @@ def test_optional_and_unions(settings):
 
 
 @attr.s(auto_attribs=True)
-class ProvidedAsyncTest:
+class ProvidedWithDeferred:
     msg: str
     response: ResponseData  # it should be None because this class is provided
 
 
-@provides(ProvidedAsyncTest)
-class ResponseDataProvider(PageObjectInputProvider):
+@attr.s(auto_attribs=True)
+class ProvidedWithFutures(ProvidedWithDeferred):
+    pass
 
-    def __init__(self, response: scrapy.http.Response):
-        self.response = response
+
+class WithDeferredProvider(PageObjectInputProvider):
+
+    provided_classes = {ProvidedWithDeferred}
 
     @inlineCallbacks
-    def __call__(self):
+    def __call__(self, to_provide, response: scrapy.http.Response):
         five = yield deferToThread(lambda: 5)
-        raise returnValue(ProvidedAsyncTest(f"Provided {five}!", None))
+        return [ProvidedWithDeferred(f"Provided {five}!", None)]
+
+
+class WithFuturesProvider(PageObjectInputProvider):
+
+    provided_classes = {ProvidedWithFutures}
+
+    async def async_fn(self):
+        return 5
+
+    async def __call__(self, to_provide):
+        five = await self.async_fn()
+        return [ProvidedWithFutures(f"Provided {five}!", None)]
 
 
 @attr.s(auto_attribs=True)
-class ProvidersPage(ItemWebPage):
-    provided: ProvidedAsyncTest
+class ExtraClassData(ItemPage):
+    msg: str
+
+    def to_item(self):
+        return {"msg": self.msg}
+
+
+class ExtraClassDataProvider(PageObjectInputProvider):
+
+    provided_classes = {ExtraClassData}
+
+    def __call__(self, to_provide):
+        # This should generate a runtime error in Injection Middleware because
+        # we're returning a class that's not listed in self.provided_classes
+        return {
+            ExtraClassData: ExtraClassData("this should be returned"),
+            ResponseData: ResponseData("example.com", "this shouldn't"),
+        }
+
+
+@attr.s(auto_attribs=True)
+class ProvidedWithDeferredPage(ItemWebPage):
+    provided: ProvidedWithDeferred
 
     def to_item(self):
         return attr.asdict(self, recurse=False)
 
+@attr.s(auto_attribs=True)
+class ProvidedWithFuturesPage(ProvidedWithDeferredPage):
+    provided: ProvidedWithFutures
 
+
+@pytest.mark.parametrize("type_", [ProvidedWithDeferredPage, ProvidedWithFuturesPage])
 @inlineCallbacks
-def test_providers(settings):
-    item, _, _ = yield crawl_single_item(spider_for(ProvidersPage),
+def test_providers(settings, type_):
+    item, _, _ = yield crawl_single_item(spider_for(type_),
                                          ProductHtml, settings)
     assert item['provided'].msg == "Provided 5!"
-    assert item['provided'].response == None
+    assert item['provided'].response is None
+
+
+@inlineCallbacks
+def test_providers_returning_wrong_classes(settings):
+    """Injection Middleware should raise a runtime error whenever a provider
+    returns instances of classes that they're not supposed to provide.
+    """
+    with pytest.raises(AssertionError):
+        yield crawl_single_item(
+            spider_for(ExtraClassData), ProductHtml, settings
+        )
 
 
 class MultiArgsCallbackSpider(scrapy.Spider):
+
     url = None
+    custom_settings = {
+        "SCRAPY_POET_PROVIDERS": {
+            WithDeferredProvider: 1
+        }
+    }
 
     def start_requests(self):
         yield Request(self.url, self.parse, cb_kwargs=dict(cb_arg="arg!"))
 
-    def parse(self, response, product: ProductPage, provided: ProvidedAsyncTest,
+    def parse(self, response, product: ProductPage, provided: ProvidedWithDeferred,
               cb_arg: Optional[str], non_cb_arg: Optional[str]):
         yield {
             'product': product,
@@ -160,9 +231,9 @@ def test_multi_args_callbacks(settings):
     item, _, _ = yield crawl_single_item(MultiArgsCallbackSpider, ProductHtml,
                                          settings)
     assert type(item['product']) == ProductPage
-    assert type(item['provided']) == ProvidedAsyncTest
+    assert type(item['provided']) == ProvidedWithDeferred
     assert item['cb_arg'] == "arg!"
-    assert item['non_cb_arg'] == None
+    assert item['non_cb_arg'] is None
 
 
 @attr.s(auto_attribs=True)

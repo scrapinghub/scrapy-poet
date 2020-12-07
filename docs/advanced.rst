@@ -33,26 +33,39 @@ that need it, like the ``ItemWebPage``.
         html: str
 
 
-    @provides(ResponseData)
     class ResponseDataProvider(PageObjectInputProvider):
         """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
+        provided_classes = {ResponseData}
 
-        def __init__(self, response: Response):
-            """This class receives a Scrapy ``Response`` as a dependency."""
-            self.response = response
+        def __call__(self, to_provide: Set[Callable], response: Response):
+            """Build a ``ResponseData`` instance using a Scrapy ``Response``"""
+            return [ResponseData(url=response.url, html=response.text)]
 
-        def __call__(self):
-            """This method builds a ``ResponseData`` instance using a Scrapy
-            ``Response``.
-            """
-            return ResponseData(
-                url=self.response.url,
-                html=self.response.text
-            )
-
-You are able to implement your own providers in order to extend or override
+You can implement your own providers in order to extend or override
 current scrapy-poet behavior.
-Please, check :class:`PageObjectInputProvider` for more details.
+Please, check :class:`scrapy_poet.page_input_providers.PageObjectInputProvider` for more details.
+
+Configuring providers
+=====================
+
+The list of available providers should be configured in the spider settings. For example,
+the following configuration should be included in the settings to enable a new provider
+``MyProvider``:
+
+.. code-block:: python
+
+    "SCRAPY_POET_PROVIDERS": {MyProvider: 500}
+
+The number used as value (`500`) defines the provider priority. See
+:ref:`Scrapy Middlewares <scrapy:topics-downloader-middleware-ref>`
+configuration dictionaries for more information.
+
+.. note::
+
+    The providers in :const:`scrapy_poet.DEFAULT_PROVIDERS`,
+    which includes a provider for :class:`~ResponseData`, are always
+    included by default. You can disable any of them by listing it
+    in the configuration with the priority `None`.
 
 Ignoring requests
 =================
@@ -93,26 +106,23 @@ If neither spider callback nor any of the input providers are using
 
     @attr.s(auto_attribs=True)
     class CachedData:
-
         key: str
         value: str
 
 
-    @provides(CachedData)
     class CachedDataProvider(PageObjectInputProvider):
+        provided_classes = {CachedData}
 
-        def __init__(self, request: scrapy.Request):
-            self.request = request
-
-        def __call__(self):
-            return CachedData(
-                key=self.request.url,
-                value=get_cached_content(self.request.url)
-            )
+        def __call__(self, to_provide: List[Callable], request: scrapy.Request):
+            return [
+                CachedData(
+                    key=request.url,
+                    value=get_cached_content(request.url)
+                )
+            ]
 
 
     class MyPageObject(ItemPage):
-
         content: CachedData
 
         def to_item(self):
@@ -123,7 +133,6 @@ If neither spider callback nor any of the input providers are using
 
 
     class MySpider(scrapy.Spider):
-
         name = 'my_spider'
 
         def parse(self, response: DummyResponse, page: MyPageObject):
@@ -143,26 +152,23 @@ Page Object uses it, the request is not ignored, for example:
 
     @attr.s(auto_attribs=True)
     class MyResponseData:
-
         url: str
         html: str
 
 
-    @provides(MyResponseData)
     class MyResponseDataProvider(PageObjectInputProvider):
+        provided_classes = {MyResponseData}
 
-        def __init__(self, response: Response):
-            self.response = response
-
-        def __call__(self):
-            return MyResponseData(
-                url=self.response.url,
-                html=self.response.content,
-            )
+        def __call__(self, to_provide: Set[Callable], response: Response):
+            return [
+                MyResponseData(
+                    url=response.url,
+                    html=response.content,
+                )
+            ]
 
 
     class MyPageObject(ItemPage):
-
         response: MyResponseData
 
         def to_item(self):
@@ -173,7 +179,6 @@ Page Object uses it, the request is not ignored, for example:
 
 
     class MySpider(scrapy.Spider):
-
         name = 'my_spider'
 
         def parse(self, response: DummyResponse, page: MyPageObject):

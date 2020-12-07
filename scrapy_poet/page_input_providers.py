@@ -1,102 +1,123 @@
-"""The Injection Middleware needs a standard way to build dependencies for
-the Page Inputs used by the request callbacks. That's why we have created a
-repository of ``PageObjectInputProviders``.
+"""The Injection Middleware needs a standard way to build the Page Inputs dependencies
+that the Page Objects uses to get external data (e.g. the HTML). That's why we
+have created a repository of ``PageObjectInputProviders``.
 
-You could implement different providers in order to acquire data from multiple
-external sources, for example, Splash or Auto Extract API.
+The current module implements a ``PageObjectInputProviders`` for
+:class:`web_poet.page_inputs.ResponseData`, which is in charge of providing the response
+HTML from Scrapy. You could also implement different providers in order to
+acquire data from multiple external sources, for example,
+Splash or Auto Extract API.
 """
-import abc
-import typing
+from typing import Set, Union, Callable, ClassVar
 
 from scrapy.http import Response
-from web_poet.page_inputs import ResponseData
+from scrapy.crawler import Crawler
+from scrapy_poet.injection_errors import MalformedProvidedClassesError
+from web_poet import ResponseData
 
-# FIXME: refactor _providers / provides / register,  make a nicer API
-providers = {}
 
+class PageObjectInputProvider:
+    """
+    This is the base class for creating Page Object Input Providers.
 
-class PageObjectInputProvider(abc.ABC):
-    """This is an abstract class for describing Page Object Input Providers."""
+    A Page Object Input Provider (POIP) takes responsibility for providing
+    instances of some types to Scrapy callbacks. The types a POIP provides must
+    be declared in the class attribute ``provided_classes``.
 
-    def __init__(self):
-        """You can override this method to receive external dependencies.
+    POIPs are initialized when the spider starts by invoking the ``__init__`` method,
+    which receives the crawler instance as argument.
 
-        Currently, scrapy-poet is able to inject instances of the following
-        classes as *provider* dependencies:
+    The ``__call__`` method must be overridden, and it is inside this method
+    where the actual instances must be build. The default ``__call__`` signature
+    is as follows:
 
-        - :class:`~scrapy.http.Request`
-        - :class:`~scrapy.http.Response`
-        - :class:`~scrapy.crawler.Crawler`
-        - :class:`~scrapy.settings.Settings`
-        - :class:`~scrapy.statscollectors.StatsCollector`
+    .. code-block:: python
 
-        .. warning::
+        def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]:
 
-            Scrapy doesn't know when a Request is going to generate
-            a Response, a TextResponse, an HtmlResponse,
-            or any other type that inherits from Response.
-            Because of this,
-            you should always annotate your provider's response argument
-            with the Response type.
-            If your provider needs a TextResponse,
-            you need to validate it by yourself,
-            the same way you would need to do when using Scrapy callbacks.
-            Example:
+    Therefore, it receives a list of types to be provided and return a list
+    with the instances created (don't get confused by the
+    ``Callable`` annotation. Think on it as a synonym of ``Type``).
 
-            .. code-block:: python
+    Additional dependencies can be declared in the ``__call__`` signature
+    that will be automatically injected. Currently, scrapy-poet is able
+    to inject instances of the following classes:
 
-                @provides(MyCustomResponseData)
-                class MyCustomResponseDataProvider(PageObjectInputProvider):
+    - :class:`~scrapy.http.Request`
+    - :class:`~scrapy.http.Response`
+    - :class:`~scrapy.crawler.Crawler`
+    - :class:`~scrapy.settings.Settings`
+    - :class:`~scrapy.statscollectors.StatsCollector`
 
-                    def __init__(self, response: Response):
-                        assert isinstance(response, TextResponse)
-                        self.response = response
+    Finally, ``__call__`` function can execute asynchronous code. Just
+    either prepend the declaration with ``async`` to use futures or annotate it with
+    ``@inlineCallbacks`` for deferred execution. Additionally, you
+    might want to configure Scrapy ``TWISTED_REACTOR`` to support ``asyncio``
+    libraries.
+
+    The available POIPs should be declared in the spider setting using the key
+    ``SCRAPY_POET_PROVIDERS``. It must be a dictionary that follows same
+    structure than the
+    :ref:`Scrapy Middlewares <scrapy:topics-downloader-middleware-ref>`
+    configuration dictionaries.
+
+    A simple example of a provider:
+
+    .. code-block:: python
+
+        class BodyHtml(str): pass
+
+        class BodyHtmlProvider(PageObjectInputProvider):
+            provided_classes = {BodyHtml}
+
+            def __call__(self, to_provide, response: Response):
+                return [BodyHtml(response.css("html body").get())]
+
+    The **provided_classes** class attribute is the ``set`` of classes
+    that this provider provides.
+    Alternatively, it can be a function with type ``Callable[[Callable], bool]`` that
+    returns ``True`` if and only if the given type, which must be callable,
+    is provided by this provider.
+    """
+
+    provided_classes: ClassVar[Union[Set[Callable], Callable[[Callable], bool]]]
+
+    @classmethod
+    def is_provided(cls, type_: Callable):
         """
+        Return ``True`` if the given type is provided by this provider based
+        on the value of the attribute ``provided_classes``
+        """
+        if isinstance(cls.provided_classes, Set):
+            return type_ in cls.provided_classes
+        elif callable(cls.provided_classes):
+            return cls.provided_classes(type_)
+        else:
+            raise MalformedProvidedClassesError(
+                f"Unexpected type '{type_}' for 'provided_classes' attribute of"
+                f"'{cls}.'. Expected either 'set' or 'callable'")
 
-    @abc.abstractmethod
-    def __call__(self):
-        """This method is responsible for building Page Input dependencies."""
+    def __init__(self, crawler: Crawler):
+        """Initializes the provider. Invoked only at spider start up."""
+        pass
 
-
-def register(provider_class: typing.Type[PageObjectInputProvider],
-             provided_class: typing.Type):
-    """This method registers a Page Object Input Provider in the providers
-    registry. It could be replaced by the use of the ``provides`` decorator.
-
-    Example:
-
-        register(ResponseDataProvider, ResponseData)
-    """
-    providers[provided_class] = provider_class
-
-
-def provides(provided_class: typing.Type):
-    """This decorator should be used with classes that inherits from
-    ``PageObjectInputProvider`` in order to automatically register them as
-    providers.
-
-    See ``ResponseDataProvider``'s implementation for an example.
-    """
-    def decorator(provider_class: typing.Type[PageObjectInputProvider]):
-        register(provider_class, provided_class)
-        return provider_class
-
-    return decorator
+    # Remember that is expected for all children to implement the ``__call__``
+    # method. The simplest signature for it is:
+    #
+    #   def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]:
+    #
+    # But some adding some other injectable attributes are possible
+    # (see the class docstring)
+    #
+    # The technical reason why this method was not declared abstract is that
+    # injection breaks the method overriding rules and mypy then complains.
 
 
-@provides(ResponseData)
 class ResponseDataProvider(PageObjectInputProvider):
     """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
 
-    def __init__(self, response: Response):
-        """This class receives a Scrapy ``Response`` as a dependency."""
-        self.response = response
+    provided_classes = {ResponseData}
 
-    def __call__(self):
-        """This method builds a ``ResponseData`` instance using a Scrapy
-        ``Response``.
-        """
-        return ResponseData(
-            url=self.response.url,
-            html=self.response.text
-        )
+    def __call__(self, to_provide: Set[Callable], response: Response):
+        """Builds a ``ResponseData`` instance using a Scrapy ``Response``"""
+        return [ResponseData(url=response.url, html=response.text)]

@@ -6,12 +6,16 @@ are executed.
 from scrapy import Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
-from scrapy.settings import Settings
-from scrapy.statscollectors import StatsCollector
 from twisted.internet.defer import inlineCallbacks, returnValue
 
-from scrapy_poet import utils
-from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES
+from . import api
+from .page_input_providers import ResponseDataProvider
+from .injection import Injector
+
+
+DEFAULT_PROVIDERS = {
+    ResponseDataProvider: 500
+}
 
 
 class InjectionMiddleware:
@@ -20,6 +24,15 @@ class InjectionMiddleware:
     * check if request downloads could be skipped
     * inject dependencies before request callbacks are executed
     """
+    def __init__(self, crawler: Crawler):
+        """Initialize the middleware"""
+        self.crawler = crawler
+        self.injector = Injector(crawler, default_providers=DEFAULT_PROVIDERS)
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler)
+
     def process_request(self, request: Request, spider: Spider):
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a ``Response``
@@ -32,55 +45,36 @@ class InjectionMiddleware:
         With this behavior, we're able to optimize spider executions avoiding
         unnecessary downloads. That could be the case when the callback is
         actually using another source like external APIs such as Scrapinghub's
-        Auto Extract.
+        AutoExtract.
         """
-        if utils.is_response_going_to_be_used(request, spider):
+        if self.injector.is_scrapy_response_required(request):
             return
 
         spider.logger.debug(f'Skipping download of {request}')
-        return utils.DummyResponse(url=request.url, request=request)
+        return api.DummyResponse(url=request.url, request=request)
 
     @inlineCallbacks
     def process_response(self, request: Request, response: Response,
                          spider: Spider):
-        """This method instantiates all ``Injectable`` subclasses declared as
-        request callback arguments and any other parameter with a provider for
-        its type. Otherwise, this middleware doesn't populate
-        ``request.cb_kwargs`` for this argument.
+        """This method fills ``request.cb_kwargs`` with instances for
+        the required Page Objects found in the callback signature.
+
+        In other words, this method instantiates all ``Injectable``
+        subclasses declared as request callback arguments and
+        any other parameter with a ``PageObjectInputProvider`` configured for
+        its type.
 
         If there's a collision between an already set ``cb_kwargs``
         and an injectable attribute,
         the user-defined ``cb_kwargs`` takes precedence.
-
-        Currently, we are able to inject instances of the following
-        classes as *provider* dependencies:
-
-        - :class:`~scrapy.Spider`
-        - :class:`~scrapy.http.Request`
-        - :class:`~scrapy.http.Response`
-        - :class:`~scrapy.crawler.Crawler`
-        - :class:`~scrapy.settings.Settings`
-        - :class:`~scrapy.statscollectors.StatsCollector`
         """
         # Find out the dependencies
-        callback = utils.get_callback(request, spider)
-        dependencies = {
-            Spider: spider,
-            Request: request,
-            Response: response,
-            Crawler: spider.crawler,
-            Settings: spider.settings,
-            StatsCollector: spider.crawler.stats,
-        }
-        assert set(dependencies.keys()) == _SCRAPY_PROVIDED_CLASSES
-        plan, provider_instances = utils.build_plan(callback, dependencies)
-
-        # Build all instances declared as dependencies
-        instances = yield from utils.build_instances(
-            plan.dependencies, provider_instances)
-
+        final_kwargs = yield from self.injector.build_callback_dependencies(
+            request,
+            response
+        )
         # Fill the callback arguments with the created instances
-        for arg, value in plan.final_kwargs(instances).items():
+        for arg, value in final_kwargs.items():
             # Precedence of user callback arguments
             if arg not in request.cb_kwargs:
                 request.cb_kwargs[arg] = value

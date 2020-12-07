@@ -4,7 +4,7 @@ You can mix various page types freely.
 """
 import scrapy
 
-from web_poet.pages import WebPage
+from web_poet import WebPage
 from example.autoextract import ProductPage
 
 

@@ -5,10 +5,10 @@ from scrapy import Spider
 from scrapy.http import Request
 from web_poet.pages import ItemWebPage
 
-from scrapy_poet.utils import _SCRAPY_PROVIDED_CLASSES
+from scrapy_poet.injection import SCRAPY_PROVIDED_CLASSES
 from scrapy_poet.page_input_providers import (
-    provides,
     PageObjectInputProvider,
+    ResponseDataProvider,
 )
 
 from tests.utils import crawl_items, crawl_single_item, HtmlResource
@@ -30,7 +30,7 @@ class ProductHtml(HtmlResource):
 
 
 @inlineCallbacks
-@pytest.mark.parametrize('scrapy_class', _SCRAPY_PROVIDED_CLASSES)
+@pytest.mark.parametrize('scrapy_class', SCRAPY_PROVIDED_CLASSES)
 def test_scrapy_dependencies_on_providers(scrapy_class, settings):
     """Scrapy dependencies should be injected into Providers."""
 
@@ -38,16 +38,12 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
     class PageData:
         scrapy_class: str
 
-    @provides(PageData)
     class PageDataProvider(PageObjectInputProvider):
 
-        def __init__(self, obj: scrapy_class):
-            self.obj = obj
+        provided_classes = {PageData}
 
-        def __call__(self):
-            return PageData(
-                scrapy_class=scrapy_class.__name__,
-            )
+        def __call__(self, to_provide, obj: scrapy_class):
+            return [PageData(scrapy_class=scrapy_class.__name__)]
 
     @attr.s(auto_attribs=True)
     class Page(ItemWebPage):
@@ -63,6 +59,12 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
 
         name = "my_spider"
         url = None
+        custom_settings = {
+            "SCRAPY_POET_PROVIDERS": {
+                ResponseDataProvider: 1,
+                PageDataProvider: 2,
+            }
+        }
 
         def start_requests(self):
             yield Request(url=self.url, callback=self.parse)
@@ -76,7 +78,7 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
 
 
 @inlineCallbacks
-@pytest.mark.parametrize('scrapy_class', _SCRAPY_PROVIDED_CLASSES)
+@pytest.mark.parametrize('scrapy_class', SCRAPY_PROVIDED_CLASSES)
 def test_scrapy_dependencies_on_page_objects(scrapy_class, settings):
     """Scrapy dependencies should not be injected into Page Objects."""
 

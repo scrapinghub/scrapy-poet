@@ -1,6 +1,8 @@
 import pytest
 from scrapy.settings import Settings
 
+from scrapy_poet.page_input_providers import ResponseDataProvider
+
 
 @pytest.fixture()
 def settings(request):
@@ -12,6 +14,6 @@ def settings(request):
         },
         DOWNLOADER_MIDDLEWARES={
             'scrapy_poet.InjectionMiddleware': 543,
-        },
+        }
     )
     return Settings(s)
