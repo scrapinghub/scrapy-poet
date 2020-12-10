@@ -14,6 +14,7 @@ from scrapy.statscollectors import StatsCollector
 from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import load_object
+from scrapy.utils.test import get_crawler
 from scrapy_poet.injection_errors import (UndeclaredProvidedTypeError,
                                           NonCallableProviderError,
                                           InjectionError)
@@ -285,10 +286,12 @@ def get_injector_for_testing(
     class MySpider(Spider):
         name = "my_spider"
 
+    settings = Settings({**(additional_settings or {}),
+                         "SCRAPY_POET_PROVIDERS": providers})
     crawler = Crawler(MySpider)
+    crawler.settings = settings
     spider = MySpider()
-    spider.settings = Settings({**(additional_settings or {}),
-                                "SCRAPY_POET_PROVIDERS": providers})
+    spider.settings = settings
     crawler.spider = spider
     return Injector(crawler)
 
