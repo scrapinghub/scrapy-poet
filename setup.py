@@ -12,7 +12,7 @@ setup(
     packages=find_packages(exclude=['tests', 'example']),
     install_requires=['andi>=0.3', 'attrs', 'parsel', 'web-poet'],
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',

@@ -2,7 +2,7 @@
 Changelog
 =========
 
-X.Y.Z (YYYY-MM-DD)
+0.1.0 (2020-12-29)
 ------------------
 
 * New providers interface
@@ -10,6 +10,9 @@ X.Y.Z (YYYY-MM-DD)
   * One provider can provide many types at once
   * Single instance during the whole spider lifespan
   * Registration is now explicit and done in the spider settings
+
+* CI is migrated from Travis to Github Actions
+* Python 3.9 support
 
 0.0.3 (2020-07-19)
 ------------------
