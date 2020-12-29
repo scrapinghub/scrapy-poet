@@ -10,8 +10,8 @@ scrapy-poet
    :target: https://pypi.python.org/pypi/scrapy-poet
    :alt: Supported Python Versions
 
-.. image:: https://travis-ci.com/scrapinghub/scrapy-poet.svg?branch=master
-   :target: https://travis-ci.com/scrapinghub/scrapy-poet
+.. image:: https://github.com/scrapinghub/scrapy-poet/workflows/tox/badge.svg
+   :target: https://github.com/scrapinghub/scrapy-poet/actions
    :alt: Build Status
 
 .. image:: https://codecov.io/github/scrapinghub/scrapy-poet/coverage.svg?branch=master
