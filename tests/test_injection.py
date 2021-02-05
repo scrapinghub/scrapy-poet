@@ -3,6 +3,7 @@ import pytest
 from pytest_twisted import inlineCallbacks
 import weakref
 
+from scrapy import Request
 from scrapy.http import Response
 from scrapy_poet import ResponseDataProvider, PageObjectInputProvider, \
     DummyResponse
@@ -10,7 +11,9 @@ from scrapy_poet.injection import check_all_providers_are_callable, is_class_pro
     get_injector_for_testing, get_response_for_testing
 from scrapy_poet.injection_errors import NonCallableProviderError, \
     InjectionError, UndeclaredProvidedTypeError
-from web_poet import Injectable
+from scrapy_poet.overrides import PerDomainOverridesRegistry
+from web_poet import Injectable, ItemPage
+from web_poet.mixins import ResponseShortcutsMixin
 
 
 def get_provider(classes, content=None):
@@ -112,8 +115,11 @@ class TestInjector:
         with pytest.raises(NonCallableProviderError):
             get_injector_for_testing({NonCallableProvider: 1})
 
-    def test_discover_callback_providers(self, injector, providers):
-        discover_fn = injector.discover_callback_providers
+    def test_discover_callback_providers(self, injector, providers, request):
+        def discover_fn(callback):
+            request = Request("http://example.com", callback=callback)
+            return injector.discover_callback_providers(request)
+
         providers_list = list(providers.keys())
 
         def callback_0(a: ClsNoProvided):
@@ -248,6 +254,71 @@ class TestInjector:
             "c": WrapCls,
             "d": ClsNoProviderRequired
         }
+
+
+class Html(Injectable):
+    url = "http://example.com"
+    html = """<html><body>Price: <span class="price">22</span>€</body></html>"""
+
+
+class EurDollarRate(Injectable):
+    rate = 1.1
+
+
+class OtherEurDollarRate(Injectable):
+    rate = 2
+
+
+@attr.s(auto_attribs=True)
+class PricePO(ItemPage, ResponseShortcutsMixin):
+    response: Html
+
+    def to_item(self):
+        return dict(price=float(self.css(".price::text").get()), currency="€")
+
+
+@attr.s(auto_attribs=True)
+class PriceInDollarsPO(ItemPage):
+    original_po: PricePO
+    conversion: EurDollarRate
+
+    def to_item(self):
+        item = self.original_po.to_item()
+        item["price"] *= self.conversion.rate
+        item["currency"] = "$"
+        return item
+
+
+class TestInjectorOverrides:
+
+    @pytest.mark.parametrize("override_expected", [True, False])
+    @inlineCallbacks
+    def test_overrides(self, providers, override_expected):
+        overrides = {("other-example.com", "example.com")[override_expected]: {
+            PricePO: PriceInDollarsPO,
+            EurDollarRate: OtherEurDollarRate
+        }}
+        registry = PerDomainOverridesRegistry(overrides)
+        injector = get_injector_for_testing(providers,
+                                            overrides_registry=registry)
+
+        def callback(response: DummyResponse, price_po: PricePO, rate_po: EurDollarRate):
+            pass
+
+        response = get_response_for_testing(callback)
+        kwargs = yield from injector.build_callback_dependencies(
+            response.request, response)
+        kwargs_types = {key: type(value) for key, value in kwargs.items()}
+        price_po = kwargs["price_po"]
+        item = price_po.to_item()
+        if override_expected:
+            assert kwargs_types == {"price_po": PriceInDollarsPO, "rate_po": OtherEurDollarRate}
+            # Note that OtherEurDollarRate don't have effect inside PriceInDollarsPO
+            # because composability of overrides is forbidden
+            assert item == {"price": 22 * 1.1, "currency": "$"}
+        else:
+            assert kwargs_types == {"price_po": PricePO, "rate_po": EurDollarRate}
+            assert item == {"price": 22, "currency": "€"}
 
 
 def test_load_provider_classes():

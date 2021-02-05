@@ -1,3 +1,5 @@
+import socket
+
 from scrapy.utils.log import configure_logging
 from twisted.internet.threads import deferToThread
 from typing import Optional, Union, Type
@@ -11,6 +13,7 @@ from pytest_twisted import inlineCallbacks
 import attr
 
 from scrapy_poet import callback_for
+from scrapy_poet.utils import get_domain
 from web_poet.pages import WebPage, ItemPage, ItemWebPage
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider
@@ -77,6 +80,12 @@ class ProductPage(ItemWebPage):
         }
 
 
+@attr.s(auto_attribs=True)
+class OverridenBreadcrumbsExtraction(WebPage):
+    def get(self):
+        return {"overriden_breadcrumb": "http://example.com"}
+
+
 @inlineCallbacks
 def test_basic_case(settings):
     item, url, _ = yield crawl_single_item(spider_for(ProductPage),
@@ -87,6 +96,23 @@ def test_basic_case(settings):
         'price': '22€',
         'description': 'The best chocolate ever',
         'category': 'Food / Sweets',
+    }
+
+
+@inlineCallbacks
+def test_overrides(settings):
+    host = socket.gethostbyname(socket.gethostname())
+    domain = get_domain(host)
+    settings["SCRAPY_POET_OVERRIDES"] = {
+        domain: {BreadcrumbsExtraction: OverridenBreadcrumbsExtraction}}
+    item, url, _ = yield crawl_single_item(spider_for(ProductPage),
+                                           ProductHtml, settings)
+    assert item == {
+        'url': url,
+        'name': 'Chocolate',
+        'price': '22€',
+        'description': 'The best chocolate ever',
+        'category': 'overriden_breadcrumb',
     }
 
 
