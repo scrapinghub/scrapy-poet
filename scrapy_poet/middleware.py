@@ -33,7 +33,9 @@ class InjectionMiddleware:
         registry_cls = load_object(settings.get("SCRAPY_POET_OVERRIDES_REGISTRY",
                                                 PerDomainOverridesRegistry))
         self.overrides_registry = create_instance(registry_cls, settings, crawler)
-        self.injector = Injector(crawler, default_providers=DEFAULT_PROVIDERS, overrides_registry=self.overrides_registry)
+        self.injector = Injector(crawler,
+                                 default_providers=DEFAULT_PROVIDERS,
+                                 overrides_registry=self.overrides_registry)
 
     @classmethod
     def from_crawler(cls, crawler):
