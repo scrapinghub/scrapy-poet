@@ -281,8 +281,8 @@ def is_provider_requiring_scrapy_response(provider):
 
 def get_injector_for_testing(
         providers: Mapping,
-        overrides_registry: Optional[OverridesRegistryBase] = None,
-        additional_settings: Dict = None
+        additional_settings: Dict = None,
+        overrides_registry: Optional[OverridesRegistryBase] = None
 ) -> Injector:
     """
     Return an :class:`Injector` using a fake crawler.
