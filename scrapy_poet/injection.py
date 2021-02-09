@@ -109,7 +109,7 @@ class Injector:
             callback,
             is_injectable=is_injectable,
             externally_provided=self.is_class_provided_by_any_provider,
-            overrides=self.overrides_registry.overrides_for(request.url).get
+            overrides=self.overrides_registry.overrides_for(request).get
         )
 
     @inlineCallbacks
