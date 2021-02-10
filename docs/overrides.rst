@@ -91,7 +91,7 @@ are used for Book Page URLs. This can be done by configuring
 ``SCRAPY_POET_OVERRIDES`` contain rules that overrides the Page Objects
 used for a particular domain. In this particular case, Page Objects
 ``BPBookListPage`` and ``BPBookPage`` will be used instead of
-``BookListPage`` and ``BPBookPage`` for any request whose domain is
+``BookListPage`` and ``BookPage`` for any request whose domain is
 ``bookpage.com``.
 
 The spider is now ready to extract books from both sites 😀.
