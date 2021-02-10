@@ -291,13 +291,18 @@ class PriceInDollarsPO(ItemPage):
 
 class TestInjectorOverrides:
 
-    @pytest.mark.parametrize("override_expected", [True, False])
+    @pytest.mark.parametrize("override_should_happen", [True, False])
     @inlineCallbacks
-    def test_overrides(self, providers, override_expected):
-        overrides = {("other-example.com", "example.com")[override_expected]: {
-            PricePO: PriceInDollarsPO,
-            EurDollarRate: OtherEurDollarRate
-        }}
+    def test_overrides(self, providers, override_should_happen):
+        domain = "example.com" if override_should_happen else "other-example.com"
+        # The request domain is example.com, so overrides shouldn't be applied
+        # when we configure them for domain other-example.com
+        overrides = {
+            domain: {
+                PricePO: PriceInDollarsPO,
+                EurDollarRate: OtherEurDollarRate
+            }
+        }
         registry = PerDomainOverridesRegistry(overrides)
         injector = get_injector_for_testing(providers,
                                             overrides_registry=registry)
@@ -311,7 +316,8 @@ class TestInjectorOverrides:
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
         price_po = kwargs["price_po"]
         item = price_po.to_item()
-        if override_expected:
+
+        if override_should_happen:
             assert kwargs_types == {"price_po": PriceInDollarsPO, "rate_po": OtherEurDollarRate}
             # Note that OtherEurDollarRate don't have effect inside PriceInDollarsPO
             # because composability of overrides is forbidden
