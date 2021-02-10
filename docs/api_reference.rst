@@ -37,3 +37,9 @@ Injection errors
 
 .. automodule:: scrapy_poet.injection_errors
    :members:
+
+Overrides
+=========
+
+.. automodule:: scrapy_poet.overrides
+   :members:

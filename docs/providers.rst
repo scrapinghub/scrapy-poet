@@ -1,8 +1,8 @@
-.. _`advanced`:
+.. _`providers`:
 
-==============
-Advanced Usage
-==============
+=========
+Providers
+=========
 
 .. note::
 

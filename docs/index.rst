@@ -35,10 +35,16 @@ To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
    intro/tutorial
 
 .. toctree::
-   :caption: Reference
+   :caption: Advanced
    :maxdepth: 1
 
-   advanced
+   overrides
+   providers
+
+.. toctree::
+   :caption: All the rest
+   :maxdepth: 1
+
    api_reference
    contributing
    changelog

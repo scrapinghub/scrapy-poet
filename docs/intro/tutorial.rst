@@ -240,7 +240,8 @@ is separated from the spider.
 
 On a surface, it looks just like a different way to organize Scrapy spider
 code - and indeed, it *is* just a different way to organize the code,
-but it opens some cool possibilities.
+but it opens some cool possibilities, like having a single crawling
+logic for many sites (See :ref:`overrides`).
 
 Next steps
 ==========
@@ -248,7 +249,7 @@ Next steps
 Now that you know how scrapy-poet is supposed to work, what about trying to
 apply it to an existing or new Scrapy project?
 
-Also, please check :ref:`advanced` and refer to spiders in the "example"
+Also, please check :ref:`overrides`, :ref:`providers` and refer to spiders in the "example"
 folder: https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
 
 .. _Scrapy Tutorial: https://docs.scrapy.org/en/latest/intro/tutorial.html

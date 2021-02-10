@@ -11,6 +11,11 @@ class OverridesRegistryBase(ABC):
 
     @abstractmethod
     def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
+        """
+        Return a ``Mapping`` (e.g. a ``dict``) with type translation rules.
+        The key is the source type that is wanted to be replaced by
+        value, which is also a type.
+        """
         pass
 
 
