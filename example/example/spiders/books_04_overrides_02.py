@@ -13,7 +13,7 @@ from scrapy_poet import callback_for
 
 class BookListPage(WebPage):
 
-    def product_urls(self):
+    def book_urls(self):
         return []
 
 
@@ -25,7 +25,7 @@ class BookPage(ItemWebPage):
 
 class BTSBookListPage(BookListPage):
     """Logic to extract listings from pages like https://books.toscrape.com"""
-    def product_urls(self):
+    def book_urls(self):
         return self.css('.image_container a::attr(href)').getall()
 
 
@@ -40,7 +40,7 @@ class BTSBookPage(BookPage):
 
 class BPBookListPage(BookListPage):
     """Logic to extract listings from pages like https://bookpage.com/reviews"""
-    def product_urls(self):
+    def book_urls(self):
         return self.css('.article-info a::attr(href)').getall()
 
 
@@ -71,5 +71,5 @@ class BooksSpider(scrapy.Spider):
     }
 
     def parse(self, response, page: BookListPage):
-        for url in page.product_urls():
+        for url in page.book_urls():
             yield response.follow(url, callback_for(BookPage))
