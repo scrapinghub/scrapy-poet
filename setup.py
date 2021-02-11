@@ -11,7 +11,7 @@ setup(
     url='https://github.com/scrapinghub/scrapy-poet',
     packages=find_packages(exclude=['tests', 'example']),
     install_requires=[
-        'andi @ git+git://github.com/scrapinghub/andi@local_overrides',
+        'andi >= 0.4.1',
         'attrs',
         'parsel',
         'web-poet',
