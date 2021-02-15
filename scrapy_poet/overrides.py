@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-from collections import Callable
-from typing import Dict, Mapping
+from typing import Dict, Mapping, Callable
 
 from scrapy import Request
 from scrapy.crawler import Crawler
