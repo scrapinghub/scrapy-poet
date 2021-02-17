@@ -4,7 +4,7 @@
 Overrides
 =========
 This functionality opens the door to configure specific Page Objects depending
-on the request URL domain. Please have a look to :ref:`intro/tutorial` to
+on the request URL domain. Please have a look to :ref:`intro-tutorial` to
 learn the basics about overrides before digging deeper in the content of this
 page.
 
@@ -65,7 +65,7 @@ Overrides registry
 The overrides registry is responsible for informing whether there exists an
 override for a particular type for a given response. The default overrides
 registry keeps a map of overrides for each domain and read this configuration
-from settings ``SCRAPY_POET_OVERRIDES`` as has been seen in the :ref:`tutorial`
+from settings ``SCRAPY_POET_OVERRIDES`` as has been seen in the :ref:`intro-tutorial`
 example.
 
 But the registry implementation can be changed at convenience. A different
