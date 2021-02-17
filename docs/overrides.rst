@@ -4,7 +4,7 @@
 Overrides
 =========
 This functionality opens the door to configure specific Page Objects depending
-on the request URL domain. Please have a look to :ref:`tutorial` to
+on the request URL domain. Please have a look to :ref:`intro/tutorial` to
 learn the basics about overrides before digging deeper in the content of this
 page.
 
