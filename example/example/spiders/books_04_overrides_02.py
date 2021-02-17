@@ -71,5 +71,4 @@ class BooksSpider(scrapy.Spider):
     }
 
     def parse(self, response, page: BookListPage):
-        for url in page.book_urls():
-            yield response.follow(url, callback_for(BookPage))
+        yield from response.follow_all(page.book_urls(), callback_for(BookPage))
