@@ -12,6 +12,11 @@ way, which separates extraction and crawling logic from the I/O,
 and from the Scrapy implementation details as well.
 It makes the code more testable and reusable.
 
+Beside, it
+opens the door to create generic spider code that works across sites.
+Integrating a new site in the spider is then just a matter of write
+a bunch of Page Objects for it.
+
 ``scrapy-poet`` also provides a way to integrate third-party APIs
 (like `Splash`_ and `AutoExtract`_) with the spider, without losing
 testability and reusability.

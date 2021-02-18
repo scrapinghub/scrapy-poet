@@ -74,5 +74,5 @@ registry implementation can be configured using the property
 must be a subclass of ``scrapy_poet.overrides.OverridesRegistryBase``
 and must implement the method ``overrides_for``. As other Scrapy components,
 it can be initialized from the ``from_crawler`` class method if implemented.
-This might be handy to be able to access settings, stats, etc.
+This might be handy to be able to access settings, stats, request meta, etc.
 

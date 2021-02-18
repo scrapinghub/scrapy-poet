@@ -247,7 +247,7 @@ As a side effect, it is now pretty easy to **create a generic spider with a comm
 that works across different sites**. The unique missing requirement is to be able to
 configure different Page Objects for different sites, because the extraction logic
 surely changes from site to site.
-This is exactly the functionality that overrides provides.
+This is exactly the functionality that *overrides* provides.
 
 Note that the crawling logic of the ``BooksSpider`` is pretty simple and straightforward:
 
@@ -259,12 +259,13 @@ having pages with lists of books and then detail pages with the individual book 
 such a common way of structuring sites.
 
 Let's refactor the spider presented in the former section so that it also supports
-extracting books from the page `bookpage.com/reviews <https://bookpage.com/reviews>`_.
+extracting books from the page `bookpage.com/reviews <https://bookpage.com/reviews>`_
+as well.
 
-The steps will follow are:
+The steps to follow are:
 
-#. Make the spider generic: create a Page Object for the listing extraction
-#. Introduce overrides for Books to Scrape
+#. Make our spider generic: move the remaining extraction code from the spider to a Page Object
+#. Configure *overrides* for Books to Scrape
 #. Add support for another site (Book Page site)
 
 Making the spider generic
@@ -293,15 +294,20 @@ Let's adapt the spider to use this new Page Object:
         def parse(self, response, page: BookListPage):
             yield from response.follow_all(page.books_urls(), self.parse_book)
 
-All the extraction logic that is specific to each site is now responsibility
-of the Page Objects. As result, the spider is generic and will work providing that the
-Page Objects do their work.
+All the extraction logic that is specific to the site is now responsibility
+of the Page Objects. As a result, the spider is now *site-agnostic* and will
+work providing that the Page Objects do their work.
 
-Introduce overrides for Books to Scrape
----------------------------------------
+In fact, the spider only responsibility becomes expressing the crawling strategy:
+"fetch a list of item URLs, follow them, and extract the resultant items".
+The code gets clearer and simpler.
+
+Configure *overrides* for Books to Scrape
+-----------------------------------------
 It is convenient to create bases classes for the Page Objects given that we are going
-to have several implementations of the same Page Objects (one per each site).
-The following code snippet introduces such base classes:
+to have several implementations of the same Page Object (one per each site).
+The following code snippet introduces such base classes and refactors the
+existing Page Objects as subclasses of them:
 
 .. code-block:: python
 
@@ -335,9 +341,10 @@ The following code snippet introduces such base classes:
             }
 
 The spider won't work anymore after the change. The reason is that it
-is using the empty base page objects without any logic. Let's fix that
-by configuring the overrides for the ``toscrape.com`` domain
-in ``settings.py``:
+is using the new base Page Objects and they are empty.
+Let's fix it by instructing ``scrapy-poet`` to use the Books To Scrape (BTS)
+Page Objects for URLs belonging to the domain ``toscrape.com``. This must
+be done by configuring ``SCRAPY_POET_OVERRIDES`` into ``settings.py``:
 
 .. code-block:: python
 
@@ -365,7 +372,8 @@ The code is now refactored to accept other implementations for other sites.
 Let's illustrate it by adding support for the books in the
 page `bookpage.com/reviews <https://bookpage.com/reviews>`_.
 
-We cannot reuse the Books to Scrape Page Objects in this case, so we have
+We cannot reuse the Books to Scrape Page Objects in this case. The site is
+different so their extraction logic wouldn't work. Therefore, we have
 to implement new ones:
 
 .. code-block:: python
@@ -384,8 +392,10 @@ to implement new ones:
                 'name': self.css(".book-data h4::text").get().strip(),
             }
 
-The last step is configuring the Page Objects to be used for the domain
-``bookpage.com`` in the settings property ``SCRAPY_POET_OVERRIDES``.
+The last step is configuring the overrides so that these new Page Objects
+are used for the domain
+``bookpage.com``. This is how ``SCRAPY_POET_OVERRIDES`` should look like into
+``settings.py``:
 
 .. code-block:: python
 
