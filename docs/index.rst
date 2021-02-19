@@ -10,9 +10,7 @@ extraction and crawling code; please check its docs_ to learn more.
 By using ``scrapy-poet`` you'll be organizing the spider code in a different
 way, which separates extraction and crawling logic from the I/O,
 and from the Scrapy implementation details as well.
-It makes the code more testable and reusable.
-
-Beside, it
+It makes the code more testable and reusable. Furthermore, it
 opens the door to create generic spider code that works across sites.
 Integrating a new site in the spider is then just a matter of write
 a bunch of Page Objects for it.
