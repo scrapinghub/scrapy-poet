@@ -355,7 +355,7 @@ be done by configuring ``SCRAPY_POET_OVERRIDES`` into ``settings.py``:
         }
     }
 
-The spider is back to live!
+The spider is back to life!
 ``SCRAPY_POET_OVERRIDES`` contain rules that overrides the Page Objects
 used for a particular domain. In this particular case, Page Objects
 ``BTSBookListPage`` and ``BTSBookPage`` will be used instead of
