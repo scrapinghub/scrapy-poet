@@ -19,6 +19,20 @@ class OverridesRegistryBase(ABC):
 
 
 class PerDomainOverridesRegistry(Dict[str, Dict[Callable, Callable]], OverridesRegistryBase):
+    """
+    Simple dictionary based registry that reads the overrides
+    from the option ``SCRAPY_POET_OVERRIDES`` in the spider settings
+
+    Example of overrides configuration:
+
+    .. code-block:: python
+
+        SCRAPY_POET_OVERRIDES = {
+            "example.com": {
+                BookPage: ISBNBookPage
+            }
+        }
+    """
 
     @classmethod
     def from_crawler(cls, crawler: Crawler):
