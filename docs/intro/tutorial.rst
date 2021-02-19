@@ -322,7 +322,7 @@ existing Page Objects as subclasses of them:
     class BookPage(ItemWebPage):
 
         def to_item(self):
-            return {}
+            return None
 
     # ------ Concrete page objects for books.toscrape.com (BTS) ------
 

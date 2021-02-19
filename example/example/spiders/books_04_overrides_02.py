@@ -20,7 +20,7 @@ class BookListPage(WebPage):
 class BookPage(ItemWebPage):
 
     def to_item(self):
-        return {}
+        return None
 
 
 class BTSBookListPage(BookListPage):
