@@ -22,8 +22,8 @@ dependency. For example, you might have an existing Page Object for book extract
         def to_item(self):
             ...
 
-Imagine this Page Object is
-obtaining its data from an external API. Therefore, it is not holding the page HTML code.
+Imagine this Page Object obtains its data from an external API.
+Therefore, it is not holding the page HTML code.
 But you want to extract an additional attribute (e.g. ``ISBN``) that
 was not extracted by the original Page Object.
 Using inheritance is not enough in this case, though.
