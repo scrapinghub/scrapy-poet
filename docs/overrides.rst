@@ -18,20 +18,24 @@ dependency. For example, you might have an existing Page Object for book extract
 
 .. code-block:: python
 
-    class BookPage(ItemWebPage):
+    class BookPage(ItemPage):
         def to_item(self):
             ...
 
-Imagine this Page Object is provided by an external library, so you cannot
-directly modify it. But you want to extract an additional attribute (e.g. ``ISBN``) that
-was not extracted by the original Page Object. No problem, you can just override it
+Imagine this Page Object is
+obtaining its data from an external API. Therefore, it is not holding the page HTML code.
+But you want to extract an additional attribute (e.g. ``ISBN``) that
+was not extracted by the original Page Object.
+Using inheritance is not enough in this case, though.
+No problem, you can just override it
 using the following Page Object:
 
 .. code-block:: python
 
     class ISBNBookPage(ItemWebPage):
 
-        def __init__(self, book_page: BookPage):
+        def __init__(self, response: ResponseData, book_page: BookPage):
+            super().__init__(response)
             self.book_page = book_page
 
         def to_item(self):
@@ -50,7 +54,7 @@ And then override it for a particular domain using ``settings.py``:
     }
 
 This new Page Objects gets the original ``BookPage`` as dependency and enrich
-the obtained item with the ISBN.
+the obtained item with the ISBN from the page HTML.
 
 .. note::
 
@@ -58,6 +62,22 @@ the obtained item with the ISBN.
     as it is an overridden type. If they were,
     it would end up in a cyclic dependency error because ``ISBNBookPage`` would
     depend on itself!
+
+.. note::
+
+    This is an alternative more compact way of writing the above Page Object using ``attr.s``:
+
+    .. code-block:: python
+
+        @attr.s(auto_attribs=True)
+        class ISBNBookPage(ItemWebPage):
+            book_page: BookPage
+
+            def to_item(self):
+                item = self.book_page.to_item()
+                item['isbn'] = self.css(".isbn-class::text").get()
+                return item
+
 
 Overrides registry
 ==================
