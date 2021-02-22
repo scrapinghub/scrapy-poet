@@ -22,10 +22,12 @@ scrapy-poet
    :target: https://scrapy-poet.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
-.. warning::
-    Current status is "experimental".
-
 ``scrapy-poet`` is the `web-poet`_ Page Object pattern implementation for Scrapy.
+``scrapy-poet`` allows to write spiders where extraction logic is separated from the crawling one.
+With ``scrapy-poet`` is possible to make a single spider that supports many sites with
+different layouts.
+
+Read the `documentation <http://scrapy-poet.readthedocs.io>`_  for more information.
 
 License is BSD 3-clause.
 

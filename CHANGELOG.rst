@@ -2,8 +2,8 @@
 Changelog
 =========
 
-TBR
----
+0.2.0 (2021-01-22)
+------------------
 
 * Overrides support
 
