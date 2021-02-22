@@ -238,6 +238,182 @@ At the end of our job, the spider should look like this:
 It now looks similar to the original spider, but the item extraction logic
 is separated from the spider.
 
+Single spider - multiple sites
+==============================
+
+We have seen that using Page Objects is a great way to isolate the extraction logic
+from the crawling logic.
+As a side effect, it is now pretty easy to **create a generic spider with a common crawling logic
+that works across different sites**. The unique missing requirement is to be able to
+configure different Page Objects for different sites, because the extraction logic
+surely changes from site to site.
+This is exactly the functionality that *overrides* provides.
+
+Note that the crawling logic of the ``BooksSpider`` is pretty simple and straightforward:
+
+1. Extract all books URLs from the listing page
+2. For each book URL found in the step 1, fetch the page and extract the resultant item
+
+This logic should work without any change for different books sites because
+having pages with lists of books and then detail pages with the individual book is
+such a common way of structuring sites.
+
+Let's refactor the spider presented in the former section so that it also supports
+extracting books from the page `bookpage.com/reviews <https://bookpage.com/reviews>`_
+as well.
+
+The steps to follow are:
+
+#. Make our spider generic: move the remaining extraction code from the spider to a Page Object
+#. Configure *overrides* for Books to Scrape
+#. Add support for another site (Book Page site)
+
+Making the spider generic
+-------------------------
+This is almost done. The book extraction logic has been already moved to the
+``BookPage`` Page Object, but extraction logic to obtain the list of URL to books
+is already present in the ``parse`` method. It must be moved to its own Page
+Object:
+
+.. code-block:: python
+
+    class BookListPage(WebPage):
+
+        def book_urls(self):
+            return self.css('.article-info a::attr(href)').getall()
+
+Let's adapt the spider to use this new Page Object:
+
+.. code-block:: python
+
+    class BooksSpider(scrapy.Spider):
+        name = 'books_spider'
+        start_urls = ['http://books.toscrape.com/']
+        parse_book = callback_for(BookPage)  # extract items from book pages
+
+        def parse(self, response, page: BookListPage):
+            yield from response.follow_all(page.books_urls(), self.parse_book)
+
+All the extraction logic that is specific to the site is now responsibility
+of the Page Objects. As a result, the spider is now *site-agnostic* and will
+work providing that the Page Objects do their work.
+
+In fact, the spider only responsibility becomes expressing the crawling strategy:
+"fetch a list of item URLs, follow them, and extract the resultant items".
+The code gets clearer and simpler.
+
+Configure *overrides* for Books to Scrape
+-----------------------------------------
+It is convenient to create bases classes for the Page Objects given that we are going
+to have several implementations of the same Page Object (one per each site).
+The following code snippet introduces such base classes and refactors the
+existing Page Objects as subclasses of them:
+
+.. code-block:: python
+
+    # ------ Base page objects ------
+
+    class BookListPage(WebPage):
+
+        def book_urls(self):
+            return []
+
+
+    class BookPage(ItemWebPage):
+
+        def to_item(self):
+            return None
+
+    # ------ Concrete page objects for books.toscrape.com (BTS) ------
+
+    class BTSBookListPage(BookListPage):
+
+        def book_urls(self):
+            return self.css('.image_container a::attr(href)').getall()
+
+
+    class BTSBookPage(BookPage):
+
+        def to_item(self):
+            return {
+                'url': self.url,
+                'name': self.css("title::text").get(),
+            }
+
+The spider won't work anymore after the change. The reason is that it
+is using the new base Page Objects and they are empty.
+Let's fix it by instructing ``scrapy-poet`` to use the Books To Scrape (BTS)
+Page Objects for URLs belonging to the domain ``toscrape.com``. This must
+be done by configuring ``SCRAPY_POET_OVERRIDES`` into ``settings.py``:
+
+.. code-block:: python
+
+    SCRAPY_POET_OVERRIDES = {
+        "toscrape.com": {
+            BookListPage: BTSBookListPage,
+            BookPage: BTSBookPage
+        }
+    }
+
+The spider is back to life!
+``SCRAPY_POET_OVERRIDES`` contain rules that overrides the Page Objects
+used for a particular domain. In this particular case, Page Objects
+``BTSBookListPage`` and ``BTSBookPage`` will be used instead of
+``BookListPage`` and ``BookPage`` for any request whose domain is
+``toscrape.com``.
+
+The right Page Objects will be then injected
+in the spider callbacks whenever a URL that belongs to the domain ``toscrape.com``
+is requested.
+
+Add another site
+----------------
+The code is now refactored to accept other implementations for other sites.
+Let's illustrate it by adding support for the books in the
+page `bookpage.com/reviews <https://bookpage.com/reviews>`_.
+
+We cannot reuse the Books to Scrape Page Objects in this case. The site is
+different so their extraction logic wouldn't work. Therefore, we have
+to implement new ones:
+
+.. code-block:: python
+
+    class BPBookListPage(WebPage):
+
+        def book_urls(self):
+            return self.css('.article-info a::attr(href)').getall()
+
+
+    class BPBookPage(ItemWebPage):
+
+        def to_item(self):
+            return {
+                'url': self.url,
+                'name': self.css(".book-data h4::text").get().strip(),
+            }
+
+The last step is configuring the overrides so that these new Page Objects
+are used for the domain
+``bookpage.com``. This is how ``SCRAPY_POET_OVERRIDES`` should look like into
+``settings.py``:
+
+.. code-block:: python
+
+    SCRAPY_POET_OVERRIDES = {
+        "toscrape.com": {
+            BookListPage: BTSBookListPage,
+            BookPage: BTSBookPage
+        },
+        "bookpage.com": {
+            BookListPage: BPBookListPage,
+            BookPage: BPBookPage
+        }
+    }
+
+The spider is now ready to extract books from both sites 😀.
+The full example
+`can be seen here <https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders/books_04_overrides_02.py>`_
+
 On a surface, it looks just like a different way to organize Scrapy spider
 code - and indeed, it *is* just a different way to organize the code,
 but it opens some cool possibilities.
@@ -248,7 +424,7 @@ Next steps
 Now that you know how scrapy-poet is supposed to work, what about trying to
 apply it to an existing or new Scrapy project?
 
-Also, please check :ref:`advanced` and refer to spiders in the "example"
+Also, please check :ref:`overrides`, :ref:`providers` and refer to spiders in the "example"
 folder: https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
 
 .. _Scrapy Tutorial: https://docs.scrapy.org/en/latest/intro/tutorial.html

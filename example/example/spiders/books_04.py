@@ -7,7 +7,7 @@ from scrapy_poet import callback_for
 
 
 class BookListPage(WebPage):
-    def product_urls(self):
+    def book_urls(self):
         return self.css('.image_container a::attr(href)').getall()
 
 
@@ -24,5 +24,5 @@ class BooksSpider(scrapy.Spider):
     start_urls = ['http://books.toscrape.com/']
 
     def parse(self, response, page: BookListPage):
-        for url in page.product_urls():
+        for url in page.book_urls():
             yield response.follow(url, callback_for(BookPage))

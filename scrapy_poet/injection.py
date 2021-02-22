@@ -18,6 +18,8 @@ from scrapy.utils.test import get_crawler
 from scrapy_poet.injection_errors import (UndeclaredProvidedTypeError,
                                           NonCallableProviderError,
                                           InjectionError)
+from scrapy_poet.overrides import OverridesRegistryBase, \
+    PerDomainOverridesRegistry
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from web_poet.pages import is_injectable
@@ -31,9 +33,14 @@ class Injector:
     Keep all the logic required to do dependency injection in Scrapy callbacks.
     Initializes the providers from the spider settings at initialization.
     """
-    def __init__(self, crawler: Crawler, default_providers: Optional[Mapping] = None):
+    def __init__(self,
+                 crawler: Crawler,
+                 *,
+                 default_providers: Optional[Mapping] = None,
+                 overrides_registry: Optional[OverridesRegistryBase] = None):
         self.crawler = crawler
         self.spider = crawler.spider
+        self.overrides_registry = overrides_registry or PerDomainOverridesRegistry()
         self.load_providers(default_providers)
 
     def load_providers(self, default_providers: Optional[Mapping] = None):
@@ -69,14 +76,10 @@ class Injector:
         assert deps.keys() == SCRAPY_PROVIDED_CLASSES
         return deps
 
-    def discover_callback_providers(self, callback: Callable
+    def discover_callback_providers(self, request: Request
                                     ) -> Set[PageObjectInputProvider]:
         """Discover the providers that are required to fulfil the callback dependencies"""
-        plan = andi.plan(
-            callback,
-            is_injectable=is_injectable,
-            externally_provided=self.is_class_provided_by_any_provider,
-        )
+        plan = self.build_plan(request)
         result = set()
         for cls, _ in plan:
             for provider in self.providers:
@@ -93,7 +96,7 @@ class Injector:
         if is_callback_requiring_scrapy_response(callback):
             return True
 
-        for provider in self.discover_callback_providers(callback):
+        for provider in self.discover_callback_providers(request):
             if self.is_provider_requiring_scrapy_response[provider]:
                 return True
 
@@ -106,6 +109,7 @@ class Injector:
             callback,
             is_injectable=is_injectable,
             externally_provided=self.is_class_provided_by_any_provider,
+            overrides=self.overrides_registry.overrides_for(request).get
         )
 
     @inlineCallbacks
@@ -277,7 +281,8 @@ def is_provider_requiring_scrapy_response(provider):
 
 def get_injector_for_testing(
         providers: Mapping,
-        additional_settings: Dict = None
+        additional_settings: Dict = None,
+        overrides_registry: Optional[OverridesRegistryBase] = None
 ) -> Injector:
     """
     Return an :class:`Injector` using a fake crawler.
@@ -293,7 +298,7 @@ def get_injector_for_testing(
     spider = MySpider()
     spider.settings = settings
     crawler.spider = spider
-    return Injector(crawler)
+    return Injector(crawler, overrides_registry=overrides_registry)
 
 
 def get_response_for_testing(callback: Callable) -> Response:
