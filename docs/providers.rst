@@ -14,7 +14,7 @@ Providers
     scrapy-poet.
 
 
-.. _docs: https://web-poet.readthedocs.io/en/latest/
+.. _docs: https://web-poet.readthedocs.io/en/stable/
 
 Creating providers
 ==================

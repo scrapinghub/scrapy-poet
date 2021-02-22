@@ -26,7 +26,7 @@ This tutorial will walk you through these tasks:
 If you're not already familiar with Scrapy, and want to learn it quickly,
 the `Scrapy Tutorial`_ is a good resource.
 
-.. _web-poet docs: https://web-poet.readthedocs.io/en/latest/
+.. _web-poet docs: https://web-poet.readthedocs.io/en/stable/
 
 Creating a spider
 =================
