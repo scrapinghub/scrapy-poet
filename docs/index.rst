@@ -28,7 +28,7 @@ To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
 .. _`AutoExtract`: https://scrapinghub.com/autoextract
 .. _`Splash`: https://scrapinghub.com/splash
 .. _`web-poet`: https://github.com/scrapinghub/web-poet
-.. _docs: https://web-poet.readthedocs.io/en/latest/
+.. _docs: https://web-poet.readthedocs.io/en/stable/
 
 .. toctree::
    :caption: Getting started
