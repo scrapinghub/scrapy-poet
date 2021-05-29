@@ -6,7 +6,7 @@ are executed.
 from scrapy import Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 
 from scrapy.utils.misc import create_instance, load_object
 from . import api
@@ -88,4 +88,4 @@ class InjectionMiddleware:
                 request.cb_kwargs[arg] = value
             # TODO: check if all arguments are fulfilled somehow?
 
-        raise returnValue(response)
+        return response
