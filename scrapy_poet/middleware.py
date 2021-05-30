@@ -2,6 +2,7 @@
 responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
+import logging
 
 from scrapy import Spider
 from scrapy.crawler import Crawler
@@ -13,6 +14,9 @@ from . import api
 from .overrides import PerDomainOverridesRegistry
 from .page_input_providers import ResponseDataProvider
 from .injection import Injector
+
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_PROVIDERS = {
@@ -58,7 +62,7 @@ class InjectionMiddleware:
         if self.injector.is_scrapy_response_required(request):
             return
 
-        spider.logger.debug(f'Skipping download of {request}')
+        logger.debug(f"Using DummyResponse instead of downloading {request}")
         return api.DummyResponse(url=request.url, request=request)
 
     @inlineCallbacks
