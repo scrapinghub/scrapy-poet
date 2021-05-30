@@ -20,3 +20,4 @@ _build/
 _static/
 _templates/
 htmlcov/
+coverage.xml
