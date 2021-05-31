@@ -5,7 +5,7 @@ which even requires an API request.
 from typing import Dict, Any
 
 import attr
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks
 from twisted.internet.threads import deferToThread
 
 from scrapy import Request
@@ -34,7 +34,7 @@ def get_autoextract_product(url):
     # fixme: rate limits?
     from autoextract.sync import request_batch
     resp = yield deferToThread(request_batch, urls=[url], page_type='product')
-    raise returnValue(resp[0])
+    return resp[0]
 
 
 @attr.s(auto_attribs=True)

@@ -2,7 +2,6 @@ from typing import Dict
 
 from pytest_twisted import inlineCallbacks
 from scrapy.exceptions import CloseSpider
-from twisted.internet.defer import returnValue
 from twisted.web.resource import Resource
 from scrapy.crawler import Crawler
 from tests.mockserver import MockServer
@@ -35,8 +34,7 @@ def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None):
     with MockServer(resource_cls) as s:
         root_url = s.root_url
         yield crawler.crawl(url=root_url, **spider_kwargs)
-    result = crawler.spider.collected_items, s.root_url, crawler
-    returnValue(result)
+    return crawler.spider.collected_items, s.root_url, crawler
 
 
 @inlineCallbacks
@@ -50,7 +48,7 @@ def crawl_single_item(spider_cls, resource_cls, settings, spider_kwargs=None):
     resp = items[0]
     if 'exception' in resp:
         raise resp['exception']
-    returnValue((resp, url, crawler))
+    return resp, url, crawler
 
 
 def make_crawler(spider_cls, settings):
