@@ -14,7 +14,6 @@ from scrapy.statscollectors import StatsCollector
 from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import load_object
-from scrapy.utils.test import get_crawler
 from scrapy_poet.injection_errors import (UndeclaredProvidedTypeError,
                                           NonCallableProviderError,
                                           InjectionError)
