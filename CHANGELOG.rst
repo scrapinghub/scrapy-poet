@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.2.1 (2021-06-11)
+------------------
+
+* Improved logging message for DummyResponse
+* various internal cleanups
+
 0.2.0 (2021-01-22)
 ------------------
 
