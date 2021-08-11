@@ -11,7 +11,7 @@ from scrapy_poet.injection import check_all_providers_are_callable, is_class_pro
     get_injector_for_testing, get_response_for_testing
 from scrapy_poet.injection_errors import NonCallableProviderError, \
     InjectionError, UndeclaredProvidedTypeError
-from scrapy_poet.overrides import PerDomainOverridesRegistry
+from scrapy_poet.overrides import HierarchicalOverridesRegistry
 from web_poet import Injectable, ItemPage
 from web_poet.mixins import ResponseShortcutsMixin
 
@@ -303,7 +303,7 @@ class TestInjectorOverrides:
                 EurDollarRate: OtherEurDollarRate
             }
         }
-        registry = PerDomainOverridesRegistry(overrides)
+        registry = HierarchicalOverridesRegistry(overrides)
         injector = get_injector_for_testing(providers,
                                             overrides_registry=registry)
 

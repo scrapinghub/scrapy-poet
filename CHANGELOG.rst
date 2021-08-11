@@ -2,6 +2,13 @@
 Changelog
 =========
 
+TBR
+------------------
+
+* More powerful overrides configuration by the introduction of
+  the ``HierarchicalOverridesRegistry``. The old registry was
+  removed.
+
 0.2.1 (2021-06-11)
 ------------------
 

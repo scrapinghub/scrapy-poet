@@ -18,7 +18,7 @@ from scrapy_poet.injection_errors import (UndeclaredProvidedTypeError,
                                           NonCallableProviderError,
                                           InjectionError)
 from scrapy_poet.overrides import OverridesRegistryBase, \
-    PerDomainOverridesRegistry
+    HierarchicalOverridesRegistry
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from web_poet.pages import is_injectable
@@ -39,7 +39,7 @@ class Injector:
                  overrides_registry: Optional[OverridesRegistryBase] = None):
         self.crawler = crawler
         self.spider = crawler.spider
-        self.overrides_registry = overrides_registry or PerDomainOverridesRegistry()
+        self.overrides_registry = overrides_registry or HierarchicalOverridesRegistry()
         self.load_providers(default_providers)
 
     def load_providers(self, default_providers: Optional[Mapping] = None):

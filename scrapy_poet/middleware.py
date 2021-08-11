@@ -11,7 +11,7 @@ from twisted.internet.defer import inlineCallbacks
 
 from scrapy.utils.misc import create_instance, load_object
 from . import api
-from .overrides import PerDomainOverridesRegistry
+from .overrides import HierarchicalOverridesRegistry
 from .page_input_providers import ResponseDataProvider
 from .injection import Injector
 
@@ -35,7 +35,7 @@ class InjectionMiddleware:
         self.crawler = crawler
         settings = self.crawler.settings
         registry_cls = load_object(settings.get("SCRAPY_POET_OVERRIDES_REGISTRY",
-                                                PerDomainOverridesRegistry))
+                                                HierarchicalOverridesRegistry))
         self.overrides_registry = create_instance(registry_cls, settings, crawler)
         self.injector = Injector(crawler,
                                  default_providers=DEFAULT_PROVIDERS,

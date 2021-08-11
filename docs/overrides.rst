@@ -78,20 +78,36 @@ the obtained item with the ISBN from the page HTML.
                 item['isbn'] = self.css(".isbn-class::text").get()
                 return item
 
+Overrides rules
+---------------
+
+The former example showed how to configure the overrides for a particular
+domain. This is by far the most common case, but sometimes this is not
+enough: in some cases you may require to have different overrides for some subdomains
+(e.g. ``uk.somesite.com`` and ``us.somesite.com``); in other cases
+you may want to have specific overrides for a subsection of a site
+(e.g. ``somesite.com`` and ``somesite.com/deals``). This is entirely possible.
+In fact, the examples presented above are already valid keys to be used
+in the setting dictionary ``SCRAPY_POET_OVERRIDES``.
+
+There is more information about how to configure ``SCRAPY_POET_OVERRIDES``
+and the supported rules in :class:`scrapy_poet.overrides.HierarchicalOverridesRegistry`
+documentation.
+
 
 Overrides registry
 ==================
 
 The overrides registry is responsible for informing whether there exists an
 override for a particular type for a given response. The default overrides
-registry keeps a map of overrides for each domain and read this configuration
-from settings ``SCRAPY_POET_OVERRIDES`` as has been seen in the :ref:`intro-tutorial`
-example.
+registry allows to configure the overriding rules and reads the configuration
+from settings ``SCRAPY_POET_OVERRIDES``. See :class:`scrapy_poet.overrides.HierarchicalOverridesRegistry`
+for more information.
 
 But the registry implementation can be changed at convenience. A different
 registry implementation can be configured using the property
 ``SCRAPY_POET_OVERRIDES_REGISTRY`` in ``settings.py``. The new registry
-must be a subclass of ``scrapy_poet.overrides.OverridesRegistryBase``
+must be a subclass of :class:`scrapy_poet.overrides.OverridesRegistryBase`
 and must implement the method ``overrides_for``. As other Scrapy components,
 it can be initialized from the ``from_crawler`` class method if implemented.
 This might be handy to be able to access settings, stats, request meta, etc.

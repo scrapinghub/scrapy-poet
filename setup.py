@@ -15,7 +15,8 @@ setup(
         'attrs',
         'parsel',
         'web-poet',
-        'tldextract'],
+        'tldextract',
+        'marisa-trie'],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
