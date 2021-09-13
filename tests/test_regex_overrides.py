@@ -1,3 +1,4 @@
+import re
 from typing import Mapping
 
 import pytest
@@ -5,7 +6,7 @@ import pytest
 from scrapy import Request, Spider
 from scrapy.utils.test import get_crawler
 from scrapy_poet.overrides import RegexOverridesRegistry, \
-    PerDomainOverridesRegistry
+    PerDomainOverridesRegistry, domain_or_more_regex
 
 
 class _str(str, Mapping):  # type: ignore
@@ -113,3 +114,37 @@ class TestPerDomainOverridesRegistry:
         assert reg.overrides_for(_r("http://toscrape.com/path")) == "TOSCRAPE"
         assert reg.overrides_for(_r("http://books.toscrape.com/path")) == "TOSCRAPE"
         assert reg.overrides_for(_r("http://toscrape2.com/path")) == {}
+
+
+@pytest.mark.parametrize("domain_or_more",
+                         [
+                             "", "example.com:343", "example.com:343/",
+                             "WWW.example.com:343/",
+                             "www.EXAMPLE.com:343/?id=23",
+                             "www.example.com:343/page?id=23",
+                             "www.example.com:343/page?id=23;params#fragment",
+                             "127.0.0.1:80/page?id=23;params#fragment",
+                             "127.0.0.1:443/page?id=23;params#fragment",
+                             "127.0.0.1:333/page?id=23;params#fragment"
+                         ])
+def test_domain_or_more_regex(domain_or_more):
+    url = f"http://{domain_or_more}"
+    regex = domain_or_more_regex(domain_or_more)
+
+    assert re.match(regex, url)
+    assert re.match(regex, f"https://{domain_or_more}")
+    assert re.match(regex, url + "a")
+    assert re.match(regex, url + "/")
+    assert re.match(regex, url + "/some_text")
+    assert re.match(regex, url + "some_other_text")
+
+    if url[-1] == '/' and domain_or_more:
+        assert re.match(regex, url[:-1])
+        assert not re.match(regex, url[:-2])
+        url = url[:-1]  # The polluted test requires the url without a last slash
+    else:
+        assert not re.match(regex, url[:-1])
+    for i in range(len(url)):
+        # Modify a single character
+        polluted = url[:i] + chr(ord(url[i]) - 1) + url[i+1:]
+        assert not re.match(regex, polluted)

@@ -151,6 +151,11 @@ class HierarchicalOverridesRegistry(OverridesRegistryBase):
 
 @attr.s(auto_attribs=True, order=False)
 class RegexOverridesRecord:
+    """
+    Keep a reverse ordering on hurl. This is required to prioritize the more
+    especific rules over the less especific ones using the hierarchy determined
+    by the hierarchical url.
+    """
     hurl: str = attr.ib(eq=False)
     regex: str
     overrides: Mapping[Callable, Callable] = attr.ib(eq=False)
@@ -191,9 +196,6 @@ class RegexOverridesRegistry(OverridesRegistryBase):
         self._insert(domain, record)
 
     def register(self, domain_or_more: str, overrides: Mapping[Callable, Callable]):
-        if domain_or_more.endswith("/"):
-            domain_or_more = domain_or_more[:-1]
-
         if domain_or_more.strip() == "":
             self.register_regex("", r".*", overrides)
             return
@@ -201,7 +203,7 @@ class RegexOverridesRegistry(OverridesRegistryBase):
         url = f"http://{domain_or_more}"
         domain = get_domain(url)
         hurl = url_hierarchical_str(url)
-        regex = r"https?://(?:.+\.)?" + re.escape(domain_or_more) + r".*"
+        regex = domain_or_more_regex(domain_or_more)
         record = RegexOverridesRecord(hurl, regex, overrides)
         self._insert(domain, record)
 
@@ -223,3 +225,15 @@ class RegexOverridesRegistry(OverridesRegistryBase):
             if record.re.match(request.url):
                 return record.overrides
         return {}
+
+
+def domain_or_more_regex(domain_or_more: str) -> str:
+    """
+    Return a regex that matches urls belonging to the set represented by
+    the given `domain_or_more` rule
+    """
+    if domain_or_more.endswith("/"):
+        domain_or_more = domain_or_more[:-1]
+    if domain_or_more.strip() == "":
+        return r"https?://.*"
+    return r"https?://(?:.+\.)?" + re.escape(domain_or_more) + r".*"
