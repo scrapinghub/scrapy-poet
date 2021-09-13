@@ -1,8 +1,12 @@
+import re
+from re import Pattern
 from abc import ABC, abstractmethod
-from typing import Dict, Mapping, Callable, Optional, List
+import bisect
+from collections import defaultdict
+from typing import Dict, Mapping, Callable, Optional, List, Union, Tuple
 
+import attr
 from marisa_trie import Trie
-
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy_poet.utils import get_domain, url_hierarchical_str
@@ -142,3 +146,80 @@ class HierarchicalOverridesRegistry(OverridesRegistryBase):
             return self.overrides[self.trie[max_prefix]].overrides
         else:
             return {}
+
+
+
+@attr.s(auto_attribs=True, order=False)
+class RegexOverridesRecord:
+    hurl: str = attr.ib(eq=False)
+    regex: str
+    overrides: Mapping[Callable, Callable] = attr.ib(eq=False)
+    re: Pattern = attr.ib(init=False, eq=False)
+
+    def __attrs_post_init__(self):
+        self.re = re.compile(self.regex)
+
+    def __gt__(self, other):
+        return self.hurl < other.hurl
+
+    def __lt__(self, other):
+        return self.hurl > other.hurl
+
+    def __ge__(self, other):
+        return self.hurl <= other.hurl
+
+    def __le__(self, other):
+        return self.hurl >= other.hurl
+
+
+RuleType = Union[str, Tuple[str, str]]
+
+
+class RegexOverridesRegistry(OverridesRegistryBase):
+    def __init__(self, all_overrides: Optional[Mapping[RuleType, Mapping[Callable, Callable]]] = None) -> None:
+        super().__init__()
+        self.rules = defaultdict(list)
+        for rule, overrides in (all_overrides or {}).items():
+            if isinstance(rule, tuple):
+                domain, regex = rule
+                self.register_regex(domain, regex, overrides)
+            else:
+                self.register(rule, overrides)
+
+    def register_regex(self, domain: str, regex: str, overrides: Mapping[Callable, Callable]):
+        record = RegexOverridesRecord("\ue83a", regex, overrides)
+        self._insert(domain, record)
+
+    def register(self, domain_or_more: str, overrides: Mapping[Callable, Callable]):
+        if domain_or_more.endswith("/"):
+            domain_or_more = domain_or_more[:-1]
+
+        if domain_or_more.strip() == "":
+            self.register_regex("", r".*", overrides)
+            return
+
+        url = f"http://{domain_or_more}"
+        domain = get_domain(url)
+        hurl = url_hierarchical_str(url)
+        regex = r"https?://(?:.+\.)?" + re.escape(domain_or_more) + r".*"
+        record = RegexOverridesRecord(hurl, regex, overrides)
+        self._insert(domain, record)
+
+    def _insert(self, domain: str, record: RegexOverridesRecord):
+        records = self.rules[domain]
+        try:
+            del records[records.index(record)]
+        except ValueError:
+            ...
+        bisect.insort(records, record)
+
+    @classmethod
+    def from_crawler(cls, crawler: Crawler):
+        return cls(crawler.settings.getdict("SCRAPY_POET_OVERRIDES", {}))
+
+    def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
+        rules = self.rules.get(get_domain(request.url)) or self.rules.get("", {})
+        for record in rules:
+            if record.re.match(request.url):
+                return record.overrides
+        return {}
