@@ -1,4 +1,3 @@
-import dataclasses
 from typing import Any, List, Set, Callable, Sequence
 
 import attr
