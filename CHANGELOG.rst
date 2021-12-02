@@ -2,6 +2,11 @@
 Changelog
 =========
 
+TBR:
+------------------
+
+* Cache mechanism using SCRAPY_POET_CACHE setting
+
 0.2.1 (2021-06-11)
 ------------------
 
