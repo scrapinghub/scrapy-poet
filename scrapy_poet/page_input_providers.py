@@ -8,10 +8,14 @@ HTML from Scrapy. You could also implement different providers in order to
 acquire data from multiple external sources, for example,
 Splash or Auto Extract API.
 """
-from typing import Set, Union, Callable, ClassVar
+from typing import Set, Union, Callable, ClassVar, List, Any, Sequence
 
+import attr
+from scrapy import Request
 from scrapy.http import Response
 from scrapy.crawler import Crawler
+from scrapy.utils.request import request_fingerprint
+
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
 from web_poet import ResponseData
 
@@ -81,6 +85,7 @@ class PageObjectInputProvider:
     """
 
     provided_classes: ClassVar[Union[Set[Callable], Callable[[Callable], bool]]]
+    name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
     @classmethod
     def is_provided(cls, type_: Callable):
@@ -101,6 +106,26 @@ class PageObjectInputProvider:
         """Initializes the provider. Invoked only at spider start up."""
         pass
 
+    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+        """
+        Return a fingerprint that identifies this particular request. It will be used to implement
+        the cache and record/replay mechanism
+        """
+        raise NotImplementedError("Not Implemented. This provider should implement this method to be fully functional.")
+
+    def serialize(self, result: Sequence[Any]) -> Any:
+        """
+        Serializes the results of this provider. The data returned will be pickled.
+        """
+        raise NotImplementedError("Not Implemented. This provider should implement this method to be fully functional.")
+
+    def deserialize(self, data: Any) -> Sequence[Any]:
+        """
+        Deserialize some results of the provider that were previously serialized using the method
+        :meth:`serialize`.
+        """
+        raise NotImplementedError("Not Implemented. This provider should implement this method to be fully functional.")
+
     # Remember that is expected for all children to implement the ``__call__``
     # method. The simplest signature for it is:
     #
@@ -117,7 +142,17 @@ class ResponseDataProvider(PageObjectInputProvider):
     """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
 
     provided_classes = {ResponseData}
+    name = "response_data"
 
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``ResponseData`` instance using a Scrapy ``Response``"""
         return [ResponseData(url=response.url, html=response.text)]
+
+    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+        return request_fingerprint(request)
+
+    def serialize(self, result: Sequence[Any]) -> Any:
+        return [attr.asdict(response_data) for response_data in result]
+
+    def deserialize(self, data: Any) -> Sequence[Any]:
+        return [ResponseData(**response_data) for response_data in data]

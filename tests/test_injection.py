@@ -1,3 +1,5 @@
+from typing import Any, Sequence, Set, Callable
+
 import attr
 import pytest
 from pytest_twisted import inlineCallbacks
@@ -5,6 +7,8 @@ import weakref
 
 from scrapy import Request
 from scrapy.http import Response
+from scrapy_poet.utils import get_domain
+
 from scrapy_poet import ResponseDataProvider, PageObjectInputProvider, \
     DummyResponse
 from scrapy_poet.injection import check_all_providers_are_callable, is_class_provided_by_any_provider_fn, \
@@ -364,3 +368,94 @@ def test_is_class_provided_by_any_provider_fn():
 
     with pytest.raises(InjectionError):
         is_class_provided_by_any_provider_fn([WrongProvider])
+
+
+def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
+    class Provider(PageObjectInputProvider):
+        name = a_name
+        provided_classes = classes
+        require_response = False
+
+        def __init__(self, crawler):
+            self.crawler = crawler
+
+        def __call__(self, to_provide, request: Request):
+            if not get_domain(request.url) == "example.com":
+                raise error("The URL is not from example.com")
+            return [cls(content) if content else cls() for cls in classes]
+
+        def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+            return request.url
+
+        def serialize(self, result: Sequence[Any]) -> Any:
+            return result
+
+        def deserialize(self, data: Any) -> Sequence[Any]:
+            return data
+
+    return Provider
+
+
+@pytest.mark.parametrize("cache_errors", [True, False])
+@inlineCallbacks
+def test_cache(tmp_path, cache_errors):
+    """
+    In a first run, the cache is empty, and two requests are done, one with exception.
+    In the second run we should get the same result as in the first run. The
+    behaviour for exceptions vary if caching errors is disabled.
+    """
+    providers = {
+                    get_provider_for_cache({str}, "str", content="foo"): 1,
+                    get_provider_for_cache({int, float}, "number", content=3): 2,
+                 }
+
+    cache = tmp_path / "cache3.sqlite3"
+    if cache.exists():
+        print(f"Cache file {cache} already exists. Weird. Deleting")
+        cache.unlink()
+    settings = {"SCRAPY_POET_CACHE": cache,
+                "SCRAPY_POET_CACHE_ALSO_ERRORS": cache_errors}
+    injector = get_injector_for_testing(providers, settings)
+    assert cache.exists()
+
+    def callback(response: DummyResponse, arg_str: str, arg_int: int, arg_float: float):
+        pass
+
+    response = get_response_for_testing(callback)
+    plan = injector.build_plan(response.request)
+    instances = yield from injector.build_instances_from_providers(
+        response.request, response, plan)
+
+    assert instances[str] == "foo"
+    assert instances[int] == 3
+    assert instances[float] == 3.0
+
+    response.request = Request.replace(response.request, url="http://willfail.page")
+    with pytest.raises(ValueError):
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances_from_providers(
+            response.request, response, plan)
+
+    # Different providers. They return a different result, but the cache data should prevail.
+    providers = {
+                    get_provider_for_cache({str}, "str", content="bar", error=KeyError): 1,
+                    get_provider_for_cache({int, float}, "number", content=4, error=KeyError): 2,
+                 }
+    injector = get_injector_for_testing(providers, settings)
+
+    response = get_response_for_testing(callback)
+    plan = injector.build_plan(response.request)
+    instances = yield from injector.build_instances_from_providers(
+        response.request, response, plan)
+
+    assert instances[str] == "foo"
+    assert instances[int] == 3
+    assert instances[float] == 3.0
+
+    # If caching errors is disabled, then KeyError should be raised.
+    Error = ValueError if cache_errors else KeyError
+    response.request = Request.replace(response.request, url="http://willfail.page")
+    with pytest.raises(Error):
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances_from_providers(
+            response.request, response, plan)
