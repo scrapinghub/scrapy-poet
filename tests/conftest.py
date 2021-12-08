@@ -1,8 +1,6 @@
 import pytest
 from scrapy.settings import Settings
 
-from scrapy_poet.page_input_providers import ResponseDataProvider
-
 
 @pytest.fixture()
 def settings(request):

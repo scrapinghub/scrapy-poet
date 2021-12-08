@@ -15,14 +15,14 @@ from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import maybeDeferred_coro
-from scrapy.utils.misc import load_object
+from scrapy.utils.misc import load_object, create_instance
 
 from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.injection_errors import (UndeclaredProvidedTypeError,
                                           NonCallableProviderError,
                                           InjectionError)
 from scrapy_poet.overrides import OverridesRegistryBase, \
-    PerDomainOverridesRegistry
+    OverridesRegistry
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from web_poet.pages import is_injectable
@@ -43,7 +43,7 @@ class Injector:
                  overrides_registry: Optional[OverridesRegistryBase] = None):
         self.crawler = crawler
         self.spider = crawler.spider
-        self.overrides_registry = overrides_registry or PerDomainOverridesRegistry()
+        self.overrides_registry = overrides_registry or OverridesRegistry()
         self.load_providers(default_providers)
         self.init_cache()
 
@@ -348,6 +348,8 @@ def get_injector_for_testing(
     spider = MySpider()
     spider.settings = settings
     crawler.spider = spider
+    if not overrides_registry:
+        overrides_registry = create_instance(OverridesRegistry, settings, crawler)
     return Injector(crawler, overrides_registry=overrides_registry)
 
 

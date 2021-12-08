@@ -24,26 +24,26 @@ class HtmlResource(Resource):
 
 
 @inlineCallbacks
-def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None):
+def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None, port=None):
     """Use spider_cls to crawl resource_cls. URL of the resource is passed
     to the spider as ``url`` argument.
     Return ``(items, resource_url, crawler)`` tuple.
     """
     spider_kwargs = {} if spider_kwargs is None else spider_kwargs
     crawler = make_crawler(spider_cls, settings)
-    with MockServer(resource_cls) as s:
+    with MockServer(resource_cls, port=port) as s:
         root_url = s.root_url
         yield crawler.crawl(url=root_url, **spider_kwargs)
     return crawler.spider.collected_items, s.root_url, crawler
 
 
 @inlineCallbacks
-def crawl_single_item(spider_cls, resource_cls, settings, spider_kwargs=None):
+def crawl_single_item(spider_cls, resource_cls, settings, spider_kwargs=None, port=None):
     """Run a spider where a single item is expected. Use in combination with
     ``capture_capture_exceptions`` and ``CollectorPipeline``
     """
     items, url, crawler = yield crawl_items(spider_cls, resource_cls, settings,
-                                            spider_kwargs=spider_kwargs)
+                                            spider_kwargs=spider_kwargs, port=port)
     assert len(items) == 1
     resp = items[0]
     if 'exception' in resp:

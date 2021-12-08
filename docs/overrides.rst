@@ -47,11 +47,9 @@ And then override it for a particular domain using ``settings.py``:
 
 .. code-block:: python
 
-    SCRAPY_POET_OVERRIDES = {
-        "example.com": {
-            BookPage: ISBNBookPage
-        }
-    }
+    SCRAPY_POET_OVERRIDES = [
+        ("example.com", ISBNBookPage, BookPage)
+    ]
 
 This new Page Objects gets the original ``BookPage`` as dependency and enrich
 the obtained item with the ISBN from the page HTML.
@@ -79,13 +77,82 @@ the obtained item with the ISBN from the page HTML.
                 return item
 
 
+Overrides rules
+===============
+
+The default way of configuring the override rules is using triplets
+of the form (``url pattern``, ``override_type``, ``overridden_type``). But
+more complex rules can be introduced if the class ``OverrideRule``
+is used. The following example configures an override that
+is only applied for book pages from ``books.toscrape.com``:
+
+.. code-block:: python
+
+
+    SCRAPY_POET_OVERRIDES = [
+        OverrideRule(
+            for_patterns=Patterns(
+                include=["books.toscrape.com/cataloge/*index.html|"],
+                exclude=["/catalogue/category/"]),
+            use=MyBookPage,
+            instead_of=BookPage
+        )
+    ]
+
+Note how category pages are excludes by using a ``exclude`` pattern.
+You can find more information about the patterns syntax in the
+`url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_
+documentation.
+
+
+Decorate Page Objects with the rules
+====================================
+
+Having the rules along with the Page Objects is a good idea,
+as you can identify with a single sight what the Page Object is doing
+along with where it is applied. This can be done by decorating the
+Page Objects with ``handle_urls`` and then
+configure the overrides automatically with the help of the function
+``find_page_object_overrides``.
+
+Let's see an example:
+
+.. code-block:: python
+
+        @handle_urls("toscrape.com", BookPage)
+        class BTSBookPage(BookPage):
+
+        def to_item(self):
+            return {
+                'url': self.url,
+                'name': self.css("title::text").get(),
+            }
+
+The ``handle_urls`` decorator in this case is indicating that
+the class ``BSTBookPage`` should be used instead of ``BookPage``
+for the domain ``toscrape.com``.
+
+In order to configure the scrapy-poet overrides automatically
+using these annotations,
+you can use the function ``find_page_object_overrides``.
+For example:
+
+.. code-block:: python
+
+    SCRAPY_POET_OVERRIDES = find_page_object_overrides("my_page_objects_module")
+
+The function will collect all the ``handle_urls`` annotations from the
+``my_page_objects_module`` and submodules, and will convert them
+to rules ready to be used with ``SCRAPY_POET_OVERRIDES``.
+
 Overrides registry
 ==================
 
-The overrides registry is responsible for informing whether there exists an
-override for a particular type for a given response. The default overrides
-registry keeps a map of overrides for each domain and read this configuration
-from settings ``SCRAPY_POET_OVERRIDES`` as has been seen in the :ref:`intro-tutorial`
+The overrides registry is responsible of informing whether there exists an
+override for a particular type for a given request. The default overrides
+registry allows to configure these rules using patterns that follows the
+`url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_ syntax. These rules can be configured using the
+``SCRAPY_POET_OVERRIDES`` setting, as it has been seen in the :ref:`intro-tutorial`
 example.
 
 But the registry implementation can be changed at convenience. A different

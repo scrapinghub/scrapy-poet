@@ -348,12 +348,10 @@ be done by configuring ``SCRAPY_POET_OVERRIDES`` into ``settings.py``:
 
 .. code-block:: python
 
-    SCRAPY_POET_OVERRIDES = {
-        "toscrape.com": {
-            BookListPage: BTSBookListPage,
-            BookPage: BTSBookPage
-        }
-    }
+        "SCRAPY_POET_OVERRIDES": [
+            ("toscrape.com", BTSBookListPage, BookListPage),
+            ("toscrape.com", BTSBookPage, BookPage)
+        ]
 
 The spider is back to life!
 ``SCRAPY_POET_OVERRIDES`` contain rules that overrides the Page Objects
@@ -381,7 +379,7 @@ to implement new ones:
     class BPBookListPage(WebPage):
 
         def book_urls(self):
-            return self.css('.article-info a::attr(href)').getall()
+            return self.css('article.post h4 a::attr(href)').getall()
 
 
     class BPBookPage(ItemWebPage):
@@ -389,7 +387,7 @@ to implement new ones:
         def to_item(self):
             return {
                 'url': self.url,
-                'name': self.css(".book-data h4::text").get().strip(),
+                'name': self.css("body div > h1::text").get().strip(),
             }
 
 The last step is configuring the overrides so that these new Page Objects
@@ -399,16 +397,12 @@ are used for the domain
 
 .. code-block:: python
 
-    SCRAPY_POET_OVERRIDES = {
-        "toscrape.com": {
-            BookListPage: BTSBookListPage,
-            BookPage: BTSBookPage
-        },
-        "bookpage.com": {
-            BookListPage: BPBookListPage,
-            BookPage: BPBookPage
-        }
-    }
+        "SCRAPY_POET_OVERRIDES": [
+            ("toscrape.com", BTSBookListPage, BookListPage),
+            ("toscrape.com", BTSBookPage, BookPage),
+            ("bookpage.com", BPBookListPage, BookListPage),
+            ("bookpage.com", BPBookPage, BookPage)
+        ]
 
 The spider is now ready to extract books from both sites 😀.
 The full example
@@ -417,6 +411,20 @@ The full example
 On a surface, it looks just like a different way to organize Scrapy spider
 code - and indeed, it *is* just a different way to organize the code,
 but it opens some cool possibilities.
+
+.. note::
+
+    In the examples above we have been configuring the overrides
+    for a particular domain, but more complex URL patterns are also possible.
+    For example, the pattern ``books.toscrape.com/cataloge/category/``
+    is accepted and it would restrict the override only to category pages.
+
+    It is even possible to configure more complex patterns by
+    using the ``OverrideRule`` class instead of a triplet in
+    the configuration.
+
+    Also see the `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_
+    documentation for more information about the patterns syntax.
 
 Next steps
 ==========

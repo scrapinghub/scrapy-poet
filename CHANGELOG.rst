@@ -6,6 +6,8 @@ TBR:
 ------------------
 
 * Cache mechanism using SCRAPY_POET_CACHE setting
+* New and richer SCRAPY_POET_OVERRIDES registry that uses the
+  url-matcher patterns to configure the overrides
 
 0.2.1 (2021-06-11)
 ------------------

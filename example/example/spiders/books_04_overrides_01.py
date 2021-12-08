@@ -28,7 +28,7 @@ class BookPage(ItemWebPage):
 class BPBookListPage(WebPage):
     """Logic to extract listings from pages like https://bookpage.com/reviews"""
     def book_urls(self):
-        return self.css('.article-info a::attr(href)').getall()
+        return self.css('article.post h4 a::attr(href)').getall()
 
 
 class BPBookPage(ItemWebPage):
@@ -36,7 +36,7 @@ class BPBookPage(ItemWebPage):
     def to_item(self):
         return {
             'url': self.url,
-            'name': self.css(".book-data h4::text").get().strip(),
+            'name': self.css("body div > h1::text").get().strip(),
         }
 
 
@@ -45,12 +45,10 @@ class BooksSpider(scrapy.Spider):
     start_urls = ['http://books.toscrape.com/', 'https://bookpage.com/reviews']
     # Configuring different page objects pages from the bookpage.com domain
     custom_settings = {
-        "SCRAPY_POET_OVERRIDES": {
-            "bookpage.com": {
-                BookListPage: BPBookListPage,
-                BookPage: BPBookPage
-            }
-        }
+        "SCRAPY_POET_OVERRIDES": [
+            ("bookpage.com", BPBookListPage, BookListPage),
+            ("bookpage.com", BPBookPage, BookPage)
+        ]
     }
 
     def parse(self, response, page: BookListPage):

@@ -7,7 +7,9 @@ import weakref
 
 from scrapy import Request
 from scrapy.http import Response
-from scrapy_poet.utils import get_domain
+from url_matcher import Patterns
+
+from url_matcher.util import get_domain
 
 from scrapy_poet import ResponseDataProvider, PageObjectInputProvider, \
     DummyResponse
@@ -15,9 +17,10 @@ from scrapy_poet.injection import check_all_providers_are_callable, is_class_pro
     get_injector_for_testing, get_response_for_testing
 from scrapy_poet.injection_errors import NonCallableProviderError, \
     InjectionError, UndeclaredProvidedTypeError
-from scrapy_poet.overrides import PerDomainOverridesRegistry
+from scrapy_poet.overrides import OverridesRegistry
 from web_poet import Injectable, ItemPage
 from web_poet.mixins import ResponseShortcutsMixin
+from web_poet.overrides import OverrideRule
 
 
 def get_provider(classes, content=None):
@@ -301,13 +304,11 @@ class TestInjectorOverrides:
         domain = "example.com" if override_should_happen else "other-example.com"
         # The request domain is example.com, so overrides shouldn't be applied
         # when we configure them for domain other-example.com
-        overrides = {
-            domain: {
-                PricePO: PriceInDollarsPO,
-                EurDollarRate: OtherEurDollarRate
-            }
-        }
-        registry = PerDomainOverridesRegistry(overrides)
+        overrides = [
+            (domain, PriceInDollarsPO, PricePO),
+            OverrideRule(Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate)
+        ]
+        registry = OverridesRegistry(overrides)
         injector = get_injector_for_testing(providers,
                                             overrides_registry=registry)
 

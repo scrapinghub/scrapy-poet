@@ -13,7 +13,9 @@ from pytest_twisted import inlineCallbacks
 import attr
 
 from scrapy_poet import callback_for
-from scrapy_poet.utils import get_domain
+from url_matcher.util import get_domain
+
+from tests.mockserver import get_ephemeral_port
 from web_poet.pages import WebPage, ItemPage, ItemWebPage
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider
@@ -103,10 +105,12 @@ def test_basic_case(settings):
 def test_overrides(settings):
     host = socket.gethostbyname(socket.gethostname())
     domain = get_domain(host)
-    settings["SCRAPY_POET_OVERRIDES"] = {
-        domain: {BreadcrumbsExtraction: OverridenBreadcrumbsExtraction}}
+    port = get_ephemeral_port()
+    settings["SCRAPY_POET_OVERRIDES"] = [
+        (f"{domain}:{port}", OverridenBreadcrumbsExtraction, BreadcrumbsExtraction)
+    ]
     item, url, _ = yield crawl_single_item(spider_for(ProductPage),
-                                           ProductHtml, settings)
+                                           ProductHtml, settings, port=port)
     assert item == {
         'url': url,
         'name': 'Chocolate',
