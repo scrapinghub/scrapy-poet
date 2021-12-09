@@ -1,3 +1,7 @@
+from hashlib import md5
+
+import tempfile
+
 import re
 
 import os
@@ -6,8 +10,9 @@ from importlib import resources
 from pathlib import Path
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
+from twisted.python.failure import Failure
 
-from typing import Type
+from typing import Type, Callable, Tuple
 
 from dataclasses import dataclass
 
@@ -19,7 +24,8 @@ from scrapy.utils.spider import DefaultSpider
 from url_matcher.util import get_domain
 from w3lib.url import is_url
 
-from scrapy_poet import templates
+from scrapy_poet import templates, DummyResponse
+from scrapy_poet.po_tester import POTester
 from web_poet import ResponseData, Injectable
 
 
@@ -55,14 +61,9 @@ class OverrideCommand(ScrapyCommand):
 
     def process_options(self, args, opts):
         super().process_options(args, opts)
-
-        if len(args) != 2 or not is_url(args[1]):
-            raise UsageError()
-        page_object = load_object(args[0])
-        url = args[1]
+        page_object, url = parse_args(args)
 
         self.ensure_injection_middleware()
-
         for key in ("PO_PACKAGE", "PO_TESTS_PACKAGE"):
             if key not in self.settings:
                 raise ValueError(f"{key} is not defined in settings and is required to run this command."
@@ -106,6 +107,7 @@ class OverrideCommand(ScrapyCommand):
             po_path=po_path,
             test_path=test_path,
         )
+        self.context = context
         generate_po_code(context)
 
     def ensure_injection_middleware(self):
@@ -122,13 +124,54 @@ class OverrideCommand(ScrapyCommand):
         print(response_data.html)
 
     def run(self, args, opts):
-        request = Request(args[1], callback=self._print_response,
-                          cb_kwargs={"opts": opts}, dont_filter=True)
+        page_object, url = parse_args(args)
 
-        spidercls = DefaultSpider
-        self.crawler_process.crawl(spidercls, start_requests=lambda: [request])
-        self.crawler_process.start()
+        errors = []
+        def callback(response: DummyResponse, po: page_object):
+            ...
 
+        def errback(failure: Failure):
+            errors.append(failure)
+
+        request = Request(args[1], callback=callback, errback=errback, dont_filter=True)
+
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            tmppath = Path(tmpdirname)
+            po_tester = POTester(url, page_object, self.context.test_path)
+            fixture_path = po_tester.fixture_path
+
+            if fixture_path.exists():
+                print(f"The fixture {fixture_path} for the URL {url} already exists. Updating it...")
+            else:
+                print(f"Creating fixture {fixture_path} for the URL {url}...")
+
+            cache_path = tmppath / fixture_path.name
+            self.settings.set("SCRAPY_POET_CACHE", str(cache_path.absolute()))
+
+            spidercls = DefaultSpider
+            self.crawler_process.crawl(spidercls, start_requests=lambda: [request])
+            self.crawler_process.start()
+
+            if errors:
+                print(f"An error occurred while fetching the resources for the page {url}")
+                raise errors[0]
+
+            # Moving the data to the fixtures folder
+            cache_path.replace(fixture_path)
+            os.system(f"git add {fixture_path.absolute()}")
+            print("Fixture saved successfully")
+
+            generate_test(self.context)
+            print("Finished!")
+
+
+
+def parse_args(args) -> Tuple[Callable, str]:
+    if len(args) != 2 or not is_url(args[1]):
+        raise UsageError()
+    page_object = load_object(args[0])
+    url = args[1]
+    return page_object, url
 
 def domain_in_snake_case(text: str):
     return text.replace(".", "_").replace("-", "_")
@@ -153,6 +196,7 @@ class ZytePoContext:
     def variables_for_template(self):
         domain = get_domain(self.url)
         norm_domain_ = domain_in_snake_case(domain)
+        base_po_module = self.page_object.__module__
         base_po_name = self.page_object.__name__
         po_name = f"{to_camel_case(norm_domain_)}{base_po_name}"
         po_submodule = f"{norm_domain_}_{self.page_object.__name__}"
@@ -160,6 +204,7 @@ class ZytePoContext:
         return dict(
             url=self.url,
             domain=domain,
+            base_po_module=base_po_module,
             base_po_name=base_po_name,
             po_name=po_name,
             po_module=self.po_module,
@@ -245,22 +290,8 @@ def generate_po_code(context: ZytePoContext):
         print(f"Open {po_file_path} and complete the code with your custom extraction")
 
 
-@inlineCallbacks
 def generate_test(context: ZytePoContext):
-    class HtmlAlsoRequired(Injectable):
-        """Forcing HTML to be also obtained"""
-
-        def __init__(self, po: context.page_object, html: AutoExtractHtml):  # type: ignore
-            self.po = po
-            self.html = html
-
     domain = domain_in_snake_case(get_domain(context.url))
-
-    # TODO: Record the request
-    #tester = POTester(context.url, HtmlAlsoRequired, context.test_path)
-    #yield tester.record()
-    #os.system(f'git add "{tester.fixture_path}"')
-
     test_code_sample = template_for(context, prefix="_test")
     sc_page_type = context.page_object.__name__
     test_file_name = f"test_{domain}_{sc_page_type}.py"

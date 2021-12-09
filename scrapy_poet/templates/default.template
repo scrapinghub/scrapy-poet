@@ -10,13 +10,14 @@
 ##
 ## And the command executed were:
 ##
-##      scrapy override AutoExtractProductData \
+##      scrapy override autoextract.AutoExtractProductData \
 ##         "https://books.toscrape.com/catalogue/a-flight-of-arrows-the-pathfinders-2_876/index.html"
 ##
 ## Then the available parameters and their values for the template would be:
 ##
 ##      url: https://books.toscrape.com/catalogue/a-flight-of-arrows-the-pathfinders-2_876/index.html
 ##      domain: toscrape.com
+##      base_po_module: autoextract
 ##      base_po_name: AutoExtractProductData
 ##      po_name: ToscrapeComAutoExtractProductData
 ##      po_module: zyte_po.po
@@ -26,9 +27,9 @@
 ##      po_path: /home/ivan/autocrawl/zyte_po/po
 ##      test_path: /home/ivan/autocrawl/tests_zyte_po
 
-import attrs
+import attr
 from web_poet import ItemWebPage, handle_urls
-
+from {base_po_module} import {base_po_name}
 
 @handle_urls("{domain}", {base_po_name})
 @attr.define()
