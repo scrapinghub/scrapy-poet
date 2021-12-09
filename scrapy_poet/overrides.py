@@ -102,7 +102,6 @@ class OverridesRegistry(OverridesRegistryBase):
             pattern, use, instead_of = rule
             rule = OverrideRule(for_patterns=Patterns([pattern]), use=use, instead_of=instead_of)
         self.rules.append(rule)
-        print(rule)
         self.matcher[rule.instead_of].add_or_update(len(self.rules) - 1, rule.for_patterns)
 
     def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:

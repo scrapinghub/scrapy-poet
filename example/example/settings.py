@@ -8,6 +8,8 @@
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 from example.autoextract import AutoextractProductProvider
 
+from web_poet.overrides import find_page_object_overrides
+
 BOT_NAME = 'example'
 
 SPIDER_MODULES = ['example.spiders']
@@ -22,3 +24,6 @@ DOWNLOADER_MIDDLEWARES = {
    'scrapy_poet.InjectionMiddleware': 543,
 }
 
+PO_PACKAGE = "example.po"
+PO_TESTS_PACKAGE = "tests.po"
+SCRAPY_POET_OVERRIDES = find_page_object_overrides(PO_PACKAGE)

@@ -1,0 +1,56 @@
+## Template file used to generate Page Objects whith the command `python -m zyte_po ...`
+## Any lines starting by ## in the template will be stripped out
+##
+## The parameters of this template will be replaced using the python `format()` function
+##
+## If settings were:
+##
+##      PO_MODULE = "zyte_po.po"
+##      PO_TESTS_MODULE = "tests_zyte_po"
+##
+## And the command executed were:
+##
+##      python -m zyte_po AutoExtractProductData \
+##         "https://books.toscrape.com/catalogue/a-flight-of-arrows-the-pathfinders-2_876/index.html"
+##
+## Then the available parameters and their values for the template would be:
+##
+##      url: https://books.toscrape.com/catalogue/a-flight-of-arrows-the-pathfinders-2_876/index.html
+##      domain: toscrape.com
+##      base_po_name: AutoExtractProductData
+##      item_name: Product
+##      po_name: ToscrapeComProduct
+##      po_module: zyte_po.po
+##      po_submodule: toscrape_com_product
+##      test_module: tests_zyte_po
+##      test_submodule: test_toscrape_com_product
+##      po_path: /home/ivan/autocrawl/zyte_po/po
+##      test_path: /home/ivan/autocrawl/tests_zyte_po
+
+import json
+from pathlib import Path
+from autoextract_poet.page_inputs import {base_po_name}
+from pytest_twisted import inlineCallbacks
+from zyte_po import POTester
+
+from {po_module}.{po_submodule} import {po_name}  # noqa: F401
+
+
+@inlineCallbacks
+def test_{po_submodule}():
+    """
+    Update this test inputs by running::
+        python -m zyte_po \\
+            {po_name} \\
+            "{url}"
+    """
+    url = "{url}"
+    tester = POTester(url, {base_po_name}, Path(__file__).resolve().parent)
+    po = yield tester.replay()  # type: {base_po_name}
+    item = po.to_item()
+    # Show item as will be in the output
+    pipeline = RemoveEmptyAttrFieldsPipeline()
+    item_as_dict = pipeline.process_item(item, None)
+    print(json.dumps(item_as_dict, indent=2))
+    assert item.url == "{url}"
+    # Put your own asserts here:

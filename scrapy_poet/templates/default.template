@@ -1,0 +1,43 @@
+## Template file used to generate Page Objects whith the command `python -m zyte_po ...`
+## Any lines starting by ## in the template will be stripped out
+##
+## The parameters of this template will be replaced using the python `format()` function
+##
+## If settings were:
+##
+##      PO_PACKAGE = "zyte_po.po"
+##      PO_TESTS_PACKAGE = "tests_zyte_po"
+##
+## And the command executed were:
+##
+##      scrapy override AutoExtractProductData \
+##         "https://books.toscrape.com/catalogue/a-flight-of-arrows-the-pathfinders-2_876/index.html"
+##
+## Then the available parameters and their values for the template would be:
+##
+##      url: https://books.toscrape.com/catalogue/a-flight-of-arrows-the-pathfinders-2_876/index.html
+##      domain: toscrape.com
+##      base_po_name: AutoExtractProductData
+##      po_name: ToscrapeComAutoExtractProductData
+##      po_module: zyte_po.po
+##      po_submodule: toscrape_com_product
+##      test_module: tests_zyte_po
+##      test_submodule: test_toscrape_com_product
+##      po_path: /home/ivan/autocrawl/zyte_po/po
+##      test_path: /home/ivan/autocrawl/tests_zyte_po
+
+import attrs
+from web_poet import ItemWebPage, handle_urls
+
+
+@handle_urls("{domain}", {base_po_name})
+@attr.define()
+class {po_name}(ItemWebPage):
+    """
+    Override for URLs like {url}
+    """
+    item_data: {base_po_name}
+
+    def to_item(self):
+        item = self.item_data.to_item()
+        return item

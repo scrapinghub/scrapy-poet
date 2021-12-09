@@ -18,7 +18,13 @@ setup(
         'url-matcher',
         'tldextract',
         'sqlitedict',
+        'scrapy',
     ],
+    entry_points={
+        'scrapy.commands': [
+            'override=scrapy_poet.commands.override:OverrideCommand',
+        ],
+    },
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
