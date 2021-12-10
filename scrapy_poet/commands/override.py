@@ -1,15 +1,10 @@
-from hashlib import md5
-
 import tempfile
-
-import re
 
 import os
 from importlib import resources
 
 from pathlib import Path
 from scrapy.utils.misc import load_object
-from twisted.internet.defer import inlineCallbacks
 from twisted.python.failure import Failure
 
 from typing import Type, Callable, Tuple
@@ -26,7 +21,7 @@ from w3lib.url import is_url
 
 from scrapy_poet import templates, DummyResponse
 from scrapy_poet.po_tester import POTester
-from web_poet import ResponseData, Injectable
+from web_poet import ResponseData
 
 
 class OverrideCommand(ScrapyCommand):
@@ -45,18 +40,6 @@ class OverrideCommand(ScrapyCommand):
         )
 
     def add_options(self, parser):
-        # parser.add_option(
-        #     "page_object",
-        #     metavar="PAGE_OBJECT",
-        #     type=load_object,
-        #     help="Page Object to generate an override and a test case for. It must be a full "
-        #          "qualified reference (e.g. my_module.MyClass)",
-        # )
-        # parser.add_option(
-        #     "url", metavar="URL", type=str, help="example url to generate a test case for the override. "
-        #                                          "The content from this page will be fetched and stored locally "
-        #                                          "so that unit testing and local development can be carried on."
-        # )
         ScrapyCommand.add_options(self, parser)
 
     def process_options(self, args, opts):
@@ -99,7 +82,7 @@ class OverrideCommand(ScrapyCommand):
             init_path.write_text("")
             os.system(f"git add {init_path.absolute()}")
 
-        context = ZytePoContext(
+        context = OverrideContext(
             url=url,
             page_object=page_object,
             po_module=po_module,
@@ -108,7 +91,7 @@ class OverrideCommand(ScrapyCommand):
             test_path=test_path,
         )
         self.context = context
-        generate_po_code(context)
+        self.po_path = generate_po_code(context)
 
     def ensure_injection_middleware(self):
         """Ensures that the InjectionMiddleware is configured"""
@@ -161,8 +144,13 @@ class OverrideCommand(ScrapyCommand):
             os.system(f"git add {fixture_path.absolute()}")
             print("Fixture saved successfully")
 
-            generate_test(self.context)
+            self.po_test_path = generate_test(self.context)
             print("Finished!")
+            print()
+            print(f" - You can now add your extraction code to the Page Object at {self.po_path}")
+            print(f" - It is handy to debug it locally using the test case at {self.po_test_path}")
+            print(f" - And remember to invoke this very same command whenever you want fresh data ")
+            print(f"   to update the fixture or if you changed the dependencies on your Page Object. It is safe! :-)")
 
 
 
@@ -185,7 +173,7 @@ def to_camel_case(snake_str):
 
 
 @dataclass
-class ZytePoContext:
+class OverrideContext:
     url: str
     page_object: Type
     po_module: str
@@ -252,7 +240,7 @@ def load_template(module, page_object, suffix=""):
     return file, text
 
 
-def template_for(context: ZytePoContext, *, prefix=""):
+def template_for(context: OverrideContext, *, prefix=""):
     file, template = load_template(
         f"{context.po_module}.templates", context.page_object, prefix
     )
@@ -264,7 +252,7 @@ def template_for(context: ZytePoContext, *, prefix=""):
             f"Unknown parameter {e} on template '{file}'. Available parameters: {list(data.keys())}"
         )
 
-def generate_po_code(context: ZytePoContext):
+def generate_po_code(context: OverrideContext) -> Path:
     norm_domain = domain_in_snake_case(get_domain(context.url))
     sc_page_type = context.page_object.__name__
     po_root_path = context.po_path
@@ -288,9 +276,10 @@ def generate_po_code(context: ZytePoContext):
         os.system(f'git add "{po_file_path}"')
         print("Done!")
         print(f"Open {po_file_path} and complete the code with your custom extraction")
+    return po_file_path
 
 
-def generate_test(context: ZytePoContext):
+def generate_test(context: OverrideContext) -> Path:
     domain = domain_in_snake_case(get_domain(context.url))
     test_code_sample = template_for(context, prefix="_test")
     sc_page_type = context.page_object.__name__
@@ -313,6 +302,7 @@ def generate_test(context: ZytePoContext):
         os.system(f'git add "{test_path}"')
         print("Done!")
         print(f"Open {test_path} and complete the code with sensible assert statements")
+    return test_path
 
 
 def path_join(root: Path, path: Path):

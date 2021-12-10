@@ -6,8 +6,10 @@ from scrapy import Request, Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.http import Response
 from scrapy.utils.project import get_project_settings
+
+from scrapy_poet import InjectionMiddleware
 from scrapy_poet.injection import Injector
-from scrapy_poet.overrides import PerDomainOverridesRegistry
+from scrapy_poet.overrides import OverridesRegistry
 from url_matcher.util import get_domain
 from twisted.internet.defer import inlineCallbacks
 
@@ -25,10 +27,8 @@ def get_injector(additional_settings: Mapping) -> Injector:
     spider = DummySpider()
     spider.settings = settings
     crawler.spider = spider
-    overrides_registry = PerDomainOverridesRegistry(
-        settings.get("SCRAPY_POET_OVERRIDES")
-    )
-    return Injector(crawler, overrides_registry=overrides_registry)
+    injector_middleware = InjectionMiddleware.from_crawler(crawler)
+    return injector_middleware.injector
 
 
 def get_replaying_injector(fixture_path: Path) -> Injector:
