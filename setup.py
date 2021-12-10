@@ -23,6 +23,7 @@ setup(
     entry_points={
         'scrapy.commands': [
             'override=scrapy_poet.commands.override:OverrideCommand',
+            'startproject=scrapy_poet.commands.startproject:Command',
         ],
     },
     classifiers=[
