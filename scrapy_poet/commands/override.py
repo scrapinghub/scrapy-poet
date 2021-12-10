@@ -77,7 +77,7 @@ class OverrideCommand(ScrapyCommand):
         # Creating folders and files
         for path in (po_path / "templates", test_path):
             path.mkdir(parents=True, exist_ok=True)
-        init_path = po_path / "templates" / "__init__"
+        init_path = po_path / "templates" / "__init__.py"
         if not init_path.exists():
             init_path.write_text("")
             os.system(f"git add {init_path.absolute()}")
