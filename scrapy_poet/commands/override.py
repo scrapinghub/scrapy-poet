@@ -103,9 +103,6 @@ class OverrideCommand(ScrapyCommand):
                 **self.settings.getdict('DOWNLOADER_MIDDLEWARES', {}),
                 injection_mdlw: 543})
 
-    def _print_response(self, response, opts, response_data: ResponseData):
-        print(response_data.html)
-
     def run(self, args, opts):
         page_object, url = parse_args(args)
 
@@ -145,6 +142,7 @@ class OverrideCommand(ScrapyCommand):
             print("Fixture saved successfully")
 
             self.po_test_path = generate_test(self.context)
+            print()
             print("Finished!")
             print()
             print(f" - You can now add your extraction code to the Page Object at {self.po_path}")
@@ -204,7 +202,7 @@ class OverrideContext:
         )
 
 
-def load_template(module, page_object, suffix=""):
+def load_template(module, page_object, po_path: Path, suffix=""):
     """Load the most specific template possible from the given po_module"""
     specific_template = f"{page_object.__name__}{suffix}.template"
     try:
@@ -224,15 +222,28 @@ def load_template(module, page_object, suffix=""):
                 f"create your custom one in the module '{module}' with the name '{specific_template}'"
             )
         except FileNotFoundError as e:
-            # FIXME: Instead of reading the templates from scrapy-poet, just create them in the project so that
-            #  the user can modify them easily.
+            templates_path = po_path / "templates"
+            templates_path.mkdir(parents=True, exist_ok=True)
+            init_path = templates_path / "__init__.py"
+            if not init_path.exists():
+                init_path.touch()
+                os.system(f"git add {init_path}")
+            template_path = templates_path / default_template
+            file = default_template
+
             print(
                 f"Neither '{specific_template}' nor '{default_template}' template was found in the module '{module}'. "
-                f"Create one of them using the ones at `scrapy-poet.templates` as example. Using the default from "
-                f"scrapy-poet"
+                f"Creating a default one at {template_path}."
             )
-            file = default_template
+            print("You can edit it to customize the generated code for your Page Objects.")
+            print(f"What is more, if you want an specific template only for the Page Objects that overrides {page_object.__name__} "
+                  f"you can create one template in the module '{module}' with the name '{specific_template}'. "
+                  f"Use the default one as reference.")
+
             text = resources.read_text(templates, default_template)
+            template_path.write_text(text)
+            os.system(f"git add {template_path.absolute()}")
+
     # remove template comments and trailing lines
     text = "\n".join(
         [line for line in text.splitlines() if not line.strip().startswith("##")]
@@ -242,7 +253,7 @@ def load_template(module, page_object, suffix=""):
 
 def template_for(context: OverrideContext, *, prefix=""):
     file, template = load_template(
-        f"{context.po_module}.templates", context.page_object, prefix
+        f"{context.po_module}.templates", context.page_object, context.po_path, prefix
     )
     data = context.variables_for_template()
     try:
@@ -261,9 +272,9 @@ def generate_po_code(context: OverrideContext) -> Path:
     po_code_sample = template_for(context)
     if po_file_path.exists():
         print(
-            f"Page Object code already exists in path {po_file_path}. No modifying anything."
+            f"Page Object code already exists in path {po_file_path}. Not modifying anything."
         )
-        print("Use the following code example to add a new Page Object to the file:")
+        print("Use the following code example to add a new Page Object to the file if required:")
         print()
         print("-" * 20 + " Page Object sample code " + "-" * 20)
         print()
@@ -286,7 +297,7 @@ def generate_test(context: OverrideContext) -> Path:
     test_file_name = f"test_{domain}_{sc_page_type}.py"
     test_path = context.test_path / test_file_name
     if test_path.exists():
-        print(f"Test already exists in path {test_path}. No modifying anything. ")
+        print(f"Test already exists in path {test_path}. Not modifying anything. ")
         print(
             "Use the following code example to add new tests using the captured content:"
         )

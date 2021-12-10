@@ -1,4 +1,4 @@
-## Template file used to generate Page Objects whith the command `scrapy override ...`
+## Template file used to generate Page Objects with the command `scrapy override ...`
 ## Any lines starting by ## in the template will be stripped out
 ##
 ## The parameters of this template will be replaced using the python `format()` function
