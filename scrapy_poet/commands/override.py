@@ -22,6 +22,7 @@ from w3lib.url import is_url
 from scrapy_poet import templates, DummyResponse
 from scrapy_poet.po_tester import POTester
 from web_poet import ResponseData
+from web_poet.overrides import find_page_object_overrides
 
 
 class OverrideCommand(ScrapyCommand):
@@ -92,6 +93,12 @@ class OverrideCommand(ScrapyCommand):
         )
         self.context = context
         self.po_path = generate_po_code(context)
+
+        # Configuring the new Page Object so that it is used to record the fixtures
+        override_rules_for_new_po = find_page_object_overrides(
+            f"{context.po_module}.{context.variables_for_template()['po_submodule']}")
+        self.settings["SCRAPY_POET_OVERRIDES"] = (self.settings.get("SCRAPY_POET_OVERRIDES", []) +
+                                                  override_rules_for_new_po)
 
     def ensure_injection_middleware(self):
         """Ensures that the InjectionMiddleware is configured"""
