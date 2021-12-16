@@ -420,7 +420,7 @@ def test_cache(tmp_path, cache_errors):
         print(f"Cache file {cache} already exists. Weird. Deleting")
         cache.unlink()
     settings = {"SCRAPY_POET_CACHE": cache,
-                "SCRAPY_POET_CACHE_ALSO_ERRORS": cache_errors}
+                "SCRAPY_POET_CACHE_ERRORS": cache_errors}
     injector = get_injector_for_testing(providers, settings)
     assert cache.exists()
 

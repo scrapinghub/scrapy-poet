@@ -77,7 +77,7 @@ class Injector:
             cache_filename = os.path.join(get_scrapy_data_path(createdir=True), "scrapy-poet-cache.sqlite3")
         if cache_filename:
             compressed = self.spider.settings.getbool('SCRAPY_POET_CACHE_GZIP', True)
-            self.caching_errors = self.spider.settings.getbool('SCRAPY_POET_CACHE_ALSO_ERRORS', False)
+            self.caching_errors = self.spider.settings.getbool('SCRAPY_POET_CACHE_ERRORS', False)
             self.cache = SqlitedictCache(cache_filename, compressed=compressed)
             logger.info(f"Cache enabled. File: '{cache_filename}'. Compressed: {compressed}. Caching errors: {self.caching_errors}")
 
