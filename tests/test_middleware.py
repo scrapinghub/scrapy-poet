@@ -3,18 +3,22 @@ import socket
 from scrapy.utils.log import configure_logging
 from twisted.internet.threads import deferToThread
 from typing import Optional, Union, Type
+from unittest import mock
 
 import pytest
 import scrapy
-from scrapy import Request
+from scrapy import Request, Spider
 from scrapy.http import Response
+from scrapy.utils.test import get_crawler
 from pytest_twisted import inlineCallbacks
 
 import attr
 
 from scrapy_poet import callback_for
+from scrapy_poet import InjectionMiddleware
 from scrapy_poet.utils import get_domain
 from web_poet.pages import WebPage, ItemPage, ItemWebPage
+from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider
 )
@@ -30,7 +34,7 @@ class ProductHtml(HtmlResource):
     html = """
     <html>
         <div class="breadcrumbs">
-            <a href="/food">Food</a> / 
+            <a href="/food">Food</a> /
             <a href="/food/sweets">Sweets</a>
         </div>
         <h1 class="name">Chocolate</h1>
@@ -316,3 +320,29 @@ def test_skip_downloads(settings):
     assert isinstance(item['response'], DummyResponse) is True
     assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
     assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
+
+
+@mock.patch("scrapy_poet.injection.SqlitedictCache", spec=SqlitedictCache)
+def test_cache_closed_on_spider_close(mock_sqlitedictcache, settings):
+    def get_middleware(settings):
+        crawler = get_crawler(Spider, settings)
+        crawler.spider = crawler._create_spider('example.com')
+        return InjectionMiddleware(crawler)
+
+    mock_sqlitedictcache_instance = mock_sqlitedictcache.return_value = mock.Mock()
+
+    # no cache
+    no_cache_middleware = get_middleware(settings)
+    assert no_cache_middleware.injector.cache is None
+
+    # cache is present
+    settings.set("SCRAPY_POET_CACHE", "/tmp/cache")
+    has_cache_middleware = get_middleware(settings)
+    assert has_cache_middleware.injector.cache is not None
+
+    spider = has_cache_middleware.crawler.spider
+    has_cache_middleware.spider_closed(spider)
+    assert mock_sqlitedictcache.mock_calls == [
+        mock.call('/tmp/cache', compressed=True),
+        mock.call().close()
+    ]

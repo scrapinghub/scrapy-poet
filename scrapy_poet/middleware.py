@@ -3,14 +3,15 @@ responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
 import logging
+from typing import Optional, Type, TypeVar
 
-from scrapy import Spider
+from scrapy import Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from twisted.internet.defer import inlineCallbacks
 
 from scrapy.utils.misc import create_instance, load_object
-from . import api
+from .api import DummyResponse
 from .overrides import PerDomainOverridesRegistry
 from .page_input_providers import ResponseDataProvider
 from .injection import Injector
@@ -23,6 +24,8 @@ DEFAULT_PROVIDERS = {
     ResponseDataProvider: 500
 }
 
+InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")
+
 
 class InjectionMiddleware:
     """This is a Downloader Middleware that's supposed to:
@@ -30,7 +33,7 @@ class InjectionMiddleware:
     * check if request downloads could be skipped
     * inject dependencies before request callbacks are executed
     """
-    def __init__(self, crawler: Crawler):
+    def __init__(self, crawler: Crawler) -> None:
         """Initialize the middleware"""
         self.crawler = crawler
         settings = self.crawler.settings
@@ -42,10 +45,15 @@ class InjectionMiddleware:
                                  overrides_registry=self.overrides_registry)
 
     @classmethod
-    def from_crawler(cls, crawler):
-        return cls(crawler)
+    def from_crawler(cls: Type[InjectionMiddlewareTV], crawler: Crawler) -> InjectionMiddlewareTV:
+        o = cls(crawler)
+        crawler.signals.connect(o.spider_closed, signal=signals.spider_closed)
+        return o
 
-    def process_request(self, request: Request, spider: Spider):
+    def spider_closed(self, spider: Spider) -> None:
+        self.injector.close()
+
+    def process_request(self, request: Request, spider: Spider) -> Optional[DummyResponse]:
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a ``Response``
         is going to be used by the callback or a Page Input.
@@ -60,14 +68,14 @@ class InjectionMiddleware:
         AutoExtract.
         """
         if self.injector.is_scrapy_response_required(request):
-            return
+            return None
 
         logger.debug(f"Using DummyResponse instead of downloading {request}")
-        return api.DummyResponse(url=request.url, request=request)
+        return DummyResponse(url=request.url, request=request)
 
     @inlineCallbacks
     def process_response(self, request: Request, response: Response,
-                         spider: Spider):
+                         spider: Spider) -> Response:
         """This method fills ``request.cb_kwargs`` with instances for
         the required Page Objects found in the callback signature.
 

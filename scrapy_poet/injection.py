@@ -66,6 +66,10 @@ class Injector:
         self.is_class_provided_by_any_provider = \
             is_class_provided_by_any_provider_fn(self.providers)
 
+    def close(self) -> None:
+        if self.cache:
+            self.cache.close()
+
     def init_cache(self):
         self.cache = None
         cache_filename = self.spider.settings.get('SCRAPY_POET_CACHE')
@@ -361,7 +365,7 @@ def get_response_for_testing(callback: Callable) -> Response:
         <html>
             <body>
                 <div class="breadcrumbs">
-                    <a href="/food">Food</a> / 
+                    <a href="/food">Food</a> /
                     <a href="/food/sweets">Sweets</a>
                 </div>
                 <h1 class="name">Chocolate</h1>
