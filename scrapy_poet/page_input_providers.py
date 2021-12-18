@@ -8,12 +8,14 @@ HTML from Scrapy. You could also implement different providers in order to
 acquire data from multiple external sources, for example,
 Splash or Auto Extract API.
 """
+import json
 from typing import Set, Union, Callable, ClassVar, List, Any, Sequence
 
 import attr
 from scrapy import Request
 from scrapy.http import Response
 from scrapy.crawler import Crawler
+from scrapy.utils.reqser import request_to_dict
 from scrapy.utils.request import request_fingerprint
 
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
@@ -149,7 +151,17 @@ class ResponseDataProvider(PageObjectInputProvider):
         return [ResponseData(url=response.url, html=response.text)]
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        return request_fingerprint(request)
+        request_keys = {"url", "method", "body"}
+        request_data = {
+            k: str(v)
+            for k, v in request_to_dict(request).items()
+            if k in request_keys
+        }
+        fp_data = {
+            "SCRAPY_FINGERPRINT": request_fingerprint(request),
+            **request_data,
+        }
+        return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
 
     def serialize(self, result: Sequence[Any]) -> Any:
         return [attr.asdict(response_data) for response_data in result]
