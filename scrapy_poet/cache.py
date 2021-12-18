@@ -21,6 +21,10 @@ class _Cache(abc.ABC):
 
 
 class SqlitedictCache(_Cache):
+    """Stores dependencies from Providers in a persistent local storage using
+    https://github.com/RaRe-Technologies/sqlitedict.
+    """
+
     def __init__(self, path: str, *, compressed=True):
         self.path = path
         self.compressed = compressed

@@ -65,11 +65,12 @@ the obtained item with the ISBN from the page HTML.
 
 .. note::
 
-    This is an alternative more compact way of writing the above Page Object using ``attr.s``:
+    This is an alternative more compact way of writing the above Page Object
+    using ``attr.define``:
 
     .. code-block:: python
 
-        @attr.s(auto_attribs=True)
+        @attr.define
         class ISBNBookPage(ItemWebPage):
             book_page: BookPage
 
