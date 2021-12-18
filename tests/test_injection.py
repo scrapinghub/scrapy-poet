@@ -9,7 +9,7 @@ from scrapy import Request
 from scrapy.http import Response
 from scrapy_poet.utils import get_domain
 
-from scrapy_poet import ResponseDataProvider, PageObjectInputProvider, \
+from scrapy_poet import CacheDataProviderMixin, ResponseDataProvider, PageObjectInputProvider, \
     DummyResponse
 from scrapy_poet.injection import check_all_providers_are_callable, is_class_provided_by_any_provider_fn, \
     get_injector_for_testing, get_response_for_testing
@@ -371,7 +371,7 @@ def test_is_class_provided_by_any_provider_fn():
 
 
 def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
-    class Provider(PageObjectInputProvider):
+    class Provider(PageObjectInputProvider, CacheDataProviderMixin):
         name = a_name
         provided_classes = classes
         require_response = False

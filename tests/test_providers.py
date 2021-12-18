@@ -11,7 +11,7 @@ from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
-from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.page_input_providers import CacheDataProviderMixin, PageObjectInputProvider
 from tests.utils import crawl_single_item, HtmlResource
 from web_poet import ResponseData
 
@@ -52,7 +52,7 @@ class Html:
     html: str
 
 
-class PriceHtmlDataProvider(PageObjectInputProvider):
+class PriceHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     name = "price_html"
     provided_classes = {Price, Html}
@@ -80,7 +80,7 @@ class PriceHtmlDataProvider(PageObjectInputProvider):
         return data
 
 
-class NameHtmlDataProvider(PageObjectInputProvider):
+class NameHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     name = "name_html"
     provided_classes = {Name, Html}.__contains__

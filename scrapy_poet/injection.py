@@ -164,7 +164,7 @@ class Injector:
 
             objs, fingerprint = None, None
             cache_hit = False
-            if self.cache:
+            if self.cache and provider.has_cache_support:
                 if not provider.name:
                     raise NotImplementedError(f"The provider {type(provider)} must have a `name` defined if"
                                               f" you want to use the cache. It must be unique across the providers.")
@@ -194,7 +194,7 @@ class Injector:
                     objs = yield maybeDeferred_coro(provider, set(provided_classes), **kwargs)
 
                 except Exception as e:
-                    if self.cache and self.caching_errors:
+                    if self.cache and self.caching_errors and provider.has_cache_support:
                         # Save errors in the cache
                         self.cache[fingerprint] = e
                         self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
@@ -210,7 +210,7 @@ class Injector:
                 )
             instances.update(objs_by_type)
 
-            if self.cache and not cache_hit:
+            if self.cache and not cache_hit and provider.has_cache_support:
                 # Save the results in the cache
                 self.cache[fingerprint] = provider.serialize(objs)
                 self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
