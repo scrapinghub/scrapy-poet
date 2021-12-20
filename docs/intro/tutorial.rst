@@ -4,7 +4,7 @@
 Tutorial
 ========
 
-In this tutorial, we’ll assume that scrapy-poet is already installed on your
+In this tutorial, we’ll assume that ``scrapy-poet`` is already installed on your
 system. If that’s not the case, see :ref:`intro-install`.
 
 .. note::
@@ -20,7 +20,7 @@ This tutorial will walk you through these tasks:
 
 #. Writing a :ref:`spider <scrapy:topics-spiders>` to crawl a site and extract data
 #. Separating extraction logic from the spider
-#. Configuring Scrapy project to use scrapy-poet
+#. Configuring Scrapy project to use ``scrapy-poet``
 #. Changing spider to make use of our extraction logic
 
 If you're not already familiar with Scrapy, and want to learn it quickly,
@@ -113,7 +113,7 @@ extract a property from the ``to_item`` method:
 Configuring the project
 =======================
 
-To use scrapy-poet, enable its downloader middleware in ``settings.py``:
+To use ``scrapy-poet``, enable its downloader middleware in ``settings.py``:
 
 .. code-block:: python
 
@@ -122,7 +122,7 @@ To use scrapy-poet, enable its downloader middleware in ``settings.py``:
     }
 
 
-``BookPage`` class we created previously can be used without scrapy-poet,
+``BookPage`` class we created previously can be used without ``scrapy-poet``,
 and even without Scrapy (note that imports were from ``web_poet`` so far).
 
 ``scrapy-poet`` makes it easy to use ``web-poet`` Page Objects
@@ -143,7 +143,7 @@ the ``parse_book`` method as follows:
             yield book_page.to_item()
 
 ``parse_book`` method now has a type annotated argument
-called ``book_page``. scrapy-poet detects this and makes sure
+called ``book_page``. ``scrapy-poet`` detects this and makes sure
 a BookPage instance is created and passed to the callback.
 
 The full spider code would be looking like this:
@@ -421,7 +421,7 @@ but it opens some cool possibilities.
 Next steps
 ==========
 
-Now that you know how scrapy-poet is supposed to work, what about trying to
+Now that you know how ``scrapy-poet`` is supposed to work, what about trying to
 apply it to an existing or new Scrapy project?
 
 Also, please check :ref:`overrides`, :ref:`providers` and refer to spiders in the "example"

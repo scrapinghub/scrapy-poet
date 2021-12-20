@@ -15,7 +15,9 @@ setup(
         'attrs',
         'parsel',
         'web-poet',
-        'tldextract'],
+        'tldextract',
+        'sqlitedict',
+    ],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',

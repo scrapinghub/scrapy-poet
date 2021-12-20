@@ -1,27 +1,38 @@
-from typing import Any, List
+from typing import Any, List, Set, Callable, Sequence
 
 import attr
+import json
 from pytest_twisted import inlineCallbacks
+from scrapy_poet import ResponseDataProvider
 from twisted.python.failure import Failure
 
 import scrapy
-from scrapy import Request
+from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.settings import Settings
-from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy.utils.test import get_crawler
+from scrapy_poet.page_input_providers import CacheDataProviderMixin, PageObjectInputProvider
 from tests.utils import crawl_single_item, HtmlResource
+from web_poet import ResponseData
 
 
 class ProductHtml(HtmlResource):
     html = """
     <html>
         <div class="breadcrumbs">
-            <a href="/food">Food</a> / 
+            <a href="/food">Food</a> /
             <a href="/food/sweets">Sweets</a>
         </div>
         <h1 class="name">Chocolate</h1>
         <p>Price: <span class="price">22€</span></p>
         <p class="description">The best chocolate ever</p>
+    </html>
+    """
+
+class NonProductHtml(HtmlResource):
+    html = """
+    <html>
+        <p>This one is clearly not a product</p>
     </html>
     """
 
@@ -41,8 +52,9 @@ class Html:
     html: str
 
 
-class PriceHtmlDataProvider(PageObjectInputProvider):
+class PriceHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
+    name = "price_html"
     provided_classes = {Price, Html}
 
     def __init__(self, crawler: Crawler):
@@ -58,9 +70,19 @@ class PriceHtmlDataProvider(PageObjectInputProvider):
             ret.append(Html("Price Html!"))
         return ret
 
+    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+        return "http://example.com"
 
-class NameHtmlDataProvider(PageObjectInputProvider):
+    def serialize(self, result: Sequence[Any]) -> Any:
+        return result
 
+    def deserialize(self, data: Any) -> Sequence[Any]:
+        return data
+
+
+class NameHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
+
+    name = "name_html"
     provided_classes = {Name, Html}.__contains__
 
     def __call__(self, to_provide, response: scrapy.http.Response, settings: Settings):
@@ -72,12 +94,29 @@ class NameHtmlDataProvider(PageObjectInputProvider):
             ret.append(Html("Name Html!"))
         return ret
 
+    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+        return "http://example.com"
+
+    def serialize(self, result: Sequence[Any]) -> Any:
+        return result
+
+    def deserialize(self, data: Any) -> Sequence[Any]:
+        return data
+
+
+class ResponseDataProviderForTest(ResponseDataProvider):
+    """Uses a fixed fingerprint because the test server is always changing the URL from test to test"""
+
+    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+        return "http://example.com"
+
 
 class PriceFirstMultiProviderSpider(scrapy.Spider):
 
     url = None
     custom_settings = {
         "SCRAPY_POET_PROVIDERS": {
+            ResponseDataProviderForTest: 0,
             PriceHtmlDataProvider: 1,
             NameHtmlDataProvider: 2,
         }
@@ -89,11 +128,12 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
     def errback(self, failure: Failure):
         yield {"exception": failure.value}
 
-    def parse(self, response, price: Price, name: Name, html: Html):
+    def parse(self, response, price: Price, name: Name, html: Html, response_data: ResponseData):
         yield {
             Price: price,
             Name: name,
-            Html: html
+            Html: html,
+            "response_data_html": response_data.html,
         }
 
 
@@ -101,6 +141,7 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
 
     custom_settings = {
         "SCRAPY_POET_PROVIDERS": {
+            ResponseDataProviderForTest: 0,
             NameHtmlDataProvider: 1,
             PriceHtmlDataProvider: 2,
         }
@@ -108,14 +149,30 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
 
 
 @inlineCallbacks
-def test_name_first_spider(settings):
+def test_name_first_spider(settings, tmp_path):
+    cache = tmp_path / "cache.sqlite3"
+    settings.set("SCRAPY_POET_CACHE", str(cache))
     item, _, _ = yield crawl_single_item(NameFirstMultiProviderSpider, ProductHtml,
+                                         settings)
+    assert cache.exists()
+    assert item == {
+        Price: Price("22€"),
+        Name: Name("Chocolate"),
+        Html: Html("Name Html!"),
+        "response_data_html": ProductHtml.html,
+    }
+
+    # Let's see that the cache is working. We use a different and wrong resource,
+    # but it should be ignored by the cached version used
+    item, _, _ = yield crawl_single_item(NameFirstMultiProviderSpider, NonProductHtml,
                                          settings)
     assert item == {
         Price: Price("22€"),
         Name: Name("Chocolate"),
         Html: Html("Name Html!"),
+        "response_data_html": ProductHtml.html,
     }
+
 
 
 @inlineCallbacks
@@ -126,4 +183,15 @@ def test_price_first_spider(settings):
         Price: Price("22€"),
         Name: Name("Chocolate"),
         Html: Html("Price Html!"),
+        "response_data_html": ProductHtml.html,
     }
+
+
+def test_response_data_provider_fingerprint(settings):
+    crawler = get_crawler(Spider, settings)
+    rdp = ResponseDataProvider(crawler)
+    request = scrapy.http.Request("https://example.com")
+
+    # The fingerprint should be readable since it's JSON-encoded.
+    fp = rdp.fingerprint(scrapy.http.Response, request)
+    assert json.loads(fp)

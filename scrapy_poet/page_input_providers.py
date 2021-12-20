@@ -8,10 +8,17 @@ HTML from Scrapy. You could also implement different providers in order to
 acquire data from multiple external sources, for example,
 Splash or Auto Extract API.
 """
-from typing import Set, Union, Callable, ClassVar
+import abc
+import json
+from typing import Set, Union, Callable, ClassVar, List, Any, Sequence
 
+import attr
+from scrapy import Request
 from scrapy.http import Response
 from scrapy.crawler import Crawler
+from scrapy.utils.reqser import request_to_dict
+from scrapy.utils.request import request_fingerprint
+
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
 from web_poet import ResponseData
 
@@ -81,6 +88,7 @@ class PageObjectInputProvider:
     """
 
     provided_classes: ClassVar[Union[Set[Callable], Callable[[Callable], bool]]]
+    name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
     @classmethod
     def is_provided(cls, type_: Callable):
@@ -113,11 +121,64 @@ class PageObjectInputProvider:
     # injection breaks the method overriding rules and mypy then complains.
 
 
-class ResponseDataProvider(PageObjectInputProvider):
+class CacheDataProviderMixin(abc.ABC):
+    """Providers that intend to support the ``SCRAPY_POET_CACHE`` should inherit
+    from this mixin class.
+    """
+
+    @abc.abstractmethod
+    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+        """
+        Return a fingerprint that identifies this particular request. It will be used to implement
+        the cache and record/replay mechanism
+        """
+        pass
+
+    @abc.abstractmethod
+    def serialize(self, result: Sequence[Any]) -> Any:
+        """
+        Serializes the results of this provider. The data returned will be pickled.
+        """
+        pass
+
+    @abc.abstractmethod
+    def deserialize(self, data: Any) -> Sequence[Any]:
+        """
+        Deserialize some results of the provider that were previously serialized using the method
+        :meth:`serialize`.
+        """
+        pass
+
+    @property
+    def has_cache_support(self):
+        return True
+
+
+class ResponseDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
     """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
 
     provided_classes = {ResponseData}
+    name = "response_data"
 
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``ResponseData`` instance using a Scrapy ``Response``"""
         return [ResponseData(url=response.url, html=response.text)]
+
+    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+        request_keys = {"url", "method", "body"}
+        request_data = {
+            k: str(v)
+            for k, v in request_to_dict(request).items()
+            if k in request_keys
+        }
+        fp_data = {
+            "SCRAPY_FINGERPRINT": request_fingerprint(request),
+            **request_data,
+        }
+        return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
+
+    def serialize(self, result: Sequence[Any]) -> Any:
+        return [attr.asdict(response_data) for response_data in result]
+
+    def deserialize(self, data: Any) -> Sequence[Any]:
+        return [ResponseData(**response_data) for response_data in data]

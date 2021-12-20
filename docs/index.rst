@@ -2,7 +2,7 @@
 scrapy-poet documentation
 =========================
 
-scrapy-poet allows to use `web-poet`_ Page Objects with Scrapy.
+``scrapy-poet`` allows to use `web-poet`_ Page Objects with Scrapy.
 
 web-poet_ defines a standard for writing reusable and portable
 extraction and crawling code; please check its docs_ to learn more.
@@ -48,6 +48,7 @@ To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
    :caption: All the rest
    :maxdepth: 1
 
+   settings
    api_reference
    contributing
    changelog

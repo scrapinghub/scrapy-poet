@@ -9,9 +9,9 @@ Providers
     This document assumes a good familiarity with ``web-poet`` concepts;
     make sure you've read ``web-poet`` docs_.
 
-    This page is mostly aimed at developers who want to extend scrapy-poet,
-    not to developers who're writing extraction and crawling code using
-    scrapy-poet.
+    This page is mostly aimed at developers who want to extend ``scrapy-poet``,
+    **not** to developers who are writing extraction and crawling code using
+    ``scrapy-poet``.
 
 
 .. _docs: https://web-poet.readthedocs.io/en/stable/
@@ -26,7 +26,14 @@ that need it, like the ``ItemWebPage``.
 
 .. code-block:: python
 
-    @attr.s(auto_attribs=True)
+    import attr
+    from typing import Set, Callable
+
+    from scrapy_poet.page_input_providers import PageObjectInputProvider
+    from scrapy import Response
+
+
+    @attr.define
     class ResponseData:
         """Represents a response containing its URL and HTML content."""
         url: str
@@ -41,9 +48,75 @@ that need it, like the ``ItemWebPage``.
             """Build a ``ResponseData`` instance using a Scrapy ``Response``"""
             return [ResponseData(url=response.url, html=response.text)]
 
-You can implement your own providers in order to extend or override
-current scrapy-poet behavior.
-Please, check :class:`scrapy_poet.page_input_providers.PageObjectInputProvider` for more details.
+
+You can implement your own providers in order to extend or override current
+``scrapy-poet`` behavior. All providers should inherit from this base class:
+:class:`~.PageObjectInputProvider`.
+
+Please, check the docs provided in the following API reference for more details:
+:class:`scrapy_poet.page_input_providers.PageObjectInputProvider`.
+
+
+Cache Suppport in Providers
+===========================
+
+``scrapy-poet`` also supports caching of the provided dependencies from the
+providers. For example, :class:`~.ResponseDataProvider` supports this right off
+the bat. It's able to do this by inheriting the :class:`~.CacheDataProviderMixin`
+and implementing all of its ``abstractmethods``.
+
+So, extending from the previous example we've tackled above to support cache
+would lead to the following code:
+
+.. code-block:: python
+
+    from scrapy_poet.page_input_providers import (
+        CacheDataProviderMixin,
+        PageObjectInputProvider,
+    )
+
+    class ResponseDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
+        """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
+        provided_classes = {ResponseData}
+
+        def __call__(self, to_provide: Set[Callable], response: Response):
+            """Build a ``ResponseData`` instance using a Scrapy ``Response``"""
+            return [ResponseData(url=response.url, html=response.text)]
+
+        def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+            """Returns a fingerprint to identify the specific request."""
+            # Implementation here
+
+        def serialize(self, result: Sequence[Any]) -> Any:
+            """Serializes the results of this provider. The data returned will
+            be pickled.
+            """
+            # Implementation here
+
+        def deserialize(self, data: Any) -> Sequence[Any]:
+            """Deserialize some results of the provider that were previously
+            serialized using the serialize() method.
+            """
+            # Implementation here
+
+Take note that even if you're using providers that supports the Caching interface,
+it's only going to be used if the ``SCRAPY_POET_CACHE`` has been enabled in the
+settings.
+
+The caching of provided dependencies is **very useful for local development** of
+Page Objects, as it lowers down the waiting time for your Responses `(or any type
+of external dependency for that manner)` by caching them up locally.
+
+Currently, the data is cached using a sqlite database in your local directory.
+This is implemented using :class:`~.SqlitedictCache`.
+
+The cache mechanism that ``scrapy-poet`` currently offers is quite different
+from the :class:`~.scrapy.downloadermiddlewares.httpcache.HttpCacheMiddleware`
+which Scrapy has. Although they are quite similar in its intended purpose,
+``scrapy-poet``'s cached data is directly tied to its appropriate provider. This
+could be anything that could stretch beyond Scrapy's ``Responses`` `(e.g. Network
+Database queries, API Calls, AWS S3 files, etc)`.
+
 
 Configuring providers
 =====================
@@ -104,7 +177,7 @@ If neither spider callback nor any of the input providers are using
         pass
 
 
-    @attr.s(auto_attribs=True)
+    @attr.define
     class CachedData:
         key: str
         value: str
@@ -150,7 +223,7 @@ Page Object uses it, the request is not ignored, for example:
         pass
 
 
-    @attr.s(auto_attribs=True)
+    @attr.define
     class MyResponseData:
         url: str
         html: str
@@ -191,7 +264,7 @@ Page Object uses it, the request is not ignored, for example:
     The code above is just for example purposes. If you need to use ``Response``
     instances in your Page Objects, use built-in ``ItemWebPage`` - it has
     ``response`` attribute with ``ResponseData``; no additional configuration
-    is needed, as there is ``ResponseDataProvider`` enabled in scrapy-poet
+    is needed, as there is ``ResponseDataProvider`` enabled in ``scrapy-poet``
     by default.
 
 Requests concurrency
