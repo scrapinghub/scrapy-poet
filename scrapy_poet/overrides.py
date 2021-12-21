@@ -12,9 +12,11 @@ from web_poet.overrides import OverrideRule
 
 logger = logging.getLogger(__name__)
 
+RuleAsTuple = Union[Tuple[str, Callable, Callable], List]
+RuleFromUser = Union[RuleAsTuple, OverrideRule]
+
 
 class OverridesRegistryBase(ABC):
-
     @abstractmethod
     def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
         """
@@ -24,8 +26,6 @@ class OverridesRegistryBase(ABC):
         """
         pass
 
-
-RuleAsTuple = Union[Tuple[str, Callable, Callable], List]
 
 class OverridesRegistry(OverridesRegistryBase):
     """
@@ -73,28 +73,35 @@ class OverridesRegistry(OverridesRegistryBase):
     """
 
     @classmethod
-    def from_crawler(cls, crawler: Crawler):
+    def from_crawler(cls, crawler: Crawler) -> Crawler:
         return cls(crawler.settings.getlist("SCRAPY_POET_OVERRIDES", []))
 
-    def __init__(self, rules: Optional[Iterable[Union[RuleAsTuple, OverrideRule]]] = None):
+    def __init__(self, rules: Optional[Iterable[RuleFromUser]] = None) -> None:
         self.rules: List[OverrideRule] = []
         self.matcher: Dict[Callable, URLMatcher] = defaultdict(URLMatcher)
         for rule in rules or []:
             self.add_rule(rule)
         logger.debug(f"List of parsed OverrideRules:\n{self.rules}")
 
-    def add_rule(self, rule: Union[RuleAsTuple, OverrideRule]):
+    def add_rule(self, rule: RuleFromUser) -> None:
         if isinstance(rule, (tuple, list)):
             if len(rule) != 3:
-                raise ValueError(f"Invalid overrides rule: {rule}. Rules as tuples must have three elements: "
-                                 f"the pattern, the type to override and the new type to use instead.")
+                raise ValueError(
+                    f"Invalid overrides rule: {rule}. Rules as tuples must have "
+                    f"3 elements: (1) the pattern, (2) the PO class used as a "
+                    f"replacement and (3) the PO class to be replaced."
+                )
             pattern, use, instead_of = rule
-            rule = OverrideRule(for_patterns=Patterns([pattern]), use=use, instead_of=instead_of)
+            rule = OverrideRule(
+                for_patterns=Patterns([pattern]), use=use, instead_of=instead_of
+            )
         self.rules.append(rule)
-        self.matcher[rule.instead_of].add_or_update(len(self.rules) - 1, rule.for_patterns)
+        self.matcher[rule.instead_of].add_or_update(
+            len(self.rules) - 1, rule.for_patterns
+        )
 
     def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
-        overrides = {}
+        overrides: Dict[Callable, Callable] = {}
         for instead_of, matcher in self.matcher.items():
             rule_id = matcher.match(request.url)
             if rule_id is not None:
