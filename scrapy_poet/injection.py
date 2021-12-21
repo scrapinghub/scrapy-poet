@@ -66,6 +66,10 @@ class Injector:
         self.is_class_provided_by_any_provider = \
             is_class_provided_by_any_provider_fn(self.providers)
 
+    def close(self) -> None:
+        if self.cache:
+            self.cache.close()
+
     def init_cache(self):
         self.cache = None
         cache_filename = self.spider.settings.get('SCRAPY_POET_CACHE')
@@ -73,7 +77,7 @@ class Injector:
             cache_filename = os.path.join(get_scrapy_data_path(createdir=True), "scrapy-poet-cache.sqlite3")
         if cache_filename:
             compressed = self.spider.settings.getbool('SCRAPY_POET_CACHE_GZIP', True)
-            self.caching_errors = self.spider.settings.getbool('SCRAPY_POET_CACHE_ALSO_ERRORS', False)
+            self.caching_errors = self.spider.settings.getbool('SCRAPY_POET_CACHE_ERRORS', False)
             self.cache = SqlitedictCache(cache_filename, compressed=compressed)
             logger.info(f"Cache enabled. File: '{cache_filename}'. Compressed: {compressed}. Caching errors: {self.caching_errors}")
 
@@ -160,7 +164,7 @@ class Injector:
 
             objs, fingerprint = None, None
             cache_hit = False
-            if self.cache:
+            if self.cache and provider.has_cache_support:
                 if not provider.name:
                     raise NotImplementedError(f"The provider {type(provider)} must have a `name` defined if"
                                               f" you want to use the cache. It must be unique across the providers.")
@@ -172,7 +176,7 @@ class Injector:
                     self.crawler.stats.inc_value("scrapy-poet/cache/miss")
                 else:
                     self.crawler.stats.inc_value("scrapy-poet/cache/hit")
-                    if isinstance(data, BaseException):
+                    if isinstance(data, Exception):
                         raise data
                     objs = provider.deserialize(data)
                     cache_hit = True
@@ -189,8 +193,8 @@ class Injector:
                     # Invoke the provider to get the data
                     objs = yield maybeDeferred_coro(provider, set(provided_classes), **kwargs)
 
-                except BaseException as e:
-                    if self.cache and self.caching_errors:
+                except Exception as e:
+                    if self.cache and self.caching_errors and provider.has_cache_support:
                         # Save errors in the cache
                         self.cache[fingerprint] = e
                         self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
@@ -206,7 +210,7 @@ class Injector:
                 )
             instances.update(objs_by_type)
 
-            if self.cache and not cache_hit:
+            if self.cache and not cache_hit and provider.has_cache_support:
                 # Save the results in the cache
                 self.cache[fingerprint] = provider.serialize(objs)
                 self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
@@ -363,7 +367,7 @@ def get_response_for_testing(callback: Callable) -> Response:
         <html>
             <body>
                 <div class="breadcrumbs">
-                    <a href="/food">Food</a> / 
+                    <a href="/food">Food</a> /
                     <a href="/food/sweets">Sweets</a>
                 </div>
                 <h1 class="name">Chocolate</h1>

@@ -8,12 +8,15 @@ HTML from Scrapy. You could also implement different providers in order to
 acquire data from multiple external sources, for example,
 Splash or Auto Extract API.
 """
+import abc
+import json
 from typing import Set, Union, Callable, ClassVar, List, Any, Sequence
 
 import attr
 from scrapy import Request
 from scrapy.http import Response
 from scrapy.crawler import Crawler
+from scrapy.utils.reqser import request_to_dict
 from scrapy.utils.request import request_fingerprint
 
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
@@ -106,26 +109,6 @@ class PageObjectInputProvider:
         """Initializes the provider. Invoked only at spider start up."""
         pass
 
-    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        """
-        Return a fingerprint that identifies this particular request. It will be used to implement
-        the cache and record/replay mechanism
-        """
-        raise NotImplementedError("Not Implemented. This provider should implement this method to be fully functional.")
-
-    def serialize(self, result: Sequence[Any]) -> Any:
-        """
-        Serializes the results of this provider. The data returned will be pickled.
-        """
-        raise NotImplementedError("Not Implemented. This provider should implement this method to be fully functional.")
-
-    def deserialize(self, data: Any) -> Sequence[Any]:
-        """
-        Deserialize some results of the provider that were previously serialized using the method
-        :meth:`serialize`.
-        """
-        raise NotImplementedError("Not Implemented. This provider should implement this method to be fully functional.")
-
     # Remember that is expected for all children to implement the ``__call__``
     # method. The simplest signature for it is:
     #
@@ -138,7 +121,40 @@ class PageObjectInputProvider:
     # injection breaks the method overriding rules and mypy then complains.
 
 
-class ResponseDataProvider(PageObjectInputProvider):
+class CacheDataProviderMixin(abc.ABC):
+    """Providers that intend to support the ``SCRAPY_POET_CACHE`` should inherit
+    from this mixin class.
+    """
+
+    @abc.abstractmethod
+    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+        """
+        Return a fingerprint that identifies this particular request. It will be used to implement
+        the cache and record/replay mechanism
+        """
+        pass
+
+    @abc.abstractmethod
+    def serialize(self, result: Sequence[Any]) -> Any:
+        """
+        Serializes the results of this provider. The data returned will be pickled.
+        """
+        pass
+
+    @abc.abstractmethod
+    def deserialize(self, data: Any) -> Sequence[Any]:
+        """
+        Deserialize some results of the provider that were previously serialized using the method
+        :meth:`serialize`.
+        """
+        pass
+
+    @property
+    def has_cache_support(self):
+        return True
+
+
+class ResponseDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
     """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
 
     provided_classes = {ResponseData}
@@ -149,7 +165,17 @@ class ResponseDataProvider(PageObjectInputProvider):
         return [ResponseData(url=response.url, html=response.text)]
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        return request_fingerprint(request)
+        request_keys = {"url", "method", "body"}
+        request_data = {
+            k: str(v)
+            for k, v in request_to_dict(request).items()
+            if k in request_keys
+        }
+        fp_data = {
+            "SCRAPY_FINGERPRINT": request_fingerprint(request),
+            **request_data,
+        }
+        return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
 
     def serialize(self, result: Sequence[Any]) -> Any:
         return [attr.asdict(response_data) for response_data in result]

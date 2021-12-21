@@ -26,6 +26,12 @@ Page Input Providers
 .. toctree::
    :hidden:
 
+Cache
+=====
+
+.. automodule:: scrapy_poet.cache
+   :members:
+
 Injection
 =========
 

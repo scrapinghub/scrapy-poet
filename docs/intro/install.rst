@@ -7,10 +7,10 @@ Installation
 Installing scrapy-poet
 ======================
 
-scrapy-poet is a Scrapy extension that runs on Python 3.6 and above.
+``scrapy-poet`` is a Scrapy extension that runs on Python 3.7 and above.
 
 If you’re already familiar with installation of Python packages, you can install
-scrapy-poet and its dependencies from PyPI with:
+``scrapy-poet`` and its dependencies from PyPI with:
 
 ::
 
@@ -21,7 +21,7 @@ Scrapy 2.1.0 or above is required and it has to be installed separately.
 Things that are good to know
 ============================
 
-scrapy-poet is written in pure Python and depends on a few key Python packages
+``scrapy-poet`` is written in pure Python and depends on a few key Python packages
 (among others):
 
 - web-poet_, core library used for Page Object pattern
