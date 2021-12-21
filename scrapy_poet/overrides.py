@@ -1,14 +1,16 @@
-from collections import defaultdict
-
+import logging
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Dict, Mapping, Callable, Iterable, Union, Tuple, Optional, List
 
 from scrapy import Request
 from scrapy.crawler import Crawler
 from url_matcher import Patterns, URLMatcher
-
 from url_matcher.util import get_domain
 from web_poet.overrides import OverrideRule
+
+
+logger = logging.getLogger(__name__)
 
 
 class OverridesRegistryBase(ABC):
@@ -27,37 +29,47 @@ RuleAsTuple = Union[Tuple[str, Callable, Callable], List]
 
 class OverridesRegistry(OverridesRegistryBase):
     """
-    Overrides registry that reads the overrides
-    from the option ``SCRAPY_POET_OVERRIDES`` in the spider settings. It
-    is a list and each rule can be a tuple or an instance of the class ``OverrideRule``.
+    Overrides registry that reads the overrides from the ``SCRAPY_POET_OVERRIDES``
+    in the spider settings. It is a list and each rule can be a tuple or an
+    instance of the class ``OverrideRule``.
 
-    If a tuple is provided, the first element is the pattern to match the URL,
-    the second element is the type to be used instead of the type in
-    the third element. Another way to see it:
-    for the URLs that match the pattern ``tuple[0]`` use ``tuple[1]`` instead of ``tuple[2]``.
+    If a tuple is provided:
+
+        - the **first** element is the pattern to match the URL,
+        - the **second** element is the type to be used instead of the type in
+          the **third** element.
+
+    Another way to see it for the URLs that match the pattern ``tuple[0]`` use
+    ``tuple[1]`` instead of ``tuple[2]``.
 
     Example of overrides configuration:
 
     .. code-block:: python
 
-
         SCRAPY_POET_OVERRIDES = [
             ("books.toscrape.com", ISBNBookPage, BookPage),
-            OverrideRule(for_patterns=Patterns(["books.toscrape.com"]),
-                         use=MyBookListPage,
-                         instead_of=BookListPage,
-                         ),
+            OverrideRule(
+                for_patterns=Patterns(["books.toscrape.com"]),
+                use=MyBookListPage,
+                instead_of=BookListPage,
+            ),
         ]
 
-    It can be handy to compile the list of rules automatically
-    from a module using the method ``find_page_object_overrides``. For example:
+    It can be handy to compile the list of rules automatically from a module
+    using the utility function ``find_page_object_overrides()`` from ``web-poet``.
+    For example:
 
     .. code-block:: python
 
+        from web_poet import find_page_object_overrides
+
         SCRAPY_POET_OVERRIDES = find_page_object_overrides("my_page_objects_module")
 
-    It finds all the rules annotated using the decorator ``handle_urls`` inside the module ``my_page_objects_module`` and
-    its submodules.
+    It finds all the rules annotated using ``web-poet``'s ``@handle_urls``
+    decorator inside the ``my_page_objects_module`` module and all of its
+    submodules.
+
+    More info on this at `web-poet <https://web-poet.readthedocs.io>`_.
     """
 
     @classmethod
@@ -69,6 +81,7 @@ class OverridesRegistry(OverridesRegistryBase):
         self.matcher: Dict[Callable, URLMatcher] = defaultdict(URLMatcher)
         for rule in rules or []:
             self.add_rule(rule)
+        logger.debug(f"List of parsed OverrideRules:\n{self.rules}")
 
     def add_rule(self, rule: Union[RuleAsTuple, OverrideRule]):
         if isinstance(rule, (tuple, list)):
