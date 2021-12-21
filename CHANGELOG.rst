@@ -7,11 +7,15 @@ TBR:
 ------------------
 
 * Cache mechanism using ``SCRAPY_POET_CACHE`` setting
-* New and richer ``SCRAPY_POET_OVERRIDES`` registry that uses the
-  url-matcher patterns to configure the overrides
 
-  * This results in a **backward incompatible** change since the rules
-    follow a different structure.
+* We also have these **backward incompatible** changes since the
+  rules follow a different structure:
+
+    * Deprecated ``PerDomainOverridesRegistry`` in lieu of the newer
+      ``OverridesRegistry`` which provides a wide variety of features
+      for better URL matching.
+    * This resuls in a newer ``SCRAPY_POET_OVERRIDES`` which follows
+      a different format.
 
 * removed support for Python 3.6
 * added support for Python 3.10
