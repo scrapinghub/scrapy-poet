@@ -348,10 +348,10 @@ be done by configuring ``SCRAPY_POET_OVERRIDES`` into ``settings.py``:
 
 .. code-block:: python
 
-        "SCRAPY_POET_OVERRIDES": [
-            ("toscrape.com", BTSBookListPage, BookListPage),
-            ("toscrape.com", BTSBookPage, BookPage)
-        ]
+    "SCRAPY_POET_OVERRIDES": [
+        ("toscrape.com", BTSBookListPage, BookListPage),
+        ("toscrape.com", BTSBookPage, BookPage)
+    ]
 
 The spider is back to life!
 ``SCRAPY_POET_OVERRIDES`` contain rules that overrides the Page Objects
@@ -397,34 +397,48 @@ are used for the domain
 
 .. code-block:: python
 
-        "SCRAPY_POET_OVERRIDES": [
-            ("toscrape.com", BTSBookListPage, BookListPage),
-            ("toscrape.com", BTSBookPage, BookPage),
-            ("bookpage.com", BPBookListPage, BookListPage),
-            ("bookpage.com", BPBookPage, BookPage)
-        ]
+    "SCRAPY_POET_OVERRIDES": [
+        ("toscrape.com", BTSBookListPage, BookListPage),
+        ("toscrape.com", BTSBookPage, BookPage),
+        ("bookpage.com", BPBookListPage, BookListPage),
+        ("bookpage.com", BPBookPage, BookPage)
+    ]
 
 The spider is now ready to extract books from both sites 😀.
 The full example
 `can be seen here <https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders/books_04_overrides_02.py>`_
 
-On a surface, it looks just like a different way to organize Scrapy spider
+On the surface, it looks just like a different way to organize Scrapy spider
 code - and indeed, it *is* just a different way to organize the code,
 but it opens some cool possibilities.
 
-.. note::
+In the examples above we have been configuring the overrides
+for a particular domain, but more complex URL patterns are also possible.
+For example, the pattern ``books.toscrape.com/cataloge/category/``
+is accepted and it would restrict the override only to category pages.
 
-    In the examples above we have been configuring the overrides
-    for a particular domain, but more complex URL patterns are also possible.
-    For example, the pattern ``books.toscrape.com/cataloge/category/``
-    is accepted and it would restrict the override only to category pages.
+It is even possible to configure more complex patterns by
+using the ``OverrideRule`` class instead of a triplet in
+the configuration. Another way of declaring the earlier config
+for ``SCRAPY_POET_OVERRIDES`` would be the following:
 
-    It is even possible to configure more complex patterns by
-    using the ``OverrideRule`` class instead of a triplet in
-    the configuration.
+.. code-block:: python
 
-    Also see the `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_
-    documentation for more information about the patterns syntax.
+    from url_matcher import Patterns
+    from web_poet.overrides import OverrideRule
+
+    SCRAPY_POET_PROVIDERS = [
+        OverrideRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookListPage, instead_of=BookListPage),
+        OverrideRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookPage, instead_of=BookPage),
+        OverrideRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookListPage, instead_of=BookListPage),
+        OverrideRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookPage, instead_of=BookPage),
+    ]
+
+As you can see, this could get verbose. The earlier tuple config simply offers
+a shortcut to be more concise.
+
+Also see the `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_
+documentation for more information about the patterns syntax.
 
 Next steps
 ==========

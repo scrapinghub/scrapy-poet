@@ -6,9 +6,13 @@ Changelog
 TBR:
 ------------------
 
-* Cache mechanism using SCRAPY_POET_CACHE setting
-* New and richer SCRAPY_POET_OVERRIDES registry that uses the
+* Cache mechanism using ``SCRAPY_POET_CACHE`` setting
+* New and richer ``SCRAPY_POET_OVERRIDES`` registry that uses the
   url-matcher patterns to configure the overrides
+
+  * This results in a **backward incompatible** change since the rules
+    follow a different structure.
+
 * removed support for Python 3.6
 * added support for Python 3.10
 

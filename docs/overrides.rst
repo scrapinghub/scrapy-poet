@@ -100,7 +100,7 @@ is only applied for book pages from ``books.toscrape.com``:
         )
     ]
 
-Note how category pages are excludes by using a ``exclude`` pattern.
+Note how category pages are excluded by using a ``exclude`` pattern.
 You can find more information about the patterns syntax in the
 `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_
 documentation.
@@ -120,25 +120,29 @@ Let's see an example:
 
 .. code-block:: python
 
-        @handle_urls("toscrape.com", BookPage)
-        class BTSBookPage(BookPage):
+    from web_poet import handle_urls
 
-        def to_item(self):
-            return {
-                'url': self.url,
-                'name': self.css("title::text").get(),
-            }
+    @handle_urls("toscrape.com", BookPage)
+    class BTSBookPage(BookPage):
+
+    def to_item(self):
+        return {
+            'url': self.url,
+            'name': self.css("title::text").get(),
+        }
 
 The ``handle_urls`` decorator in this case is indicating that
 the class ``BSTBookPage`` should be used instead of ``BookPage``
 for the domain ``toscrape.com``.
 
-In order to configure the scrapy-poet overrides automatically
+In order to configure the ``scrapy-poet`` overrides automatically
 using these annotations,
 you can use the function ``find_page_object_overrides``.
 For example:
 
 .. code-block:: python
+
+    from web_poet import find_page_object_overrides
 
     SCRAPY_POET_OVERRIDES = find_page_object_overrides("my_page_objects_module")
 
@@ -146,12 +150,16 @@ The function will collect all the ``handle_urls`` annotations from the
 ``my_page_objects_module`` and submodules, and will convert them
 to rules ready to be used with ``SCRAPY_POET_OVERRIDES``.
 
+For more info and advanced features, of ``web-poet``'s ``handle_urls``
+and ``find_page_object_overrides``, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
+documentatino regarding Overrides.
+
 Overrides registry
 ==================
 
-The overrides registry is responsible of informing whether there exists an
+The overrides registry is responsible for informing whether there exists an
 override for a particular type for a given request. The default overrides
-registry allows to configure these rules using patterns that follows the
+registry allows to configure these rules using patterns that follow the
 `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_ syntax. These rules can be configured using the
 ``SCRAPY_POET_OVERRIDES`` setting, as it has been seen in the :ref:`intro-tutorial`
 example.
