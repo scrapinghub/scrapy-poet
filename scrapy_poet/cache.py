@@ -54,14 +54,14 @@ class SqlitedictCache(_Cache):
         return pickle.loads(data)
 
     def __str__(self) -> str:
-        return (
+        return (  #pragma: no cover
             f"SqlitedictCache <{self.db.filename} | "
             f"compressed: {self.compressed} | "
             f"{len(self.db)} records>"
         )
 
     def __repr__(self) -> str:
-        return f"SqlitedictCache({self.path!r}, compressed={self.compressed})"
+        return f"SqlitedictCache({self.path!r}, compressed={self.compressed})"  #pragma: no cover
 
     def __getitem__(self, fingerprint: str) -> Any:
         return self.db[fingerprint]
