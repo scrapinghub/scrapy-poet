@@ -2,7 +2,7 @@ import inspect
 import logging
 import os
 import pprint
-from typing import Dict, Callable, Any, List, Set, Mapping, Optional
+from typing import Dict, Callable, Any, List, Set, Mapping, Optional, Type
 
 from .utils import get_scrapy_data_path
 from twisted.internet.defer import inlineCallbacks
@@ -169,7 +169,7 @@ class Injector:
                     raise NotImplementedError(f"The provider {type(provider)} must have a `name` defined if"
                                               f" you want to use the cache. It must be unique across the providers.")
                 # Return the data if it is already in the cache
-                fingerprint = f"{provider.name}_{provider.fingerprint(set(provided_classes), request)}"
+                fingerprint = self.fingerprint(provider, provided_classes, request)
                 try:
                     data = self.cache[fingerprint]
                 except KeyError:
@@ -227,6 +227,9 @@ class Injector:
         plan = self.build_plan(request)
         provider_instances = yield from self.build_instances(request, response, plan)
         return plan.final_kwargs(provider_instances)
+
+    def fingerprint(self, provider: Type, provided_classes: Set, request: Request) -> str:
+        return f"{provider.name}_{provider.fingerprint(set(provided_classes), request)}"
 
 
 def check_all_providers_are_callable(providers):
