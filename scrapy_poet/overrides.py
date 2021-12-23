@@ -55,19 +55,27 @@ class OverridesRegistry(OverridesRegistryBase):
             ),
         ]
 
-    It can be handy to compile the list of rules automatically from a module
-    using the utility function ``find_page_object_overrides()`` from ``web-poet``.
-    For example:
+    Now, if you've used ``web-poet``'s built-in functionality to directly create
+    the override rules in the Page Object via the ``@handle_urls`` annotation,
+    you can quickly import them via:
 
     .. code-block:: python
 
-        from web_poet import find_page_object_overrides
+        from web_poet import default_registry
 
-        SCRAPY_POET_OVERRIDES = find_page_object_overrides("my_page_objects_module")
+        SCRAPY_POET_OVERRIDES = default_registry.get_overrides_from_module("my_page_objects_module")
 
     It finds all the rules annotated using ``web-poet``'s ``@handle_urls``
     decorator inside the ``my_page_objects_module`` module and all of its
     submodules.
+
+    However, for most cases, you'd most likely going to simply retrieve all of
+    the override rules that were ever declared on a given registry. Thus, you
+    could simply do:
+
+    .. code-block:: python
+
+        SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
 
     More info on this at `web-poet <https://web-poet.readthedocs.io>`_.
     """

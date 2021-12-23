@@ -112,9 +112,7 @@ Decorate Page Objects with the rules
 Having the rules along with the Page Objects is a good idea,
 as you can identify with a single sight what the Page Object is doing
 along with where it is applied. This can be done by decorating the
-Page Objects with ``handle_urls`` and then
-configure the overrides automatically with the help of the function
-``find_page_object_overrides``.
+Page Objects with ``@handle_urls`` provided by ``web-poet``.
 
 Let's see an example:
 
@@ -131,28 +129,31 @@ Let's see an example:
             'name': self.css("title::text").get(),
         }
 
-The ``handle_urls`` decorator in this case is indicating that
+The ``@handle_urls`` decorator in this case is indicating that
 the class ``BSTBookPage`` should be used instead of ``BookPage``
 for the domain ``toscrape.com``.
 
 In order to configure the ``scrapy-poet`` overrides automatically
-using these annotations,
-you can use the function ``find_page_object_overrides``.
+using these annotations, you can directly interact with ``web-poet``'s
+default registry.
+
 For example:
 
 .. code-block:: python
 
-    from web_poet import find_page_object_overrides
+    from web_poet import default_registry
 
-    SCRAPY_POET_OVERRIDES = find_page_object_overrides("my_page_objects_module")
+    SCRAPY_POET_OVERRIDES = default_registry.get_overrides_from_module("my_page_objects_module")
 
-The function will collect all the ``handle_urls`` annotations from the
+The function will collect all the ``@handle_urls`` annotations from the
 ``my_page_objects_module`` and submodules, and will convert them
 to rules ready to be used with ``SCRAPY_POET_OVERRIDES``.
 
-For more info and advanced features, of ``web-poet``'s ``handle_urls``
-and ``find_page_object_overrides``, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
-documentatino regarding Overrides.
+.. note::
+
+    For more info and advanced features of ``web-poet``'s ``@handle_urls``
+    and its registry, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
+    documentation regarding Overrides.
 
 Overrides registry
 ==================
