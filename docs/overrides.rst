@@ -89,7 +89,6 @@ is only applied for book pages from ``books.toscrape.com``:
 
 .. code-block:: python
 
-
     SCRAPY_POET_OVERRIDES = [
         OverrideRule(
             for_patterns=Patterns(
@@ -112,7 +111,7 @@ Decorate Page Objects with the rules
 Having the rules along with the Page Objects is a good idea,
 as you can identify with a single sight what the Page Object is doing
 along with where it is applied. This can be done by decorating the
-Page Objects with ``@handle_urls`` provided by ``web-poet``.
+Page Objects with ``@handle_urls`` provided by `web-poet`_.
 
 Let's see an example:
 
@@ -123,18 +122,18 @@ Let's see an example:
     @handle_urls("toscrape.com", BookPage)
     class BTSBookPage(BookPage):
 
-    def to_item(self):
-        return {
-            'url': self.url,
-            'name': self.css("title::text").get(),
-        }
+        def to_item(self):
+            return {
+                'url': self.url,
+                'name': self.css("title::text").get(),
+            }
 
 The ``@handle_urls`` decorator in this case is indicating that
 the class ``BSTBookPage`` should be used instead of ``BookPage``
 for the domain ``toscrape.com``.
 
 In order to configure the ``scrapy-poet`` overrides automatically
-using these annotations, you can directly interact with ``web-poet``'s
+using these annotations, you can directly interact with `web-poet`_'s
 default registry.
 
 For example:
@@ -143,15 +142,22 @@ For example:
 
     from web_poet import default_registry
 
+    # To get all of the Override Rules that were declared via annotations.
+    SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
+
+    # Or, you could even extract the rules on a specific subpackage or module.
     SCRAPY_POET_OVERRIDES = default_registry.get_overrides_from_module("my_page_objects_module")
 
-The function will collect all the ``@handle_urls`` annotations from the
-``my_page_objects_module`` and submodules, and will convert them
-to rules ready to be used with ``SCRAPY_POET_OVERRIDES``.
+The ``get_overrides()`` and ``get_overrides_from_module()`` methods of the
+``default_registry`` above returns ``List[OverrideRule]`` that were declared
+using `web-poet`_'s ``@handle_urls()`` annotation. This is much more convenient
+that manually defining all of the ``OverrideRule``. Take note that since
+``SCRAPY_POET_OVERRIDES`` is structured as ``List[OverrideRule]``, you can easily
+modify it later on if needed.
 
 .. note::
 
-    For more info and advanced features of ``web-poet``'s ``@handle_urls``
+    For more info and advanced features of `web-poet`_'s ``@handle_urls``
     and its registry, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
     documentation regarding Overrides.
 

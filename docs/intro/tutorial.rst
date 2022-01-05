@@ -9,7 +9,7 @@ system. If that’s not the case, see :ref:`intro-install`.
 
 .. note::
 
-    This tutorial can be followed without reading `web-poet docs`_, but
+    This tutorial can be followed without reading `web-poet`_ docs, but
     for a better understanding it is highly recommended to check them first.
 
 
@@ -26,7 +26,7 @@ This tutorial will walk you through these tasks:
 If you're not already familiar with Scrapy, and want to learn it quickly,
 the `Scrapy Tutorial`_ is a good resource.
 
-.. _web-poet docs: https://web-poet.readthedocs.io/en/stable/
+.. _web-poet: https://web-poet.readthedocs.io/en/stable/
 
 Creating a spider
 =================
@@ -125,7 +125,7 @@ To use ``scrapy-poet``, enable its downloader middleware in ``settings.py``:
 ``BookPage`` class we created previously can be used without ``scrapy-poet``,
 and even without Scrapy (note that imports were from ``web_poet`` so far).
 
-``scrapy-poet`` makes it easy to use ``web-poet`` Page Objects
+``scrapy-poet`` makes it easy to use `web-poet`_ Page Objects
 (such as BookPage) in Scrapy spiders.
 
 Changing spider
@@ -427,7 +427,7 @@ for ``SCRAPY_POET_OVERRIDES`` would be the following:
     from url_matcher import Patterns
     from web_poet.overrides import OverrideRule
 
-    SCRAPY_POET_PROVIDERS = [
+    SCRAPY_POET_OVERRIDES = [
         OverrideRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookListPage, instead_of=BookListPage),
         OverrideRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookPage, instead_of=BookPage),
         OverrideRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookListPage, instead_of=BookListPage),
@@ -437,8 +437,27 @@ for ``SCRAPY_POET_OVERRIDES`` would be the following:
 As you can see, this could get verbose. The earlier tuple config simply offers
 a shortcut to be more concise.
 
-Also see the `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_
-documentation for more information about the patterns syntax.
+.. note::
+
+    Also see the `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_
+    documentation for more information about the patterns syntax.
+
+Manually defining overrides like this would be inconvenient, most
+especially for larger projects. Fortunately, `web-poet`_ has a cool feature
+to annotate Page Objects like ``@web_poet.handle_urls`` that would define and
+store the ``OverrideRule`` for you. All of the Override rules could then be
+simply read as:
+
+.. code:: python
+
+    from web_poet import default_registry
+
+    SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
+
+For more info on this, you can refer to these docs:
+
+    * :ref:`overrides` section
+    * external `web-poet`_ docs
 
 Next steps
 ==========
@@ -446,7 +465,7 @@ Next steps
 Now that you know how ``scrapy-poet`` is supposed to work, what about trying to
 apply it to an existing or new Scrapy project?
 
-Also, please check :ref:`overrides`, :ref:`providers` and refer to spiders in the "example"
-folder: https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
+Also, please check the :ref:`overrides` and :ref:`providers` sections as well as
+refer to spiders in the "example" folder: https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
 
 .. _Scrapy Tutorial: https://docs.scrapy.org/en/latest/intro/tutorial.html

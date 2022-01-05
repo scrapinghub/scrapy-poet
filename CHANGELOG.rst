@@ -14,8 +14,7 @@ TBR:
     * Deprecated ``PerDomainOverridesRegistry`` in lieu of the newer
       ``OverridesRegistry`` which provides a wide variety of features
       for better URL matching.
-    * This resuls in a newer ``SCRAPY_POET_OVERRIDES`` which follows
-      a different format.
+    * This resuls in a newer format in the ``SCRAPY_POET_OVERRIDES`` setting.
 
 * removed support for Python 3.6
 * added support for Python 3.10
