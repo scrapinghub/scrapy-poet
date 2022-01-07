@@ -450,7 +450,12 @@ simply read as:
 
 .. code:: python
 
-    from web_poet import default_registry
+    from web_poet import default_registry, consume_modules
+
+    # The consume_modules() must be called first if you need to load
+    # rules from other packages. Otherwise, it can be omitted.
+    # More info about this caveat on web-poet docs.
+    consume_modules("external_package_A.po", "another_ext_package.lib")
 
     SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
 

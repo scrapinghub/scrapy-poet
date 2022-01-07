@@ -63,17 +63,24 @@ class OverridesRegistry(OverridesRegistryBase):
 
         from web_poet import default_registry
 
-        SCRAPY_POET_OVERRIDES = default_registry.get_overrides_from_module("my_page_objects_module")
+        SCRAPY_POET_OVERRIDES = default_registry.get_overrides_from("my_page_objects_module")
 
     It finds all the rules annotated using ``web-poet``'s ``@handle_urls``
     decorator inside the ``my_page_objects_module`` module and all of its
     submodules.
 
     However, for most cases, you'd most likely going to simply retrieve all of
-    the override rules that were ever declared on a given registry. Thus, you
-    could simply do:
+    the override rules that were ever declared on a given registry. Though make
+    sure to call ``consume_module()`` beforehand:
 
     .. code-block:: python
+
+        from web_poet import default_registry, consume_modules
+
+        # The consume_modules() must be called first if you need to load
+        # rules from other packages. Otherwise, it can be omitted.
+        # More info about this caveat on web-poet docs.
+        consume_modules("external_package_A.po", "another_ext_package.lib")
 
         SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
 

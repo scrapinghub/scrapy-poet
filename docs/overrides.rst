@@ -140,15 +140,22 @@ For example:
 
 .. code-block:: python
 
-    from web_poet import default_registry
+    from web_poet import default_registry, consume_modules
+
+    # The consume_modules() must be called first if you need to load
+    # rules from other packages. Otherwise, it can be omitted.
+    # More info about this caveat on web-poet docs.
+    consume_modules("external_package_A.po", "another_ext_package.lib")
 
     # To get all of the Override Rules that were declared via annotations.
     SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
 
     # Or, you could even extract the rules on a specific subpackage or module.
-    SCRAPY_POET_OVERRIDES = default_registry.get_overrides_from_module("my_page_objects_module")
+    SCRAPY_POET_OVERRIDES = default_registry.get_overrides_from(
+        "external_page_objects_package", "another_page_object_package.module_1"
+    )
 
-The ``get_overrides()`` and ``get_overrides_from_module()`` methods of the
+The ``get_overrides()`` and ``get_overrides_from()`` methods of the
 ``default_registry`` above returns ``List[OverrideRule]`` that were declared
 using `web-poet`_'s ``@handle_urls()`` annotation. This is much more convenient
 that manually defining all of the ``OverrideRule``. Take note that since
