@@ -63,7 +63,7 @@ class OverridesRegistry(OverridesRegistryBase):
 
         from web_poet import default_registry
 
-        SCRAPY_POET_OVERRIDES = default_registry.get_overrides_from("my_page_objects_module")
+        SCRAPY_POET_OVERRIDES = default_registry.get_overrides(filters="my_page_objects_module")
 
     It finds all the rules annotated using ``web-poet``'s ``@handle_urls``
     decorator inside the ``my_page_objects_module`` module and all of its
@@ -81,8 +81,12 @@ class OverridesRegistry(OverridesRegistryBase):
         # rules from other packages. Otherwise, it can be omitted.
         # More info about this caveat on web-poet docs.
         consume_modules("external_package_A.po", "another_ext_package.lib")
-
         SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
+
+        # The two lines above could be mixed together via this shortcut:
+        SCRAPY_POET_OVERRIDES = default_registry.get_overrides(
+            consume=["external_package_A.po", "another_ext_package.lib"]
+        )
 
     More info on this at `web-poet <https://web-poet.readthedocs.io>`_.
     """

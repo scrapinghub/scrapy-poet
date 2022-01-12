@@ -150,17 +150,21 @@ For example:
     # To get all of the Override Rules that were declared via annotations.
     SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
 
-    # Or, you could even extract the rules on a specific subpackage or module.
-    SCRAPY_POET_OVERRIDES = default_registry.get_overrides_from(
-        "external_page_objects_package", "another_page_object_package.module_1"
+    # The two lines above could be mixed together via this shortcut:
+    SCRAPY_POET_OVERRIDES = default_registry.get_overrides(
+        consume=["external_package_A.po", "another_ext_package.lib"]
     )
 
-The ``get_overrides()`` and ``get_overrides_from()`` methods of the
-``default_registry`` above returns ``List[OverrideRule]`` that were declared
-using `web-poet`_'s ``@handle_urls()`` annotation. This is much more convenient
-that manually defining all of the ``OverrideRule``. Take note that since
-``SCRAPY_POET_OVERRIDES`` is structured as ``List[OverrideRule]``, you can easily
-modify it later on if needed.
+    # Or, you could even extract the rules on a specific subpackage or module.
+    SCRAPY_POET_OVERRIDES = default_registry.get_overrides(
+        filters=["external_page_objects_package", "another_page_object_package.module_1"]
+    )
+
+The ``get_overrides()`` method of the ``default_registry`` above returns
+``List[OverrideRule]`` that were declared using `web-poet`_'s ``@handle_urls()``
+annotation. This is much more convenient that manually defining all of the 
+`OverrideRule``. Take note that since ``SCRAPY_POET_OVERRIDES`` is structured as
+``List[OverrideRule]``, you can easily modify it later on if needed.
 
 .. note::
 
