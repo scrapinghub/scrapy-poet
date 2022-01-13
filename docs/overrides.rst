@@ -134,7 +134,7 @@ for the domain ``toscrape.com``.
 
 In order to configure the ``scrapy-poet`` overrides automatically
 using these annotations, you can directly interact with `web-poet`_'s
-default registry.
+``default_registry``.
 
 For example:
 
@@ -145,14 +145,14 @@ For example:
     # The consume_modules() must be called first if you need to load
     # rules from other packages. Otherwise, it can be omitted.
     # More info about this caveat on web-poet docs.
-    consume_modules("external_package_A.po", "another_ext_package.lib")
+    consume_modules("external_package_A", "another_ext_package.lib")
 
     # To get all of the Override Rules that were declared via annotations.
     SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
 
     # The two lines above could be mixed together via this shortcut:
     SCRAPY_POET_OVERRIDES = default_registry.get_overrides(
-        consume=["external_package_A.po", "another_ext_package.lib"]
+        consume=["external_package_A", "another_ext_package.lib"]
     )
 
     # Or, you could even extract the rules on a specific subpackage or module.
@@ -171,6 +171,34 @@ annotation. This is much more convenient that manually defining all of the
     For more info and advanced features of `web-poet`_'s ``@handle_urls``
     and its registry, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
     documentation regarding Overrides.
+
+In case the external packages you're using does not use `web-poet`_'s
+``default_registry``, you can find and collect custom registries via `web-poet`_'s
+``registry_pool``:
+
+.. code-block:: python
+
+    from web_poet import registry_pool, consume_modules
+
+    # Ensures that the external dependencies are properly imported so that the
+    # Registry and its accompanying rules can be discovered.
+    consume_modules("external_package_A", "another_ext_package_B.lib")
+
+    print(registry_pool)
+    # {
+    #     'default': <web_poet.overrides.PageObjectRegistry object at 0x7f47d654d8b0>,
+    #     'custom_reg' = <external_package_A.PageObjectRegistry object at 0x7f47d654382a>,
+    #     'another_custom_reg' = <another_ext_package_B.lib.PageObjectRegistry object at 0xd93746549dea>,
+    # }
+
+    SCRAPY_POET_OVERRIDES = [
+        rule
+        for _, registry in registry_pool.items()
+        for rule in registry.get_overrides()
+    ]
+
+    # Converting it to a set also ensures that there are no duplicate OverrideRules.
+    SCRAPY_POET_OVERRIDES = set(SCRAPY_POET_OVERRIDES)
 
 Overrides registry
 ==================

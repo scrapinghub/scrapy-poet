@@ -368,7 +368,10 @@ def test_web_poet_integration(settings):
     from tests.po_lib import DOMAIN, PORT, POOverriden
 
     # Override rules are defined in `tests/po_lib/__init__.py`.
-    settings["SCRAPY_POET_OVERRIDES"] = default_registry.get_overrides()
+    rules = default_registry.get_overrides()
+
+    # Converting it to a set removes potential duplicate OverrideRules
+    settings["SCRAPY_POET_OVERRIDES"] = set(rules)
 
     item, url, _ = yield crawl_single_item(
         spider_for(POOverriden), ProductHtml, settings, port=PORT

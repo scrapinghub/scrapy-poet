@@ -455,12 +455,12 @@ simply read as:
     # The consume_modules() must be called first if you need to load
     # rules from other packages. Otherwise, it can be omitted.
     # More info about this caveat on web-poet docs.
-    consume_modules("external_package_A.po", "another_ext_package.lib")
+    consume_modules("external_package_A", "another_ext_package.lib")
     SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
 
     # The two lines above could be mixed together via this shortcut:
     SCRAPY_POET_OVERRIDES = default_registry.get_overrides(
-        consume=["external_package_A.po", "another_ext_package.lib"]
+        consume=["external_package_A", "another_ext_package.lib"]
     )
 
 For more info on this, you can refer to these docs:
