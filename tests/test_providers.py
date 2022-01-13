@@ -1,15 +1,17 @@
 from typing import Any, List, Set, Callable, Sequence
 
 import attr
+import json
 from pytest_twisted import inlineCallbacks
 from scrapy_poet import ResponseDataProvider
 from twisted.python.failure import Failure
 
 import scrapy
-from scrapy import Request
+from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.settings import Settings
-from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy.utils.test import get_crawler
+from scrapy_poet.page_input_providers import CacheDataProviderMixin, PageObjectInputProvider
 from tests.utils import crawl_single_item, HtmlResource
 from web_poet import ResponseData
 
@@ -18,7 +20,7 @@ class ProductHtml(HtmlResource):
     html = """
     <html>
         <div class="breadcrumbs">
-            <a href="/food">Food</a> / 
+            <a href="/food">Food</a> /
             <a href="/food/sweets">Sweets</a>
         </div>
         <h1 class="name">Chocolate</h1>
@@ -50,7 +52,7 @@ class Html:
     html: str
 
 
-class PriceHtmlDataProvider(PageObjectInputProvider):
+class PriceHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     name = "price_html"
     provided_classes = {Price, Html}
@@ -78,7 +80,7 @@ class PriceHtmlDataProvider(PageObjectInputProvider):
         return data
 
 
-class NameHtmlDataProvider(PageObjectInputProvider):
+class NameHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     name = "name_html"
     provided_classes = {Name, Html}.__contains__
@@ -183,3 +185,13 @@ def test_price_first_spider(settings):
         Html: Html("Price Html!"),
         "response_data_html": ProductHtml.html,
     }
+
+
+def test_response_data_provider_fingerprint(settings):
+    crawler = get_crawler(Spider, settings)
+    rdp = ResponseDataProvider(crawler)
+    request = scrapy.http.Request("https://example.com")
+
+    # The fingerprint should be readable since it's JSON-encoded.
+    fp = rdp.fingerprint(scrapy.http.Response, request)
+    assert json.loads(fp)

@@ -3,11 +3,13 @@ import socket
 from scrapy.utils.log import configure_logging
 from twisted.internet.threads import deferToThread
 from typing import Optional, Union, Type
+from unittest import mock
 
 import pytest
 import scrapy
-from scrapy import Request
+from scrapy import Request, Spider
 from scrapy.http import Response
+from scrapy.utils.test import get_crawler
 from pytest_twisted import inlineCallbacks
 
 import attr
@@ -16,10 +18,13 @@ from scrapy_poet import callback_for
 from url_matcher.util import get_domain
 
 from tests.mockserver import get_ephemeral_port
+from scrapy_poet import InjectionMiddleware
 from web_poet.pages import WebPage, ItemPage, ItemWebPage
+from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider
 )
+from web_poet import default_registry
 from web_poet.page_inputs import ResponseData
 from scrapy_poet import DummyResponse
 from tests.utils import (HtmlResource,
@@ -32,7 +37,7 @@ class ProductHtml(HtmlResource):
     html = """
     <html>
         <div class="breadcrumbs">
-            <a href="/food">Food</a> / 
+            <a href="/food">Food</a> /
             <a href="/food/sweets">Sweets</a>
         </div>
         <h1 class="name">Chocolate</h1>
@@ -320,3 +325,52 @@ def test_skip_downloads(settings):
     assert isinstance(item['response'], DummyResponse) is True
     assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
     assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
+
+
+@mock.patch("scrapy_poet.injection.SqlitedictCache", spec=SqlitedictCache)
+def test_cache_closed_on_spider_close(mock_sqlitedictcache, settings):
+    def get_middleware(settings):
+        crawler = get_crawler(Spider, settings)
+        crawler.spider = crawler._create_spider('example.com')
+        return InjectionMiddleware(crawler)
+
+    mock_sqlitedictcache_instance = mock_sqlitedictcache.return_value = mock.Mock()
+
+    # no cache
+    no_cache_middleware = get_middleware(settings)
+    assert no_cache_middleware.injector.cache is None
+
+    # cache is present
+    settings.set("SCRAPY_POET_CACHE", "/tmp/cache")
+    has_cache_middleware = get_middleware(settings)
+    assert has_cache_middleware.injector.cache is not None
+
+    spider = has_cache_middleware.crawler.spider
+    has_cache_middleware.spider_closed(spider)
+    assert mock_sqlitedictcache.mock_calls == [
+        mock.call('/tmp/cache', compressed=True),
+        mock.call().close()
+    ]
+
+
+@inlineCallbacks
+def test_web_poet_integration(settings):
+    """This tests scrapy-poet's integration with web-poet most especially when
+    populating override settings via:
+
+        from web_poet import default_registry
+
+        SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
+    """
+
+    # Only import them in this test scope since they need to be synced with
+    # the URL of the Page Object annotated with @handle_urls.
+    from tests.po_lib import DOMAIN, PORT, POOverriden
+
+    # Override rules are defined in `tests/po_lib/__init__.py`.
+    settings["SCRAPY_POET_OVERRIDES"] = default_registry.get_overrides()
+
+    item, url, _ = yield crawl_single_item(
+        spider_for(POOverriden), ProductHtml, settings, port=PORT
+    )
+    assert item == {"msg": "PO replacement"}
