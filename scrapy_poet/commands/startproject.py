@@ -42,18 +42,18 @@ class Command(startproject.Command):
 def scrapy_poet_settings(po_package: str, po_tests_package) -> str:
     return dedent(
         f"""
-        
+
         # Scrapy-poet settings
-        
+
         DOWNLOADER_MIDDLEWARES = {{
            'scrapy_poet.InjectionMiddleware': 543,
         }}
-        
+
         PO_PACKAGE = "{po_package}"
         PO_TESTS_PACKAGE = "{po_tests_package}"
-        
-        from web_poet.overrides import find_page_object_overrides
-        SCRAPY_POET_OVERRIDES = find_page_object_overrides(PO_PACKAGE)        
+
+        from web_poet import default_registry
+        SCRAPY_POET_OVERRIDES = default_registry.get_overrides(filters=PO_PACKAGE)
         """)
 
 

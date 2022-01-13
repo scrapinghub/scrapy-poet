@@ -22,7 +22,7 @@ from w3lib.url import is_url
 from scrapy_poet import templates, DummyResponse
 from scrapy_poet.po_tester import POTester
 from web_poet import ResponseData
-from web_poet.overrides import find_page_object_overrides
+from web_poet import default_registry
 
 
 class OverrideCommand(ScrapyCommand):
@@ -58,7 +58,7 @@ class OverrideCommand(ScrapyCommand):
             raise ValueError(f"SCRAPY_POET_OVERRIDES is not defined in settings and it is required to run this command. "
                              f"A typical configuration is the following:\n"
                              f"\n"
-                             f"  SCRAPY_POET_OVERRIDES = find_page_object_overrides(PO_PACKAGE)")
+                             f"  SCRAPY_POET_OVERRIDES = default_registry.get_overrides()")
 
         root_path = Path(".").absolute()
         scrapy_cfg_route = closest_scrapy_cfg()
@@ -95,8 +95,8 @@ class OverrideCommand(ScrapyCommand):
         self.po_path = generate_po_code(context)
 
         # Configuring the new Page Object so that it is used to record the fixtures
-        override_rules_for_new_po = find_page_object_overrides(
-            f"{context.po_module}.{context.variables_for_template()['po_submodule']}")
+        override_rules_for_new_po = default_registry.get_overrides(
+            filters=f"{context.po_module}.{context.variables_for_template()['po_submodule']}")
         self.settings["SCRAPY_POET_OVERRIDES"] = (self.settings.get("SCRAPY_POET_OVERRIDES", []) +
                                                   override_rules_for_new_po)
 

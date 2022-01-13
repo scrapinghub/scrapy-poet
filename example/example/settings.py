@@ -8,7 +8,8 @@
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 from example.autoextract import AutoextractProductProvider
 
-from web_poet.overrides import find_page_object_overrides
+from web_poet import default_registry
+
 
 BOT_NAME = 'example'
 
@@ -26,4 +27,4 @@ DOWNLOADER_MIDDLEWARES = {
 
 PO_PACKAGE = "example.po"
 PO_TESTS_PACKAGE = "tests.po"
-SCRAPY_POET_OVERRIDES = find_page_object_overrides(PO_PACKAGE)
+SCRAPY_POET_OVERRIDES = default_registry.get_overrides(filters=PO_PACKAGE)
