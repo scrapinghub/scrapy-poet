@@ -24,7 +24,7 @@ class Command(startproject.Command):
 
         project_path = Path(project_dir)
         po_package = f"{project_name}.po"
-        po_tests_package = f"tests.po"
+        po_tests_package = "tests.po"
         po_path = project_path / project_name / "po"
         po_tests_path = project_path / "tests" / "po"
         po_tests_path_fixtures = project_path / "tests" / "po" / "fixtures"
@@ -60,5 +60,3 @@ def scrapy_poet_settings(po_package: str, po_tests_package) -> str:
 def create_package(path: Path):
     path.mkdir(parents=True, exist_ok=True)
     path.joinpath("__init__.py").touch(exist_ok=True)
-
-

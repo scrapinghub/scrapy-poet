@@ -6,7 +6,6 @@ from typing import Dict, Mapping, Callable, Iterable, Union, Tuple, Optional, Li
 from scrapy import Request
 from scrapy.crawler import Crawler
 from url_matcher import Patterns, URLMatcher
-from url_matcher.util import get_domain
 from web_poet.overrides import OverrideRule
 
 

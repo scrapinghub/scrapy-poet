@@ -1,7 +1,6 @@
 import os
 from pathlib import PosixPath
 
-import url_matcher.util
 from scrapy.utils.project import project_data_dir, inside_project
 
 
@@ -15,7 +14,3 @@ def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -
     if createdir:
         os.makedirs(path, exist_ok=True)
     return path
-
-
-def get_domain(url: str) -> str:
-    return url_matcher.util.get_domain(url)

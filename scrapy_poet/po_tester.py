@@ -6,12 +6,11 @@ from scrapy import Request, Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.http import Response
 from scrapy.utils.project import get_project_settings
+from twisted.internet.defer import inlineCallbacks
+from url_matcher.util import get_domain
 
 from scrapy_poet import InjectionMiddleware
 from scrapy_poet.injection import Injector
-from scrapy_poet.overrides import OverridesRegistry
-from url_matcher.util import get_domain
-from twisted.internet.defer import inlineCallbacks
 
 
 class DummySpider(Spider):
