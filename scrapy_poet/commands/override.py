@@ -1,23 +1,19 @@
 import tempfile
-
 import os
 from importlib import resources
-
 from pathlib import Path
-from scrapy.utils.misc import load_object
-from twisted.python.failure import Failure
-
 from typing import Type, Callable, Tuple
-
 from dataclasses import dataclass
+from w3lib.url import is_url
 
 from scrapy import Request
 from scrapy.commands import ScrapyCommand
+from scrapy.utils.misc import load_object
 from scrapy.exceptions import UsageError
 from scrapy.utils.conf import build_component_list, closest_scrapy_cfg
 from scrapy.utils.spider import DefaultSpider
 from url_matcher.util import get_domain
-from w3lib.url import is_url
+from twisted.python.failure import Failure
 
 from scrapy_poet import templates, DummyResponse
 from scrapy_poet.po_tester import POTester
@@ -161,7 +157,7 @@ def parse_args(args) -> Tuple[Callable, str]:
         raise UsageError(
             "Expected usage should be: scrapy override <page-object> <url>"
         )
-    page_object = load_object(args[0])
+    page_object = args[0]
     url = args[1]
     return page_object, url
 
@@ -229,7 +225,7 @@ def load_template(module, page_object, po_path: Path, suffix=""):
                 f"create your custom one in the module '{module}' with the name '{specific_template}'"
             )
         except FileNotFoundError:
-            templates_path = po_path / "templates"
+            templates_path = po_path / "tmpl"
             templates_path.mkdir(parents=True, exist_ok=True)
             init_path = templates_path / "__init__.py"
             if not init_path.exists():
@@ -260,7 +256,7 @@ def load_template(module, page_object, po_path: Path, suffix=""):
 
 def template_for(context: OverrideContext, *, prefix=""):
     file, template = load_template(
-        f"{context.po_module}.templates", context.page_object, context.po_path, prefix
+        f"{context.po_module}.tmpl", context.page_object, context.po_path, prefix
     )
     data = context.variables_for_template()
     try:

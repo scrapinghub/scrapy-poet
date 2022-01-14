@@ -2,6 +2,6 @@ include CHANGELOG.rst
 include LICENSE
 include README.rst
 
-recursive-include scrapy_poet/templates *.template
+recursive-include scrapy_poet/templates *.tmpl
 
 global-exclude __pycache__ *.py[cod]
