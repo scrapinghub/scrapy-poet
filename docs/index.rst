@@ -49,6 +49,7 @@ To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
    :maxdepth: 1
 
    settings
+   project_commands
    api_reference
    contributing
    changelog
