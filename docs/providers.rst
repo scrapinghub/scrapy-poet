@@ -195,6 +195,7 @@ If neither spider callback nor any of the input providers are using
             ]
 
 
+    @attr.define
     class MyPageObject(ItemPage):
         content: CachedData
 
