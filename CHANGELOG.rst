@@ -3,10 +3,11 @@ Changelog
 =========
 
 
-TBR:
+0.3.0 (2021-01-28)
 ------------------
 
-* Cache mechanism using SCRAPY_POET_CACHE setting
+* Cache mechanism using ``SCRAPY_POET_CACHE``
+* Fixed and improved docs
 * removed support for Python 3.6
 * added support for Python 3.10
 
