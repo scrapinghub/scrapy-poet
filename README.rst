@@ -27,11 +27,11 @@ scrapy-poet
 With ``scrapy-poet`` is possible to make a single spider that supports many sites with
 different layouts.
 
-Read the `documentation <http://scrapy-poet.readthedocs.io>`_  for more information.
+Read the `documentation <https://scrapy-poet.readthedocs.io>`_  for more information.
 
 License is BSD 3-clause.
 
-* Documentation: http://scrapy-poet.readthedocs.io
+* Documentation: https://scrapy-poet.readthedocs.io
 * Source code: https://github.com/scrapinghub/scrapy-poet
 * Issue tracker: https://github.com/scrapinghub/scrapy-poet/issues
 
