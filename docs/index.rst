@@ -18,7 +18,7 @@ a bunch of Page Objects for it.
 ``scrapy-poet`` also provides a way to integrate third-party APIs
 (like `Splash`_ and `AutoExtract`_) with the spider, without losing
 testability and reusability.
-Concrete integrations are not provided by ``scrapy-poet``, but
+Concrete integrations are not provided by ``web-poet``, but
 ``scrapy-poet`` makes them possbile.
 
 To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
