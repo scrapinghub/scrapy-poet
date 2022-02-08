@@ -1,9 +1,11 @@
 import logging
 from contextvars import ContextVar
 
+import attr
 import scrapy
 import scrapy_poet
 from web_poet.page_inputs import ResponseData
+from web_poet.requests import GenericRequest
 
 
 logger = logging.getLogger(__name__)
@@ -16,14 +18,13 @@ def enable_backend():
 
 # Binds the Scrapy Downloader here. The scrapy_poet.InjectionMiddleware will
 # update this later when the spider starts.
-scrapy_downloader_var = ContextVar("downloader")
+scrapy_downloader_var: ContextVar = ContextVar("downloader")
 
 
-async def scrapy_poet_backend(url):
+async def scrapy_poet_backend(request: GenericRequest):
     """To use this, frameworks must run: ``scrapy_poet.enable_backend()``."""
 
-    if isinstance(url, str):
-        request = scrapy.Request(url)
+    request = scrapy.Request(**attr.asdict(request))
 
     try:
         scrapy_downloader = scrapy_downloader_var.get()

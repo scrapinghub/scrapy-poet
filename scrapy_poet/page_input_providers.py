@@ -20,7 +20,9 @@ from scrapy.utils.reqser import request_to_dict
 from scrapy.utils.request import request_fingerprint
 
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
+from scrapy_poet.backend import scrapy_poet_backend
 from web_poet import ResponseData
+from web_poet.requests import HttpClient
 
 
 class PageObjectInputProvider:
@@ -182,3 +184,12 @@ class ResponseDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def deserialize(self, data: Any) -> Sequence[Any]:
         return [ResponseData(**response_data) for response_data in data]
+
+
+class HttpClientProvider(PageObjectInputProvider):
+    """This class provides ``web_poet.requests.HttpClient`` instances."""
+    provided_classes = {HttpClient}
+
+    def __call__(self, to_provide: Set[Callable]):
+        """Build a ``ResponseData`` instance using a Scrapy ``Response``"""
+        return [HttpClient(request_downloader=scrapy_poet_backend)]
