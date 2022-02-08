@@ -191,5 +191,5 @@ class HttpClientProvider(PageObjectInputProvider):
     provided_classes = {HttpClient}
 
     def __call__(self, to_provide: Set[Callable]):
-        """Build a ``ResponseData`` instance using a Scrapy ``Response``"""
+        """Creates an ``HttpClient``` instance using Scrapy's downloader."""
         return [HttpClient(request_downloader=scrapy_poet_backend)]
