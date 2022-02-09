@@ -29,7 +29,7 @@ async def scrapy_poet_backend(request: Union[GenericRequest, scrapy.Request]):
     ``scrapy.Request`` to give developers more fine grain control.
     """
 
-    if not isinstance(request, scrapyRequest):
+    if not isinstance(request, scrapy.Request):
         try:
             request = scrapy.Request(**attr.asdict(request))
         except TypeError:
