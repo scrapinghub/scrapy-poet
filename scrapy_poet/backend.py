@@ -1,5 +1,6 @@
 import logging
 from contextvars import ContextVar
+from typing import Union
 
 import attr
 import scrapy
@@ -21,16 +22,21 @@ def enable_backend():
 scrapy_downloader_var: ContextVar = ContextVar("downloader")
 
 
-async def scrapy_poet_backend(request: GenericRequest):
-    """To use this, frameworks must run: ``scrapy_poet.enable_backend()``."""
+async def scrapy_poet_backend(request: Union[GenericRequest, scrapy.Request]):
+    """To use this, frameworks must run: ``scrapy_poet.enable_backend()``.
 
-    try:
-        request = scrapy.Request(**attr.asdict(request))
-    except TypeError:
-        raise RequestBackendError(
-            f"The given GenericRequest isn't compatible with `scrapy.Request`. "
-            f"Ensure that it doesn't contain extra fields: {request}"
-        )
+    The request could either be ``web_poet.GenericRequest`` or even a
+    ``scrapy.Request`` to give developers more fine grain control.
+    """
+
+    if not isinstance(request, scrapyRequest):
+        try:
+            request = scrapy.Request(**attr.asdict(request))
+        except TypeError:
+            raise RequestBackendError(
+                f"The given GenericRequest isn't compatible with `scrapy.Request`. "
+                f"Ensure that it doesn't contain extra fields: {request}"
+            )
 
     try:
         scrapy_downloader = scrapy_downloader_var.get()

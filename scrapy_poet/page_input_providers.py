@@ -164,7 +164,14 @@ class ResponseDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``ResponseData`` instance using a Scrapy ``Response``"""
-        return [ResponseData(url=response.url, html=response.text)]
+        return [
+            ResponseData(
+                url=response.url,
+                html=response.text,
+                status=response.status,
+                headers=response.headers
+            )
+        ]
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
         request_keys = {"url", "method", "body"}
