@@ -5,7 +5,7 @@ import attr
 import scrapy
 import scrapy_poet
 from web_poet.page_inputs import ResponseData
-from web_poet.requests import GenericRequest
+from web_poet.requests import GenericRequest, RequestBackendError
 
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,13 @@ scrapy_downloader_var: ContextVar = ContextVar("downloader")
 async def scrapy_poet_backend(request: GenericRequest):
     """To use this, frameworks must run: ``scrapy_poet.enable_backend()``."""
 
-    request = scrapy.Request(**attr.asdict(request))
+    try:
+        request = scrapy.Request(**attr.asdict(request))
+    except TypeError:
+        raise RequestBackendError(
+            f"The given GenericRequest isn't compatible with `scrapy.Request`. "
+            f"Ensure that it doesn't contain extra fields: {request}"
+        )
 
     try:
         scrapy_downloader = scrapy_downloader_var.get()
@@ -32,7 +38,12 @@ async def scrapy_poet_backend(request: GenericRequest):
 
         response = await scrapy.utils.defer.deferred_to_future(deferred)
 
-        return ResponseData(url=response.url, html=response.text)
+        return ResponseData(
+            url=response.url,
+            html=response.text,
+            status=response.status,
+            headers=response.headers,
+        )
 
     except scrapy.exceptions.IgnoreRequest:
         logger.warning(f"Additional Request Ignored: {request}")
