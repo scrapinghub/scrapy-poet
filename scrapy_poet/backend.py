@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def enable_backend():
-    from web_poet import request_backend_var
+    from web_poet.requests import request_backend_var
     request_backend_var.set(scrapy_poet_backend)
 
 

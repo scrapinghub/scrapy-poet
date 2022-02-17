@@ -207,7 +207,9 @@ class HttpClientProvider(PageObjectInputProvider):
     provided_classes = {HttpClient}
 
     def __call__(self, to_provide: Set[Callable]):
-        """Creates an ``HttpClient``` instance using Scrapy's downloader."""
+        """Creates an ``web_poet.requests.HttpClient``` instance using Scrapy's
+        downloader.
+        """
         return [HttpClient(request_downloader=scrapy_poet_backend)]
 
 
@@ -216,5 +218,7 @@ class MetaProvider(PageObjectInputProvider):
     provided_classes = {Meta}
 
     def __call__(self, to_provide: Set[Callable], request: Request):
-        """Creates an ``HttpClient``` instance using Scrapy's downloader."""
-        return [Meta(**request.meta)]
+        """Creates a ``web_poet.requests.Meta`` instance based on the data found
+        from the ``meta["po_args"]`` field of a ``scrapy.http.Response``instance.
+        """
+        return [Meta(**request.meta.get("po_args", {}))]
