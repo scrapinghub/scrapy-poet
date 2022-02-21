@@ -11,9 +11,15 @@ from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
-from scrapy_poet.page_input_providers import CacheDataProviderMixin, PageObjectInputProvider
+from scrapy_poet.page_input_providers import (
+    CacheDataProviderMixin,
+    PageObjectInputProvider,
+    HttpClientProvider,
+    MetaProvider,
+)
+from scrapy_poet.backend import scrapy_poet_backend
 from tests.utils import crawl_single_item, HtmlResource
-from web_poet import ResponseData
+from web_poet import ResponseData, HttpClient
 
 
 class ProductHtml(HtmlResource):
@@ -28,6 +34,7 @@ class ProductHtml(HtmlResource):
         <p class="description">The best chocolate ever</p>
     </html>
     """
+
 
 class NonProductHtml(HtmlResource):
     html = """
@@ -61,7 +68,9 @@ class PriceHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
         assert isinstance(crawler, Crawler)
         super().__init__(crawler)
 
-    def __call__(self, to_provide, response: scrapy.http.Response, spider: scrapy.Spider):
+    def __call__(
+        self, to_provide, response: scrapy.http.Response, spider: scrapy.Spider
+    ):
         assert isinstance(spider, scrapy.Spider)
         ret: List[Any] = []
         if Price in to_provide:
@@ -128,7 +137,14 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
     def errback(self, failure: Failure):
         yield {"exception": failure.value}
 
-    def parse(self, response, price: Price, name: Name, html: Html, response_data: ResponseData):
+    def parse(
+        self,
+        response,
+        price: Price,
+        name: Name,
+        html: Html,
+        response_data: ResponseData,
+    ):
         yield {
             Price: price,
             Name: name,
@@ -152,8 +168,9 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
 def test_name_first_spider(settings, tmp_path):
     cache = tmp_path / "cache.sqlite3"
     settings.set("SCRAPY_POET_CACHE", str(cache))
-    item, _, _ = yield crawl_single_item(NameFirstMultiProviderSpider, ProductHtml,
-                                         settings)
+    item, _, _ = yield crawl_single_item(
+        NameFirstMultiProviderSpider, ProductHtml, settings
+    )
     assert cache.exists()
     assert item == {
         Price: Price("22€"),
@@ -164,8 +181,9 @@ def test_name_first_spider(settings, tmp_path):
 
     # Let's see that the cache is working. We use a different and wrong resource,
     # but it should be ignored by the cached version used
-    item, _, _ = yield crawl_single_item(NameFirstMultiProviderSpider, NonProductHtml,
-                                         settings)
+    item, _, _ = yield crawl_single_item(
+        NameFirstMultiProviderSpider, NonProductHtml, settings
+    )
     assert item == {
         Price: Price("22€"),
         Name: Name("Chocolate"),
@@ -174,11 +192,11 @@ def test_name_first_spider(settings, tmp_path):
     }
 
 
-
 @inlineCallbacks
 def test_price_first_spider(settings):
-    item, _, _ = yield crawl_single_item(PriceFirstMultiProviderSpider, ProductHtml,
-                                         settings)
+    item, _, _ = yield crawl_single_item(
+        PriceFirstMultiProviderSpider, ProductHtml, settings
+    )
     assert item == {
         Price: Price("22€"),
         Name: Name("Chocolate"),
@@ -195,3 +213,29 @@ def test_response_data_provider_fingerprint(settings):
     # The fingerprint should be readable since it's JSON-encoded.
     fp = rdp.fingerprint(scrapy.http.Response, request)
     assert json.loads(fp)
+
+
+def test_http_client_provider(settings):
+    crawler = get_crawler(Spider, settings)
+    provider = HttpClientProvider(crawler)
+
+    results = provider(set())
+
+    assert isinstance(results[0], HttpClient)
+    assert results[0].request_downloader == scrapy_poet_backend
+
+
+def test_meta_provider(settings):
+    crawler = get_crawler(Spider, settings)
+    provider = MetaProvider(crawler)
+    request = scrapy.http.Request("https://example.com")
+
+    results = provider(set(), request)
+
+    assert results[0] == {}
+
+    expected_data = {"key": "value"}
+    request.meta.update({"po_args": expected_data})
+    results = provider(set(), request)
+
+    assert results[0] == expected_data

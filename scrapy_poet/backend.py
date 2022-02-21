@@ -5,6 +5,7 @@ from typing import Union
 import attr
 import scrapy
 import scrapy_poet
+from scrapy.utils.defer import deferred_to_future
 from web_poet.page_inputs import ResponseData
 from web_poet.requests import Request, RequestBackendError
 
@@ -42,7 +43,7 @@ async def scrapy_poet_backend(request: Union[Request, scrapy.Request]):
         scrapy_downloader = scrapy_downloader_var.get()
         deferred = scrapy_downloader(request)
 
-        response = await scrapy.utils.defer.deferred_to_future(deferred)
+        response = await deferred_to_future(deferred)
 
         return ResponseData(
             url=response.url,
