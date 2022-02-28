@@ -30,4 +30,4 @@ Things that are good to know
 
 .. _web-poet: https://github.com/scrapinghub/web-poet
 .. _andi: https://github.com/scrapinghub/andi
-.. _parsel: https://github.com/scrapinghub/parsel
+.. _parsel: https://github.com/scrapy/parsel
