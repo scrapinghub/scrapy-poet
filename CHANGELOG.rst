@@ -7,7 +7,6 @@ TBR:
 ------------------
 
 * Cache mechanism using ``SCRAPY_POET_CACHE`` setting
-
 * We also have these **backward incompatible** changes since the
   rules follow a different structure:
 
@@ -16,8 +15,12 @@ TBR:
       for better URL matching.
     * This resuls in a newer format in the ``SCRAPY_POET_OVERRIDES`` setting.
 
-* removed support for Python 3.6
-* added support for Python 3.10
+* Modified the `scrapy startproject` command to include boilerplates for
+  Page Objects and its tests.
+* Added a new `scrapy override` command easily create new Page Objects
+  with accompanying tests over a given webpage.
+* Removed support for Python 3.6
+* Added support for Python 3.10
 
 0.2.1 (2021-06-11)
 ------------------

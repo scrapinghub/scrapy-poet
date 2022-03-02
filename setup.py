@@ -10,6 +10,7 @@ setup(
     author_email='kmike84@gmail.com',
     url='https://github.com/scrapinghub/scrapy-poet',
     packages=find_packages(exclude=['tests', 'example']),
+    include_package_data=True,
     install_requires=[
         'andi >= 0.4.1',
         'attrs',
@@ -18,7 +19,14 @@ setup(
         'url-matcher',
         'tldextract',
         'sqlitedict',
+        'scrapy',
     ],
+    entry_points={
+        'scrapy.commands': [
+            'override=scrapy_poet.commands.override:OverrideCommand',
+            'startproject=scrapy_poet.commands.startproject:Command',
+        ],
+    },
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
