@@ -57,21 +57,9 @@ class OverridesRegistry(OverridesRegistryBase):
 
     Now, if you've used ``web-poet``'s built-in functionality to directly create
     the override rules in the Page Object via the ``@handle_urls`` annotation,
-    you can quickly import them via:
-
-    .. code-block:: python
-
-        from web_poet import default_registry
-
-        SCRAPY_POET_OVERRIDES = default_registry.get_overrides(filters="my_page_objects_module")
-
-    It finds all the rules annotated using ``web-poet``'s ``@handle_urls``
-    decorator inside the ``my_page_objects_module`` module and all of its
-    submodules.
-
-    However, for most cases, you'd most likely going to simply retrieve all of
-    the override rules that were ever declared on a given registry. Though make
-    sure to call ``consume_module()`` beforehand:
+    you can quickly import them via the following code below. It finds all the
+    rules annotated using ``web-poet``'s ``@handle_urls`` decorator that were
+    registered into ``web_poet.default_registry``.
 
     .. code-block:: python
 
@@ -88,8 +76,22 @@ class OverridesRegistry(OverridesRegistryBase):
             consume=["external_package_A.po", "another_ext_package.lib"]
         )
 
-    More info on this at `web-poet <https://web-poet.readthedocs.io>`_.
-    """
+    Make sure to call ``consume_module()`` beforehand. More info on this at
+    `web-poet <https://web-poet.readthedocs.io>`_.
+
+    .. tip::
+
+        If you're using External Packages which conform to the **POP**
+        standards as described in **web-poet's** `Page Object Projects (POP)
+        <https://web-poet.readthedocs.io/en/stable/intro/pop.html>`_ section,
+        then retrieving the rules should be as easy as:
+
+        .. code-block:: python
+
+            import external_package_A, another_ext_package
+
+            SCRAPY_POET_OVERRIDES = external_package_A.RULES + another_ext_package.RULES
+        """
 
     @classmethod
     def from_crawler(cls, crawler: Crawler) -> Crawler:

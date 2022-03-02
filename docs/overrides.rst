@@ -155,16 +155,24 @@ For example:
         consume=["external_package_A", "another_ext_package.lib"]
     )
 
-    # Or, you could even extract the rules on a specific subpackage or module.
-    SCRAPY_POET_OVERRIDES = default_registry.get_overrides(
-        filters=["external_page_objects_package", "another_page_object_package.module_1"]
-    )
-
 The ``get_overrides()`` method of the ``default_registry`` above returns
 ``List[OverrideRule]`` that were declared using `web-poet`_'s ``@handle_urls()``
 annotation. This is much more convenient that manually defining all of the 
 `OverrideRule``. Take note that since ``SCRAPY_POET_OVERRIDES`` is structured as
 ``List[OverrideRule]``, you can easily modify it later on if needed.
+
+.. tip::
+
+    If you're using External Packages which conform to the **POP**
+    standards as described in **web-poet's** `Page Object Projects (POP)
+    <https://web-poet.readthedocs.io/en/stable/intro/pop.html>`_ section,
+    then retrieving the rules should be as easy as:
+
+    .. code-block:: python
+
+        import external_package_A, another_ext_package
+
+        SCRAPY_POET_OVERRIDES = external_package_A.RULES + another_ext_package.RULES
 
 .. note::
 
@@ -172,33 +180,6 @@ annotation. This is much more convenient that manually defining all of the
     and its registry, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
     documentation regarding Overrides.
 
-In case the external packages you're using does not use `web-poet`_'s
-``default_registry``, you can find and collect custom registries via `web-poet`_'s
-``registry_pool``:
-
-.. code-block:: python
-
-    from web_poet import registry_pool, consume_modules
-
-    # Ensures that the external dependencies are properly imported so that the
-    # Registry and its accompanying rules can be discovered.
-    consume_modules("external_package_A", "another_ext_package_B.lib")
-
-    print(registry_pool)
-    # {
-    #     'default': <web_poet.overrides.PageObjectRegistry object at 0x7f47d654d8b0>,
-    #     'custom_reg' = <external_package_A.PageObjectRegistry object at 0x7f47d654382a>,
-    #     'another_custom_reg' = <another_ext_package_B.lib.PageObjectRegistry object at 0xd93746549dea>,
-    # }
-
-    SCRAPY_POET_OVERRIDES = [
-        rule
-        for _, registry in registry_pool.items()
-        for rule in registry.get_overrides()
-    ]
-
-    # Converting it to a set also ensures that there are no duplicate OverrideRules.
-    SCRAPY_POET_OVERRIDES = set(SCRAPY_POET_OVERRIDES)
 
 Overrides registry
 ==================
@@ -217,4 +198,3 @@ must be a subclass of ``scrapy_poet.overrides.OverridesRegistryBase``
 and must implement the method ``overrides_for``. As other Scrapy components,
 it can be initialized from the ``from_crawler`` class method if implemented.
 This might be handy to be able to access settings, stats, request meta, etc.
-
