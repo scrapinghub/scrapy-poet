@@ -18,13 +18,13 @@ sys.path.insert(0, os.path.abspath('../'))
 # -- Project information -----------------------------------------------------
 
 project = u'scrapy-poet'
-copyright = u'2020, Scrapinghub'
-author = u'Scrapinghub'
+copyright = u'2022, Zyte'
+author = u'Zyte'
 
 # The short X.Y version
 version = u''
 # The full version, including alpha/beta/rc tags
-release = u'0.2.1'
+release = u'0.3.0'
 
 
 # -- General configuration ---------------------------------------------------
