@@ -14,15 +14,18 @@ from scrapy.utils.misc import create_instance, load_object
 
 from .api import DummyResponse
 from .overrides import OverridesRegistry
-from .page_input_providers import ResponseDataProvider
+from .page_input_providers import ResponseDataProvider, HttpClientProvider, MetaProvider
 from .injection import Injector
+from .backend import enable_backend, scrapy_downloader_var
 
 
 logger = logging.getLogger(__name__)
 
 
 DEFAULT_PROVIDERS = {
-    ResponseDataProvider: 500
+    ResponseDataProvider: 500,
+    HttpClientProvider: 600,
+    MetaProvider: 700,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")
@@ -49,10 +52,15 @@ class InjectionMiddleware:
     def from_crawler(cls: Type[InjectionMiddlewareTV], crawler: Crawler) -> InjectionMiddlewareTV:
         o = cls(crawler)
         crawler.signals.connect(o.spider_closed, signal=signals.spider_closed)
+        crawler.signals.connect(o.spider_opened, signal=signals.spider_opened)
         return o
 
     def spider_closed(self, spider: Spider) -> None:
         self.injector.close()
+
+    def spider_opened(self, spider):
+        scrapy_downloader_var.set(spider.crawler.engine.download)
+        enable_backend()
 
     def process_request(self, request: Request, spider: Spider) -> Optional[DummyResponse]:
         """This method checks if the request is really needed and if its
