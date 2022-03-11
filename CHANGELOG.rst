@@ -5,6 +5,13 @@ Changelog
 TBR
 ---
 
+* Support for the new features in ``web_poet>=0.2.0`` for supporting additional 
+  requests inside Page Objects:
+
+    * Created new providers for ``web_poet.Meta`` and ``web_poet.HttpClient``.
+    * Using the said additional requests needs ``async/await`` support in
+      ``asyncio``. This raises the minimum scrapy requirement to ``scrapy>=2.6.0``.
+
 * Use the new ``web_poet.HttpResponse`` which replaces ``web_poet.ResponseData``.
 * Support for the new features in ``web_poet>=0.2.0`` for supporting additional 
   requests inside Page Objects:
