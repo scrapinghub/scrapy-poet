@@ -1,7 +1,9 @@
 from typing import Any, List, Set, Callable, Sequence
+from unittest import mock
 
 import attr
 import json
+import pytest
 from pytest_twisted import inlineCallbacks
 from scrapy_poet import ResponseDataProvider
 from twisted.python.failure import Failure
@@ -17,8 +19,7 @@ from scrapy_poet.page_input_providers import (
     HttpClientProvider,
     MetaProvider,
 )
-from scrapy_poet.backend import scrapy_poet_backend
-from tests.utils import crawl_single_item, HtmlResource
+from tests.utils import crawl_single_item, HtmlResource, AsyncMock
 from web_poet import ResponseData, HttpClient
 
 
@@ -215,15 +216,19 @@ def test_response_data_provider_fingerprint(settings):
     assert json.loads(fp)
 
 
-def test_http_client_provider(settings):
+@pytest.mark.asyncio
+async def test_http_client_provider(settings):
     crawler = get_crawler(Spider, settings)
-    provider = HttpClientProvider(crawler)
+    crawler.engine = AsyncMock()
 
-    results = provider(set())
+    with mock.patch(
+        "scrapy_poet.page_input_providers.create_scrapy_backend"
+    ) as mock_factory:
+        provider = HttpClientProvider(crawler)
+        results = provider(set(), crawler)
+        assert isinstance(results[0], HttpClient)
 
-    assert isinstance(results[0], HttpClient)
-    assert results[0].request_downloader == scrapy_poet_backend
-
+    results[0].request_downloader == mock_factory.return_value
 
 def test_meta_provider(settings):
     crawler = get_crawler(Spider, settings)
