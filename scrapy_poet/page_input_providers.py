@@ -10,7 +10,7 @@ Splash or Auto Extract API.
 """
 import abc
 import json
-from typing import Set, Union, Callable, ClassVar, List, Any, Sequence
+from typing import Set, Union, Callable, ClassVar, Any, Sequence
 
 import attr
 from scrapy import Request
@@ -20,7 +20,7 @@ from scrapy.utils.reqser import request_to_dict
 from scrapy.utils.request import request_fingerprint
 
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
-from scrapy_poet.backend import scrapy_poet_backend
+from scrapy_poet.backend import create_scrapy_backend
 from web_poet import HttpResponse, HttpResponseHeaders, Meta
 from web_poet.requests import HttpClient
 
@@ -206,11 +206,12 @@ class HttpClientProvider(PageObjectInputProvider):
     """This class provides ``web_poet.requests.HttpClient`` instances."""
     provided_classes = {HttpClient}
 
-    def __call__(self, to_provide: Set[Callable]):
+    def __call__(self, to_provide: Set[Callable], crawler: Crawler):
         """Creates an ``web_poet.requests.HttpClient``` instance using Scrapy's
         downloader.
         """
-        return [HttpClient(request_downloader=scrapy_poet_backend)]
+        backend = create_scrapy_backend(crawler.engine.download)
+        return [HttpClient(request_downloader=backend)]
 
 
 class MetaProvider(PageObjectInputProvider):

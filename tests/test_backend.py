@@ -4,28 +4,18 @@ from unittest import mock
 
 import web_poet
 import scrapy
-from scrapy_poet.backend import scrapy_downloader_var
-from scrapy_poet.backend import scrapy_poet_backend, RequestBackendError
+from scrapy_poet.backend import RequestBackendError, create_scrapy_backend
+from tests.utils import AsyncMock
 
 
-class AsyncMock(mock.MagicMock):
-    """workaround since python 3.7 doesn't ship with asyncmock."""
-
-    async def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
-
-
-@pytest.mark.asyncio
-async def test_scrapy_poet_backend_var_unset():
-    """The ContextVar must be set first."""
-    req = web_poet.Request("https://example.com")
-
-    with pytest.raises(LookupError):
-        await scrapy_poet_backend(req)
+@pytest.fixture
+def scrapy_backend():
+    mock_backend = AsyncMock()
+    return create_scrapy_backend(mock_backend)
 
 
 @pytest.mark.asyncio
-async def test_scrapy_poet_backend_incompatible_request():
+async def test_incompatible_request(scrapy_backend):
     """The Request must have fields that are a subset of `scrapy.Request`."""
 
     @attr.define
@@ -35,7 +25,17 @@ async def test_scrapy_poet_backend_incompatible_request():
     req = Request("https://example.com")
 
     with pytest.raises(RequestBackendError):
-        await scrapy_poet_backend(req)
+        await scrapy_backend(req)
+
+
+@pytest.mark.asyncio
+async def test_incompatible_scrapy_request(scrapy_backend):
+    """The Request must be web_poet.Request and not anything else."""
+
+    req = scrapy.Request("https://example.com")
+
+    with pytest.raises(TypeError):
+        await scrapy_backend(req)
 
 
 @pytest.mark.asyncio
@@ -47,9 +47,9 @@ async def test_scrapy_poet_backend():
     ) as mock_dtf:
 
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
-        scrapy_downloader_var.set(mock_downloader)
+        scrapy_backend = create_scrapy_backend(mock_downloader)
 
-        response = await scrapy_poet_backend(req)
+        response = await scrapy_backend(req)
 
         mock_downloader.assert_called_once()
         assert isinstance(response, web_poet.ResponseData)
@@ -66,6 +66,6 @@ async def test_scrapy_poet_backend_ignored_request():
 
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
         mock_downloader.side_effect = scrapy.exceptions.IgnoreRequest
-        scrapy_downloader_var.set(mock_downloader)
+        scrapy_backend = create_scrapy_backend(mock_downloader)
 
-        await scrapy_poet_backend(req)
+        await scrapy_backend(req)
