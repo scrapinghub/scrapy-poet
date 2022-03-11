@@ -38,6 +38,16 @@ async def test_incompatible_scrapy_request(scrapy_backend):
         await scrapy_backend(req)
 
 
+@pytest.mark.asyncio
+async def test_incompatible_scrapy_request(scrapy_backend):
+    """The Request must be web_poet.Request and not anything else."""
+
+    req = scrapy.Request("https://example.com")
+
+    with pytest.raises(TypeError):
+        await scrapy_backend(req)
+
+
 @pytest.fixture
 def fake_http_response():
     return web_poet.HttpResponse(

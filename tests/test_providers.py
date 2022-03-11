@@ -223,7 +223,6 @@ async def test_http_client_provider(settings):
 
     results[0].request_downloader == mock_factory.return_value
 
-
 def test_meta_provider(settings):
     crawler = get_crawler(Spider, settings)
     provider = MetaProvider(crawler)
