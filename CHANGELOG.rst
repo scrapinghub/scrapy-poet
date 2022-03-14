@@ -3,7 +3,7 @@ Changelog
 =========
 
 
-0.3.0 (2021-01-28)
+0.3.0 (2022-01-28)
 ------------------
 
 * Cache mechanism using ``SCRAPY_POET_CACHE``
