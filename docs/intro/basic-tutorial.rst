@@ -1,8 +1,8 @@
-.. _`intro-tutorial`:
+.. _`intro-basic-tutorial`:
 
-========
-Tutorial
-========
+==============
+Basic Tutorial
+==============
 
 In this tutorial, we’ll assume that ``scrapy-poet`` is already installed on your
 system. If that’s not the case, see :ref:`intro-install`.

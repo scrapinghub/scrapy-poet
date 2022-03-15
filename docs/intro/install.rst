@@ -16,7 +16,7 @@ If you’re already familiar with installation of Python packages, you can insta
 
     pip install scrapy-poet
 
-Scrapy 2.1.0 or above is required and it has to be installed separately.
+Scrapy 2.6.0 or above is required and it has to be installed separately.
 
 Things that are good to know
 ============================

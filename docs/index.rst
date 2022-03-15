@@ -35,7 +35,8 @@ To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
    :maxdepth: 1
 
    intro/install
-   intro/tutorial
+   intro/basic-tutorial
+   intro/advanced-tutorial
 
 .. toctree::
    :caption: Advanced

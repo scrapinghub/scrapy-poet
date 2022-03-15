@@ -36,3 +36,27 @@ License is BSD 3-clause.
 * Issue tracker: https://github.com/scrapinghub/scrapy-poet/issues
 
 .. _`web-poet`: https://github.com/scrapinghub/web-poet
+
+
+Quick Start
+***********
+
+Installation
+============
+
+.. code-block::
+
+    pip install scrapy-poet
+
+Requires **Python 3.7+** and **Scrapy >= 2.6.0**.
+
+Usage in a Scrapy Project
+=========================
+
+Add the following inside Scrapy's ``settings.py`` file:
+
+.. code-block:: python
+
+    DOWNLOADER_MIDDLEWARES = {
+        "scrapy_poet.InjectionMiddleware": 543,
+    }
