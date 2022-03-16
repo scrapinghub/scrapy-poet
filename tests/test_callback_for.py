@@ -36,7 +36,7 @@ class MySpider(scrapy.Spider):
 class MySpiderAsync(scrapy.Spider):
 
     name = 'my_spider_async'
-    parse_item = callback_for(FakeItemPage, is_async=True)
+    parse_item = callback_for(FakeItemPageAsync, is_async=True)
 
 
 def test_callback_for():
