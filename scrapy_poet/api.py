@@ -30,7 +30,7 @@ class DummyResponse(Response):
         super().__init__(url=url, request=request)
 
 
-def callback_for(page_cls: Type[ItemPage], is_async: bool = False) -> Callable:
+def callback_for(page_cls: Type[ItemPage], *, is_async: bool = False) -> Callable:
     """Create a callback for an :class:`web_poet.pages.ItemPage` subclass.
 
     The generated callback returns the output of the
