@@ -12,6 +12,7 @@ TBR
     * Using the said additional requests needs ``async/await`` support in
       ``asyncio``. This raises the minimum scrapy requirement to ``scrapy>=2.6.0``.
 
+* add ``async`` support for ``callback_for``.
 
 
 0.3.0 (2021-01-28)
