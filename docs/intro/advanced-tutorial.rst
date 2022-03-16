@@ -15,6 +15,7 @@ These are mainly achieved by **scrapy-poet** implementing **providers** for them
     * :class:`scrapy_poet.page_input_providers.HttpClientProvider`
     * :class:`scrapy_poet.page_input_providers.MetaProvider`
 
+.. _`intro-additional-requests`:
 
 Additional Requests
 ===================

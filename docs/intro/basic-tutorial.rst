@@ -198,6 +198,21 @@ returning the result of the ``to_item`` method call. We could use
     ``response.follow_all(links, callback_for(BookPage))``, without creating
     an attribute, but currently it won't work with Scrapy disk queues.
 
+.. tip::
+
+    :func:`~.callback_for` also supports `async generators` via the ``is_async=True``
+    parameter. In this way, having ``parse_book = callback_for(BookPage, is_async=True)``
+    would result in the following:
+
+    .. code-block:: python
+
+        async def parse_book(self, response: DummyResponse, page: BookPage):
+            yield await page.to_item()
+
+    This is useful when the Page Objects uses additional requests which relies
+    heavily on ``async/await`` format. More info on this in this tutorial section:
+    :ref:`intro-additional-requests`.
+
 Final result
 ============
 
