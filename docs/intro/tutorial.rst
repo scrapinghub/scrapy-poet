@@ -9,7 +9,7 @@ system. If that’s not the case, see :ref:`intro-install`.
 
 .. note::
 
-    This tutorial can be followed without reading `web-poet docs`_, but
+    This tutorial can be followed without reading `web-poet`_ docs, but
     for a better understanding it is highly recommended to check them first.
 
 
@@ -26,7 +26,7 @@ This tutorial will walk you through these tasks:
 If you're not already familiar with Scrapy, and want to learn it quickly,
 the `Scrapy Tutorial`_ is a good resource.
 
-.. _web-poet docs: https://web-poet.readthedocs.io/en/stable/
+.. _web-poet: https://web-poet.readthedocs.io/en/stable/
 
 Creating a spider
 =================
@@ -125,7 +125,7 @@ To use ``scrapy-poet``, enable its downloader middleware in ``settings.py``:
 ``BookPage`` class we created previously can be used without ``scrapy-poet``,
 and even without Scrapy (note that imports were from ``web_poet`` so far).
 
-``scrapy-poet`` makes it easy to use ``web-poet`` Page Objects
+``scrapy-poet`` makes it easy to use `web-poet`_ Page Objects
 (such as BookPage) in Scrapy spiders.
 
 Changing spider
@@ -348,12 +348,10 @@ be done by configuring ``SCRAPY_POET_OVERRIDES`` into ``settings.py``:
 
 .. code-block:: python
 
-    SCRAPY_POET_OVERRIDES = {
-        "toscrape.com": {
-            BookListPage: BTSBookListPage,
-            BookPage: BTSBookPage
-        }
-    }
+    "SCRAPY_POET_OVERRIDES": [
+        ("toscrape.com", BTSBookListPage, BookListPage),
+        ("toscrape.com", BTSBookPage, BookPage)
+    ]
 
 The spider is back to life!
 ``SCRAPY_POET_OVERRIDES`` contain rules that overrides the Page Objects
@@ -381,7 +379,7 @@ to implement new ones:
     class BPBookListPage(WebPage):
 
         def book_urls(self):
-            return self.css('.article-info a::attr(href)').getall()
+            return self.css('article.post h4 a::attr(href)').getall()
 
 
     class BPBookPage(ItemWebPage):
@@ -389,7 +387,7 @@ to implement new ones:
         def to_item(self):
             return {
                 'url': self.url,
-                'name': self.css(".book-data h4::text").get().strip(),
+                'name': self.css("body div > h1::text").get().strip(),
             }
 
 The last step is configuring the overrides so that these new Page Objects
@@ -399,24 +397,76 @@ are used for the domain
 
 .. code-block:: python
 
-    SCRAPY_POET_OVERRIDES = {
-        "toscrape.com": {
-            BookListPage: BTSBookListPage,
-            BookPage: BTSBookPage
-        },
-        "bookpage.com": {
-            BookListPage: BPBookListPage,
-            BookPage: BPBookPage
-        }
-    }
+    "SCRAPY_POET_OVERRIDES": [
+        ("toscrape.com", BTSBookListPage, BookListPage),
+        ("toscrape.com", BTSBookPage, BookPage),
+        ("bookpage.com", BPBookListPage, BookListPage),
+        ("bookpage.com", BPBookPage, BookPage)
+    ]
 
 The spider is now ready to extract books from both sites 😀.
 The full example
 `can be seen here <https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders/books_04_overrides_02.py>`_
 
-On a surface, it looks just like a different way to organize Scrapy spider
+On the surface, it looks just like a different way to organize Scrapy spider
 code - and indeed, it *is* just a different way to organize the code,
 but it opens some cool possibilities.
+
+In the examples above we have been configuring the overrides
+for a particular domain, but more complex URL patterns are also possible.
+For example, the pattern ``books.toscrape.com/cataloge/category/``
+is accepted and it would restrict the override only to category pages.
+
+It is even possible to configure more complex patterns by
+using the ``OverrideRule`` class instead of a triplet in
+the configuration. Another way of declaring the earlier config
+for ``SCRAPY_POET_OVERRIDES`` would be the following:
+
+.. code-block:: python
+
+    from url_matcher import Patterns
+    from web_poet.overrides import OverrideRule
+
+    SCRAPY_POET_OVERRIDES = [
+        OverrideRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookListPage, instead_of=BookListPage),
+        OverrideRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookPage, instead_of=BookPage),
+        OverrideRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookListPage, instead_of=BookListPage),
+        OverrideRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookPage, instead_of=BookPage),
+    ]
+
+As you can see, this could get verbose. The earlier tuple config simply offers
+a shortcut to be more concise.
+
+.. note::
+
+    Also see the `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_
+    documentation for more information about the patterns syntax.
+
+Manually defining overrides like this would be inconvenient, most
+especially for larger projects. Fortunately, `web-poet`_ has a cool feature
+to annotate Page Objects like ``@web_poet.handle_urls`` that would define and
+store the ``OverrideRule`` for you. All of the Override rules could then be
+simply read as:
+
+.. code:: python
+
+    from web_poet import default_registry, consume_modules
+
+    # The consume_modules() must be called first if you need to load
+    # rules from other packages. Otherwise, it can be omitted.
+    # More info about this caveat on web-poet docs.
+    consume_modules("external_package_A", "another_ext_package.lib")
+    SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
+
+    # The two lines above could be mixed together via this shortcut:
+    SCRAPY_POET_OVERRIDES = default_registry.get_overrides(
+        consume=["external_package_A", "another_ext_package.lib"]
+    )
+
+For more info on this, you can refer to these docs:
+
+    * :ref:`overrides` section
+    * external `web-poet`_ docs
 
 Next steps
 ==========
@@ -424,7 +474,7 @@ Next steps
 Now that you know how ``scrapy-poet`` is supposed to work, what about trying to
 apply it to an existing or new Scrapy project?
 
-Also, please check :ref:`overrides`, :ref:`providers` and refer to spiders in the "example"
-folder: https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
+Also, please check the :ref:`overrides` and :ref:`providers` sections as well as
+refer to spiders in the "example" folder: https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
 
 .. _Scrapy Tutorial: https://docs.scrapy.org/en/latest/intro/tutorial.html

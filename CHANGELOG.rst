@@ -2,6 +2,16 @@
 Changelog
 =========
 
+TBR
+---
+
+* We have these **backward incompatible** changes since the
+  ``OverrideRule`` follow a different structure:
+
+    * Deprecated ``PerDomainOverridesRegistry`` in lieu of the newer
+      ``OverridesRegistry`` which provides a wide variety of features
+      for better URL matching.
+    * This resuls in a newer format in the ``SCRAPY_POET_OVERRIDES`` setting.
 
 0.3.0 (2022-01-28)
 ------------------
