@@ -10,7 +10,7 @@ Splash or Auto Extract API.
 """
 import abc
 import json
-from typing import Set, Union, Callable, ClassVar, List, Any, Sequence
+from typing import Set, Union, Callable, ClassVar, Any, Sequence
 
 import attr
 from scrapy import Request
@@ -20,7 +20,9 @@ from scrapy.utils.reqser import request_to_dict
 from scrapy.utils.request import request_fingerprint
 
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
-from web_poet import ResponseData
+from scrapy_poet.backend import create_scrapy_backend
+from web_poet.page_inputs import ResponseData, Meta
+from web_poet.requests import HttpClient
 
 
 class PageObjectInputProvider:
@@ -162,7 +164,14 @@ class ResponseDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``ResponseData`` instance using a Scrapy ``Response``"""
-        return [ResponseData(url=response.url, html=response.text)]
+        return [
+            ResponseData(
+                url=response.url,
+                html=response.text,
+                status=response.status,
+                headers=response.headers
+            )
+        ]
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
         request_keys = {"url", "method", "body"}
@@ -182,3 +191,26 @@ class ResponseDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def deserialize(self, data: Any) -> Sequence[Any]:
         return [ResponseData(**response_data) for response_data in data]
+
+
+class HttpClientProvider(PageObjectInputProvider):
+    """This class provides ``web_poet.requests.HttpClient`` instances."""
+    provided_classes = {HttpClient}
+
+    def __call__(self, to_provide: Set[Callable], crawler: Crawler):
+        """Creates an ``web_poet.requests.HttpClient`` instance using Scrapy's
+        downloader.
+        """
+        backend = create_scrapy_backend(crawler.engine.download)
+        return [HttpClient(request_downloader=backend)]
+
+
+class MetaProvider(PageObjectInputProvider):
+    """This class provides ``web_poet.page_inputs.Meta`` instances."""
+    provided_classes = {Meta}
+
+    def __call__(self, to_provide: Set[Callable], request: Request):
+        """Creates a ``web_poet.requests.Meta`` instance based on the data found
+        from the ``meta["po_args"]`` field of a ``scrapy.http.Response`` instance.
+        """
+        return [Meta(**request.meta.get("po_args", {}))]

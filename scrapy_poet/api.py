@@ -30,7 +30,7 @@ class DummyResponse(Response):
         super().__init__(url=url, request=request)
 
 
-def callback_for(page_cls: Type[ItemPage]) -> Callable:
+def callback_for(page_cls: Type[ItemPage], *, is_async: bool = False) -> Callable:
     """Create a callback for an :class:`web_poet.pages.ItemPage` subclass.
 
     The generated callback returns the output of the
@@ -67,6 +67,15 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
 
             parse_book = callback_for(BookPage)
 
+    The optional ``is_async`` param can also be set to ``True`` to support async
+    callbacks like the following, especially when Page Objects uses additional
+    requests needing the ``async/await`` syntax.
+
+    .. code-block:: python
+
+        async def parse_book(self, response: DummyResponse, page: BookPage):
+            yield await page.to_item()
+
     The generated callback could be used as a spider instance method or passed
     as an inline/anonymous argument. Make sure to define it as a spider
     attribute (as shown in the example above) if you're planning to use
@@ -90,5 +99,12 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     def parse(*args, page: page_cls, **kwargs):  # type: ignore
         yield page.to_item()  # type: ignore
 
-    setattr(parse, _CALLBACK_FOR_MARKER, True)
-    return parse
+    async def async_parse(*args, page: page_cls, **kwargs):  # type: ignore
+        yield await page.to_item()  # type: ignore
+
+    if is_async:
+        setattr(async_parse, _CALLBACK_FOR_MARKER, True)
+        return async_parse
+    else:
+        setattr(parse, _CALLBACK_FOR_MARKER, True)
+        return parse
