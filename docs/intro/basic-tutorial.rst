@@ -200,9 +200,18 @@ returning the result of the ``to_item`` method call. We could use
 
 .. tip::
 
-    :func:`~.callback_for` also supports `async generators` via the ``is_async=True``
-    parameter. In this way, having ``parse_book = callback_for(BookPage, is_async=True)``
-    would result in the following:
+    :func:`~.callback_for` also supports `async generators` by checking if the
+    ``to_item()`` method is a coroutine. So having the following:
+
+    .. code-block:: python
+
+        class BookPage(web_poet.ItemWebPage):
+            async def to_item(self):
+                return await do_something_async()
+
+        callback_for(BookPage)
+
+    would result in:
 
     .. code-block:: python
 

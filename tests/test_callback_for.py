@@ -36,7 +36,7 @@ class MySpider(scrapy.Spider):
 class MySpiderAsync(scrapy.Spider):
 
     name = 'my_spider_async'
-    parse_item = callback_for(FakeItemPageAsync, is_async=True)
+    parse_item = callback_for(FakeItemPageAsync)
 
 
 def test_callback_for():
@@ -52,7 +52,7 @@ def test_callback_for():
 
 @pytest.mark.asyncio
 async def test_callback_for_async():
-    cb = callback_for(FakeItemPage, is_async=True)
+    cb = callback_for(FakeItemPageAsync)
     assert callable(cb)
 
     fake_page = FakeItemPageAsync()
@@ -125,7 +125,7 @@ def test_inline_callback():
 def test_inline_callback_async():
     """Sample request with inline callback using async callback_for."""
     spider = MySpiderAsync()
-    cb = callback_for(FakeItemPage, is_async=True)
+    cb = callback_for(FakeItemPageAsync)
     request = scrapy.Request('http://example.com/', callback=cb)
     with pytest.raises(ValueError) as exc:
         request_to_dict(request, spider)

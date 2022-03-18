@@ -1,4 +1,5 @@
 from typing import Callable, Optional, Type
+from inspect import iscoroutinefunction
 
 from scrapy.http import Request, Response
 
@@ -30,7 +31,7 @@ class DummyResponse(Response):
         super().__init__(url=url, request=request)
 
 
-def callback_for(page_cls: Type[ItemPage], *, is_async: bool = False) -> Callable:
+def callback_for(page_cls: Type[ItemPage]) -> Callable:
     """Create a callback for an :class:`web_poet.pages.ItemPage` subclass.
 
     The generated callback returns the output of the
@@ -67,9 +68,19 @@ def callback_for(page_cls: Type[ItemPage], *, is_async: bool = False) -> Callabl
 
             parse_book = callback_for(BookPage)
 
-    The optional ``is_async`` param can also be set to ``True`` to support async
-    callbacks like the following, especially when Page Objects uses additional
-    requests needing the ``async/await`` syntax.
+    This also produces an async generator callable if the Page Objects's
+    ``to_item()`` method is a coroutine which uses the ``async/await`` syntax.
+    So having the following:
+
+    .. code-block:: python
+
+        class BookPage(web_poet.ItemWebPage):
+            async def to_item(self):
+                return await do_something_async()
+
+        callback_for(BookPage)
+
+    would result in:
 
     .. code-block:: python
 
@@ -102,7 +113,7 @@ def callback_for(page_cls: Type[ItemPage], *, is_async: bool = False) -> Callabl
     async def async_parse(*args, page: page_cls, **kwargs):  # type: ignore
         yield await page.to_item()  # type: ignore
 
-    if is_async:
+    if iscoroutinefunction(page_cls.to_item):
         setattr(async_parse, _CALLBACK_FOR_MARKER, True)
         return async_parse
     else:
