@@ -126,7 +126,7 @@ To use ``scrapy-poet``, enable its downloader middleware in ``settings.py``:
 and even without Scrapy (note that imports were from ``web_poet`` so far).
 
 ``scrapy-poet`` makes it easy to use `web-poet`_ Page Objects
-(such as BookPage) in Scrapy spiders.
+(such as ``BookPage``) in Scrapy spiders.
 
 Changing spider
 ===============
@@ -418,7 +418,7 @@ For example, the pattern ``books.toscrape.com/cataloge/category/``
 is accepted and it would restrict the override only to category pages.
 
 It is even possible to configure more complex patterns by
-using the ``OverrideRule`` class instead of a triplet in
+using the ``web_poet.OverrideRule`` class instead of a triplet in
 the configuration. Another way of declaring the earlier config
 for ``SCRAPY_POET_OVERRIDES`` would be the following:
 

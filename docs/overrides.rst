@@ -158,7 +158,7 @@ For example:
 The ``get_overrides()`` method of the ``default_registry`` above returns
 ``List[OverrideRule]`` that were declared using `web-poet`_'s ``@handle_urls()``
 annotation. This is much more convenient that manually defining all of the 
-`OverrideRule``. Take note that since ``SCRAPY_POET_OVERRIDES`` is structured as
+``OverrideRule``. Take note that since ``SCRAPY_POET_OVERRIDES`` is structured as
 ``List[OverrideRule]``, you can easily modify it later on if needed.
 
 .. tip::
@@ -172,7 +172,10 @@ annotation. This is much more convenient that manually defining all of the
 
         import external_package_A, another_ext_package
 
-        SCRAPY_POET_OVERRIDES = external_package_A.RULES + another_ext_package.RULES
+        SCRAPY_POET_OVERRIDES = (
+            external_package_A.REGISTRY.get_overrides()
+            + another_ext_package.REGISTRY.get_overrides()
+        )
 
 .. note::
 

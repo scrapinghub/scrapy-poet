@@ -6,7 +6,7 @@ TBR
 ---
 
 * We have these **backward incompatible** changes since the
-  ``OverrideRule`` follow a different structure:
+  ``web_poet.OverrideRule`` follow a different structure:
 
     * Deprecated ``PerDomainOverridesRegistry`` in lieu of the newer
       ``OverridesRegistry`` which provides a wide variety of features

@@ -47,7 +47,10 @@ class OverridesRegistry(OverridesRegistryBase):
     .. code-block:: python
 
         SCRAPY_POET_OVERRIDES = [
+            # Option 1
             ("books.toscrape.com", ISBNBookPage, BookPage),
+
+            # Option 2
             OverrideRule(
                 for_patterns=Patterns(["books.toscrape.com"]),
                 use=MyBookListPage,
@@ -90,8 +93,11 @@ class OverridesRegistry(OverridesRegistryBase):
 
             import external_package_A, another_ext_package
 
-            SCRAPY_POET_OVERRIDES = external_package_A.RULES + another_ext_package.RULES
-        """
+            SCRAPY_POET_OVERRIDES = (
+                external_package_A.REGISTRY.get_overrides()
+                + another_ext_package.REGISTRY.get_overrides()
+            )
+    """
 
     @classmethod
     def from_crawler(cls, crawler: Crawler) -> Crawler:
