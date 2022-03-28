@@ -3,7 +3,7 @@ that the Page Objects uses to get external data (e.g. the HTML). That's why we
 have created a repository of ``PageObjectInputProviders``.
 
 The current module implements a ``PageObjectInputProviders`` for
-:class:`web_poet.page_inputs.ResponseData`, which is in charge of providing the response
+:class:`web_poet.page_inputs.HttpResponse`, which is in charge of providing the response
 HTML from Scrapy. You could also implement different providers in order to
 acquire data from multiple external sources, for example,
 Splash or Auto Extract API.
@@ -20,7 +20,7 @@ from scrapy.utils.reqser import request_to_dict
 from scrapy.utils.request import request_fingerprint
 
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
-from web_poet import ResponseData
+from web_poet import HttpResponse
 
 
 class PageObjectInputProvider:
@@ -154,15 +154,15 @@ class CacheDataProviderMixin(abc.ABC):
         return True
 
 
-class ResponseDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
-    """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
+class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
+    """This class provides ``web_poet.page_inputs.HttpResponse`` instances."""
 
-    provided_classes = {ResponseData}
+    provided_classes = {HttpResponse}
     name = "response_data"
 
     def __call__(self, to_provide: Set[Callable], response: Response):
-        """Builds a ``ResponseData`` instance using a Scrapy ``Response``"""
-        return [ResponseData(url=response.url, html=response.text)]
+        """Builds a ``HttpResponse`` instance using a Scrapy ``Response``"""
+        return [HttpResponse(url=response.url, body=response.body)]
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
         request_keys = {"url", "method", "body"}
@@ -178,7 +178,14 @@ class ResponseDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
         return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
 
     def serialize(self, result: Sequence[Any]) -> Any:
-        return [attr.asdict(response_data) for response_data in result]
+        return [self._to_dict(response_data) for response_data in result]
 
     def deserialize(self, data: Any) -> Sequence[Any]:
-        return [ResponseData(**response_data) for response_data in data]
+        return [HttpResponse(**response_data) for response_data in data]
+
+    @staticmethod
+    def _to_dict(data: Any) -> dict:
+        return attr.asdict(
+            data,
+            filter=lambda attrib, _: not attrib.name.startswith("_")
+        )

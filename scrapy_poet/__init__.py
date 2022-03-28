@@ -3,5 +3,5 @@ from .api import callback_for, DummyResponse
 from .page_input_providers import (
     PageObjectInputProvider,
     CacheDataProviderMixin,
-    ResponseDataProvider,
+    HttpResponseProvider,
 )

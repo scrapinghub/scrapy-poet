@@ -12,7 +12,7 @@ from scrapy_poet.injection import Injector, get_callback, \
 
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
-    ResponseDataProvider,
+    HttpResponseProvider,
 )
 from web_poet import ItemPage, WebPage
 
@@ -62,7 +62,7 @@ class FakeProductProvider(PageObjectInputProvider):
         return [FakeProductResponse(data=data)]
 
 
-class TextProductProvider(ResponseDataProvider):
+class TextProductProvider(HttpResponseProvider):
 
     # This is wrong. You should not annotate provider dependencies with classes
     # like TextResponse or HtmlResponse, you should use Response instead.
@@ -70,7 +70,7 @@ class TextProductProvider(ResponseDataProvider):
         return super().__call__(to_provide, response)
 
 
-class StringProductProvider(ResponseDataProvider):
+class StringProductProvider(HttpResponseProvider):
 
     def __call__(self, to_provide, response: str):
         return super().__call__(to_provide, response)
@@ -115,7 +115,7 @@ class MySpider(scrapy.Spider):
     name = 'foo'
     custom_settings = {
         "SCRAPY_POET_PROVIDERS": {
-            ResponseDataProvider: 1,
+            HttpResponseProvider: 1,
             DummyProductProvider: 2,
             FakeProductProvider: 3,
         }
@@ -177,7 +177,7 @@ def test_get_callback():
 
 def test_is_provider_using_response():
     assert is_provider_requiring_scrapy_response(PageObjectInputProvider) is False
-    assert is_provider_requiring_scrapy_response(ResponseDataProvider) is True
+    assert is_provider_requiring_scrapy_response(HttpResponseProvider) is True
     # TextProductProvider wrongly annotates response dependency as
     # TextResponse, instead of using the Response type.
     assert is_provider_requiring_scrapy_response(TextProductProvider) is False

@@ -20,33 +20,27 @@ Creating providers
 ==================
 
 Providers are responsible for building dependencies needed by Injectable
-objects. A good example would be the ``ResponseDataProvider``,
-which builds and provides a ``ResponseData`` instance for Injectables
-that need it, like the ``ItemWebPage``.
+objects. A good example would be the ``HttpResponseProvider``,
+which builds and provides a ``web_poet.HttpResponse`` instance for Injectables
+that need it, like the ``web_poet.ItemWebPage``.
 
 .. code-block:: python
 
     import attr
     from typing import Set, Callable
 
+    import web_poet
     from scrapy_poet.page_input_providers import PageObjectInputProvider
     from scrapy import Response
 
 
-    @attr.define
-    class ResponseData:
-        """Represents a response containing its URL and HTML content."""
-        url: str
-        html: str
-
-
-    class ResponseDataProvider(PageObjectInputProvider):
-        """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
-        provided_classes = {ResponseData}
+    class HttpResponseProvider(PageObjectInputProvider):
+        """This class provides ``web_poet.HttpResponse`` instances."""
+        provided_classes = {web_poet.HttpResponse}
 
         def __call__(self, to_provide: Set[Callable], response: Response):
-            """Build a ``ResponseData`` instance using a Scrapy ``Response``"""
-            return [ResponseData(url=response.url, html=response.text)]
+            """Build a ``web_poet.HttpResponse`` instance using a Scrapy ``Response``"""
+            return [web_poet.HttpResponse(url=response.url, body=response.body)]
 
 
 You can implement your own providers in order to extend or override current
@@ -61,7 +55,7 @@ Cache Suppport in Providers
 ===========================
 
 ``scrapy-poet`` also supports caching of the provided dependencies from the
-providers. For example, :class:`~.ResponseDataProvider` supports this right off
+providers. For example, :class:`~.HttpResponseProvider` supports this right off
 the bat. It's able to do this by inheriting the :class:`~.CacheDataProviderMixin`
 and implementing all of its ``abstractmethods``.
 
@@ -70,18 +64,19 @@ would lead to the following code:
 
 .. code-block:: python
 
+    import web_poet
     from scrapy_poet.page_input_providers import (
         CacheDataProviderMixin,
         PageObjectInputProvider,
     )
 
-    class ResponseDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
-        """This class provides ``web_poet.page_inputs.ResponseData`` instances."""
-        provided_classes = {ResponseData}
+    class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
+        """This class provides ``web_poet.HttpResponse`` instances."""
+        provided_classes = {web_poet.HttpResponse}
 
         def __call__(self, to_provide: Set[Callable], response: Response):
-            """Build a ``ResponseData`` instance using a Scrapy ``Response``"""
-            return [ResponseData(url=response.url, html=response.text)]
+            """Build a ``web_poet.HttpResponse`` instance using a Scrapy ``Response``"""
+            return [web_poet.HttpResponse(url=response.url, body=response.body)]
 
         def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
             """Returns a fingerprint to identify the specific request."""
@@ -136,7 +131,7 @@ configuration dictionaries for more information.
 .. note::
 
     The providers in :const:`scrapy_poet.DEFAULT_PROVIDERS`,
-    which includes a provider for :class:`~ResponseData`, are always
+    which includes a provider for :class:`~HttpResponse`, are always
     included by default. You can disable any of them by listing it
     in the configuration with the priority `None`.
 
@@ -264,8 +259,8 @@ Page Object uses it, the request is not ignored, for example:
 
     The code above is just for example purposes. If you need to use ``Response``
     instances in your Page Objects, use built-in ``ItemWebPage`` - it has
-    ``response`` attribute with ``ResponseData``; no additional configuration
-    is needed, as there is ``ResponseDataProvider`` enabled in ``scrapy-poet``
+    ``response`` attribute with ``HttpResponse``; no additional configuration
+    is needed, as there is ``HttpResponseProvider`` enabled in ``scrapy-poet``
     by default.
 
 Requests concurrency

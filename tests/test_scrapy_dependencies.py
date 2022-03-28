@@ -8,7 +8,7 @@ from web_poet.pages import ItemWebPage
 from scrapy_poet.injection import SCRAPY_PROVIDED_CLASSES
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
-    ResponseDataProvider,
+    HttpResponseProvider,
 )
 
 from tests.utils import crawl_items, crawl_single_item, HtmlResource
@@ -19,7 +19,7 @@ class ProductHtml(HtmlResource):
     html = """
     <html>
         <div class="breadcrumbs">
-            <a href="/food">Food</a> / 
+            <a href="/food">Food</a> /
             <a href="/food/sweets">Sweets</a>
         </div>
         <h1 class="name">Chocolate</h1>
@@ -61,7 +61,7 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
         url = None
         custom_settings = {
             "SCRAPY_POET_PROVIDERS": {
-                ResponseDataProvider: 1,
+                HttpResponseProvider: 1,
                 PageDataProvider: 2,
             }
         }
