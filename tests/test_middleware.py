@@ -198,7 +198,7 @@ class ExtraClassDataProvider(PageObjectInputProvider):
         # we're returning a class that's not listed in self.provided_classes
         return {
             ExtraClassData: ExtraClassData("this should be returned"),
-            HttpResponse: HttpResponse("example.com", "this shouldn't"),
+            HttpResponse: HttpResponse("example.com", b"this shouldn't"),
         }
 
 

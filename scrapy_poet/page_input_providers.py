@@ -20,7 +20,7 @@ from scrapy.utils.reqser import request_to_dict
 from scrapy.utils.request import request_fingerprint
 
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
-from web_poet import HttpResponse
+from web_poet import HttpResponse, HttpResponseHeaders
 
 
 class PageObjectInputProvider:
@@ -162,7 +162,14 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``HttpResponse`` instance using a Scrapy ``Response``"""
-        return [HttpResponse(url=response.url, body=response.body)]
+        return [
+            HttpResponse(
+                url=response.url,
+                body=response.body,
+                status=response.status,
+                headers=HttpResponseHeaders.from_bytes(response.headers),
+            )
+        ]
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
         request_keys = {"url", "method", "body"}
@@ -178,14 +185,16 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
         return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
 
     def serialize(self, result: Sequence[Any]) -> Any:
-        return [self._to_dict(response_data) for response_data in result]
+        return [attr.asdict(response_data) for response_data in result]
 
     def deserialize(self, data: Any) -> Sequence[Any]:
-        return [HttpResponse(**response_data) for response_data in data]
-
-    @staticmethod
-    def _to_dict(data: Any) -> dict:
-        return attr.asdict(
-            data,
-            filter=lambda attrib, _: not attrib.name.startswith("_")
-        )
+        return [
+            HttpResponse(
+                response_data["url"],
+                response_data["body"],
+                response_data["status"],
+                HttpResponseHeaders.from_bytes(response_data["headers"]),
+                response_data["_encoding"],
+            )
+            for response_data in data
+        ]

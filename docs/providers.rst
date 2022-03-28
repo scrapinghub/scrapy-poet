@@ -40,8 +40,14 @@ that need it, like the ``web_poet.ItemWebPage``.
 
         def __call__(self, to_provide: Set[Callable], response: Response):
             """Build a ``web_poet.HttpResponse`` instance using a Scrapy ``Response``"""
-            return [web_poet.HttpResponse(url=response.url, body=response.body)]
-
+            return [
+                HttpResponse(
+                    url=response.url,
+                    body=response.body,
+                    status=response.status,
+                    headers=web_poet.HttpResponseHeaders.from_bytes(response.headers),
+                )
+            ]
 
 You can implement your own providers in order to extend or override current
 ``scrapy-poet`` behavior. All providers should inherit from this base class:
@@ -76,7 +82,14 @@ would lead to the following code:
 
         def __call__(self, to_provide: Set[Callable], response: Response):
             """Build a ``web_poet.HttpResponse`` instance using a Scrapy ``Response``"""
-            return [web_poet.HttpResponse(url=response.url, body=response.body)]
+            return [
+                HttpResponse(
+                    url=response.url,
+                    body=response.body,
+                    status=response.status,
+                    headers=web_poet.HttpResponseHeaders.from_bytes(response.headers),
+                )
+            ]
 
         def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
             """Returns a fingerprint to identify the specific request."""
