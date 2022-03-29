@@ -14,7 +14,7 @@ setup(
         'andi >= 0.4.1',
         'attrs',
         'parsel',
-        'web-poet @ git+https://git@github.com/scrapinghub/web-poet@additional-requests#egg=web-poet',
+        'web-poet @ git+https://git@github.com/scrapinghub/web-poet@tmp-dep-AR-1#egg=web-poet',
         'tldextract',
         'sqlitedict',
     ],

@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_PROVIDERS = {
-    HttpResponseProvider: 500
+    HttpResponseProvider: 500,
     HttpClientProvider: 600,
     MetaProvider: 700,
 }

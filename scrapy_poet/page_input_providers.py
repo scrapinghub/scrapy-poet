@@ -19,6 +19,7 @@ from scrapy.crawler import Crawler
 from scrapy.utils.reqser import request_to_dict
 from scrapy.utils.request import request_fingerprint
 
+from scrapy_poet.utils import scrapy_response_to_http_response
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
 from scrapy_poet.backend import create_scrapy_backend
 from web_poet import HttpResponse, HttpResponseHeaders, Meta
@@ -164,14 +165,7 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``HttpResponse`` instance using a Scrapy ``Response``"""
-        return [
-            HttpResponse(
-                url=response.url,
-                body=response.body,
-                status=response.status,
-                headers=HttpResponseHeaders.from_bytes(response.headers),
-            )
-        ]
+        return [scrapy_response_to_http_response(response)]
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
         request_keys = {"url", "method", "body"}

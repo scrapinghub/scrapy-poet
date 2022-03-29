@@ -54,11 +54,10 @@ Suppose we have the following Page Object:
             }
 
             # Simulates clicking on a button that says "View All Images"
-            response: web_poet.ResponseData = await self.http_client.get(
+            response: web_poet.HttpResponse = await self.http_client.get(
                 f"https://api.example.com/v2/images?id={item['product_id']}"
             )
-            page = web_poet.WebPage(response)
-            item["images"] = page.css(".product-images img::attr(src)").getall()
+            item["images"] = response.css(".product-images img::attr(src)").getall()
             return item
 
 
@@ -122,11 +121,10 @@ This basically acts as a switch to update the behavior of the Page Object:
 
             # Simulates clicking on a button that says "View All Images"
             if self.meta.get("enable_extracting_all_images")
-                response: web_poet.ResponseData = await self.http_client.get(
+                response: web_poet.HttpResponse = await self.http_client.get(
                     f"https://api.example.com/v2/images?id={item['product_id']}"
                 )
-                page = web_poet.WebPage(response)
-                item["images"] = page.css(".product-images img::attr(src)").getall()
+                item["images"] = response.css(".product-images img::attr(src)").getall()
 
             return item
 

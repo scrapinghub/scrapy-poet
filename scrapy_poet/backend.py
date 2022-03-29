@@ -3,8 +3,10 @@ import logging
 import attr
 import scrapy
 from scrapy.utils.defer import deferred_to_future
-from web_poet.page_inputs import ResponseData
+from web_poet.page_inputs import HttpResponse, HttpResponseHeaders
 from web_poet.requests import Request, RequestBackendError
+
+from scrapy_poet.utils import scrapy_response_to_http_response
 
 
 logger = logging.getLogger(__name__)
@@ -28,13 +30,8 @@ def create_scrapy_backend(backend):
 
         try:
             deferred = backend(request)
-            response = await deferred_to_future(deferred)
-            return ResponseData(
-                url=response.url,
-                html=response.text,
-                status=response.status,
-                headers=response.headers,
-            )
+            response: scrapy.http.Response = await deferred_to_future(deferred)
+            return scrapy_response_to_http_response(response)
 
         except scrapy.exceptions.IgnoreRequest:
             logger.warning(f"Additional Request Ignored: {request}")
