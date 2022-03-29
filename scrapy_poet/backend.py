@@ -3,7 +3,6 @@ import logging
 import attr
 import scrapy
 from scrapy.utils.defer import deferred_to_future
-from web_poet.page_inputs import HttpResponse, HttpResponseHeaders
 from web_poet.requests import Request, RequestBackendError
 
 from scrapy_poet.utils import scrapy_response_to_http_response
