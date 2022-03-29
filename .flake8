@@ -1,0 +1,20 @@
+[flake8]
+ignore =
+    # Refers to the max-line length. Let's suppress the error and simply
+    # let black take care on how it wants to format the lines.
+    E501,
+
+    # Refers to "line break before binary operator".
+    # Similar to above, let black take care of the formatting.
+    W503,
+
+    # Refers to "nnecessary dict call - rewrite as a literal".
+    C408
+
+per-file-ignores =
+    # Ignore "imported but unused" errors in __init__ files, as those imports are there
+    # to expose submodule functions so they can be imported directly from that module
+    scrapy_poet/__init__.py:F401
+
+    # Ignore * imports in these files 
+    scrapy_poet/__init__.py:F403
