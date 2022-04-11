@@ -277,6 +277,9 @@ Object:
 
 .. code-block:: python
 
+    from web_poet.pages import WebPage
+
+
     class BookListPage(WebPage):
 
         def book_urls(self):
@@ -310,6 +313,9 @@ The following code snippet introduces such base classes and refactors the
 existing Page Objects as subclasses of them:
 
 .. code-block:: python
+
+    from web_poet.pages import ItemWebPage, WebPage
+
 
     # ------ Base page objects ------
 
@@ -377,6 +383,9 @@ different so their extraction logic wouldn't work. Therefore, we have
 to implement new ones:
 
 .. code-block:: python
+
+    from web_poet.pages import ItemWebPage, WebPage
+
 
     class BPBookListPage(WebPage):
 
