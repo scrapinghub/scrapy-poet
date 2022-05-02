@@ -51,7 +51,7 @@ And then override it for a particular domain using ``settings.py``:
         ("example.com", ISBNBookPage, BookPage)
     ]
 
-This new Page Objects gets the original ``BookPage`` as dependency and enrich
+This new Page Object gets the original ``BookPage`` as dependency and enrich
 the obtained item with the ISBN from the page HTML.
 
 .. note::
@@ -82,12 +82,15 @@ Overrides rules
 ===============
 
 The default way of configuring the override rules is using triplets
-of the form (``url pattern``, ``override_type``, ``overridden_type``). But
-more complex rules can be introduced if the class ``OverrideRule``
-is used. The following example configures an override that
-is only applied for book pages from ``books.toscrape.com``:
+of the form (``url pattern``, ``override_type``, ``overridden_type``). But more
+complex rules can be introduced if the class :py:class:`web_poet.overrides.OverrideRule`
+is used. The following example configures an override that is only applied for
+book pages from ``books.toscrape.com``:
 
 .. code-block:: python
+
+    from web_poet import OverrideRule
+
 
     SCRAPY_POET_OVERRIDES = [
         OverrideRule(
@@ -111,13 +114,19 @@ Decorate Page Objects with the rules
 Having the rules along with the Page Objects is a good idea,
 as you can identify with a single sight what the Page Object is doing
 along with where it is applied. This can be done by decorating the
-Page Objects with ``@handle_urls`` provided by `web-poet`_.
+Page Objects with :py:func:`web_poet.handle_urls` provided by `web-poet`_.
+
+.. tip::
+    Make sure to read the :external:ref:`intro-overrides` Tutorial section of
+    `web-poet`_ to learn all of its other functionalities that is not covered
+    in this section.
 
 Let's see an example:
 
 .. code-block:: python
 
     from web_poet import handle_urls
+
 
     @handle_urls("toscrape.com", BookPage)
     class BTSBookPage(BookPage):
@@ -128,13 +137,13 @@ Let's see an example:
                 'name': self.css("title::text").get(),
             }
 
-The ``@handle_urls`` decorator in this case is indicating that
+The :py:func:`web_poet.handle_urls` decorator in this case is indicating that
 the class ``BSTBookPage`` should be used instead of ``BookPage``
 for the domain ``toscrape.com``.
 
 In order to configure the ``scrapy-poet`` overrides automatically
 using these annotations, you can directly interact with `web-poet`_'s
-``default_registry``.
+``default_registry`` (an instance of :py:class:`web_poet.overrides.PageObjectRegistry`).
 
 For example:
 
@@ -142,7 +151,7 @@ For example:
 
     from web_poet import default_registry, consume_modules
 
-    # The consume_modules() must be called first if you need to load
+    # The consume_modules() must be called first if you need to properly import
     # rules from other packages. Otherwise, it can be omitted.
     # More info about this caveat on web-poet docs.
     consume_modules("external_package_A", "another_ext_package.lib")
@@ -150,38 +159,20 @@ For example:
     # To get all of the Override Rules that were declared via annotations.
     SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
 
-    # The two lines above could be mixed together via this shortcut:
-    SCRAPY_POET_OVERRIDES = default_registry.get_overrides(
-        consume=["external_package_A", "another_ext_package.lib"]
-    )
+The :py:meth:`web_poet.overrides.PageObjectRegistry.get_overrides` method of the
+``default_registry`` above returns ``List[OverrideRule]`` that were declared
+using `web-poet`_'s :py:func:`web_poet.handle_urls` annotation. This is much
+more convenient that manually defining all of the :py:class:`web_poet.overrides.OverrideRule`.
 
-The ``get_overrides()`` method of the ``default_registry`` above returns
-``List[OverrideRule]`` that were declared using `web-poet`_'s ``@handle_urls()``
-annotation. This is much more convenient that manually defining all of the 
-``OverrideRule``. Take note that since ``SCRAPY_POET_OVERRIDES`` is structured as
+Take note that since ``SCRAPY_POET_OVERRIDES`` is structured as
 ``List[OverrideRule]``, you can easily modify it later on if needed.
-
-.. tip::
-
-    If you're using External Packages which conform to the **POP**
-    standards as described in **web-poet's** `Page Object Projects (POP)
-    <https://web-poet.readthedocs.io/en/stable/intro/pop.html>`_ section,
-    then retrieving the rules should be as easy as:
-
-    .. code-block:: python
-
-        import external_package_A, another_ext_package
-
-        SCRAPY_POET_OVERRIDES = (
-            external_package_A.REGISTRY.get_overrides()
-            + another_ext_package.REGISTRY.get_overrides()
-        )
 
 .. note::
 
-    For more info and advanced features of `web-poet`_'s ``@handle_urls``
+    For more info and advanced features of `web-poet`_'s :py:func:`web_poet.handle_urls`
     and its registry, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
-    documentation regarding Overrides.
+    documentation, specifically its :external:ref:`intro-overrides` tutorial
+    section.
 
 
 Overrides registry
@@ -197,7 +188,8 @@ example.
 But the registry implementation can be changed at convenience. A different
 registry implementation can be configured using the property
 ``SCRAPY_POET_OVERRIDES_REGISTRY`` in ``settings.py``. The new registry
-must be a subclass of ``scrapy_poet.overrides.OverridesRegistryBase``
-and must implement the method ``overrides_for``. As other Scrapy components,
-it can be initialized from the ``from_crawler`` class method if implemented.
-This might be handy to be able to access settings, stats, request meta, etc.
+must be a subclass of :class:`scrapy_poet.overrides.OverridesRegistryBase` and
+must implement the method :meth:`scrapy_poet.overrides.OverridesRegistryBase.overrides_for`.
+As other Scrapy components, it can be initialized from the ``from_crawler`` class
+method if implemented. This might be handy to be able to access settings, stats,
+request meta, etc.

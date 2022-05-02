@@ -417,15 +417,16 @@ for a particular domain, but more complex URL patterns are also possible.
 For example, the pattern ``books.toscrape.com/cataloge/category/``
 is accepted and it would restrict the override only to category pages.
 
-It is even possible to configure more complex patterns by
-using the ``web_poet.OverrideRule`` class instead of a triplet in
+It is even possible to configure more complex patterns by using the
+:py:class:`web_poet.overrides.OverrideRule` class instead of a triplet in
 the configuration. Another way of declaring the earlier config
 for ``SCRAPY_POET_OVERRIDES`` would be the following:
 
 .. code-block:: python
 
     from url_matcher import Patterns
-    from web_poet.overrides import OverrideRule
+    from web_poet import OverrideRule
+
 
     SCRAPY_POET_OVERRIDES = [
         OverrideRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookListPage, instead_of=BookListPage),
@@ -443,30 +444,27 @@ a shortcut to be more concise.
     documentation for more information about the patterns syntax.
 
 Manually defining overrides like this would be inconvenient, most
-especially for larger projects. Fortunately, `web-poet`_ has a cool feature
-to annotate Page Objects like ``@web_poet.handle_urls`` that would define and
-store the ``OverrideRule`` for you. All of the Override rules could then be
-simply read as:
+especially for larger projects. Fortunately, `web-poet`_ has a cool feature to
+annotate Page Objects like :py:func:`web_poet.handle_urls` that would define
+and store the :py:class:`web_poet.overrides.OverrideRule` for you. All of the
+:py:class:`web_poet.overrides.OverrideRule` rules could then be simply read as:
 
 .. code:: python
 
     from web_poet import default_registry, consume_modules
 
-    # The consume_modules() must be called first if you need to load
+    # The consume_modules() must be called first if you need to properly import
     # rules from other packages. Otherwise, it can be omitted.
     # More info about this caveat on web-poet docs.
     consume_modules("external_package_A", "another_ext_package.lib")
     SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
 
-    # The two lines above could be mixed together via this shortcut:
-    SCRAPY_POET_OVERRIDES = default_registry.get_overrides(
-        consume=["external_package_A", "another_ext_package.lib"]
-    )
-
 For more info on this, you can refer to these docs:
 
-    * :ref:`overrides` section
-    * external `web-poet`_ docs
+    * ``scrapy-poet``'s :ref:`overrides` Tutorial section.
+    * External `web-poet`_ docs.
+
+        * Specifically, the :external:ref:`intro-overrides` Tutorial section.
 
 Next steps
 ==========

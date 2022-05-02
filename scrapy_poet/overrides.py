@@ -31,7 +31,7 @@ class OverridesRegistry(OverridesRegistryBase):
     """
     Overrides registry that reads the overrides from the ``SCRAPY_POET_OVERRIDES``
     in the spider settings. It is a list and each rule can be a tuple or an
-    instance of the class ``OverrideRule``.
+    instance of the class :py:class:`web_poet.overrides.OverrideRule`.
 
     If a tuple is provided:
 
@@ -46,6 +46,10 @@ class OverridesRegistry(OverridesRegistryBase):
 
     .. code-block:: python
 
+        from url_matcher import Patterns
+        from scrapy_poet.overrides import OverrideRule
+
+
         SCRAPY_POET_OVERRIDES = [
             # Option 1
             ("books.toscrape.com", ISBNBookPage, BookPage),
@@ -58,45 +62,28 @@ class OverridesRegistry(OverridesRegistryBase):
             ),
         ]
 
-    Now, if you've used ``web-poet``'s built-in functionality to directly create
-    the override rules in the Page Object via the ``@handle_urls`` annotation,
-    you can quickly import them via the following code below. It finds all the
-    rules annotated using ``web-poet``'s ``@handle_urls`` decorator that were
-    registered into ``web_poet.default_registry``.
+    .. _web-poet: https://web-poet.readthedocs.io
+
+    Now, if you've used web-poet_'s built-in functionality to directly create
+    the :py:class:`web_poet.overrides.OverrideRule` in the Page Object via the
+    :py:func:`web_poet.handle_urls` annotation, you can quickly import them via
+    the following code below. It finds all the rules annotated using web-poet_'s
+    :py:func:`web_poet.handle_urls` as a decorator that were registered into
+    ``web_poet.default_registry`` (an instance of
+    :py:class:`web_poet.overrides.PageObjectRegistry`).
 
     .. code-block:: python
 
         from web_poet import default_registry, consume_modules
 
-        # The consume_modules() must be called first if you need to load
-        # rules from other packages. Otherwise, it can be omitted.
+        # The consume_modules() must be called first if you need to properly
+        # import rules from other packages. Otherwise, it can be omitted.
         # More info about this caveat on web-poet docs.
         consume_modules("external_package_A.po", "another_ext_package.lib")
         SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
 
-        # The two lines above could be mixed together via this shortcut:
-        SCRAPY_POET_OVERRIDES = default_registry.get_overrides(
-            consume=["external_package_A.po", "another_ext_package.lib"]
-        )
-
-    Make sure to call ``consume_module()`` beforehand. More info on this at
-    `web-poet <https://web-poet.readthedocs.io>`_.
-
-    .. tip::
-
-        If you're using External Packages which conform to the **POP**
-        standards as described in **web-poet's** `Page Object Projects (POP)
-        <https://web-poet.readthedocs.io/en/stable/intro/pop.html>`_ section,
-        then retrieving the rules should be as easy as:
-
-        .. code-block:: python
-
-            import external_package_A, another_ext_package
-
-            SCRAPY_POET_OVERRIDES = (
-                external_package_A.REGISTRY.get_overrides()
-                + another_ext_package.REGISTRY.get_overrides()
-            )
+    Make sure to call :py:func:`web_poet.overrides.consume_modules` beforehand.
+    More info on this at web-poet_.
     """
 
     @classmethod

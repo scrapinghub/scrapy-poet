@@ -188,7 +188,7 @@ epub_exclude_files = ['search.html']
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None, ),
     'scrapy': ('https://docs.scrapy.org/en/latest', None, ),
-    'web-poet': ('https://web-poet.readthedocs.io/en/stable/', None),
+    'web-poet': ('https://web-poet.readthedocs.io/en/latest/', None),
     'url-matcher': ('https://url-matcher.readthedocs.io/en/stable/', None),
 }
 
