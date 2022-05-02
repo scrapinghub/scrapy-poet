@@ -167,7 +167,7 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
                 url=response.url,
                 body=response.body,
                 status=response.status,
-                headers=HttpResponseHeaders.from_bytes(response.headers),
+                headers=HttpResponseHeaders.from_bytes_dict(response.headers),
             )
         ]
 
@@ -192,9 +192,9 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
             HttpResponse(
                 response_data["url"],
                 response_data["body"],
-                response_data["status"],
-                HttpResponseHeaders.from_bytes(response_data["headers"]),
-                response_data["_encoding"],
+                status=response_data["status"],
+                headers=HttpResponseHeaders.from_bytes_dict(response_data["headers"]),
+                encoding=response_data["_encoding"],
             )
             for response_data in data
         ]

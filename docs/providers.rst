@@ -45,7 +45,7 @@ that need it, like the ``web_poet.ItemWebPage``.
                     url=response.url,
                     body=response.body,
                     status=response.status,
-                    headers=web_poet.HttpResponseHeaders.from_bytes(response.headers),
+                    headers=web_poet.HttpResponseHeaders.from_bytes_dict(response.headers),
                 )
             ]
 
@@ -87,7 +87,7 @@ would lead to the following code:
                     url=response.url,
                     body=response.body,
                     status=response.status,
-                    headers=web_poet.HttpResponseHeaders.from_bytes(response.headers),
+                    headers=web_poet.HttpResponseHeaders.from_bytes_dict(response.headers),
                 )
             ]
 
