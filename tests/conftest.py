@@ -1,7 +1,7 @@
 import pytest
 from scrapy.settings import Settings
 
-from scrapy_poet.page_input_providers import ResponseDataProvider
+from scrapy_poet.page_input_providers import HttpResponseProvider
 
 
 @pytest.fixture()

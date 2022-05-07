@@ -2,6 +2,11 @@
 Changelog
 =========
 
+TBR
+---
+
+* Use the new ``web_poet.HttpResponse`` which replaces ``web_poet.ResponseData``.
+
 
 0.3.0 (2022-01-28)
 ------------------

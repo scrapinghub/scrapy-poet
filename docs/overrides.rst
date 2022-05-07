@@ -34,7 +34,7 @@ using the following Page Object:
 
     class ISBNBookPage(ItemWebPage):
 
-        def __init__(self, response: ResponseData, book_page: BookPage):
+        def __init__(self, response: HttpResponse, book_page: BookPage):
             super().__init__(response)
             self.book_page = book_page
 
