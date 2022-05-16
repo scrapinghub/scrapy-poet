@@ -18,8 +18,8 @@ scrapy-poet
    :target: https://codecov.io/gh/scrapinghub/scrapy-poet
    :alt: Coverage report
 
-.. image:: https://readthedocs.org/projects/scrapy-poet/badge/?version=latest
-   :target: https://scrapy-poet.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/scrapy-poet/badge/?version=stable
+   :target: https://scrapy-poet.readthedocs.io/en/stable/?badge=stable
    :alt: Documentation Status
 
 ``scrapy-poet`` is the `web-poet`_ Page Object pattern implementation for Scrapy.

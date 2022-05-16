@@ -25,7 +25,7 @@ from scrapy_poet.page_input_providers import (
     PageObjectInputProvider
 )
 from web_poet import default_registry
-from web_poet.page_inputs import ResponseData
+from web_poet.page_inputs import HttpResponse
 from scrapy_poet import DummyResponse
 from tests.utils import (HtmlResource,
                          crawl_items,
@@ -130,10 +130,10 @@ class OptionalAndUnionPage(ItemWebPage):
     breadcrumbs: BreadcrumbsExtraction
     opt_check_1: Optional[BreadcrumbsExtraction]
     opt_check_2: Optional[str]  # str is not Injectable, so None expected here
-    union_check_1: Union[BreadcrumbsExtraction, ResponseData]  # Breadcrumbs is injected
-    union_check_2: Union[str, ResponseData]  # ResponseData is injected
-    union_check_3: Union[Optional[str], ResponseData]  # None is injected
-    union_check_4: Union[None, str, ResponseData]  # None is injected
+    union_check_1: Union[BreadcrumbsExtraction, HttpResponse]  # Breadcrumbs is injected
+    union_check_2: Union[str, HttpResponse]  # HttpResponse is injected
+    union_check_3: Union[Optional[str], HttpResponse]  # None is injected
+    union_check_4: Union[None, str, HttpResponse]  # None is injected
     union_check_5: Union[BreadcrumbsExtraction, None, str]  # Breadcrumbs is injected
 
     def to_item(self):
@@ -156,7 +156,7 @@ def test_optional_and_unions(settings):
 @attr.s(auto_attribs=True)
 class ProvidedWithDeferred:
     msg: str
-    response: ResponseData  # it should be None because this class is provided
+    response: HttpResponse  # it should be None because this class is provided
 
 
 @attr.s(auto_attribs=True)
@@ -203,7 +203,7 @@ class ExtraClassDataProvider(PageObjectInputProvider):
         # we're returning a class that's not listed in self.provided_classes
         return {
             ExtraClassData: ExtraClassData("this should be returned"),
-            ResponseData: ResponseData("example.com", "this shouldn't"),
+            HttpResponse: HttpResponse("example.com", b"this shouldn't"),
         }
 
 

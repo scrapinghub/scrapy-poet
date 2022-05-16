@@ -5,6 +5,7 @@ Changelog
 TBR
 ---
 
+* Use the new ``web_poet.HttpResponse`` which replaces ``web_poet.ResponseData``.
 * We have these **backward incompatible** changes since the
   ``web_poet.OverrideRule`` follow a different structure:
 
@@ -13,7 +14,8 @@ TBR
       for better URL matching.
     * This resuls in a newer format in the ``SCRAPY_POET_OVERRIDES`` setting.
 
-0.3.0 (2021-01-28)
+
+0.3.0 (2022-01-28)
 ------------------
 
 * Cache mechanism using ``SCRAPY_POET_CACHE``

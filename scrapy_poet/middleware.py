@@ -14,7 +14,7 @@ from scrapy.utils.misc import create_instance, load_object
 
 from .api import DummyResponse
 from .overrides import OverridesRegistry
-from .page_input_providers import ResponseDataProvider
+from .page_input_providers import HttpResponseProvider
 from .injection import Injector
 
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_PROVIDERS = {
-    ResponseDataProvider: 500
+    HttpResponseProvider: 500
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")

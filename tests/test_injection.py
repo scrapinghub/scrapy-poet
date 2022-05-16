@@ -5,13 +5,14 @@ import pytest
 from pytest_twisted import inlineCallbacks
 import weakref
 
+import parsel
 from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 
 from url_matcher.util import get_domain
 
-from scrapy_poet import CacheDataProviderMixin, ResponseDataProvider, PageObjectInputProvider, \
+from scrapy_poet import CacheDataProviderMixin, HttpResponseProvider, PageObjectInputProvider, \
     DummyResponse
 from scrapy_poet.injection import check_all_providers_are_callable, is_class_provided_by_any_provider_fn, \
     get_injector_for_testing, get_response_for_testing
@@ -267,6 +268,10 @@ class Html(Injectable):
     url = "http://example.com"
     html = """<html><body>Price: <span class="price">22</span>€</body></html>"""
 
+    @property
+    def selector(self):
+        return parsel.Selector(self.html)
+
 
 class EurDollarRate(Injectable):
     rate = 1.1
@@ -333,17 +338,17 @@ class TestInjectorOverrides:
 
 
 def test_load_provider_classes():
-    provider_as_string = f"{ResponseDataProvider.__module__}.{ResponseDataProvider.__name__}"
-    injector = get_injector_for_testing({provider_as_string: 2, ResponseDataProvider: 1})
-    assert all(type(prov) == ResponseDataProvider for prov in injector.providers)
+    provider_as_string = f"{HttpResponseProvider.__module__}.{HttpResponseProvider.__name__}"
+    injector = get_injector_for_testing({provider_as_string: 2, HttpResponseProvider: 1})
+    assert all(type(prov) == HttpResponseProvider for prov in injector.providers)
     assert len(injector.providers) == 2
 
 
 def test_check_all_providers_are_callable():
-    check_all_providers_are_callable([ResponseDataProvider(None)])
+    check_all_providers_are_callable([HttpResponseProvider(None)])
     with pytest.raises(NonCallableProviderError) as exinf:
         check_all_providers_are_callable([PageObjectInputProvider(None),
-                                          ResponseDataProvider(None)])
+                                          HttpResponseProvider(None)])
 
     assert "PageObjectInputProvider" in str(exinf.value)
     assert "not callable" in str(exinf.value)
