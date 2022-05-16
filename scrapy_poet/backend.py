@@ -3,7 +3,8 @@ import logging
 import attr
 import scrapy
 from scrapy.utils.defer import deferred_to_future
-from web_poet.requests import Request, RequestBackendError
+from web_poet import HttpRequest
+from web_poet.exceptions import RequestBackendError
 
 from scrapy_poet.utils import scrapy_response_to_http_response
 
@@ -12,10 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 def create_scrapy_backend(backend):
-    async def scrapy_backend(request: Request):
-        if not isinstance(request, Request):
+    async def scrapy_backend(request: HttpRequest):
+        if not isinstance(request, HttpRequest):
             raise TypeError(
-                f"The request should be 'web_poet.Request' but received "
+                f"The request should be 'web_poet.HttpRequest' but received "
                 f"one of type: '{type(request)}'."
             )
 

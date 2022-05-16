@@ -22,8 +22,7 @@ from scrapy.utils.request import request_fingerprint
 from scrapy_poet.utils import scrapy_response_to_http_response
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
 from scrapy_poet.backend import create_scrapy_backend
-from web_poet import HttpResponse, HttpResponseHeaders, Meta
-from web_poet.requests import HttpClient
+from web_poet import HttpClient, HttpResponse, HttpResponseHeaders, Meta
 
 
 class PageObjectInputProvider:

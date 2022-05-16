@@ -4,8 +4,10 @@ from unittest import mock
 
 import web_poet
 import scrapy
-from scrapy_poet.backend import RequestBackendError, create_scrapy_backend
+from web_poet.exceptions import RequestBackendError
 from tests.utils import AsyncMock
+
+from scrapy_poet.backend import create_scrapy_backend
 
 
 @pytest.fixture
@@ -19,7 +21,7 @@ async def test_incompatible_request(scrapy_backend):
     """The Request must have fields that are a subset of `scrapy.Request`."""
 
     @attr.define
-    class Request(web_poet.Request):
+    class Request(web_poet.HttpRequest):
         incompatible_field: str = "value"
 
     req = Request("https://example.com")
@@ -30,7 +32,7 @@ async def test_incompatible_request(scrapy_backend):
 
 @pytest.mark.asyncio
 async def test_incompatible_scrapy_request(scrapy_backend):
-    """The Request must be web_poet.Request and not anything else."""
+    """The Request must be web_poet.HttpRequest and not anything else."""
 
     req = scrapy.Request("https://example.com")
 
@@ -43,14 +45,14 @@ def fake_http_response():
     return web_poet.HttpResponse(
         "https://example.com",
         b"some content",
-        200,
-        {"Content-Type": "text/html; charset=utf-8"},
+        status=200,
+        headers={"Content-Type": "text/html; charset=utf-8"},
     )
 
 
 @pytest.mark.asyncio
 async def test_scrapy_poet_backend(fake_http_response):
-    req = web_poet.Request("https://example.com")
+    req = web_poet.HttpRequest("https://example.com")
 
     with mock.patch(
         "scrapy_poet.backend.deferred_to_future", new_callable=AsyncMock
@@ -76,7 +78,7 @@ async def test_scrapy_poet_backend(fake_http_response):
 @pytest.mark.asyncio
 async def test_scrapy_poet_backend_ignored_request():
     """It should handle IgnoreRequest from Scrapy gracefully."""
-    req = web_poet.Request("https://example.com")
+    req = web_poet.HttpRequest("https://example.com")
 
     with mock.patch(
         "scrapy_poet.backend.deferred_to_future", new_callable=AsyncMock

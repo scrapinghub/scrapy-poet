@@ -221,7 +221,7 @@ async def test_http_client_provider(settings):
         results = provider(set(), crawler)
         assert isinstance(results[0], HttpClient)
 
-    results[0].request_downloader == mock_factory.return_value
+    results[0]._request_downloader == mock_factory.return_value
 
 def test_meta_provider(settings):
     crawler = get_crawler(Spider, settings)

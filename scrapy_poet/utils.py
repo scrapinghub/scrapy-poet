@@ -40,5 +40,5 @@ def scrapy_response_to_http_response(response: Response):
         url=response.url,
         body=response.body,
         status=response.status,
-        headers=HttpResponseHeaders.from_bytes(response.headers),
+        headers=HttpResponseHeaders.from_bytes_dict(response.headers),
     )
