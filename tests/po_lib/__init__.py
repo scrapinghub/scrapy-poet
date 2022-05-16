@@ -21,7 +21,7 @@ class POOverriden(ItemWebPage):
         return {"msg": "PO that will be replace"}
 
 
-@handle_urls(f"{DOMAIN}:{PORT}", POOverriden)
+@handle_urls(f"{DOMAIN}:{PORT}", overrides=POOverriden)
 class POIntegration(ItemWebPage):
     def to_item(self):
         return {"msg": "PO replacement"}
