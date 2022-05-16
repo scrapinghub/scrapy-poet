@@ -45,7 +45,7 @@ that need it, like the ``web_poet.ItemWebPage``.
                     url=response.url,
                     body=response.body,
                     status=response.status,
-                    headers=web_poet.HttpResponseHeaders.from_bytes(response.headers),
+                    headers=web_poet.HttpResponseHeaders.from_bytes_dict(response.headers),
                 )
             ]
 
@@ -83,11 +83,11 @@ would lead to the following code:
         def __call__(self, to_provide: Set[Callable], response: Response):
             """Build a ``web_poet.HttpResponse`` instance using a Scrapy ``Response``"""
             return [
-                HttpResponse(
+                web_poet.HttpResponse(
                     url=response.url,
                     body=response.body,
                     status=response.status,
-                    headers=web_poet.HttpResponseHeaders.from_bytes(response.headers),
+                    headers=web_poet.HttpResponseHeaders.from_bytes_dict(response.headers),
                 )
             ]
 

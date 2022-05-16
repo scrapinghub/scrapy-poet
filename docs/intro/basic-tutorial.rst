@@ -277,10 +277,13 @@ Object:
 
 .. code-block:: python
 
+    from web_poet.pages import WebPage
+
+
     class BookListPage(WebPage):
 
         def book_urls(self):
-            return self.css('.article-info a::attr(href)').getall()
+            return self.css('.image_container a')
 
 Let's adapt the spider to use this new Page Object:
 
@@ -292,7 +295,7 @@ Let's adapt the spider to use this new Page Object:
         parse_book = callback_for(BookPage)  # extract items from book pages
 
         def parse(self, response, page: BookListPage):
-            yield from response.follow_all(page.books_urls(), self.parse_book)
+            yield from response.follow_all(page.book_urls(), self.parse_book)
 
 All the extraction logic that is specific to the site is now responsibility
 of the Page Objects. As a result, the spider is now *site-agnostic* and will
@@ -310,6 +313,9 @@ The following code snippet introduces such base classes and refactors the
 existing Page Objects as subclasses of them:
 
 .. code-block:: python
+
+    from web_poet.pages import ItemWebPage, WebPage
+
 
     # ------ Base page objects ------
 
@@ -377,6 +383,9 @@ different so their extraction logic wouldn't work. Therefore, we have
 to implement new ones:
 
 .. code-block:: python
+
+    from web_poet.pages import ItemWebPage, WebPage
+
 
     class BPBookListPage(WebPage):
 

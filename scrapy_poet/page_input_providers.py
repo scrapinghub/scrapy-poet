@@ -165,7 +165,14 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``HttpResponse`` instance using a Scrapy ``Response``"""
-        return [scrapy_response_to_http_response(response)]
+        return [
+            HttpResponse(
+                url=response.url,
+                body=response.body,
+                status=response.status,
+                headers=HttpResponseHeaders.from_bytes_dict(response.headers),
+            )
+        ]
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
         request_keys = {"url", "method", "body"}
@@ -188,9 +195,9 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
             HttpResponse(
                 response_data["url"],
                 response_data["body"],
-                response_data["status"],
-                HttpResponseHeaders.from_bytes(response_data["headers"]),
-                response_data["_encoding"],
+                status=response_data["status"],
+                headers=response_data["headers"],
+                encoding=response_data["_encoding"],
             )
             for response_data in data
         ]
