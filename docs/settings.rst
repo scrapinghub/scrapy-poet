@@ -25,7 +25,7 @@ Default: ``None``
 
 Mapping of overrides for each domain. The format of the such ``dict`` mapping
 depends on the currently set Registry. The default is currently 
-:class:`~.PerDomainOverridesRegistry`. This can be overriden by the setting below:
+:class:`~.OverridesRegistry`. This can be overriden by the setting below:
 ``SCRAPY_POET_OVERRIDES_REGISTRY``.
 
 There are sections dedicated for this at :ref:`intro-tutorial` and :ref:`overrides`.
@@ -36,7 +36,7 @@ SCRAPY_POET_OVERRIDES_REGISTRY
 
 Defaut: ``None``
 
-Sets an alternative Registry to replace the default :class:`~.PerDomainOverridesRegistry`.
+Sets an alternative Registry to replace the default :class:`~.OverridesRegistry`.
 To use this, set a ``str`` which denotes the absolute object path of the new
 Registry.
 

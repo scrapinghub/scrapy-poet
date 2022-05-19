@@ -1,22 +1,44 @@
 """
 Scrapy spider which uses Page Objects both for crawling and extraction,
 and uses overrides to support two different sites without changing
-the crawling logic (the spider is exactly the same).
+the crawling logic (the spider is exactly the same)
 
-The default configured PO logic contains the logic for books.toscrape.com
+No configured default logic: if used for an unregistered domain, no logic
+at all is applied.
+
+This example is quite similar to books_04_overrides_02.py where the only
+difference is that this example is using the ``@handle_urls`` decorator to
+store the rules in web-poet's registry.
 """
 import scrapy
-from web_poet import ItemWebPage, WebPage
+from web_poet import ItemWebPage, WebPage, handle_urls, default_registry
+from web_poet.overrides import OverrideRule
+from url_matcher import Patterns
+
 from scrapy_poet import callback_for
 
 
 class BookListPage(WebPage):
+
+    def book_urls(self):
+        return []
+
+
+class BookPage(ItemWebPage):
+
+    def to_item(self):
+        return None
+
+
+@handle_urls("toscrape.com", overrides=BookListPage)
+class BTSBookListPage(BookListPage):
     """Logic to extract listings from pages like https://books.toscrape.com"""
     def book_urls(self):
         return self.css('.image_container a::attr(href)').getall()
 
 
-class BookPage(ItemWebPage):
+@handle_urls("toscrape.com", overrides=BookPage)
+class BTSBookPage(BookPage):
     """Logic to extract book info from pages like https://books.toscrape.com/catalogue/soumission_998/index.html"""
     def to_item(self):
         return {
@@ -25,13 +47,15 @@ class BookPage(ItemWebPage):
         }
 
 
-class BPBookListPage(WebPage):
+@handle_urls("bookpage.com", overrides=BookListPage)
+class BPBookListPage(BookListPage):
     """Logic to extract listings from pages like https://bookpage.com/reviews"""
     def book_urls(self):
         return self.css('article.post h4 a::attr(href)').getall()
 
 
-class BPBookPage(ItemWebPage):
+@handle_urls("bookpage.com", overrides=BookPage)
+class BPBookPage(BookPage):
     """Logic to extract from pages like https://bookpage.com/reviews/25879-laird-hunt-zorrie-fiction"""
     def to_item(self):
         return {
@@ -41,16 +65,12 @@ class BPBookPage(ItemWebPage):
 
 
 class BooksSpider(scrapy.Spider):
-    name = 'books_04_overrides_01'
+    name = 'books_04_overrides_03'
     start_urls = ['http://books.toscrape.com/', 'https://bookpage.com/reviews']
-    # Configuring different page objects pages from the bookpage.com domain
+    # Configuring different page objects pages for different domains
     custom_settings = {
-        "SCRAPY_POET_OVERRIDES": [
-            ("bookpage.com", BPBookListPage, BookListPage),
-            ("bookpage.com", BPBookPage, BookPage)
-        ]
+        "SCRAPY_POET_OVERRIDES": default_registry.get_overrides()
     }
 
     def parse(self, response, page: BookListPage):
-        for url in page.book_urls():
-            yield response.follow(url, callback_for(BookPage))
+        yield from response.follow_all(page.book_urls(), callback_for(BookPage))
