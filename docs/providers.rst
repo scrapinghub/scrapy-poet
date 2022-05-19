@@ -41,7 +41,7 @@ that need it, like the ``web_poet.ItemWebPage``.
         def __call__(self, to_provide: Set[Callable], response: Response):
             """Build a ``web_poet.HttpResponse`` instance using a Scrapy ``Response``"""
             return [
-                HttpResponse(
+                web_poet.HttpResponse(
                     url=response.url,
                     body=response.body,
                     status=response.status,
