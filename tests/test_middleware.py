@@ -15,13 +15,16 @@ from pytest_twisted import inlineCallbacks
 import attr
 
 from scrapy_poet import callback_for
+from url_matcher.util import get_domain
+
+from tests.mockserver import get_ephemeral_port
 from scrapy_poet import InjectionMiddleware
-from scrapy_poet.utils import get_domain
 from web_poet.pages import WebPage, ItemPage, ItemWebPage
 from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.page_input_providers import (
     PageObjectInputProvider
 )
+from web_poet import default_registry
 from web_poet.page_inputs import HttpResponse
 from scrapy_poet import DummyResponse
 from tests.utils import (HtmlResource,
@@ -107,10 +110,12 @@ def test_basic_case(settings):
 def test_overrides(settings):
     host = socket.gethostbyname(socket.gethostname())
     domain = get_domain(host)
-    settings["SCRAPY_POET_OVERRIDES"] = {
-        domain: {BreadcrumbsExtraction: OverridenBreadcrumbsExtraction}}
+    port = get_ephemeral_port()
+    settings["SCRAPY_POET_OVERRIDES"] = [
+        (f"{domain}:{port}", OverridenBreadcrumbsExtraction, BreadcrumbsExtraction)
+    ]
     item, url, _ = yield crawl_single_item(spider_for(ProductPage),
-                                           ProductHtml, settings)
+                                           ProductHtml, settings, port=port)
     assert item == {
         'url': url,
         'name': 'Chocolate',
@@ -346,3 +351,29 @@ def test_cache_closed_on_spider_close(mock_sqlitedictcache, settings):
         mock.call('/tmp/cache', compressed=True),
         mock.call().close()
     ]
+
+
+@inlineCallbacks
+def test_web_poet_integration(settings):
+    """This tests scrapy-poet's integration with web-poet most especially when
+    populating override settings via:
+
+        from web_poet import default_registry
+
+        SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
+    """
+
+    # Only import them in this test scope since they need to be synced with
+    # the URL of the Page Object annotated with @handle_urls.
+    from tests.po_lib import DOMAIN, PORT, POOverriden
+
+    # Override rules are defined in `tests/po_lib/__init__.py`.
+    rules = default_registry.get_overrides()
+
+    # Converting it to a set removes potential duplicate OverrideRules
+    settings["SCRAPY_POET_OVERRIDES"] = set(rules)
+
+    item, url, _ = yield crawl_single_item(
+        spider_for(POOverriden), ProductHtml, settings, port=PORT
+    )
+    assert item == {"msg": "PO replacement"}

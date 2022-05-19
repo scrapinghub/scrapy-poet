@@ -12,6 +12,13 @@ TBR
     * Created new providers for ``web_poet.Meta`` and ``web_poet.HttpClient``.
     * Using the said additional requests needs ``async/await`` support in
       ``asyncio``. This raises the minimum scrapy requirement to ``scrapy>=2.6.0``.
+* We have these **backward incompatible** changes since the
+  ``web_poet.OverrideRule`` follow a different structure:
+
+    * Deprecated ``PerDomainOverridesRegistry`` in lieu of the newer
+      ``OverridesRegistry`` which provides a wide variety of features
+      for better URL matching.
+    * This resuls in a newer format in the ``SCRAPY_POET_OVERRIDES`` setting.
 
 
 0.3.0 (2022-01-28)
