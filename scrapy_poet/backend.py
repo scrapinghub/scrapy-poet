@@ -8,7 +8,6 @@ from web_poet.exceptions import RequestBackendError
 
 from scrapy_poet.utils import scrapy_response_to_http_response
 
-
 logger = logging.getLogger(__name__)
 
 

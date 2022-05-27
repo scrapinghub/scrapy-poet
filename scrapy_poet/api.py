@@ -1,4 +1,5 @@
 from typing import Callable, Optional, Type
+from inspect import iscoroutinefunction
 
 from scrapy.http import Request, Response
 
@@ -67,6 +68,25 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
 
             parse_book = callback_for(BookPage)
 
+    This also produces an async generator callable if the Page Objects's
+    ``to_item()`` method is a coroutine which uses the ``async/await`` syntax.
+    So having the following:
+
+    .. code-block:: python
+
+        class BookPage(web_poet.ItemWebPage):
+            async def to_item(self):
+                return await do_something_async()
+
+        callback_for(BookPage)
+
+    would result in:
+
+    .. code-block:: python
+
+        async def parse_book(self, response: DummyResponse, page: BookPage):
+            yield await page.to_item()
+
     The generated callback could be used as a spider instance method or passed
     as an inline/anonymous argument. Make sure to define it as a spider
     attribute (as shown in the example above) if you're planning to use
@@ -89,6 +109,13 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     # a dict of named arguments after our injectable.
     def parse(*args, page: page_cls, **kwargs):  # type: ignore
         yield page.to_item()  # type: ignore
+
+    async def async_parse(*args, page: page_cls, **kwargs):  # type: ignore
+        yield await page.to_item()  # type: ignore
+
+    if iscoroutinefunction(page_cls.to_item):
+        setattr(async_parse, _CALLBACK_FOR_MARKER, True)
+        return async_parse
 
     setattr(parse, _CALLBACK_FOR_MARKER, True)
     return parse

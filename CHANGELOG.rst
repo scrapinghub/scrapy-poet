@@ -20,6 +20,8 @@ TBR
       for better URL matching.
     * This resuls in a newer format in the ``SCRAPY_POET_OVERRIDES`` setting.
 
+* add ``async`` support for ``callback_for``.
+
 
 0.3.0 (2022-01-28)
 ------------------
