@@ -200,8 +200,8 @@ returning the result of the ``to_item`` method call. We could use
 
 .. tip::
 
-    :func:`~.callback_for` also supports `async generators` by checking if the
-    ``to_item()`` method is a coroutine. So having the following:
+    :func:`~.callback_for` also supports `async generators`. So having the
+    following:
 
     .. code-block:: python
 
