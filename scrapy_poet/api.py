@@ -116,6 +116,6 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     if iscoroutinefunction(page_cls.to_item):
         setattr(async_parse, _CALLBACK_FOR_MARKER, True)
         return async_parse
-    else:
-        setattr(parse, _CALLBACK_FOR_MARKER, True)
-        return parse
+
+    setattr(parse, _CALLBACK_FOR_MARKER, True)
+    return parse
