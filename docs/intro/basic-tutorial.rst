@@ -218,9 +218,9 @@ returning the result of the ``to_item`` method call. We could use
         async def parse_book(self, response: DummyResponse, page: BookPage):
             yield await page.to_item()
 
-    This is useful when the Page Objects uses additional requests which relies
-    heavily on ``async/await`` format. More info on this in this tutorial section:
-    :ref:`intro-additional-requests`.
+    This is useful when the Page Objects uses additional requests, which rely
+    heavily on ``async/await`` syntax. More info on this in this tutorial 
+    section: :ref:`intro-additional-requests`.
 
 Final result
 ============
