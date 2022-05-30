@@ -4,7 +4,7 @@ import attr
 import scrapy
 from scrapy.utils.defer import deferred_to_future
 from web_poet import HttpRequest
-from web_poet.exceptions import RequestBackendError
+from web_poet.exceptions import HttpError, RequestBackendError
 
 from scrapy_poet.utils import scrapy_response_to_http_response
 
@@ -27,11 +27,12 @@ def create_scrapy_backend(backend):
                 f"Ensure that it doesn't contain extra fields: {request}"
             )
 
+        deferred = backend(request)
         try:
-            deferred = backend(request)
             response: scrapy.http.Response = await deferred_to_future(deferred)
-            return scrapy_response_to_http_response(response)
-
         except scrapy.exceptions.IgnoreRequest:
-            logger.warning(f"Additional Request Ignored: {request}")
+            raise HttpError(f"Additional request ignored: {request}")
+
+        return scrapy_response_to_http_response(response)
+
     return scrapy_backend

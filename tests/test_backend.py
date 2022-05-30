@@ -77,15 +77,16 @@ async def test_scrapy_poet_backend(fake_http_response):
 
 @pytest.mark.asyncio
 async def test_scrapy_poet_backend_ignored_request():
-    """It should handle IgnoreRequest from Scrapy gracefully."""
+    """It should handle IgnoreRequest from Scrapy according to the web poet
+    standard on additional request error handling."""
     req = web_poet.HttpRequest("https://example.com")
 
     with mock.patch(
         "scrapy_poet.backend.deferred_to_future", new_callable=AsyncMock
     ) as mock_dtf:
-
+        mock_dtf.side_effect = scrapy.exceptions.IgnoreRequest
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
-        mock_downloader.side_effect = scrapy.exceptions.IgnoreRequest
         scrapy_backend = create_scrapy_backend(mock_downloader)
 
-        await scrapy_backend(req)
+        with pytest.raises(web_poet.exceptions.HttpError):
+            await scrapy_backend(req)
