@@ -15,7 +15,7 @@ setup(
         'attrs',
         'parsel',
         'url-matcher',
-        'web-poet @ git+https://git@github.com/scrapinghub/web-poet@master#egg=web-poet',
+        'web-poet @ git+https://git@github.com/scrapinghub/web-poet@dev-3#egg=web-poet',
         'tldextract',
         'sqlitedict',
     ],
