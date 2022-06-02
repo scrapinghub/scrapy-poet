@@ -2,7 +2,7 @@ import logging
 
 import attr
 import scrapy
-from scrapy.utils.defer import deferred_to_future
+from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import HttpRequest
 from web_poet.exceptions import HttpError, RequestBackendError
 
@@ -28,8 +28,9 @@ def create_scrapy_backend(backend):
             )
 
         deferred = backend(request)
+        deferred_or_future = maybe_deferred_to_future(deferred)
         try:
-            response: scrapy.http.Response = await deferred_to_future(deferred)
+            response = await deferred_or_future
         except scrapy.exceptions.IgnoreRequest:
             raise HttpError(f"Additional request ignored: {request}")
 
