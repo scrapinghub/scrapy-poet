@@ -24,7 +24,7 @@ def create_scrapy_backend(backend):
             )
 
         try:
-            request = scrapy.Request(**attr.asdict(request))
+            request = scrapy.Request(**attr.asdict(request), dont_filter=True)
         except TypeError:
             raise RequestBackendError(
                 f"The given Request isn't compatible with `scrapy.Request`. "
