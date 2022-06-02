@@ -26,14 +26,18 @@ the spider. It would work as-is because of the readily available
 out of the box.
 
 This supplies the Page Object with the necessary ``web_poet.HttpClient`` instance.
-Take note the HTTP Downloader implementation that **scrapy-poet** provides to
-``web_poet.HttpClient`` would be the **Scrapy Downloader**.
 
-.. tip::
+The HTTP client implementation that **scrapy-poet** provides to
+``web_poet.HttpClient`` handles requests as follows:
 
-    This means that the additional requests inside a Page Object will have access
-    to the **Downloader Middlewares** that the Spider is using.
+-   Requests go through downloader middlewares, but they do not go through
+    spider middlewares or through the scheduler.
 
+-   Duplicate requests are not filtered out.
+
+-   In line with the web-poet specification for additional requests,
+    ``Request.meta['dont_redirect']`` is set to ``True`` for requests with the
+    ``HEAD`` HTTP method.
 
 Suppose we have the following Page Object:
 
