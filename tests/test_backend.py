@@ -121,7 +121,8 @@ async def test_scrapy_poet_backend_head_redirect(fake_http_response):
 
         await scrapy_backend(req)
 
-        scrapy_request = mock_downloader.call_args.args[0]
+        args, kwargs = mock_downloader.call_args
+        scrapy_request = args[0]
         assert scrapy_request.meta.get("dont_redirect") is True
 
 
@@ -138,5 +139,6 @@ async def test_scrapy_poet_backend_dont_filter(fake_http_response):
 
         await scrapy_backend(req)
 
-        scrapy_request = mock_downloader.call_args.args[0]
+        args, kwargs = mock_downloader.call_args
+        scrapy_request = args[0]
         assert scrapy_request.dont_filter is True
