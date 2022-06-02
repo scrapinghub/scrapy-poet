@@ -55,7 +55,7 @@ async def test_scrapy_poet_backend(fake_http_response):
     req = web_poet.HttpRequest("https://example.com")
 
     with mock.patch(
-        "scrapy_poet.backend.deferred_to_future", new_callable=AsyncMock
+        "scrapy_poet.backend.maybe_deferred_to_future", new_callable=AsyncMock
     ) as mock_dtf:
 
         mock_dtf.return_value = fake_http_response
@@ -82,7 +82,7 @@ async def test_scrapy_poet_backend_ignored_request():
     req = web_poet.HttpRequest("https://example.com")
 
     with mock.patch(
-        "scrapy_poet.backend.deferred_to_future", new_callable=AsyncMock
+        "scrapy_poet.backend.maybe_deferred_to_future", new_callable=AsyncMock
     ) as mock_dtf:
         mock_dtf.side_effect = scrapy.exceptions.IgnoreRequest
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
