@@ -233,7 +233,7 @@ def test_meta_provider(settings):
     assert results[0] == {}
 
     expected_data = {"key": "value"}
-    request.meta.update({"po_args": expected_data})
+    request.meta.update({"po_meta": expected_data})
     results = provider(set(), request)
 
     assert results[0] == expected_data

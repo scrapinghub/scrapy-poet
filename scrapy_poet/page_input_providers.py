@@ -220,6 +220,6 @@ class MetaProvider(PageObjectInputProvider):
 
     def __call__(self, to_provide: Set[Callable], request: Request):
         """Creates a ``web_poet.requests.Meta`` instance based on the data found
-        from the ``meta["po_args"]`` field of a ``scrapy.http.Response`` instance.
+        from the ``meta["po_meta"]`` field of a ``scrapy.http.Response`` instance.
         """
-        return [Meta(**request.meta.get("po_args", {}))]
+        return [Meta(**request.meta.get("po_meta", {}))]

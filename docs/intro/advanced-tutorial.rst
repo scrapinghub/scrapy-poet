@@ -131,7 +131,7 @@ This basically acts as a switch to update the behavior of the Page Object:
 
 Passing the ``enable_extracting_all_images`` meta value from the spider into
 the Page Object can be achieved by using **Scrapy's** ``Request.meta`` attribute.
-Specifically, any ``dict`` value inside the ``po_args`` parameter inside
+Specifically, any ``dict`` value inside the ``po_meta`` parameter inside
 **Scrapy's** ``Request.meta`` will be passed into ``web_poet.Meta``.
 
 Let's see it in action:
@@ -159,7 +159,7 @@ Let's see it in action:
                 yield scrapy.Request(
                     url=url,
                     callback=self.parse,
-                    meta={"po_args": {"enable_extracting_all_images": True}}
+                    meta={"po_meta": {"enable_extracting_all_images": True}}
                 )
 
         async def parse(self, response, page: ProductPage):
