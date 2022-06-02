@@ -31,6 +31,9 @@ def create_scrapy_backend(backend):
                 f"Ensure that it doesn't contain extra fields: {request}"
             )
 
+        if request.method == "HEAD":
+            request.meta["dont_redirect"] = True
+
         deferred = backend(request)
         deferred_or_future = maybe_deferred_to_future(deferred)
         try:
