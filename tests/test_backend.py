@@ -4,6 +4,7 @@ from unittest import mock
 
 import web_poet
 import scrapy
+import twisted
 from web_poet.exceptions import RequestBackendError
 from tests.utils import AsyncMock
 
@@ -89,4 +90,21 @@ async def test_scrapy_poet_backend_ignored_request():
         scrapy_backend = create_scrapy_backend(mock_downloader)
 
         with pytest.raises(web_poet.exceptions.HttpError):
+            await scrapy_backend(req)
+
+
+@pytest.mark.asyncio
+async def test_scrapy_poet_backend_twisted_error():
+    """It should handle IgnoreRequest from Scrapy according to the web poet
+    standard on additional request error handling."""
+    req = web_poet.HttpRequest("https://example.com")
+
+    with mock.patch(
+        "scrapy_poet.backend.maybe_deferred_to_future", new_callable=AsyncMock
+    ) as mock_dtf:
+        mock_dtf.side_effect = twisted.internet.error.TimeoutError
+        mock_downloader = mock.MagicMock(return_value=AsyncMock)
+        scrapy_backend = create_scrapy_backend(mock_downloader)
+
+        with pytest.raises(web_poet.exceptions.HttpRequestError):
             await scrapy_backend(req)
