@@ -38,10 +38,11 @@ def create_scrapy_backend(backend):
         deferred_or_future = maybe_deferred_to_future(deferred)
         try:
             response = await deferred_or_future
-        except scrapy.exceptions.IgnoreRequest:
-            raise HttpError(f"Additional request ignored: {request}")
-        except Exception:
-            raise HttpRequestError(f"Additional request failed: {request}")
+        except scrapy.exceptions.IgnoreRequest: as e
+            raise HttpError(f"Additional request ignored: {request}") from e
+        except Exception as e:
+            message = f"Additional request failed: {request}"
+            raise HttpRequestError(message) from e
 
         return scrapy_response_to_http_response(response)
 
