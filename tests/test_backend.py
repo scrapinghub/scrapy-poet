@@ -5,10 +5,17 @@ from unittest import mock
 import web_poet
 import scrapy
 import twisted
-from web_poet.exceptions import RequestBackendError
+from pytest_twisted import ensureDeferred, inlineCallbacks
+from scrapy import Spider
 from tests.utils import AsyncMock
+from web_poet import HttpClient
+from web_poet.exceptions import RequestBackendError
+from web_poet.pages import ItemWebPage
 
 from scrapy_poet.backend import create_scrapy_backend
+from tests.utils import (
+    crawl_single_item, make_crawler, HtmlResource, MockServer
+)
 
 
 @pytest.fixture
@@ -17,7 +24,7 @@ def scrapy_backend():
     return create_scrapy_backend(mock_backend)
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_incompatible_request(scrapy_backend):
     """The Request must have fields that are a subset of `scrapy.Request`."""
 
@@ -31,7 +38,7 @@ async def test_incompatible_request(scrapy_backend):
         await scrapy_backend(req)
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_incompatible_scrapy_request(scrapy_backend):
     """The Request must be web_poet.HttpRequest and not anything else."""
 
@@ -51,7 +58,7 @@ def fake_http_response():
     )
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_scrapy_poet_backend(fake_http_response):
     req = web_poet.HttpRequest("https://example.com")
 
@@ -76,7 +83,7 @@ async def test_scrapy_poet_backend(fake_http_response):
         assert len(response.headers) == 1
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_scrapy_poet_backend_ignored_request():
     """It should handle IgnoreRequest from Scrapy according to the web poet
     standard on additional request error handling."""
@@ -93,7 +100,7 @@ async def test_scrapy_poet_backend_ignored_request():
             await scrapy_backend(req)
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_scrapy_poet_backend_twisted_error():
     req = web_poet.HttpRequest("https://example.com")
 
@@ -108,7 +115,7 @@ async def test_scrapy_poet_backend_twisted_error():
             await scrapy_backend(req)
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_scrapy_poet_backend_head_redirect(fake_http_response):
     req = web_poet.HttpRequest("https://example.com", method="HEAD")
 
@@ -126,7 +133,7 @@ async def test_scrapy_poet_backend_head_redirect(fake_http_response):
         assert scrapy_request.meta.get("dont_redirect") is True
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_scrapy_poet_backend_dont_filter(fake_http_response):
     req = web_poet.HttpRequest("https://example.com")
 
@@ -142,3 +149,42 @@ async def test_scrapy_poet_backend_dont_filter(fake_http_response):
         args, kwargs = mock_downloader.call_args
         scrapy_request = args[0]
         assert scrapy_request.dont_filter is True
+
+
+@inlineCallbacks
+def test_scrapy_poet_backend_await():
+    """Make sure that the awaiting of the backend call works.
+
+    For this test to pass, the resulting deferred must be awaited as such when
+    using a non-asyncio Twisted reactor, but first converted into a future
+    when using an asyncio Twisted reactor.
+    """
+    items = []
+    with MockServer(HtmlResource) as server:
+
+        @attr.define
+        class ItemPage(ItemWebPage):
+            http_client: HttpClient
+
+            async def to_item(self):
+                await self.http_client.request(server.root_url)
+                return {'foo': 'bar'}
+
+
+        class TestSpider(Spider):
+            name = 'test_spider'
+            start_urls = [server.root_url]
+
+            custom_settings = {
+                'DOWNLOADER_MIDDLEWARES': {
+                    'scrapy_poet.InjectionMiddleware': 543,
+                },
+            }
+
+            async def parse(self, response, page: ItemPage):
+                item = await page.to_item()
+                items.append(item)
+
+        crawler = make_crawler(TestSpider, {})
+        yield crawler.crawl()
+        assert items == [{'foo': 'bar'}]

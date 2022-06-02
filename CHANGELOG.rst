@@ -10,8 +10,7 @@ TBR
   requests inside Page Objects:
 
     * Created new providers for ``web_poet.Meta`` and ``web_poet.HttpClient``.
-    * Using the said additional requests needs ``async/await`` support in
-      ``asyncio``. This raises the minimum scrapy requirement to ``scrapy>=2.6.0``.
+    * The minimum Scrapy version is now ``2.6.0``.
 * We have these **backward incompatible** changes since the
   ``web_poet.OverrideRule`` follow a different structure:
 

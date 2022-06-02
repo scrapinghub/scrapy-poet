@@ -1,5 +1,6 @@
 import scrapy
 import pytest
+from pytest_twisted import ensureDeferred
 from scrapy.utils.reqser import request_to_dict
 
 from web_poet.pages import ItemPage, ItemWebPage
@@ -50,7 +51,7 @@ def test_callback_for():
     assert list(result) == ['fake item page']
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_callback_for_async():
     cb = callback_for(FakeItemPageAsync)
     assert callable(cb)
@@ -72,7 +73,7 @@ def test_callback_for_instance_method():
     assert list(result) == ['fake item page']
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_callback_for_instance_method_async():
     spider = MySpiderAsync()
     response = DummyResponse('http://example.com/')

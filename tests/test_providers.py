@@ -4,7 +4,7 @@ from unittest import mock
 import attr
 import json
 import pytest
-from pytest_twisted import inlineCallbacks
+from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy_poet import HttpResponseProvider
 from twisted.python.failure import Failure
 
@@ -209,7 +209,7 @@ def test_response_data_provider_fingerprint(settings):
     assert json.loads(fp)
 
 
-@pytest.mark.asyncio
+@ensureDeferred
 async def test_http_client_provider(settings):
     crawler = get_crawler(Spider, settings)
     crawler.engine = AsyncMock()

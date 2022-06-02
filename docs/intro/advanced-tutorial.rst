@@ -93,9 +93,6 @@ Note that we needed to update the ``parse()`` method to be an ``async`` method,
 since the ``to_item()`` method of the Page Object we're using is an ``async``
 method as well.
 
-This is also the primary reason why **scrapy-poet** requires ``scrapy>=2.6.0``
-since it's the minimum version that has full :mod:`asyncio` support.
-
 
 Meta
 ====
