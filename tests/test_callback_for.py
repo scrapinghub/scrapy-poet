@@ -1,6 +1,5 @@
 import scrapy
 import pytest
-from scrapy.utils.reqser import request_to_dict
 
 from web_poet.pages import ItemPage, ItemWebPage
 from scrapy_poet import (
@@ -59,7 +58,7 @@ def test_default_callback():
     """Sample request not specifying callback."""
     spider = MySpider()
     request = scrapy.Request('http://example.com/')
-    request_dict = request_to_dict(request, spider)
+    request_dict = request.to_dict(spider=spider)
     assert isinstance(request_dict, dict)
     assert request_dict['url'] == 'http://example.com/'
     assert request_dict['callback'] is None
@@ -69,13 +68,13 @@ def test_instance_method_callback():
     """Sample request specifying spider's instance method callback."""
     spider = MySpider()
     request = scrapy.Request('http://example.com/', callback=spider.parse_item)
-    request_dict = request_to_dict(request, spider)
+    request_dict = request.to_dict(spider=spider)
     assert isinstance(request_dict, dict)
     assert request_dict['url'] == 'http://example.com/'
     assert request_dict['callback'] == 'parse_item'
 
     request = scrapy.Request('http://example.com/', callback=spider.parse_web)
-    request_dict = request_to_dict(request, spider)
+    request_dict = request.to_dict(spider=spider)
     assert isinstance(request_dict, dict)
     assert request_dict['url'] == 'http://example.com/'
     assert request_dict['callback'] == 'parse_web'
@@ -87,7 +86,7 @@ def test_inline_callback():
     cb = callback_for(FakeItemPage)
     request = scrapy.Request('http://example.com/', callback=cb)
     with pytest.raises(ValueError) as exc:
-        request_to_dict(request, spider)
+        request.to_dict(spider=spider)
 
     msg = f'Function {cb} is not an instance method in: {spider}'
     assert str(exc.value) == msg
