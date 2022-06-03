@@ -13,6 +13,7 @@ TBR
       ``OverridesRegistry`` which provides a wide variety of features
       for better URL matching.
     * This resuls in a newer format in the ``SCRAPY_POET_OVERRIDES`` setting.
+* Removal of this deprecated module: ``scrapy.utils.reqser``
 
 
 0.3.0 (2022-01-28)
