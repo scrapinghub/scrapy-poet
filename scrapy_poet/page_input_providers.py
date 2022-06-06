@@ -222,4 +222,4 @@ class MetaProvider(PageObjectInputProvider):
         """Creates a ``web_poet.requests.Meta`` instance based on the data found
         from the ``meta["po_meta"]`` field of a ``scrapy.http.Response`` instance.
         """
-        return [Meta(**request.meta.get("po_meta", {}))]
+        return [Meta(request.meta.get("po_meta", {}))]

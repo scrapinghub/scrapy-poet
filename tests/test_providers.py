@@ -237,3 +237,10 @@ def test_meta_provider(settings):
     results = provider(set(), request)
 
     assert results[0] == expected_data
+
+    # Check that keys that are invalid Python variable names work.
+    expected_data = {1: "a"}
+    request.meta.update({"po_meta": expected_data})
+    results = provider(set(), request)
+
+    assert results[0] == expected_data
