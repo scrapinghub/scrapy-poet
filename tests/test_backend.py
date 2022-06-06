@@ -1,14 +1,18 @@
 import attr
-import pytest
 from unittest import mock
 
-import web_poet
+import pytest
 import scrapy
 import twisted
+import web_poet
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Spider
 from tests.utils import AsyncMock
+from twisted.internet.task import deferLater
+from twisted.web.resource import Resource
+from twisted.web.server import NOT_DONE_YET
 from web_poet import HttpClient
+from web_poet.exceptions import HttpResponseError
 from web_poet.pages import ItemWebPage
 
 from scrapy_poet.backend import create_scrapy_backend
@@ -136,25 +140,41 @@ async def test_scrapy_poet_backend_dont_filter(fake_http_response):
         assert scrapy_request.dont_filter is True
 
 
-@inlineCallbacks
-def test_scrapy_poet_backend_await():
-    """Make sure that the awaiting of the backend call works.
+class LeafResource(Resource):
+    isLeaf = True
 
-    For this test to pass, the resulting deferred must be awaited as such when
-    using a non-asyncio Twisted reactor, but first converted into a future
-    when using an asyncio Twisted reactor.
-    """
+    def deferRequest(self, request, delay, f, *a, **kw):
+        def _cancelrequest(_):
+            # silence CancelledError
+            d.addErrback(lambda _: None)
+            d.cancel()
+
+        d = deferLater(reactor, delay, f, *a, **kw)
+        request.notifyFinish().addErrback(_cancelrequest)
+        return d
+
+
+class EchoResource(LeafResource):
+    def render_GET(self, request):
+        return request.content.read()
+
+
+@inlineCallbacks
+def test_additional_requests_success():
     items = []
-    with MockServer(HtmlResource) as server:
+
+    with MockServer(EchoResource) as server:
 
         @attr.define
         class ItemPage(ItemWebPage):
             http_client: HttpClient
 
             async def to_item(self):
-                await self.http_client.request(server.root_url)
-                return {'foo': 'bar'}
-
+                response = await self.http_client.request(
+                    server.root_url,
+                    body=b'bar',
+                )
+                return {'foo': response.body.decode()}
 
         class TestSpider(Spider):
             name = 'test_spider'
@@ -172,4 +192,69 @@ def test_scrapy_poet_backend_await():
 
         crawler = make_crawler(TestSpider, {})
         yield crawler.crawl()
-        assert items == [{'foo': 'bar'}]
+
+    assert items == [{'foo': 'bar'}]
+
+
+class StatusResource(LeafResource):
+    def render_GET(self, request):
+        decoded_body = request.content.read().decode()
+        if decoded_body:
+            request.setResponseCode(int(decoded_body))
+        return b""
+
+
+@inlineCallbacks
+def test_additional_requests_bad_response():
+    items = []
+
+    with MockServer(StatusResource) as server:
+
+        @attr.define
+        class ItemPage(ItemWebPage):
+            http_client: HttpClient
+
+            async def to_item(self):
+                try:
+                    await self.http_client.request(
+                        server.root_url,
+                        body=b'400',
+                    )
+                except HttpResponseError:
+                    return {'foo': 'bar'}
+
+        class TestSpider(Spider):
+            name = 'test_spider'
+            start_urls = [server.root_url]
+
+            custom_settings = {
+                'DOWNLOADER_MIDDLEWARES': {
+                    'scrapy_poet.InjectionMiddleware': 543,
+                },
+            }
+
+            async def parse(self, response, page: ItemPage):
+                item = await page.to_item()
+                items.append(item)
+
+        crawler = make_crawler(TestSpider, {})
+        yield crawler.crawl()
+
+    assert items == [{'foo': 'bar'}]
+
+
+@inlineCallbacks
+def test_additional_requests_connection_issue():
+    ...  # TODO
+
+
+@inlineCallbacks
+def test_additional_requests_ignored_request():
+    ...  # TODO
+
+
+@inlineCallbacks
+def test_additional_requests_dont_filter():
+    ...  # TODO
+    # Test using the same URL for the source request and for 2 additional
+    # requests.
