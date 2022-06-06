@@ -44,9 +44,16 @@ def create_scrapy_backend(backend):
         try:
             response = await deferred_or_future
         except scrapy.exceptions.IgnoreRequest as e:
+            # A Scrapy downloader middleware has caused the request to be
+            # ignored.
             message = f"Additional request ignored: {scrapy_request}"
             raise HttpError(message) from e
         except Exception as e:
+            # This could be caused either by network errors (Twisted
+            # exceptions, OpenSSL, exceptions, etc.) or by unhandled exceptions
+            # in Scrapy downloader middlewares. We assume the former (raise
+            # HttpRequestError instead of HttpError), it being the most likely,
+            # and the latter only happening due to badly written code.
             message = f"Additional request failed: {scrapy_request}"
             raise HttpRequestError(message) from e
 
