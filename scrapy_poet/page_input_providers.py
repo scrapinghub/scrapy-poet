@@ -16,7 +16,6 @@ import attr
 from scrapy import Request
 from scrapy.http import Response
 from scrapy.crawler import Crawler
-from scrapy.utils.reqser import request_to_dict
 from scrapy.utils.request import request_fingerprint
 
 from scrapy_poet.utils import scrapy_response_to_http_response
@@ -177,7 +176,7 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
         request_keys = {"url", "method", "body"}
         request_data = {
             k: str(v)
-            for k, v in request_to_dict(request).items()
+            for k, v in request.to_dict().items()
             if k in request_keys
         }
         fp_data = {
