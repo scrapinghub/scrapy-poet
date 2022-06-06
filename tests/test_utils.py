@@ -2,12 +2,13 @@ from unittest import mock
 from pathlib import PosixPath
 
 import pytest
-from scrapy import Request
-from web_poet import HttpRequest
+from scrapy.http import Request, Response, TextResponse
+from web_poet import HttpRequest, HttpResponse
 
 from scrapy_poet.utils import (
     get_scrapy_data_path,
     http_request_to_scrapy_request,
+    scrapy_response_to_http_response,
 )
 
 
@@ -94,3 +95,76 @@ def test_http_request_to_scrapy_request(http_request, kwargs, scrapy_request):
     assert result.callback == scrapy_request.callback
     assert result.errback == scrapy_request.errback
     assert result.flags == scrapy_request.flags
+
+
+@pytest.mark.parametrize(
+    "scrapy_response,http_response",
+    (
+        (
+            Response("https://example.com"),
+            HttpResponse("https://example.com", body=b"", status=200),
+        ),
+        (
+            Response("https://example.com", body=b"a"),
+            HttpResponse("https://example.com", body=b"a", status=200),
+        ),
+        (
+            Response("https://example.com", status=429),
+            HttpResponse("https://example.com", body=b"", status=429),
+        ),
+        (
+            Response("https://example.com", headers={"a": "b"}),
+            HttpResponse(
+                "https://example.com",
+                body=b"",
+                status=200,
+                headers={"a": "b"},
+            ),
+        ),
+        (
+            Response("https://example.com", headers={"a": "b"}),
+            HttpResponse(
+                "https://example.com",
+                body=b"",
+                status=200,
+                headers=(("a", "b"),),
+            ),
+        ),
+        (
+            Response("https://example.com", headers=(("a", "b"),)),
+            HttpResponse(
+                "https://example.com",
+                body=b"",
+                status=200,
+                headers=(("a", "b"),),
+            ),
+        ),
+        pytest.param(
+            Response("https://example.com", headers=(("a", "b"), ("a", "c"))),
+            HttpResponse(
+                "https://example.com",
+                body=b"",
+                status=200,
+                headers=(("a", "b"), ("a", "c")),
+            ),
+            marks=pytest.mark.xfail(
+                reason="https://github.com/scrapy/scrapy/issues/5515",
+            ),
+        ),
+        (
+            TextResponse("https://example.com", body="a", encoding="ascii"),
+            HttpResponse("https://example.com", body=b"a", status=200, encoding="ascii"),
+        ),
+        (
+            TextResponse("https://example.com", body="a", encoding="utf-8"),
+            HttpResponse("https://example.com", body=b"a", status=200, encoding="utf-8"),
+        ),
+    ),
+)
+def test_scrapy_response_to_http_response(scrapy_response, http_response):
+    result = scrapy_response_to_http_response(scrapy_response)
+    assert result.url == http_response.url
+    assert result.body == http_response.body
+    assert result.status == http_response.status
+    assert result.headers == http_response.headers
+    assert result._encoding == http_response._encoding

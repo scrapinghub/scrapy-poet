@@ -29,13 +29,18 @@ def http_request_to_scrapy_request(request: HttpRequest, **kwargs) -> Request:
     )
 
 
-def scrapy_response_to_http_response(response: Response):
+def scrapy_response_to_http_response(response: Response) -> HttpResponse:
     """Convenience method to convert a ``scrapy.http.Response`` into a
     ``web_poet.HttpResponse``.
     """
+    kwargs = {}
+    encoding = getattr(response, "_encoding", None)
+    if encoding:
+        kwargs["encoding"] = encoding
     return HttpResponse(
         url=response.url,
         body=response.body,
         status=response.status,
         headers=HttpResponseHeaders.from_bytes_dict(response.headers),
+        **kwargs,
     )
