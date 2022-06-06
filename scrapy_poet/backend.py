@@ -6,7 +6,6 @@ from web_poet import HttpRequest
 from web_poet.exceptions import (
     HttpError,
     HttpRequestError,
-    RequestBackendError,
 )
 
 from scrapy_poet.utils import (
@@ -25,16 +24,10 @@ def create_scrapy_backend(backend):
                 f"one of type: '{type(request)}'."
             )
 
-        try:
-            scrapy_request = http_request_to_scrapy_request(
-                request,
-                dont_filter=True,
-            )
-        except TypeError:
-            raise RequestBackendError(
-                f"The given Request isn't compatible with `scrapy.Request`. "
-                f"Ensure that it doesn't contain extra fields: {request}"
-            )
+        scrapy_request = http_request_to_scrapy_request(
+            request,
+            dont_filter=True,
+        )
 
         if scrapy_request.method == "HEAD":
             scrapy_request.meta["dont_redirect"] = True

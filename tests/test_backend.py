@@ -9,7 +9,6 @@ from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Spider
 from tests.utils import AsyncMock
 from web_poet import HttpClient
-from web_poet.exceptions import RequestBackendError
 from web_poet.pages import ItemWebPage
 
 from scrapy_poet.backend import create_scrapy_backend
@@ -22,21 +21,6 @@ from tests.utils import (
 def scrapy_backend():
     mock_backend = AsyncMock()
     return create_scrapy_backend(mock_backend)
-
-
-# TODO: Restore or remove.
-#@ensureDeferred
-#async def test_incompatible_request(scrapy_backend):
-    #"""The Request must have fields that are a subset of `scrapy.Request`."""
-
-    #@attr.define
-    #class Request(web_poet.HttpRequest):
-        #incompatible_field: str = "value"
-
-    #req = Request("https://example.com")
-
-    #with pytest.raises(RequestBackendError):
-        #await scrapy_backend(req)
 
 
 @ensureDeferred
