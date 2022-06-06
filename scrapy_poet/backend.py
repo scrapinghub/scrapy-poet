@@ -26,7 +26,10 @@ def create_scrapy_backend(backend):
             )
 
         try:
-            scrapy_request = http_request_to_scrapy_request(request)
+            scrapy_request = http_request_to_scrapy_request(
+                request,
+                dont_filter=True,
+            )
         except TypeError:
             raise RequestBackendError(
                 f"The given Request isn't compatible with `scrapy.Request`. "

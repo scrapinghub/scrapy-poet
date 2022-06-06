@@ -19,8 +19,14 @@ def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -
     return path
 
 
-def http_request_to_scrapy_request(request: HttpRequest) -> Request:
-    return Request(**attr.asdict(request), dont_filter=True)
+def http_request_to_scrapy_request(request: HttpRequest, **kwargs) -> Request:
+    return Request(
+        url=str(request.url),
+        method=request.method,
+        headers=request.headers,
+        body=request.body,
+        **kwargs,
+    )
 
 
 def scrapy_response_to_http_response(response: Response):
