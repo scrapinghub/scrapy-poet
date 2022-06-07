@@ -1,4 +1,5 @@
 import attr
+from functools import partial
 from unittest import mock
 
 import pytest
@@ -8,14 +9,16 @@ import web_poet
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Spider
 from tests.utils import AsyncMock
+from twisted.internet import reactor
 from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from web_poet import HttpClient
-from web_poet.exceptions import HttpResponseError
+from web_poet.exceptions import HttpRequestError, HttpResponseError
 from web_poet.pages import ItemWebPage
 
 from scrapy_poet.backend import create_scrapy_backend
+from scrapy_poet.utils import http_request_to_scrapy_request
 from tests.utils import (
     crawl_single_item, make_crawler, HtmlResource, MockServer
 )
@@ -243,13 +246,78 @@ def test_additional_requests_bad_response():
     assert items == [{'foo': 'bar'}]
 
 
-#@inlineCallbacks
-#def test_additional_requests_connection_issue():
-    #...  # TODO
+class DelayedResource(LeafResource):
+    def render_GET(self, request):
+        decoded_body = request.content.read().decode()
+        seconds = float(decoded_body) if decoded_body else 0
+        self.deferRequest(
+            request,
+            seconds,
+            self._delayedRender,
+            request,
+            seconds,
+        )
+        return NOT_DONE_YET
+
+    def _delayedRender(self, request, seconds):
+        request.finish()
+
+
+@inlineCallbacks
+def test_additional_requests_connection_issue():
+    items = []
+
+    with (
+        mock.patch('scrapy_poet.backend.http_request_to_scrapy_request')
+        as mock_http_request_to_scrapy_request
+    ):
+        mock_http_request_to_scrapy_request.side_effect = partial(
+            http_request_to_scrapy_request,
+            meta={'download_timeout': 0.001},
+        )
+
+        with MockServer(DelayedResource) as server:
+
+            @attr.define
+            class ItemPage(ItemWebPage):
+                http_client: HttpClient
+
+                async def to_item(self):
+                    try:
+                        await self.http_client.request(
+                            server.root_url,
+                            body=b"0.002",
+                        )
+                    except HttpRequestError:
+                        return {'foo': 'bar'}
+
+            class TestSpider(Spider):
+                name = 'test_spider'
+                start_urls = [server.root_url]
+
+                custom_settings = {
+                    'DOWNLOADER_MIDDLEWARES': {
+                        'scrapy_poet.InjectionMiddleware': 543,
+                    },
+                }
+
+                async def parse(self, response, page: ItemPage):
+                    item = await page.to_item()
+                    items.append(item)
+
+            crawler = make_crawler(TestSpider, {})
+            yield crawler.crawl()
+
+    assert items == [{'foo': 'bar'}]
 
 
 #@inlineCallbacks
 #def test_additional_requests_ignored_request():
+    #...  # TODO
+
+
+#@inlineCallbacks
+#def test_additional_requests_unhandled_downloader_middleware_exception():
     #...  # TODO
 
 
