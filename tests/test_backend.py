@@ -358,9 +358,61 @@ def test_additional_requests_ignored_request():
     assert items == [{'exc': HttpError}]
 
 
-#@inlineCallbacks
-#def test_additional_requests_unhandled_downloader_middleware_exception():
-    #...  # TODO
+@pytest.mark.xfail(
+    reason=(
+        "Currently, we do not make a distinction between exceptions raised "
+        "from the downloader or from a downloader middleware, except for "
+        "IgnoreRequest. In the future, we might want to inspect the stack to "
+        "determine the source of an exception and raise HttpError instead of "
+        "HttpRequestError when the exception originates in a downloader "
+        "middleware."
+    ),
+    strict=True,
+)
+@inlineCallbacks
+def test_additional_requests_unhandled_downloader_middleware_exception():
+    items = []
+
+    with MockServer(EchoResource) as server:
+
+        @attr.define
+        class ItemPage(ItemWebPage):
+            http_client: HttpClient
+
+            async def to_item(self):
+                try:
+                    await self.http_client.request(
+                        server.root_url,
+                        body=b'raise',
+                    )
+                except HttpError as e:
+                    return {'exc': e.__class__}
+
+        class TestDownloaderMiddleware:
+            def process_response(self, request, response, spider):
+                if b'raise' in response.body:
+                    raise RuntimeError
+                return response
+
+        class TestSpider(Spider):
+            name = 'test_spider'
+            start_urls = [server.root_url]
+
+            custom_settings = {
+                'DOWNLOADER_MIDDLEWARES': {
+                    TestDownloaderMiddleware: 1,
+                    'scrapy_poet.InjectionMiddleware': 543,
+                },
+            }
+
+            async def parse(self, response, page: ItemPage):
+                item = await page.to_item()
+                items.append(item)
+
+        crawler = make_crawler(TestSpider, {})
+        yield crawler.crawl()
+
+    assert items == [{'exc': HttpError}]
 
 
 #@inlineCallbacks
