@@ -126,24 +126,6 @@ async def test_scrapy_poet_backend_head_redirect(fake_http_response):
         assert scrapy_request.meta.get("dont_redirect") is True
 
 
-@ensureDeferred
-async def test_scrapy_poet_backend_dont_filter(fake_http_response):
-    req = web_poet.HttpRequest("https://example.com")
-
-    with mock.patch(
-        "scrapy_poet.backend.maybe_deferred_to_future", new_callable=AsyncMock
-    ) as mock_dtf:
-        mock_dtf.return_value = fake_http_response
-        mock_downloader = mock.MagicMock(return_value=AsyncMock)
-        scrapy_backend = create_scrapy_backend(mock_downloader)
-
-        await scrapy_backend(req)
-
-        args, kwargs = mock_downloader.call_args
-        scrapy_request = args[0]
-        assert scrapy_request.dont_filter is True
-
-
 class LeafResource(Resource):
     isLeaf = True
 
