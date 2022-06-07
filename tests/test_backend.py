@@ -8,13 +8,14 @@ import twisted
 import web_poet
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Spider
+from scrapy.exceptions import IgnoreRequest
 from tests.utils import AsyncMock
 from twisted.internet import reactor
 from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from web_poet import HttpClient
-from web_poet.exceptions import HttpRequestError, HttpResponseError
+from web_poet.exceptions import HttpError, HttpRequestError, HttpResponseError
 from web_poet.pages import ItemWebPage
 
 from scrapy_poet.backend import create_scrapy_backend
@@ -311,9 +312,50 @@ def test_additional_requests_connection_issue():
     assert items == [{'foo': 'bar'}]
 
 
-#@inlineCallbacks
-#def test_additional_requests_ignored_request():
-    #...  # TODO
+@inlineCallbacks
+def test_additional_requests_ignored_request():
+    items = []
+
+    with MockServer(EchoResource) as server:
+
+        @attr.define
+        class ItemPage(ItemWebPage):
+            http_client: HttpClient
+
+            async def to_item(self):
+                try:
+                    await self.http_client.request(
+                        server.root_url,
+                        body=b'ignore',
+                    )
+                except HttpError as e:
+                    return {'exc': e.__class__}
+
+        class TestDownloaderMiddleware:
+            def process_response(self, request, response, spider):
+                if b'ignore' in response.body:
+                    raise IgnoreRequest
+                return response
+
+        class TestSpider(Spider):
+            name = 'test_spider'
+            start_urls = [server.root_url]
+
+            custom_settings = {
+                'DOWNLOADER_MIDDLEWARES': {
+                    TestDownloaderMiddleware: 1,
+                    'scrapy_poet.InjectionMiddleware': 543,
+                },
+            }
+
+            async def parse(self, response, page: ItemPage):
+                item = await page.to_item()
+                items.append(item)
+
+        crawler = make_crawler(TestSpider, {})
+        yield crawler.crawl()
+
+    assert items == [{'exc': HttpError}]
 
 
 #@inlineCallbacks
