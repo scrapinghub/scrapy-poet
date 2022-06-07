@@ -21,7 +21,7 @@ from scrapy.utils.request import request_fingerprint
 from scrapy_poet.utils import scrapy_response_to_http_response
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
 from scrapy_poet.backend import create_scrapy_backend
-from web_poet import HttpClient, HttpResponse, HttpResponseHeaders, Meta
+from web_poet import HttpClient, HttpResponse, HttpResponseHeaders, PageParams
 
 
 class PageObjectInputProvider:
@@ -213,12 +213,13 @@ class HttpClientProvider(PageObjectInputProvider):
         return [HttpClient(request_downloader=backend)]
 
 
-class MetaProvider(PageObjectInputProvider):
-    """This class provides ``web_poet.page_inputs.Meta`` instances."""
-    provided_classes = {Meta}
+class PageParamsProvider(PageObjectInputProvider):
+    """This class provides ``web_poet.page_inputs.PageParams`` instances."""
+    provided_classes = {PageParams}
 
     def __call__(self, to_provide: Set[Callable], request: Request):
-        """Creates a ``web_poet.requests.Meta`` instance based on the data found
-        from the ``meta["po_meta"]`` field of a ``scrapy.http.Response`` instance.
+        """Creates a ``web_poet.requests.PageParams`` instance based on the
+        data found from the ``meta["page_params"]`` field of a
+        ``scrapy.http.Response`` instance.
         """
-        return [Meta(request.meta.get("po_meta", {}))]
+        return [PageParams(request.meta.get("page_params", {}))]

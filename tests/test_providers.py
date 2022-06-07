@@ -15,9 +15,9 @@ from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
 from scrapy_poet.page_input_providers import (
     CacheDataProviderMixin,
-    PageObjectInputProvider,
     HttpClientProvider,
-    MetaProvider,
+    PageObjectInputProvider,
+    PageParamsProvider,
 )
 from tests.utils import crawl_single_item, HtmlResource, AsyncMock
 from web_poet import HttpResponse, HttpClient
@@ -223,9 +223,9 @@ async def test_http_client_provider(settings):
 
     results[0]._request_downloader == mock_factory.return_value
 
-def test_meta_provider(settings):
+def test_page_params_provider(settings):
     crawler = get_crawler(Spider, settings)
-    provider = MetaProvider(crawler)
+    provider = PageParamsProvider(crawler)
     request = scrapy.http.Request("https://example.com")
 
     results = provider(set(), request)
@@ -233,14 +233,14 @@ def test_meta_provider(settings):
     assert results[0] == {}
 
     expected_data = {"key": "value"}
-    request.meta.update({"po_meta": expected_data})
+    request.meta.update({"page_params": expected_data})
     results = provider(set(), request)
 
     assert results[0] == expected_data
 
     # Check that keys that are invalid Python variable names work.
     expected_data = {1: "a"}
-    request.meta.update({"po_meta": expected_data})
+    request.meta.update({"page_params": expected_data})
     results = provider(set(), request)
 
     assert results[0] == expected_data

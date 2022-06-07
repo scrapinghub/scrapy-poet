@@ -243,18 +243,18 @@ def test_additional_requests_bad_response():
     assert items == [{'foo': 'bar'}]
 
 
-@inlineCallbacks
-def test_additional_requests_connection_issue():
-    ...  # TODO
+#@inlineCallbacks
+#def test_additional_requests_connection_issue():
+    #...  # TODO
 
 
-@inlineCallbacks
-def test_additional_requests_ignored_request():
-    ...  # TODO
+#@inlineCallbacks
+#def test_additional_requests_ignored_request():
+    #...  # TODO
 
 
-@inlineCallbacks
-def test_additional_requests_dont_filter():
-    ...  # TODO
-    # Test using the same URL for the source request and for 2 additional
-    # requests.
+#@inlineCallbacks
+#def test_additional_requests_dont_filter():
+    #...  # TODO
+    ## Test using the same URL for the source request and for 2 additional
+    ## requests.

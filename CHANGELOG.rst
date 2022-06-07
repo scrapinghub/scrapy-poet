@@ -9,7 +9,8 @@ TBR
 * Support for the new features in ``web_poet>=0.2.0`` for supporting additional 
   requests inside Page Objects:
 
-    * Created new providers for ``web_poet.Meta`` and ``web_poet.HttpClient``.
+    * Created new providers for ``web_poet.PageParams`` and
+      ``web_poet.HttpClient``.
     * The minimum Scrapy version is now ``2.6.0``.
 * We have these **backward incompatible** changes since the
   ``web_poet.OverrideRule`` follow a different structure:

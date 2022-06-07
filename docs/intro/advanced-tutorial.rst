@@ -8,12 +8,12 @@ This section intends to go over the supported features in **web-poet** by
 **scrapy-poet**:
 
     * ``web_poet.HttpClient``
-    * ``web_poet.Meta``
+    * ``web_poet.PageParams``
 
 These are mainly achieved by **scrapy-poet** implementing **providers** for them:
 
     * :class:`scrapy_poet.page_input_providers.HttpClientProvider`
-    * :class:`scrapy_poet.page_input_providers.MetaProvider`
+    * :class:`scrapy_poet.page_input_providers.PageParamsProvider`
 
 .. _`intro-additional-requests`:
 
@@ -94,11 +94,11 @@ since the ``to_item()`` method of the Page Object we're using is an ``async``
 method as well.
 
 
-Meta
-====
+Page params
+===========
 
-Using ``web_poet.Meta`` allows the Scrapy spider to pass any arbitrary information
-into the Page Object.
+Using ``web_poet.PageParams`` allows the Scrapy spider to pass any arbitrary
+information into the Page Object.
 
 Suppose we update the earlier Page Object to control the additional request.
 This basically acts as a switch to update the behavior of the Page Object:
@@ -112,7 +112,7 @@ This basically acts as a switch to update the behavior of the Page Object:
     @attr.define
     class ProductPage(web_poet.ItemWebPage):
         http_client: web_poet.HttpClient
-        meta: web_poet.Meta
+        page_params: web_poet.PageParams
 
         async def to_item(self):
             item = {
@@ -122,7 +122,7 @@ This basically acts as a switch to update the behavior of the Page Object:
             }
 
             # Simulates clicking on a button that says "View All Images"
-            if self.meta.get("enable_extracting_all_images")
+            if self.page_params.get("enable_extracting_all_images")
                 response: web_poet.HttpResponse = await self.http_client.get(
                     f"https://api.example.com/v2/images?id={item['product_id']}"
                 )
@@ -130,10 +130,11 @@ This basically acts as a switch to update the behavior of the Page Object:
 
             return item
 
-Passing the ``enable_extracting_all_images`` meta value from the spider into
-the Page Object can be achieved by using **Scrapy's** ``Request.meta`` attribute.
-Specifically, any ``dict`` value inside the ``po_meta`` parameter inside
-**Scrapy's** ``Request.meta`` will be passed into ``web_poet.Meta``.
+Passing the ``enable_extracting_all_images`` page parameter from the spider
+into the Page Object can be achieved by using **Scrapy's** ``Request.meta``
+attribute. Specifically, any ``dict`` value inside the ``page_params``
+parameter inside **Scrapy's** ``Request.meta`` will be passed into
+``web_poet.PageParams``.
 
 Let's see it in action:
 
@@ -160,7 +161,7 @@ Let's see it in action:
                 yield scrapy.Request(
                     url=url,
                     callback=self.parse,
-                    meta={"po_meta": {"enable_extracting_all_images": True}}
+                    meta={"page_params": {"enable_extracting_all_images": True}}
                 )
 
         async def parse(self, response, page: ProductPage):
