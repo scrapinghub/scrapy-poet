@@ -7,7 +7,7 @@ import scrapy
 import twisted
 import web_poet
 from pytest_twisted import ensureDeferred, inlineCallbacks
-from scrapy import Spider
+from scrapy import Request, Spider
 from scrapy.exceptions import IgnoreRequest
 from tests.utils import AsyncMock
 from twisted.internet import reactor
@@ -413,8 +413,47 @@ def test_additional_requests_unhandled_downloader_middleware_exception():
     assert items == [{'exc': HttpError}]
 
 
-#@inlineCallbacks
-#def test_additional_requests_dont_filter():
-    #...  # TODO
-    ## Test using the same URL for the source request and for 2 additional
-    ## requests.
+@inlineCallbacks
+def test_additional_requests_dont_filter():
+    """Verify that while duplicate regular requests are filtered out,
+    additional requests are not (neither relative to the main requests not
+    relative to each other).
+
+    In Scrapy, request de-duplication is implemented on the scheduler, and
+    because additional requests do not go through the scheduler, this works as
+    expected.
+    """
+    items = []
+
+    with MockServer(EchoResource) as server:
+
+        @attr.define
+        class ItemPage(ItemWebPage):
+            http_client: HttpClient
+
+            async def to_item(self):
+                await self.http_client.request(server.root_url)
+                await self.http_client.request(server.root_url)
+                return {'foo': 'bar'}
+
+        class TestSpider(Spider):
+            name = 'test_spider'
+
+            custom_settings = {
+                'DOWNLOADER_MIDDLEWARES': {
+                    'scrapy_poet.InjectionMiddleware': 543,
+                },
+            }
+
+            def start_requests(self):
+                yield Request(server.root_url)
+                yield Request(server.root_url)
+
+            async def parse(self, response, page: ItemPage):
+                item = await page.to_item()
+                items.append(item)
+
+        crawler = make_crawler(TestSpider, {})
+        yield crawler.crawl()
+
+    assert items == [{'foo': 'bar'}]

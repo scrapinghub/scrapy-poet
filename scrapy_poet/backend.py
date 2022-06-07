@@ -24,10 +24,7 @@ def create_scrapy_backend(backend):
                 f"one of type: '{type(request)}'."
             )
 
-        scrapy_request = http_request_to_scrapy_request(
-            request,
-            dont_filter=True,
-        )
+        scrapy_request = http_request_to_scrapy_request(request)
 
         if scrapy_request.method == "HEAD":
             scrapy_request.meta["dont_redirect"] = True
