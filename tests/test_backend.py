@@ -268,10 +268,8 @@ class DelayedResource(LeafResource):
 def test_additional_requests_connection_issue():
     items = []
 
-    with (
-        mock.patch('scrapy_poet.backend.http_request_to_scrapy_request')
-        as mock_http_request_to_scrapy_request
-    ):
+    with mock.patch('scrapy_poet.backend.http_request_to_scrapy_request') \
+            as mock_http_request_to_scrapy_request:
         mock_http_request_to_scrapy_request.side_effect = partial(
             http_request_to_scrapy_request,
             meta={'download_timeout': 0.001},
