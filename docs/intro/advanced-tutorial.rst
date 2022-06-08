@@ -143,7 +143,7 @@ Let's see it in action:
     import scrapy
 
 
-    def ProductSpider(scrapy.Spider):
+    class ProductSpider(scrapy.Spider):
 
         custom_settings = {
             "DOWNLOADER_MIDDLEWARES": {
