@@ -73,7 +73,7 @@ It can be directly used inside the spider as:
     import scrapy
 
 
-    def ProductSpider(scrapy.Spider):
+    class ProductSpider(scrapy.Spider):
 
         custom_settings = {
             "DOWNLOADER_MIDDLEWARES": {
