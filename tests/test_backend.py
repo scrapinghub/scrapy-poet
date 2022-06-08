@@ -414,9 +414,15 @@ def test_additional_requests_dont_filter():
             http_client: HttpClient
 
             async def to_item(self):
-                await self.http_client.request(server.root_url)
-                await self.http_client.request(server.root_url)
-                return {'foo': 'bar'}
+                response1 = await self.http_client.request(
+                    server.root_url,
+                    body=b'a',
+                )
+                response2 = await self.http_client.request(
+                    server.root_url,
+                    body=b'a',
+                )
+                return {response1.body.decode(): response2.body.decode()}
 
         class TestSpider(Spider):
             name = 'test_spider'
@@ -428,8 +434,8 @@ def test_additional_requests_dont_filter():
             }
 
             def start_requests(self):
-                yield Request(server.root_url)
-                yield Request(server.root_url)
+                yield Request(server.root_url, body=b'a')
+                yield Request(server.root_url, body=b'a')
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -438,4 +444,4 @@ def test_additional_requests_dont_filter():
         crawler = make_crawler(TestSpider, {})
         yield crawler.crawl()
 
-    assert items == [{'foo': 'bar'}]
+    assert items == [{'a': 'a'}]
