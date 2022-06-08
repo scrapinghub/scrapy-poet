@@ -16,7 +16,7 @@ from scrapy_poet.utils import (
 logger = logging.getLogger(__name__)
 
 
-def create_scrapy_backend(backend):
+def create_scrapy_backend(download_func):
     async def scrapy_backend(request: HttpRequest):
         if not isinstance(request, HttpRequest):
             raise TypeError(
@@ -29,7 +29,7 @@ def create_scrapy_backend(backend):
         if scrapy_request.method == "HEAD":
             scrapy_request.meta["dont_redirect"] = True
 
-        deferred = backend(scrapy_request)
+        deferred = download_func(scrapy_request)
         deferred_or_future = maybe_deferred_to_future(deferred)
         try:
             response = await deferred_or_future
