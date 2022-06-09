@@ -69,7 +69,7 @@ async def test_scrapy_poet_backend(fake_http_response):
         mock_downloader.assert_called_once()
         assert isinstance(response, web_poet.HttpResponse)
 
-        assert response.url == "https://example.com"
+        assert str(response.url) == "https://example.com"
         assert response.text == "some content"
         assert response.status == 200
         assert response.headers.get("Content-Type") == "text/html; charset=utf-8"

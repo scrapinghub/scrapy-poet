@@ -163,7 +163,7 @@ def test_http_request_to_scrapy_request(http_request, kwargs, scrapy_request):
 )
 def test_scrapy_response_to_http_response(scrapy_response, http_response):
     result = scrapy_response_to_http_response(scrapy_response)
-    assert result.url == http_response.url
+    assert str(result.url) == str(http_response.url)
     assert result.body == http_response.body
     assert result.status == http_response.status
     assert result.headers == http_response.headers
