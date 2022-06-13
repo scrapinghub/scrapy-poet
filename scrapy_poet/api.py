@@ -68,24 +68,37 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
 
             parse_book = callback_for(BookPage)
 
-    This also produces an async generator callable if the Page Objects's
+    It also supports producing an async generator callable if the Page Objects's
     ``to_item()`` method is a coroutine which uses the ``async/await`` syntax.
-    So having the following:
+
+    So if we have the following:
 
     .. code-block:: python
 
-        class BookPage(web_poet.ItemWebPage):
-            async def to_item(self):
-                return await do_something_async()
+        class BooksSpider(scrapy.Spider):
+            name = 'books'
+            start_urls = ['http://books.toscrape.com/']
 
-        callback_for(BookPage)
+            def parse(self, response):
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
 
-    would result in:
+            async def parse_book(self, response: DummyResponse, page: BookPage):
+                yield await page.to_item()
+
+    It could be turned into:
 
     .. code-block:: python
 
-        async def parse_book(self, response: DummyResponse, page: BookPage):
-            yield await page.to_item()
+        class BooksSpider(scrapy.Spider):
+            name = 'books'
+            start_urls = ['http://books.toscrape.com/']
+
+            def parse(self, response):
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
+
+            parse_book = callback_for(BookPage)
 
     The generated callback could be used as a spider instance method or passed
     as an inline/anonymous argument. Make sure to define it as a spider

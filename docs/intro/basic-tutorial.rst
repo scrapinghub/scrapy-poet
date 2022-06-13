@@ -200,23 +200,35 @@ returning the result of the ``to_item`` method call. We could use
 
 .. tip::
 
-    :func:`~.callback_for` also supports `async generators`. So having the
+    :func:`~.callback_for` also supports `async generators`. So if we have the
     following:
 
     .. code-block:: python
 
-        class BookPage(web_poet.ItemWebPage):
-            async def to_item(self):
-                return await do_something_async()
+        class BooksSpider(scrapy.Spider):
+            name = 'books'
+            start_urls = ['http://books.toscrape.com/']
 
-        callback_for(BookPage)
+            def parse(self, response):
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
 
-    would result in:
+            async def parse_book(self, response: DummyResponse, page: BookPage):
+                yield await page.to_item()
+
+    It could be turned into:
 
     .. code-block:: python
 
-        async def parse_book(self, response: DummyResponse, page: BookPage):
-            yield await page.to_item()
+        class BooksSpider(scrapy.Spider):
+            name = 'books'
+            start_urls = ['http://books.toscrape.com/']
+
+            def parse(self, response):
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
+
+            parse_book = callback_for(BookPage)
 
     This is useful when the Page Objects uses additional requests, which rely
     heavily on ``async/await`` syntax. More info on this in this tutorial 
