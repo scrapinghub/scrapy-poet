@@ -3,7 +3,7 @@ responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
 import logging
-from typing import Optional, Type, TypeVar
+from typing import Generator, Optional, Type, TypeVar
 
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
@@ -56,7 +56,7 @@ class InjectionMiddleware:
         self.injector.close()
 
     @inlineCallbacks
-    def _inject_cb_kwargs(self, request: Request, response: Optional[Response] = None):
+    def _inject_cb_kwargs(self, request: Request, response: Optional[Response] = None) -> Generator[None, None, None]:
         # Find out the dependencies
         final_kwargs = yield from self.injector.build_callback_dependencies(
             request,
@@ -70,7 +70,7 @@ class InjectionMiddleware:
             # TODO: check if all arguments are fulfilled somehow?
 
     @inlineCallbacks
-    def process_request(self, request: Request, spider: Spider) -> Optional[DummyResponse]:
+    def process_request(self, request: Request, spider: Spider) -> Generator[None, None, Optional[DummyResponse]]:
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a ``Response``
         is going to be used by the callback or a Page Input.
@@ -92,7 +92,7 @@ class InjectionMiddleware:
 
     @inlineCallbacks
     def process_response(self, request: Request, response: Response,
-                         spider: Spider) -> Response:
+                         spider: Spider) -> Generator[None, None, Response]:
         """This method fills ``request.cb_kwargs`` with instances for
         the required Page Objects found in the callback signature.
 
