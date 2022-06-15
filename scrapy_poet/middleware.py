@@ -93,7 +93,7 @@ class InjectionMiddleware:
         # Find out the dependencies
         final_kwargs = yield from self.injector.build_callback_dependencies(
             request,
-            response=response,
+            response,
         )
         # Fill the callback arguments with the created instances
         for arg, value in final_kwargs.items():
