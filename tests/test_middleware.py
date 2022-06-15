@@ -317,6 +317,7 @@ def test_skip_downloads(settings):
     assert isinstance(item['response'], Response) is True
     assert isinstance(item['response'], DummyResponse) is False
     assert crawler.stats.get_stats().get('downloader/request_count', 0) == 1
+    assert crawler.stats.get_stats().get('downloader/request_count/skipped', 0) == 0
     assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
 
     item, url, crawler = yield crawl_single_item(
@@ -324,6 +325,7 @@ def test_skip_downloads(settings):
     assert isinstance(item['response'], Response) is True
     assert isinstance(item['response'], DummyResponse) is True
     assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
+    assert crawler.stats.get_stats().get('downloader/request_count/skipped', 0) == 1
     assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
 
 
@@ -349,6 +351,7 @@ def test_skip_download_request_url(settings):
     assert isinstance(item['url'], RequestUrl)
     assert str(item['url']) == url
     assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
+    assert crawler.stats.get_stats().get('downloader/request_count/skipped', 0) == 1
     assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
 
 
@@ -377,6 +380,7 @@ def test_skip_download_request_url_page(settings):
     assert tuple(item.keys()) == ('url',)
     assert str(item['url']) == url
     assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
+    assert crawler.stats.get_stats().get('downloader/request_count/skipped', 0) == 1
     assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
 
 
