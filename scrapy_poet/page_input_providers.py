@@ -19,7 +19,7 @@ from scrapy.crawler import Crawler
 from scrapy.utils.request import request_fingerprint
 
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
-from web_poet import HttpResponse, HttpResponseHeaders
+from web_poet import HttpResponse, HttpResponseHeaders, RequestUrl
 
 
 class PageObjectInputProvider:
@@ -197,3 +197,14 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
             )
             for response_data in data
         ]
+
+
+class RequestUrlProvider(PageObjectInputProvider):
+    """This class provides ``web_poet.page_inputs.RequestUrl`` instances."""
+
+    provided_classes = {RequestUrl}
+    name = "request_url"
+
+    def __call__(self, to_provide: Set[Callable], request: Request):
+        """Builds a ``RequestUrl`` instance using a Scrapy ``Request``"""
+        return [RequestUrl(url=request.url)]

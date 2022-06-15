@@ -14,7 +14,7 @@ from scrapy.utils.misc import create_instance, load_object
 
 from .api import DummyResponse
 from .overrides import OverridesRegistry
-from .page_input_providers import HttpResponseProvider
+from .page_input_providers import HttpResponseProvider, RequestUrlProvider
 from .injection import Injector
 
 
@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_PROVIDERS = {
-    HttpResponseProvider: 500
+    HttpResponseProvider: 500,
+    RequestUrlProvider: 600,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")
@@ -54,6 +55,21 @@ class InjectionMiddleware:
     def spider_closed(self, spider: Spider) -> None:
         self.injector.close()
 
+    @inlineCallbacks
+    def _inject_cb_kwargs(self, request: Request, response: Optional[Response] = None):
+        # Find out the dependencies
+        final_kwargs = yield from self.injector.build_callback_dependencies(
+            request,
+            response=response,
+        )
+        # Fill the callback arguments with the created instances
+        for arg, value in final_kwargs.items():
+            # Precedence of user callback arguments
+            if arg not in request.cb_kwargs:
+                request.cb_kwargs[arg] = value
+            # TODO: check if all arguments are fulfilled somehow?
+
+    @inlineCallbacks
     def process_request(self, request: Request, spider: Spider) -> Optional[DummyResponse]:
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a ``Response``
@@ -70,7 +86,7 @@ class InjectionMiddleware:
         """
         if self.injector.is_scrapy_response_required(request):
             return None
-
+        yield from self._inject_cb_kwargs(request)
         logger.debug(f"Using DummyResponse instead of downloading {request}")
         return DummyResponse(url=request.url, request=request)
 
@@ -89,16 +105,5 @@ class InjectionMiddleware:
         and an injectable attribute,
         the user-defined ``cb_kwargs`` takes precedence.
         """
-        # Find out the dependencies
-        final_kwargs = yield from self.injector.build_callback_dependencies(
-            request,
-            response
-        )
-        # Fill the callback arguments with the created instances
-        for arg, value in final_kwargs.items():
-            # Precedence of user callback arguments
-            if arg not in request.cb_kwargs:
-                request.cb_kwargs[arg] = value
-            # TODO: check if all arguments are fulfilled somehow?
-
+        yield from self._inject_cb_kwargs(request, response)
         return response
