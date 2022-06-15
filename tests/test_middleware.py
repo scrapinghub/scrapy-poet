@@ -310,19 +310,6 @@ class SkipDownloadSpider(scrapy.Spider):
         }
 
 
-class RequestUrlSpider(scrapy.Spider):
-    url = None
-
-    def start_requests(self):
-        yield Request(url=self.url, callback=self.parse)
-
-    def parse(self, response: DummyResponse, *, url: RequestUrl):
-        return {
-            'response': response,
-            'url': url,
-        }
-
-
 @inlineCallbacks
 def test_skip_downloads(settings):
     item, url, crawler = yield crawl_single_item(
@@ -340,6 +327,19 @@ def test_skip_downloads(settings):
     assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
 
 
+class RequestUrlSpider(scrapy.Spider):
+    url = None
+
+    def start_requests(self):
+        yield Request(url=self.url, callback=self.parse)
+
+    def parse(self, response: DummyResponse, url: RequestUrl):
+        return {
+            'response': response,
+            'url': url,
+        }
+
+
 @inlineCallbacks
 def test_skip_download_request_url(settings):
     item, url, crawler = yield crawl_single_item(
@@ -347,6 +347,34 @@ def test_skip_download_request_url(settings):
     assert isinstance(item['response'], Response) is True
     assert isinstance(item['response'], DummyResponse) is True
     assert isinstance(item['url'], RequestUrl)
+    assert str(item['url']) == url
+    assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
+    assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
+
+
+@attr.s(auto_attribs=True)
+class RequestUrlPage(ItemPage):
+    url: RequestUrl
+
+    def to_item(self):
+        return {'url': self.url}
+
+
+class RequestUrlPageSpider(scrapy.Spider):
+    url = None
+
+    def start_requests(self):
+        yield Request(url=self.url, callback=self.parse)
+
+    def parse(self, response: DummyResponse, page: RequestUrlPage):
+        return page.to_item()
+
+
+@inlineCallbacks
+def test_skip_download_request_url_page(settings):
+    item, url, crawler = yield crawl_single_item(
+        RequestUrlPageSpider, ProductHtml, settings)
+    assert tuple(item.keys()) == ('url',)
     assert str(item['url']) == url
     assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
     assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
