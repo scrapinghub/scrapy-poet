@@ -18,7 +18,7 @@ from web_poet import HttpClient
 from web_poet.exceptions import HttpError, HttpRequestError, HttpResponseError
 from web_poet.pages import ItemWebPage
 
-from scrapy_poet.backend import create_scrapy_backend
+from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.utils import http_request_to_scrapy_request
 from tests.utils import (
     crawl_single_item, make_crawler, HtmlResource, MockServer
@@ -26,19 +26,19 @@ from tests.utils import (
 
 
 @pytest.fixture
-def scrapy_backend():
-    mock_backend = AsyncMock()
-    return create_scrapy_backend(mock_backend)
+def scrapy_downloader():
+    mock_downloader = AsyncMock()
+    return create_scrapy_downloader(mock_downloader)
 
 
 @ensureDeferred
-async def test_incompatible_scrapy_request(scrapy_backend):
+async def test_incompatible_scrapy_request(scrapy_downloader):
     """The Request must be web_poet.HttpRequest and not anything else."""
 
     req = scrapy.Request("https://example.com")
 
     with pytest.raises(TypeError):
-        await scrapy_backend(req)
+        await scrapy_downloader(req)
 
 
 @pytest.fixture
@@ -52,19 +52,19 @@ def fake_http_response():
 
 
 @ensureDeferred
-async def test_scrapy_poet_backend(fake_http_response):
+async def test_scrapy_poet_downloader(fake_http_response):
     req = web_poet.HttpRequest("https://example.com")
 
     with mock.patch(
-        "scrapy_poet.backend.maybe_deferred_to_future", new_callable=AsyncMock
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
     ) as mock_dtf:
 
         mock_dtf.return_value = fake_http_response
 
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
-        scrapy_backend = create_scrapy_backend(mock_downloader)
+        scrapy_downloader = create_scrapy_downloader(mock_downloader)
 
-        response = await scrapy_backend(req)
+        response = await scrapy_downloader(req)
 
         mock_downloader.assert_called_once()
         assert isinstance(response, web_poet.HttpResponse)
@@ -77,49 +77,49 @@ async def test_scrapy_poet_backend(fake_http_response):
 
 
 @ensureDeferred
-async def test_scrapy_poet_backend_ignored_request():
+async def test_scrapy_poet_downloader_ignored_request():
     """It should handle IgnoreRequest from Scrapy according to the web poet
     standard on additional request error handling."""
     req = web_poet.HttpRequest("https://example.com")
 
     with mock.patch(
-        "scrapy_poet.backend.maybe_deferred_to_future", new_callable=AsyncMock
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
     ) as mock_dtf:
         mock_dtf.side_effect = scrapy.exceptions.IgnoreRequest
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
-        scrapy_backend = create_scrapy_backend(mock_downloader)
+        scrapy_downloader = create_scrapy_downloader(mock_downloader)
 
         with pytest.raises(web_poet.exceptions.HttpError):
-            await scrapy_backend(req)
+            await scrapy_downloader(req)
 
 
 @ensureDeferred
-async def test_scrapy_poet_backend_twisted_error():
+async def test_scrapy_poet_downloader_twisted_error():
     req = web_poet.HttpRequest("https://example.com")
 
     with mock.patch(
-        "scrapy_poet.backend.maybe_deferred_to_future", new_callable=AsyncMock
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
     ) as mock_dtf:
         mock_dtf.side_effect = twisted.internet.error.TimeoutError
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
-        scrapy_backend = create_scrapy_backend(mock_downloader)
+        scrapy_downloader = create_scrapy_downloader(mock_downloader)
 
         with pytest.raises(web_poet.exceptions.HttpRequestError):
-            await scrapy_backend(req)
+            await scrapy_downloader(req)
 
 
 @ensureDeferred
-async def test_scrapy_poet_backend_head_redirect(fake_http_response):
+async def test_scrapy_poet_downloader_head_redirect(fake_http_response):
     req = web_poet.HttpRequest("https://example.com", method="HEAD")
 
     with mock.patch(
-        "scrapy_poet.backend.maybe_deferred_to_future", new_callable=AsyncMock
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
     ) as mock_dtf:
         mock_dtf.return_value = fake_http_response
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
-        scrapy_backend = create_scrapy_backend(mock_downloader)
+        scrapy_downloader = create_scrapy_downloader(mock_downloader)
 
-        await scrapy_backend(req)
+        await scrapy_downloader(req)
 
         args, kwargs = mock_downloader.call_args
         scrapy_request = args[0]
@@ -250,7 +250,7 @@ class DelayedResource(LeafResource):
 def test_additional_requests_connection_issue():
     items = []
 
-    with mock.patch('scrapy_poet.backend.http_request_to_scrapy_request') \
+    with mock.patch('scrapy_poet.downloader.http_request_to_scrapy_request') \
             as mock_http_request_to_scrapy_request:
         mock_http_request_to_scrapy_request.side_effect = partial(
             http_request_to_scrapy_request,

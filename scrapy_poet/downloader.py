@@ -16,8 +16,8 @@ from scrapy_poet.utils import (
 logger = logging.getLogger(__name__)
 
 
-def create_scrapy_backend(download_func):
-    async def scrapy_backend(request: HttpRequest):
+def create_scrapy_downloader(download_func):
+    async def scrapy_downloader(request: HttpRequest):
         if not isinstance(request, HttpRequest):
             raise TypeError(
                 f"The request should be 'web_poet.HttpRequest' but received "
@@ -49,4 +49,4 @@ def create_scrapy_backend(download_func):
 
         return scrapy_response_to_http_response(response)
 
-    return scrapy_backend
+    return scrapy_downloader

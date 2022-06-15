@@ -215,7 +215,7 @@ async def test_http_client_provider(settings):
     crawler.engine = AsyncMock()
 
     with mock.patch(
-        "scrapy_poet.page_input_providers.create_scrapy_backend"
+        "scrapy_poet.page_input_providers.create_scrapy_downloader"
     ) as mock_factory:
         provider = HttpClientProvider(crawler)
         results = provider(set(), crawler)

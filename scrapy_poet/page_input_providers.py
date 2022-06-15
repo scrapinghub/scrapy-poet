@@ -20,7 +20,7 @@ from scrapy.utils.request import request_fingerprint
 
 from scrapy_poet.utils import scrapy_response_to_http_response
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
-from scrapy_poet.backend import create_scrapy_backend
+from scrapy_poet.downloader import create_scrapy_downloader
 from web_poet import HttpClient, HttpResponse, HttpResponseHeaders, PageParams
 
 
@@ -209,8 +209,8 @@ class HttpClientProvider(PageObjectInputProvider):
         """Creates an ``web_poet.requests.HttpClient`` instance using Scrapy's
         downloader.
         """
-        backend = create_scrapy_backend(crawler.engine.download)
-        return [HttpClient(request_downloader=backend)]
+        downloader = create_scrapy_downloader(crawler.engine.download)
+        return [HttpClient(request_downloader=downloader)]
 
 
 class PageParamsProvider(PageObjectInputProvider):
