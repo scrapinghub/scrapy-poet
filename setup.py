@@ -12,12 +12,12 @@ setup(
     packages=find_packages(exclude=['tests', 'example']),
     install_requires=[
         'andi >= 0.4.1',
-        'attrs',
-        'parsel',
-        'url-matcher',
-        'web-poet @ git+https://git@github.com/scrapinghub/web-poet@master#egg=web-poet',
-        'tldextract',
-        'sqlitedict',
+        'attrs >= 21.3.0',
+        'parsel >= 1.5.0',
+        'scrapy >= 2.6.0',
+        'sqlitedict >= 1.5.0',
+        'url-matcher >= 0.2.0',
+        'web-poet >= 0.2.0',
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',
