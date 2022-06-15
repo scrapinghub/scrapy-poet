@@ -55,22 +55,7 @@ class InjectionMiddleware:
     def spider_closed(self, spider: Spider) -> None:
         self.injector.close()
 
-    @inlineCallbacks
-    def _inject_cb_kwargs(self, request: Request, response: Optional[Response] = None) -> Generator[None, None, None]:
-        # Find out the dependencies
-        final_kwargs = yield from self.injector.build_callback_dependencies(
-            request,
-            response=response,
-        )
-        # Fill the callback arguments with the created instances
-        for arg, value in final_kwargs.items():
-            # Precedence of user callback arguments
-            if arg not in request.cb_kwargs:
-                request.cb_kwargs[arg] = value
-            # TODO: check if all arguments are fulfilled somehow?
-
-    @inlineCallbacks
-    def process_request(self, request: Request, spider: Spider) -> Generator[None, None, Optional[DummyResponse]]:
+    def process_request(self, request: Request, spider: Spider) -> Optional[DummyResponse]:
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a ``Response``
         is going to be used by the callback or a Page Input.
@@ -86,7 +71,7 @@ class InjectionMiddleware:
         """
         if self.injector.is_scrapy_response_required(request):
             return None
-        yield from self._inject_cb_kwargs(request)
+
         logger.debug(f"Using DummyResponse instead of downloading {request}")
         return DummyResponse(url=request.url, request=request)
 
@@ -105,5 +90,16 @@ class InjectionMiddleware:
         and an injectable attribute,
         the user-defined ``cb_kwargs`` takes precedence.
         """
-        yield from self._inject_cb_kwargs(request, response)
+        # Find out the dependencies
+        final_kwargs = yield from self.injector.build_callback_dependencies(
+            request,
+            response=response,
+        )
+        # Fill the callback arguments with the created instances
+        for arg, value in final_kwargs.items():
+            # Precedence of user callback arguments
+            if arg not in request.cb_kwargs:
+                request.cb_kwargs[arg] = value
+            # TODO: check if all arguments are fulfilled somehow?
+
         return response
