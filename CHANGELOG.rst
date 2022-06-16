@@ -6,6 +6,12 @@ TBR
 ---
 
 * Use the new ``web_poet.HttpResponse`` which replaces ``web_poet.ResponseData``.
+* Support for the new features in ``web_poet>=0.2.0`` for supporting additional 
+  requests inside Page Objects:
+
+    * Created new providers for ``web_poet.PageParams`` and
+      ``web_poet.HttpClient``.
+    * The minimum Scrapy version is now ``2.6.0``.
 * We have these **backward incompatible** changes since the
   ``web_poet.OverrideRule`` follow a different structure:
 
@@ -14,6 +20,8 @@ TBR
       for better URL matching.
     * This resuls in a newer format in the ``SCRAPY_POET_OVERRIDES`` setting.
 * Removal of this deprecated module: ``scrapy.utils.reqser``
+
+* add ``async`` support for ``callback_for``.
 
 
 0.3.0 (2022-01-28)

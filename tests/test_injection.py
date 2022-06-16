@@ -266,11 +266,11 @@ class TestInjector:
 
 class Html(Injectable):
     url = "http://example.com"
-    html = """<html><body>Price: <span class="price">22</span>€</body></html>"""
+    text = """<html><body>Price: <span class="price">22</span>€</body></html>"""
 
     @property
     def selector(self):
-        return parsel.Selector(self.html)
+        return parsel.Selector(self.text)
 
 
 class EurDollarRate(Injectable):

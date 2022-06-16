@@ -1,4 +1,5 @@
 from typing import Callable, Optional, Type
+from inspect import iscoroutinefunction
 
 from scrapy.http import Request, Response
 
@@ -67,6 +68,38 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
 
             parse_book = callback_for(BookPage)
 
+    It also supports producing an async generator callable if the Page Objects's
+    ``to_item()`` method is a coroutine which uses the ``async/await`` syntax.
+
+    So if we have the following:
+
+    .. code-block:: python
+
+        class BooksSpider(scrapy.Spider):
+            name = 'books'
+            start_urls = ['http://books.toscrape.com/']
+
+            def parse(self, response):
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
+
+            async def parse_book(self, response: DummyResponse, page: BookPage):
+                yield await page.to_item()
+
+    It could be turned into:
+
+    .. code-block:: python
+
+        class BooksSpider(scrapy.Spider):
+            name = 'books'
+            start_urls = ['http://books.toscrape.com/']
+
+            def parse(self, response):
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
+
+            parse_book = callback_for(BookPage)
+
     The generated callback could be used as a spider instance method or passed
     as an inline/anonymous argument. Make sure to define it as a spider
     attribute (as shown in the example above) if you're planning to use
@@ -89,6 +122,13 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     # a dict of named arguments after our injectable.
     def parse(*args, page: page_cls, **kwargs):  # type: ignore
         yield page.to_item()  # type: ignore
+
+    async def async_parse(*args, page: page_cls, **kwargs):  # type: ignore
+        yield await page.to_item()  # type: ignore
+
+    if iscoroutinefunction(page_cls.to_item):
+        setattr(async_parse, _CALLBACK_FOR_MARKER, True)
+        return async_parse
 
     setattr(parse, _CALLBACK_FOR_MARKER, True)
     return parse
