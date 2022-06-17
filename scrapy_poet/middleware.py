@@ -8,7 +8,7 @@ from typing import Generator, Optional, Type, TypeVar
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import Deferred, inlineCallbacks
 
 from scrapy.utils.misc import create_instance, load_object
 
@@ -85,7 +85,7 @@ class InjectionMiddleware:
 
     @inlineCallbacks
     def process_response(self, request: Request, response: Response,
-                         spider: Spider) -> Generator[None, None, Response]:
+                         spider: Spider) -> Generator[Deferred[object], object, Response]:
         """This method fills ``request.cb_kwargs`` with instances for
         the required Page Objects found in the callback signature.
 
