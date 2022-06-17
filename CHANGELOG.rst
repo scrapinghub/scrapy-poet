@@ -2,16 +2,33 @@
 Changelog
 =========
 
-TBR
----
+0.4.0 (TBD)
+-----------
 
-* Use the new ``web_poet.HttpResponse`` which replaces ``web_poet.ResponseData``.
-* Support for the new features in ``web_poet>=0.2.0`` for supporting additional 
-  requests inside Page Objects:
+This release is backwards incompatible, following backwards-incompatible
+changes in web-poet 0.2.0.
 
-    * Created new providers for ``web_poet.PageParams`` and
-      ``web_poet.HttpClient``.
-    * The minimum Scrapy version is now ``2.6.0``.
+The main new feature is support for ``web-poet >= 0.2.0``, including
+support for ``async def to_item`` methods, making additional requests
+in the ``to_item`` method, new Page Object dependencies, and the new way
+to configure overrides.
+
+Full list of changes:
+
+* ``web_poet.HttpResponse`` replaces ``web_poet.ResponseData`` as a dependency
+  to use.
+* Additional requests inside Page Objects: a
+  provider for ``web_poet.HttpClient``, as well as ``web_poet.HttpClient``
+  backend implementation, which uses Scrapy downloader.
+* ``callback_for`` now supports Page Objects which define ``async def to_item``
+  method.
+* Provider for ``web_poet.PageParams`` is added, which uses
+  ``request.meta["page_params"]`` value.
+* Provider for ``web_poet.RequestUrl`` is added, which allows to access the
+  request URL in the page object without triggering the download.
+* New ``scrapy_poet/dummy_response_count`` value appears in Scrapy stats;
+  it is the number of times ``DummyResponse`` is used instead of downloading
+  the response as usual.
 * We have these **backward incompatible** changes since the
   ``web_poet.OverrideRule`` follow a different structure:
 
@@ -19,10 +36,8 @@ TBR
       ``OverridesRegistry`` which provides a wide variety of features
       for better URL matching.
     * This resuls in a newer format in the ``SCRAPY_POET_OVERRIDES`` setting.
-* Removal of this deprecated module: ``scrapy.utils.reqser``
-
-* add ``async`` support for ``callback_for``.
-
+* Removal the use of ``scrapy.utils.reqser`` deprecated module.
+* The minimum supported Scrapy version is now ``2.6.0``.
 
 0.3.0 (2022-01-28)
 ------------------
