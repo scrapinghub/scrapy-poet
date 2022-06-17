@@ -3,12 +3,12 @@ responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
 import logging
-from typing import Optional, Type, TypeVar
+from typing import Generator, Optional, Type, TypeVar
 
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import Deferred, inlineCallbacks
 
 from scrapy.utils.misc import create_instance, load_object
 
@@ -17,6 +17,7 @@ from .page_input_providers import (
     HttpClientProvider,
     HttpResponseProvider,
     PageParamsProvider,
+    RequestUrlProvider,
 )
 from .overrides import OverridesRegistry
 from .injection import Injector
@@ -29,6 +30,7 @@ DEFAULT_PROVIDERS = {
     HttpResponseProvider: 500,
     HttpClientProvider: 600,
     PageParamsProvider: 700,
+    RequestUrlProvider: 800,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")
@@ -78,11 +80,12 @@ class InjectionMiddleware:
             return None
 
         logger.debug(f"Using DummyResponse instead of downloading {request}")
+        self.crawler.stats.inc_value("scrapy_poet/dummy_response_count")
         return DummyResponse(url=request.url, request=request)
 
     @inlineCallbacks
     def process_response(self, request: Request, response: Response,
-                         spider: Spider) -> Response:
+                         spider: Spider) -> Generator[Deferred[object], object, Response]:
         """This method fills ``request.cb_kwargs`` with instances for
         the required Page Objects found in the callback signature.
 
@@ -98,7 +101,7 @@ class InjectionMiddleware:
         # Find out the dependencies
         final_kwargs = yield from self.injector.build_callback_dependencies(
             request,
-            response
+            response,
         )
         # Fill the callback arguments with the created instances
         for arg, value in final_kwargs.items():

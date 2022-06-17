@@ -25,7 +25,7 @@ from scrapy_poet.page_input_providers import (
     PageObjectInputProvider
 )
 from web_poet import default_registry
-from web_poet.page_inputs import HttpResponse
+from web_poet.page_inputs import HttpResponse, RequestUrl
 from scrapy_poet import DummyResponse
 from tests.utils import (HtmlResource,
                          crawl_items,
@@ -317,6 +317,7 @@ def test_skip_downloads(settings):
     assert isinstance(item['response'], Response) is True
     assert isinstance(item['response'], DummyResponse) is False
     assert crawler.stats.get_stats().get('downloader/request_count', 0) == 1
+    assert crawler.stats.get_stats().get('scrapy_poet/dummy_response_count', 0) == 0
     assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
 
     item, url, crawler = yield crawl_single_item(
@@ -324,6 +325,62 @@ def test_skip_downloads(settings):
     assert isinstance(item['response'], Response) is True
     assert isinstance(item['response'], DummyResponse) is True
     assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
+    assert crawler.stats.get_stats().get('scrapy_poet/dummy_response_count', 0) == 1
+    assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
+
+
+class RequestUrlSpider(scrapy.Spider):
+    url = None
+
+    def start_requests(self):
+        yield Request(url=self.url, callback=self.parse)
+
+    def parse(self, response: DummyResponse, url: RequestUrl):
+        return {
+            'response': response,
+            'url': url,
+        }
+
+
+@inlineCallbacks
+def test_skip_download_request_url(settings):
+    item, url, crawler = yield crawl_single_item(
+        RequestUrlSpider, ProductHtml, settings)
+    assert isinstance(item['response'], Response) is True
+    assert isinstance(item['response'], DummyResponse) is True
+    assert isinstance(item['url'], RequestUrl)
+    assert str(item['url']) == url
+    assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
+    assert crawler.stats.get_stats().get('scrapy_poet/dummy_response_count', 0) == 1
+    assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
+
+
+@attr.s(auto_attribs=True)
+class RequestUrlPage(ItemPage):
+    url: RequestUrl
+
+    def to_item(self):
+        return {'url': self.url}
+
+
+class RequestUrlPageSpider(scrapy.Spider):
+    url = None
+
+    def start_requests(self):
+        yield Request(url=self.url, callback=self.parse)
+
+    def parse(self, response: DummyResponse, page: RequestUrlPage):
+        return page.to_item()
+
+
+@inlineCallbacks
+def test_skip_download_request_url_page(settings):
+    item, url, crawler = yield crawl_single_item(
+        RequestUrlPageSpider, ProductHtml, settings)
+    assert tuple(item.keys()) == ('url',)
+    assert str(item['url']) == url
+    assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
+    assert crawler.stats.get_stats().get('scrapy_poet/dummy_response_count', 0) == 1
     assert crawler.stats.get_stats().get('downloader/response_count', 0) == 1
 
 
