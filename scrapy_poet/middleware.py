@@ -13,8 +13,13 @@ from twisted.internet.defer import inlineCallbacks
 from scrapy.utils.misc import create_instance, load_object
 
 from .api import DummyResponse
+from .page_input_providers import (
+    HttpClientProvider,
+    HttpResponseProvider,
+    PageParamsProvider,
+    RequestUrlProvider,
+)
 from .overrides import OverridesRegistry
-from .page_input_providers import HttpResponseProvider, RequestUrlProvider
 from .injection import Injector
 
 
@@ -23,7 +28,9 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PROVIDERS = {
     HttpResponseProvider: 500,
-    RequestUrlProvider: 600,
+    HttpClientProvider: 600,
+    PageParamsProvider: 700,
+    RequestUrlProvider: 800,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")

@@ -1,8 +1,8 @@
-.. _`intro-tutorial`:
+.. _`intro-basic-tutorial`:
 
-========
-Tutorial
-========
+==============
+Basic Tutorial
+==============
 
 In this tutorial, we’ll assume that ``scrapy-poet`` is already installed on your
 system. If that’s not the case, see :ref:`intro-install`.
@@ -197,6 +197,42 @@ returning the result of the ``to_item`` method call. We could use
     You can also write something like
     ``response.follow_all(links, callback_for(BookPage))``, without creating
     an attribute, but currently it won't work with Scrapy disk queues.
+
+.. tip::
+
+    :func:`~.callback_for` also supports `async generators`. So if we have the
+    following:
+
+    .. code-block:: python
+
+        class BooksSpider(scrapy.Spider):
+            name = 'books'
+            start_urls = ['http://books.toscrape.com/']
+
+            def parse(self, response):
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
+
+            async def parse_book(self, response: DummyResponse, page: BookPage):
+                yield await page.to_item()
+
+    It could be turned into:
+
+    .. code-block:: python
+
+        class BooksSpider(scrapy.Spider):
+            name = 'books'
+            start_urls = ['http://books.toscrape.com/']
+
+            def parse(self, response):
+                links = response.css('.image_container a')
+                yield from response.follow_all(links, self.parse_book)
+
+            parse_book = callback_for(BookPage)
+
+    This is useful when the Page Objects uses additional requests, which rely
+    heavily on ``async/await`` syntax. More info on this in this tutorial 
+    section: :ref:`intro-additional-requests`.
 
 Final result
 ============

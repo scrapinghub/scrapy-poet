@@ -10,7 +10,7 @@ Splash or Auto Extract API.
 """
 import abc
 import json
-from typing import Set, Union, Callable, ClassVar, List, Any, Sequence
+from typing import Set, Union, Callable, ClassVar, Any, Sequence
 
 import attr
 from scrapy import Request
@@ -18,8 +18,10 @@ from scrapy.http import Response
 from scrapy.crawler import Crawler
 from scrapy.utils.request import request_fingerprint
 
+from scrapy_poet.utils import scrapy_response_to_http_response
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
-from web_poet import HttpResponse, HttpResponseHeaders, RequestUrl
+from scrapy_poet.downloader import create_scrapy_downloader
+from web_poet import HttpClient, HttpResponse, HttpResponseHeaders, PageParams, RequestUrl
 
 
 class PageObjectInputProvider:
@@ -197,6 +199,30 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
             )
             for response_data in data
         ]
+
+
+class HttpClientProvider(PageObjectInputProvider):
+    """This class provides ``web_poet.requests.HttpClient`` instances."""
+    provided_classes = {HttpClient}
+
+    def __call__(self, to_provide: Set[Callable], crawler: Crawler):
+        """Creates an ``web_poet.requests.HttpClient`` instance using Scrapy's
+        downloader.
+        """
+        downloader = create_scrapy_downloader(crawler.engine.download)
+        return [HttpClient(request_downloader=downloader)]
+
+
+class PageParamsProvider(PageObjectInputProvider):
+    """This class provides ``web_poet.page_inputs.PageParams`` instances."""
+    provided_classes = {PageParams}
+
+    def __call__(self, to_provide: Set[Callable], request: Request):
+        """Creates a ``web_poet.requests.PageParams`` instance based on the
+        data found from the ``meta["page_params"]`` field of a
+        ``scrapy.http.Response`` instance.
+        """
+        return [PageParams(request.meta.get("page_params", {}))]
 
 
 class RequestUrlProvider(PageObjectInputProvider):
