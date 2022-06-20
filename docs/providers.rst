@@ -1,4 +1,4 @@
-.. _`providers`:
+.. _providers:
 
 =========
 Providers

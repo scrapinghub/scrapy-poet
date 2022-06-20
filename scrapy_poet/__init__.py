@@ -1,7 +1,7 @@
+from .api import DummyResponse, callback_for
 from .middleware import InjectionMiddleware
-from .api import callback_for, DummyResponse
 from .page_input_providers import (
-    PageObjectInputProvider,
     CacheDataProviderMixin,
     HttpResponseProvider,
+    PageObjectInputProvider,
 )

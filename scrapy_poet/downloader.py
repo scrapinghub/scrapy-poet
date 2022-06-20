@@ -3,10 +3,7 @@ import logging
 import scrapy
 from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import HttpRequest
-from web_poet.exceptions import (
-    HttpError,
-    HttpRequestError,
-)
+from web_poet.exceptions import HttpError, HttpRequestError
 
 from scrapy_poet.utils import (
     http_request_to_scrapy_request,

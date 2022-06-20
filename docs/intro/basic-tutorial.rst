@@ -1,4 +1,4 @@
-.. _`intro-basic-tutorial`:
+.. _intro-basic-tutorial:
 
 ==============
 Basic Tutorial

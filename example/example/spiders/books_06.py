@@ -10,25 +10,24 @@ All links to search result pages are followed as well.
 Scrapy > 2.0 required
 """
 
-import scrapy
 import attr
-
-from web_poet import WebPage, ItemWebPage, Injectable
+import scrapy
+from web_poet import Injectable, ItemWebPage, WebPage
 
 
 class ListingsExtractor(WebPage):
     def urls(self):
-        return self.css('.image_container a::attr(href)').getall()
+        return self.css(".image_container a::attr(href)").getall()
 
 
 class PaginationExtractor(WebPage):
     def urls(self):
-        return self.css('.pager a::attr(href)').getall()
+        return self.css(".pager a::attr(href)").getall()
 
 
 class BreadcrumbsExtractor(WebPage):
     def urls(self):
-        return self.css('.breadcrumb a::attr(href)').getall()
+        return self.css(".breadcrumb a::attr(href)").getall()
 
 
 @attr.s(auto_attribs=True)
@@ -42,21 +41,21 @@ class BookPage(ItemWebPage):
     breadcrumbs: BreadcrumbsExtractor
 
     def recently_viewed_urls(self):
-        return self.css('.image_container a::attr(href)').getall()
+        return self.css(".image_container a::attr(href)").getall()
 
     def to_item(self):
         return {
-            'url': self.url,
-            'name': self.css("title::text").get(),
+            "url": self.url,
+            "name": self.css("title::text").get(),
         }
 
 
 class BooksSpider(scrapy.Spider):
-    name = 'books_06'
-    start_urls = ['http://books.toscrape.com/']
+    name = "books_06"
+    start_urls = ["http://books.toscrape.com/"]
 
     def parse(self, response, page: ListingsPage):
-        """ Callback for Listings pages """
+        """Callback for Listings pages"""
         yield from response.follow_all(page.book_list.urls(), self.parse_book)
         yield from response.follow_all(page.pagination.urls(), self.parse, priority=+10)
 
@@ -64,4 +63,3 @@ class BooksSpider(scrapy.Spider):
         yield from response.follow_all(page.recently_viewed_urls(), self.parse_book)
         yield from response.follow_all(page.breadcrumbs.urls(), self.parse)
         yield page.to_item()
-

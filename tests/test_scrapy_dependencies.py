@@ -7,11 +7,10 @@ from web_poet.pages import ItemWebPage
 
 from scrapy_poet.injection import SCRAPY_PROVIDED_CLASSES
 from scrapy_poet.page_input_providers import (
-    PageObjectInputProvider,
     HttpResponseProvider,
+    PageObjectInputProvider,
 )
-
-from tests.utils import crawl_items, crawl_single_item, HtmlResource
+from tests.utils import HtmlResource, crawl_items, crawl_single_item
 
 
 class ProductHtml(HtmlResource):
@@ -30,7 +29,7 @@ class ProductHtml(HtmlResource):
 
 
 @inlineCallbacks
-@pytest.mark.parametrize('scrapy_class', SCRAPY_PROVIDED_CLASSES)
+@pytest.mark.parametrize("scrapy_class", SCRAPY_PROVIDED_CLASSES)
 def test_scrapy_dependencies_on_providers(scrapy_class, settings):
     """Scrapy dependencies should be injected into Providers."""
 
@@ -72,13 +71,12 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
         def parse(self, response, page: Page):
             return page.to_item()
 
-    item, url, crawler = yield crawl_single_item(
-        MySpider, ProductHtml, settings)
+    item, url, crawler = yield crawl_single_item(MySpider, ProductHtml, settings)
     assert item["scrapy_class"] == scrapy_class.__name__
 
 
 @inlineCallbacks
-@pytest.mark.parametrize('scrapy_class', SCRAPY_PROVIDED_CLASSES)
+@pytest.mark.parametrize("scrapy_class", SCRAPY_PROVIDED_CLASSES)
 def test_scrapy_dependencies_on_page_objects(scrapy_class, settings):
     """Scrapy dependencies should not be injected into Page Objects."""
 
@@ -103,6 +101,5 @@ def test_scrapy_dependencies_on_page_objects(scrapy_class, settings):
         def parse(self, response, page: Page):
             return page.to_item()
 
-    items, url, crawler = yield crawl_items(
-        MySpider, ProductHtml, settings)
+    items, url, crawler = yield crawl_items(MySpider, ProductHtml, settings)
     assert not items

@@ -1,14 +1,12 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Dict, Mapping, Callable, Iterable, Union, Tuple, Optional, List
+from typing import Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 from scrapy import Request
 from scrapy.crawler import Crawler
 from url_matcher import Patterns, URLMatcher
-from url_matcher.util import get_domain
 from web_poet.overrides import OverrideRule
-
 
 logger = logging.getLogger(__name__)
 
