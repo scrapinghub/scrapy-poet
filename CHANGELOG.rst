@@ -2,8 +2,8 @@
 Changelog
 =========
 
-0.4.0 (TBD)
------------
+0.4.0 (2022-06-20)
+------------------
 
 This release is backwards incompatible, following backwards-incompatible
 changes in web-poet 0.2.0.
