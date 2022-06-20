@@ -111,7 +111,10 @@ class TestInjector:
         assert not injector.is_class_provided_by_any_provider(ClsNoProvided)
 
         for provider in injector.providers:
-            assert injector.is_provider_requiring_scrapy_response[provider] == provider.require_response
+            assert (
+                injector.is_provider_requiring_scrapy_response[provider]
+                == provider.require_response
+            )
 
         # Asserting that we are not leaking providers references
         weak_ref = weakref.ref(injector.providers[0])
@@ -176,7 +179,13 @@ class TestInjector:
 
     @inlineCallbacks
     def test_build_instances_methods(self, injector):
-        def callback(response: DummyResponse, a: Cls1, b: Cls2, c: WrapCls, d: ClsNoProviderRequired):
+        def callback(
+            response: DummyResponse,
+            a: Cls1,
+            b: Cls2,
+            c: WrapCls,
+            d: ClsNoProviderRequired,
+        ):
             pass
 
         response = get_response_for_testing(callback)
@@ -191,7 +200,9 @@ class TestInjector:
             ClsNoProviderRequired: ClsNoProviderRequired(),
         }
 
-        instances = yield from injector.build_instances_from_providers(request, response, plan)
+        instances = yield from injector.build_instances_from_providers(
+            request, response, plan
+        )
         assert instances == {
             Cls1: Cls1(),
             Cls2: Cls2(),
@@ -212,7 +223,9 @@ class TestInjector:
         response = get_response_for_testing(callback)
         plan = injector.build_plan(response.request)
         with pytest.raises(UndeclaredProvidedTypeError) as exinf:
-            yield from injector.build_instances_from_providers(response.request, response, plan)
+            yield from injector.build_instances_from_providers(
+                response.request, response, plan
+            )
 
         assert "Provider" in str(exinf.value)
         assert "Cls2" in str(exinf.value)
@@ -236,19 +249,34 @@ class TestInjector:
 
         response = get_response_for_testing(callback)
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances_from_providers(response.request, response, plan)
+        instances = yield from injector.build_instances_from_providers(
+            response.request, response, plan
+        )
 
         assert instances[str] == min(str_list)
 
     @inlineCallbacks
     def test_build_callback_dependencies(self, injector):
-        def callback(response: DummyResponse, a: Cls1, b: Cls2, c: WrapCls, d: ClsNoProviderRequired):
+        def callback(
+            response: DummyResponse,
+            a: Cls1,
+            b: Cls2,
+            c: WrapCls,
+            d: ClsNoProviderRequired,
+        ):
             pass
 
         response = get_response_for_testing(callback)
-        kwargs = yield from injector.build_callback_dependencies(response.request, response)
+        kwargs = yield from injector.build_callback_dependencies(
+            response.request, response
+        )
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
-        assert kwargs_types == {"a": Cls1, "b": Cls2, "c": WrapCls, "d": ClsNoProviderRequired}
+        assert kwargs_types == {
+            "a": Cls1,
+            "b": Cls2,
+            "c": WrapCls,
+            "d": ClsNoProviderRequired,
+        }
 
 
 class Html(Injectable):
@@ -297,22 +325,31 @@ class TestInjectorOverrides:
         # when we configure them for domain other-example.com
         overrides = [
             (domain, PriceInDollarsPO, PricePO),
-            OverrideRule(Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate),
+            OverrideRule(
+                Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate
+            ),
         ]
         registry = OverridesRegistry(overrides)
         injector = get_injector_for_testing(providers, overrides_registry=registry)
 
-        def callback(response: DummyResponse, price_po: PricePO, rate_po: EurDollarRate):
+        def callback(
+            response: DummyResponse, price_po: PricePO, rate_po: EurDollarRate
+        ):
             pass
 
         response = get_response_for_testing(callback)
-        kwargs = yield from injector.build_callback_dependencies(response.request, response)
+        kwargs = yield from injector.build_callback_dependencies(
+            response.request, response
+        )
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
         price_po = kwargs["price_po"]
         item = price_po.to_item()
 
         if override_should_happen:
-            assert kwargs_types == {"price_po": PriceInDollarsPO, "rate_po": OtherEurDollarRate}
+            assert kwargs_types == {
+                "price_po": PriceInDollarsPO,
+                "rate_po": OtherEurDollarRate,
+            }
             # Note that OtherEurDollarRate don't have effect inside PriceInDollarsPO
             # because composability of overrides is forbidden
             assert item == {"price": 22 * 1.1, "currency": "$"}
@@ -322,8 +359,12 @@ class TestInjectorOverrides:
 
 
 def test_load_provider_classes():
-    provider_as_string = f"{HttpResponseProvider.__module__}.{HttpResponseProvider.__name__}"
-    injector = get_injector_for_testing({provider_as_string: 2, HttpResponseProvider: 1})
+    provider_as_string = (
+        f"{HttpResponseProvider.__module__}.{HttpResponseProvider.__name__}"
+    )
+    injector = get_injector_for_testing(
+        {provider_as_string: 2, HttpResponseProvider: 1}
+    )
     assert all(type(prov) == HttpResponseProvider for prov in injector.providers)
     assert len(injector.providers) == 2
 
@@ -331,7 +372,9 @@ def test_load_provider_classes():
 def test_check_all_providers_are_callable():
     check_all_providers_are_callable([HttpResponseProvider(None)])
     with pytest.raises(NonCallableProviderError) as exinf:
-        check_all_providers_are_callable([PageObjectInputProvider(None), HttpResponseProvider(None)])
+        check_all_providers_are_callable(
+            [PageObjectInputProvider(None), HttpResponseProvider(None)]
+        )
 
     assert "PageObjectInputProvider" in str(exinf.value)
     assert "not callable" in str(exinf.value)
@@ -419,7 +462,9 @@ def test_cache(tmp_path, cache_errors):
 
     response = get_response_for_testing(callback)
     plan = injector.build_plan(response.request)
-    instances = yield from injector.build_instances_from_providers(response.request, response, plan)
+    instances = yield from injector.build_instances_from_providers(
+        response.request, response, plan
+    )
 
     validate_instances(instances)
 
@@ -429,7 +474,9 @@ def test_cache(tmp_path, cache_errors):
     response.request = Request.replace(response.request, url="http://willfail.page")
     with pytest.raises(ValueError):
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances_from_providers(response.request, response, plan)
+        instances = yield from injector.build_instances_from_providers(
+            response.request, response, plan
+        )
 
     # Different providers. They return a different result, but the cache data should prevail.
     providers = {
@@ -440,7 +487,9 @@ def test_cache(tmp_path, cache_errors):
 
     response = get_response_for_testing(callback)
     plan = injector.build_plan(response.request)
-    instances = yield from injector.build_instances_from_providers(response.request, response, plan)
+    instances = yield from injector.build_instances_from_providers(
+        response.request, response, plan
+    )
 
     validate_instances(instances)
 
@@ -449,4 +498,6 @@ def test_cache(tmp_path, cache_errors):
     response.request = Request.replace(response.request, url="http://willfail.page")
     with pytest.raises(Error):
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances_from_providers(response.request, response, plan)
+        instances = yield from injector.build_instances_from_providers(
+            response.request, response, plan
+        )

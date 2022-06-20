@@ -58,7 +58,9 @@ def spider_for(injectable: Type):
 @attr.s(auto_attribs=True)
 class BreadcrumbsExtraction(WebPage):
     def get(self):
-        return {a.css("::text").get(): a.attrib["href"] for a in self.css(".breadcrumbs a")}
+        return {
+            a.css("::text").get(): a.attrib["href"] for a in self.css(".breadcrumbs a")
+        }
 
 
 @attr.s(auto_attribs=True)
@@ -83,7 +85,9 @@ class OverridenBreadcrumbsExtraction(WebPage):
 
 @inlineCallbacks
 def test_basic_case(settings):
-    item, url, _ = yield crawl_single_item(spider_for(ProductPage), ProductHtml, settings)
+    item, url, _ = yield crawl_single_item(
+        spider_for(ProductPage), ProductHtml, settings
+    )
     assert item == {
         "url": url,
         "name": "Chocolate",
@@ -98,8 +102,12 @@ def test_overrides(settings):
     host = socket.gethostbyname(socket.gethostname())
     domain = get_domain(host)
     port = get_ephemeral_port()
-    settings["SCRAPY_POET_OVERRIDES"] = [(f"{domain}:{port}", OverridenBreadcrumbsExtraction, BreadcrumbsExtraction)]
-    item, url, _ = yield crawl_single_item(spider_for(ProductPage), ProductHtml, settings, port=port)
+    settings["SCRAPY_POET_OVERRIDES"] = [
+        (f"{domain}:{port}", OverridenBreadcrumbsExtraction, BreadcrumbsExtraction)
+    ]
+    item, url, _ = yield crawl_single_item(
+        spider_for(ProductPage), ProductHtml, settings, port=port
+    )
     assert item == {
         "url": url,
         "name": "Chocolate",
@@ -126,7 +134,9 @@ class OptionalAndUnionPage(ItemWebPage):
 
 @inlineCallbacks
 def test_optional_and_unions(settings):
-    item, _, _ = yield crawl_single_item(spider_for(OptionalAndUnionPage), ProductHtml, settings)
+    item, _, _ = yield crawl_single_item(
+        spider_for(OptionalAndUnionPage), ProductHtml, settings
+    )
     assert item["breadcrumbs"].response is item["response"]
     assert item["opt_check_1"] is item["breadcrumbs"]
     assert item["opt_check_2"] is None
@@ -261,7 +271,9 @@ class UnressolvableProductPage(ProductPage):
 @inlineCallbacks
 def test_injection_failure(settings):
     configure_logging(settings)
-    items, url, crawler = yield crawl_items(spider_for(UnressolvableProductPage), ProductHtml, settings)
+    items, url, crawler = yield crawl_items(
+        spider_for(UnressolvableProductPage), ProductHtml, settings
+    )
     assert items == []
 
 
@@ -300,7 +312,9 @@ def test_skip_downloads(settings):
     assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 0
     assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
 
-    item, url, crawler = yield crawl_single_item(SkipDownloadSpider, ProductHtml, settings)
+    item, url, crawler = yield crawl_single_item(
+        SkipDownloadSpider, ProductHtml, settings
+    )
     assert isinstance(item["response"], Response) is True
     assert isinstance(item["response"], DummyResponse) is True
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 0
@@ -323,7 +337,9 @@ class RequestUrlSpider(scrapy.Spider):
 
 @inlineCallbacks
 def test_skip_download_request_url(settings):
-    item, url, crawler = yield crawl_single_item(RequestUrlSpider, ProductHtml, settings)
+    item, url, crawler = yield crawl_single_item(
+        RequestUrlSpider, ProductHtml, settings
+    )
     assert isinstance(item["response"], Response) is True
     assert isinstance(item["response"], DummyResponse) is True
     assert isinstance(item["url"], RequestUrl)
@@ -353,7 +369,9 @@ class RequestUrlPageSpider(scrapy.Spider):
 
 @inlineCallbacks
 def test_skip_download_request_url_page(settings):
-    item, url, crawler = yield crawl_single_item(RequestUrlPageSpider, ProductHtml, settings)
+    item, url, crawler = yield crawl_single_item(
+        RequestUrlPageSpider, ProductHtml, settings
+    )
     assert tuple(item.keys()) == ("url",)
     assert str(item["url"]) == url
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 0
@@ -381,7 +399,10 @@ def test_cache_closed_on_spider_close(mock_sqlitedictcache, settings):
 
     spider = has_cache_middleware.crawler.spider
     has_cache_middleware.spider_closed(spider)
-    assert mock_sqlitedictcache.mock_calls == [mock.call("/tmp/cache", compressed=True), mock.call().close()]
+    assert mock_sqlitedictcache.mock_calls == [
+        mock.call("/tmp/cache", compressed=True),
+        mock.call().close(),
+    ]
 
 
 @inlineCallbacks
@@ -404,5 +425,7 @@ def test_web_poet_integration(settings):
     # Converting it to a set removes potential duplicate OverrideRules
     settings["SCRAPY_POET_OVERRIDES"] = set(rules)
 
-    item, url, _ = yield crawl_single_item(spider_for(POOverriden), ProductHtml, settings, port=PORT)
+    item, url, _ = yield crawl_single_item(
+        spider_for(POOverriden), ProductHtml, settings, port=PORT
+    )
     assert item == {"msg": "PO replacement"}

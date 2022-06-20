@@ -153,11 +153,15 @@ def test_http_request_to_scrapy_request(http_request, kwargs, scrapy_request):
         ),
         (
             TextResponse("https://example.com", body="a", encoding="ascii"),
-            HttpResponse("https://example.com", body=b"a", status=200, encoding="ascii"),
+            HttpResponse(
+                "https://example.com", body=b"a", status=200, encoding="ascii"
+            ),
         ),
         (
             TextResponse("https://example.com", body="a", encoding="utf-8"),
-            HttpResponse("https://example.com", body=b"a", status=200, encoding="utf-8"),
+            HttpResponse(
+                "https://example.com", body=b"a", status=200, encoding="utf-8"
+            ),
         ),
     ),
 )

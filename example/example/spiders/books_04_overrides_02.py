@@ -67,8 +67,16 @@ class BooksSpider(scrapy.Spider):
             ("toscrape.com", BTSBookListPage, BookListPage),
             ("toscrape.com", BTSBookPage, BookPage),
             # We could also use the long-form version if we want to.
-            OverrideRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookListPage, instead_of=BookListPage),
-            OverrideRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookPage, instead_of=BookPage),
+            OverrideRule(
+                for_patterns=Patterns(["bookpage.com"]),
+                use=BPBookListPage,
+                instead_of=BookListPage,
+            ),
+            OverrideRule(
+                for_patterns=Patterns(["bookpage.com"]),
+                use=BPBookPage,
+                instead_of=BookPage,
+            ),
         ]
     }
 

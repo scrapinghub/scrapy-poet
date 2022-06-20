@@ -52,7 +52,9 @@ def fake_http_response():
 async def test_scrapy_poet_downloader(fake_http_response):
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch("scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock) as mock_dtf:
+    with mock.patch(
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
+    ) as mock_dtf:
 
         mock_dtf.return_value = fake_http_response
 
@@ -77,7 +79,9 @@ async def test_scrapy_poet_downloader_ignored_request():
     standard on additional request error handling."""
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch("scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock) as mock_dtf:
+    with mock.patch(
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
+    ) as mock_dtf:
         mock_dtf.side_effect = scrapy.exceptions.IgnoreRequest
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
         scrapy_downloader = create_scrapy_downloader(mock_downloader)
@@ -90,7 +94,9 @@ async def test_scrapy_poet_downloader_ignored_request():
 async def test_scrapy_poet_downloader_twisted_error():
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch("scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock) as mock_dtf:
+    with mock.patch(
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
+    ) as mock_dtf:
         mock_dtf.side_effect = twisted.internet.error.TimeoutError
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
         scrapy_downloader = create_scrapy_downloader(mock_downloader)
@@ -103,7 +109,9 @@ async def test_scrapy_poet_downloader_twisted_error():
 async def test_scrapy_poet_downloader_head_redirect(fake_http_response):
     req = web_poet.HttpRequest("https://example.com", method="HEAD")
 
-    with mock.patch("scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock) as mock_dtf:
+    with mock.patch(
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
+    ) as mock_dtf:
         mock_dtf.return_value = fake_http_response
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
         scrapy_downloader = create_scrapy_downloader(mock_downloader)
@@ -239,7 +247,9 @@ class DelayedResource(LeafResource):
 def test_additional_requests_connection_issue():
     items = []
 
-    with mock.patch("scrapy_poet.downloader.http_request_to_scrapy_request") as mock_http_request_to_scrapy_request:
+    with mock.patch(
+        "scrapy_poet.downloader.http_request_to_scrapy_request"
+    ) as mock_http_request_to_scrapy_request:
         mock_http_request_to_scrapy_request.side_effect = partial(
             http_request_to_scrapy_request,
             meta={"download_timeout": 0.001},

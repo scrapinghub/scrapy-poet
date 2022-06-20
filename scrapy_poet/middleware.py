@@ -45,14 +45,20 @@ class InjectionMiddleware:
         """Initialize the middleware"""
         self.crawler = crawler
         settings = self.crawler.settings
-        registry_cls = load_object(settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", OverridesRegistry))
+        registry_cls = load_object(
+            settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", OverridesRegistry)
+        )
         self.overrides_registry = create_instance(registry_cls, settings, crawler)
         self.injector = Injector(
-            crawler, default_providers=DEFAULT_PROVIDERS, overrides_registry=self.overrides_registry
+            crawler,
+            default_providers=DEFAULT_PROVIDERS,
+            overrides_registry=self.overrides_registry,
         )
 
     @classmethod
-    def from_crawler(cls: Type[InjectionMiddlewareTV], crawler: Crawler) -> InjectionMiddlewareTV:
+    def from_crawler(
+        cls: Type[InjectionMiddlewareTV], crawler: Crawler
+    ) -> InjectionMiddlewareTV:
         o = cls(crawler)
         crawler.signals.connect(o.spider_closed, signal=signals.spider_closed)
         return o
@@ -60,7 +66,9 @@ class InjectionMiddleware:
     def spider_closed(self, spider: Spider) -> None:
         self.injector.close()
 
-    def process_request(self, request: Request, spider: Spider) -> Optional[DummyResponse]:
+    def process_request(
+        self, request: Request, spider: Spider
+    ) -> Optional[DummyResponse]:
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a ``Response``
         is going to be used by the callback or a Page Input.

@@ -25,7 +25,16 @@ class MockServer:
 
     def __enter__(self):
         self.proc = Popen(
-            [sys.executable, "-u", "-m", "tests.mockserver", self.resource, "--port", str(self.port)], stdout=PIPE
+            [
+                sys.executable,
+                "-u",
+                "-m",
+                "tests.mockserver",
+                self.resource,
+                "--port",
+                str(self.port),
+            ],
+            stdout=PIPE,
         )
         self.proc.stdout.readline()
         return self
@@ -48,7 +57,11 @@ def main():
 
     def print_listening():
         host = http_port.getHost()
-        print("Mock server {0} running at http://{1}:{2}".format(resource, host.host, host.port))
+        print(
+            "Mock server {0} running at http://{1}:{2}".format(
+                resource, host.host, host.port
+            )
+        )
 
     reactor.callWhenRunning(print_listening)
     reactor.run()
