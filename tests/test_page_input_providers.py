@@ -5,7 +5,6 @@ from scrapy_poet.injection_errors import MalformedProvidedClassesError
 
 
 class TestProvider:
-
     def test_is_provided_on_malformed_provided_classes(self):
         class Provider(PageObjectInputProvider):
             provided_classes = [str]

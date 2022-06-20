@@ -1,26 +1,25 @@
-from typing import Any, List, Set, Callable, Sequence
+import json
+from typing import Any, Callable, List, Sequence, Set
 from unittest import mock
 
 import attr
-import json
-import pytest
-from pytest_twisted import ensureDeferred, inlineCallbacks
-from scrapy_poet import HttpResponseProvider
-from twisted.python.failure import Failure
-
 import scrapy
+from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
+from twisted.python.failure import Failure
+from web_poet import HttpClient, HttpResponse
+
+from scrapy_poet import HttpResponseProvider
 from scrapy_poet.page_input_providers import (
     CacheDataProviderMixin,
     HttpClientProvider,
     PageObjectInputProvider,
     PageParamsProvider,
 )
-from tests.utils import crawl_single_item, HtmlResource, AsyncMock
-from web_poet import HttpResponse, HttpClient
+from tests.utils import AsyncMock, HtmlResource, crawl_single_item
 
 
 class ProductHtml(HtmlResource):
@@ -138,7 +137,14 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
     def errback(self, failure: Failure):
         yield {"exception": failure.value}
 
-    def parse(self, response, price: Price, name: Name, html: Html, response_data: HttpResponse):
+    def parse(
+        self,
+        response,
+        price: Price,
+        name: Name,
+        html: Html,
+        response_data: HttpResponse,
+    ):
         yield {
             Price: price,
             Name: name,
@@ -221,7 +227,8 @@ async def test_http_client_provider(settings):
         results = provider(set(), crawler)
         assert isinstance(results[0], HttpClient)
 
-    results[0]._request_downloader == mock_factory.return_value
+    assert results[0]._request_downloader == mock_factory.return_value
+
 
 def test_page_params_provider(settings):
     crawler = get_crawler(Spider, settings)

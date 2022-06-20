@@ -57,7 +57,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ['3.10']
-        tox-job: ["mypy", "docs"]
+        tox-job: ["mypy", "docs", "linters"]
 
     steps:
     - uses: actions/checkout@v2

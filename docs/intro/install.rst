@@ -1,4 +1,4 @@
-.. _`intro-install`:
+.. _intro-install:
 
 ============
 Installation

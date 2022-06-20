@@ -1,4 +1,4 @@
-.. _`intro-advanced-tutorial`:
+.. _intro-advanced-tutorial:
 
 =================
 Advanced Tutorial
@@ -15,7 +15,7 @@ These are mainly achieved by **scrapy-poet** implementing **providers** for them
     * :class:`scrapy_poet.page_input_providers.HttpClientProvider`
     * :class:`scrapy_poet.page_input_providers.PageParamsProvider`
 
-.. _`intro-additional-requests`:
+.. _intro-additional-requests:
 
 Additional Requests
 ===================

@@ -1,0 +1,36 @@
+[flake8]
+ignore =
+    # Refers to the max-line length. Let's suppress the error and simply
+    # let black take care on how it wants to format the lines.
+    E501,
+
+    # Refers to "line break before binary operator".
+    # Similar to above, let black take care of the formatting.
+    W503,
+
+    # Refers to "necessary dict call - rewrite as a literal".
+    C408,
+
+    # To be addressed:
+    D100,  # Missing docstring in public module
+    D101,  # Missing docstring in public class
+    D102,  # Missing docstring in public method
+    D103,  # Missing docstring in public function
+    D104,  # Missing docstring in public package
+    D105,  # Missing docstring in magic method
+    D107,  # Missing docstring in __init__
+    D200,  # One-line docstring should fit on one line with quotes
+    D202,  # No blank lines allowed after function docstring
+    D205,  # 1 blank line required between summary line and description
+    D209,  # Multi-line docstring closing quotes should be on a separate line
+    D400,  # First line should end with a period
+    D401,  # First line should be in imperative mood
+    D402   # First line should not be the function's "signature"
+
+per-file-ignores =
+    # F401: Ignore "imported but unused" errors in __init__ files, as those
+    # imports are there to expose submodule functions so they can be imported
+    # directly from that module
+    # F403: Ignore * imports in these files
+    scrapy_poet/__init__.py:F401,F403
+    scrapy_poet/page_inputs/__init__.py:F401,F403

@@ -12,15 +12,15 @@ and the ``BooksSpider.parse_book`` callback for implementation details.
 """
 
 import scrapy
-
-from web_poet import WebPage
-from scrapy_poet import DummyResponse
 from example.autoextract import ProductPage
+from web_poet import WebPage
+
+from scrapy_poet import DummyResponse
 
 
 class BookListPage(WebPage):
     def product_urls(self):
-        return self.css('.image_container a::attr(href)').getall()
+        return self.css(".image_container a::attr(href)").getall()
 
 
 class BookPage(ProductPage):
@@ -28,14 +28,14 @@ class BookPage(ProductPage):
         # post-processing example: return only 2 fields
         book = super().to_item()
         return {
-            'url': book['url'],
-            'name': book['name'],
+            "url": book["url"],
+            "name": book["name"],
         }
 
 
 class BooksSpider(scrapy.Spider):
-    name = 'books_05_1'
-    start_urls = ['http://books.toscrape.com/']
+    name = "books_05_1"
+    start_urls = ["http://books.toscrape.com/"]
 
     def parse(self, response, page: BookListPage):
         for url in page.product_urls():
@@ -45,5 +45,5 @@ class BooksSpider(scrapy.Spider):
     def parse_book(self, response: DummyResponse, page: BookPage):
         # you can also post-process data in a spider
         book = page.to_item()
-        book['title'] = book.pop('name')
+        book["title"] = book.pop("name")
         yield book
