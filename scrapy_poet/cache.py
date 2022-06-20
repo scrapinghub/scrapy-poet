@@ -28,7 +28,7 @@ class SqlitedictCache(_Cache):
     def __init__(self, path: str, *, compressed=True):
         self.path = path
         self.compressed = compressed
-        tablename = 'responses_gzip' if compressed else 'responses'
+        tablename = "responses_gzip" if compressed else "responses"
         self.db = sqlitedict.SqliteDict(
             path,
             tablename=tablename,
@@ -54,14 +54,12 @@ class SqlitedictCache(_Cache):
         return pickle.loads(data)
 
     def __str__(self) -> str:
-        return (  #pragma: no cover
-            f"SqlitedictCache <{self.db.filename} | "
-            f"compressed: {self.compressed} | "
-            f"{len(self.db)} records>"
+        return (  # pragma: no cover
+            f"SqlitedictCache <{self.db.filename} | " f"compressed: {self.compressed} | " f"{len(self.db)} records>"
         )
 
     def __repr__(self) -> str:
-        return f"SqlitedictCache({self.path!r}, compressed={self.compressed})"  #pragma: no cover
+        return f"SqlitedictCache({self.path!r}, compressed={self.compressed})"  # pragma: no cover
 
     def __getitem__(self, fingerprint: str) -> Any:
         return self.db[fingerprint]

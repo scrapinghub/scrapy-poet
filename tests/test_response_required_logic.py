@@ -1,24 +1,23 @@
-import attr
 from typing import Any, Dict
 
-from pytest_twisted import inlineCallbacks
-
+import attr
 import scrapy
+from pytest_twisted import inlineCallbacks
 from scrapy.crawler import Crawler
-from scrapy.http import TextResponse, HtmlResponse
+from scrapy.http import HtmlResponse, TextResponse
 from scrapy.settings import Settings
-from scrapy_poet.injection import Injector, get_callback, \
-    is_callback_requiring_scrapy_response, is_provider_requiring_scrapy_response
-
-from scrapy_poet.page_input_providers import (
-    PageObjectInputProvider,
-    HttpResponseProvider,
-)
 from web_poet import ItemPage, WebPage
 
-from scrapy_poet import (
-    callback_for,
-    DummyResponse,
+from scrapy_poet import DummyResponse, callback_for
+from scrapy_poet.injection import (
+    Injector,
+    get_callback,
+    is_callback_requiring_scrapy_response,
+    is_provider_requiring_scrapy_response,
+)
+from scrapy_poet.page_input_providers import (
+    HttpResponseProvider,
+    PageObjectInputProvider,
 )
 
 
@@ -40,9 +39,9 @@ class DummyProductProvider(PageObjectInputProvider):
 
     def __call__(self, to_provide, request: scrapy.Request):
         data = {
-            'product': {
-                'url': request.url,
-                'name': 'Sample',
+            "product": {
+                "url": request.url,
+                "name": "Sample",
             },
         }
         return [DummyProductResponse(data=data)]
@@ -54,9 +53,9 @@ class FakeProductProvider(PageObjectInputProvider):
 
     def __call__(self, to_provide):
         data = {
-            'product': {
-                'url': 'http://example.com/sample',
-                'name': 'Sample',
+            "product": {
+                "url": "http://example.com/sample",
+                "name": "Sample",
             },
         }
         return [FakeProductResponse(data=data)]
@@ -71,7 +70,6 @@ class TextProductProvider(HttpResponseProvider):
 
 
 class StringProductProvider(HttpResponseProvider):
-
     def __call__(self, to_provide, response: str):
         return super().__call__(to_provide, response)
 
@@ -83,10 +81,10 @@ class DummyProductPage(ItemPage):
 
     @property
     def url(self):
-        return self.response.data['product']['url']
+        return self.response.data["product"]["url"]
 
     def to_item(self):
-        product = self.response.data['product']
+        product = self.response.data["product"]
         return product
 
 
@@ -97,22 +95,21 @@ class FakeProductPage(ItemPage):
 
     @property
     def url(self):
-        return self.response.data['product']['url']
+        return self.response.data["product"]["url"]
 
     def to_item(self):
-        product = self.response.data['product']
+        product = self.response.data["product"]
         return product
 
 
 class BookPage(WebPage):
-
     def to_item(self):
         pass
 
 
 class MySpider(scrapy.Spider):
 
-    name = 'foo'
+    name = "foo"
     custom_settings = {
         "SCRAPY_POET_PROVIDERS": {
             HttpResponseProvider: 1,

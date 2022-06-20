@@ -1,27 +1,36 @@
-from typing import Any, Sequence, Set, Callable
+import weakref
+from typing import Any, Callable, Sequence, Set
 
 import attr
+import parsel
 import pytest
 from pytest_twisted import inlineCallbacks
-import weakref
-
-import parsel
 from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
-
 from url_matcher.util import get_domain
-
-from scrapy_poet import CacheDataProviderMixin, HttpResponseProvider, PageObjectInputProvider, \
-    DummyResponse
-from scrapy_poet.injection import check_all_providers_are_callable, is_class_provided_by_any_provider_fn, \
-    get_injector_for_testing, get_response_for_testing
-from scrapy_poet.injection_errors import NonCallableProviderError, \
-    InjectionError, UndeclaredProvidedTypeError
-from scrapy_poet.overrides import OverridesRegistry
 from web_poet import Injectable, ItemPage
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.overrides import OverrideRule
+
+from scrapy_poet import (
+    CacheDataProviderMixin,
+    DummyResponse,
+    HttpResponseProvider,
+    PageObjectInputProvider,
+)
+from scrapy_poet.injection import (
+    check_all_providers_are_callable,
+    get_injector_for_testing,
+    get_response_for_testing,
+    is_class_provided_by_any_provider_fn,
+)
+from scrapy_poet.injection_errors import (
+    InjectionError,
+    NonCallableProviderError,
+    UndeclaredProvidedTypeError,
+)
+from scrapy_poet.overrides import OverridesRegistry
 
 
 def get_provider(classes, content=None):
@@ -76,10 +85,7 @@ def get_providers_for_testing():
     prov1 = get_provider_requiring_response({ClsReqResponse})
     prov2 = get_provider({Cls1, Cls2})
     # Duplicating them because they should work even in this situation
-    return {prov1: 1,
-            prov2: 2,
-            prov1: 3,
-            prov2: 4}
+    return {prov1: 1, prov2: 2, prov1: 3, prov2: 4}
 
 
 @pytest.fixture
@@ -98,7 +104,6 @@ class WrapCls(Injectable):
 
 
 class TestInjector:
-
     def test_constructor(self):
         injector = get_injector_for_testing(get_providers_for_testing())
         assert injector.is_class_provided_by_any_provider(ClsReqResponse)
@@ -106,8 +111,7 @@ class TestInjector:
         assert not injector.is_class_provided_by_any_provider(ClsNoProvided)
 
         for provider in injector.providers:
-            assert (injector.is_provider_requiring_scrapy_response[provider] ==
-                    provider.require_response)
+            assert injector.is_provider_requiring_scrapy_response[provider] == provider.require_response
 
         # Asserting that we are not leaking providers references
         weak_ref = weakref.ref(injector.providers[0])
@@ -117,6 +121,7 @@ class TestInjector:
 
     def test_non_callable_provider_error(self):
         """Checks that a exception is raised when a provider is not callable"""
+
         class NonCallableProvider(PageObjectInputProvider):
             pass
 
@@ -151,7 +156,6 @@ class TestInjector:
         assert set(map(type, discover_fn(callback_3))) == {providers_list[0]}
 
     def test_is_scrapy_response_required(self, injector):
-
         def callback_no_1(response: DummyResponse, a: Cls1):
             pass
 
@@ -172,12 +176,7 @@ class TestInjector:
 
     @inlineCallbacks
     def test_build_instances_methods(self, injector):
-
-        def callback(response: DummyResponse,
-                     a: Cls1,
-                     b: Cls2,
-                     c: WrapCls,
-                     d: ClsNoProviderRequired):
+        def callback(response: DummyResponse, a: Cls1, b: Cls2, c: WrapCls, d: ClsNoProviderRequired):
             pass
 
         response = get_response_for_testing(callback)
@@ -189,11 +188,10 @@ class TestInjector:
             Cls2: Cls2(),
             WrapCls: WrapCls(ClsReqResponse()),
             ClsReqResponse: ClsReqResponse(),
-            ClsNoProviderRequired: ClsNoProviderRequired()
+            ClsNoProviderRequired: ClsNoProviderRequired(),
         }
 
-        instances = yield from injector.build_instances_from_providers(
-            request, response, plan)
+        instances = yield from injector.build_instances_from_providers(request, response, plan)
         assert instances == {
             Cls1: Cls1(),
             Cls2: Cls2(),
@@ -202,7 +200,6 @@ class TestInjector:
 
     @inlineCallbacks
     def test_build_instances_from_providers_unexpected_return(self):
-
         class WrongProvider(get_provider({Cls1})):
             def __call__(self, to_provide):
                 return super().__call__(to_provide) + [Cls2()]
@@ -215,21 +212,22 @@ class TestInjector:
         response = get_response_for_testing(callback)
         plan = injector.build_plan(response.request)
         with pytest.raises(UndeclaredProvidedTypeError) as exinf:
-            yield from injector.build_instances_from_providers(
-            response.request, response, plan)
+            yield from injector.build_instances_from_providers(response.request, response, plan)
 
         assert "Provider" in str(exinf.value)
         assert "Cls2" in str(exinf.value)
         assert "Cls1" in str(exinf.value)
 
-    @pytest.mark.parametrize("str_list", [
-        ["1", "2", "3"],
-        ["3", "2", "1"],
-        ["1", "3", "2"],
-    ])
+    @pytest.mark.parametrize(
+        "str_list",
+        [
+            ["1", "2", "3"],
+            ["3", "2", "1"],
+            ["1", "3", "2"],
+        ],
+    )
     @inlineCallbacks
-    def test_build_instances_from_providers_respect_priorities(
-            self, str_list):
+    def test_build_instances_from_providers_respect_priorities(self, str_list):
         providers = {get_provider({str}, text): int(text) for text in str_list}
         injector = get_injector_for_testing(providers)
 
@@ -238,30 +236,19 @@ class TestInjector:
 
         response = get_response_for_testing(callback)
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances_from_providers(
-            response.request, response, plan)
+        instances = yield from injector.build_instances_from_providers(response.request, response, plan)
 
         assert instances[str] == min(str_list)
 
     @inlineCallbacks
     def test_build_callback_dependencies(self, injector):
-        def callback(response: DummyResponse,
-                     a: Cls1,
-                     b: Cls2,
-                     c: WrapCls,
-                     d: ClsNoProviderRequired):
+        def callback(response: DummyResponse, a: Cls1, b: Cls2, c: WrapCls, d: ClsNoProviderRequired):
             pass
 
         response = get_response_for_testing(callback)
-        kwargs = yield from injector.build_callback_dependencies(
-            response.request, response)
+        kwargs = yield from injector.build_callback_dependencies(response.request, response)
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
-        assert kwargs_types == {
-            "a": Cls1,
-            "b": Cls2,
-            "c": WrapCls,
-            "d": ClsNoProviderRequired
-        }
+        assert kwargs_types == {"a": Cls1, "b": Cls2, "c": WrapCls, "d": ClsNoProviderRequired}
 
 
 class Html(Injectable):
@@ -302,7 +289,6 @@ class PriceInDollarsPO(ItemPage):
 
 
 class TestInjectorOverrides:
-
     @pytest.mark.parametrize("override_should_happen", [True, False])
     @inlineCallbacks
     def test_overrides(self, providers, override_should_happen):
@@ -311,18 +297,16 @@ class TestInjectorOverrides:
         # when we configure them for domain other-example.com
         overrides = [
             (domain, PriceInDollarsPO, PricePO),
-            OverrideRule(Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate)
+            OverrideRule(Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate),
         ]
         registry = OverridesRegistry(overrides)
-        injector = get_injector_for_testing(providers,
-                                            overrides_registry=registry)
+        injector = get_injector_for_testing(providers, overrides_registry=registry)
 
         def callback(response: DummyResponse, price_po: PricePO, rate_po: EurDollarRate):
             pass
 
         response = get_response_for_testing(callback)
-        kwargs = yield from injector.build_callback_dependencies(
-            response.request, response)
+        kwargs = yield from injector.build_callback_dependencies(response.request, response)
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
         price_po = kwargs["price_po"]
         item = price_po.to_item()
@@ -347,17 +331,18 @@ def test_load_provider_classes():
 def test_check_all_providers_are_callable():
     check_all_providers_are_callable([HttpResponseProvider(None)])
     with pytest.raises(NonCallableProviderError) as exinf:
-        check_all_providers_are_callable([PageObjectInputProvider(None),
-                                          HttpResponseProvider(None)])
+        check_all_providers_are_callable([PageObjectInputProvider(None), HttpResponseProvider(None)])
 
     assert "PageObjectInputProvider" in str(exinf.value)
     assert "not callable" in str(exinf.value)
 
+
 def test_is_class_provided_by_any_provider_fn():
-    providers = [get_provider({str}),
-                 get_provider(lambda x: issubclass(x, InjectionError)),
-                 get_provider(frozenset({int, float})),
-                 ]
+    providers = [
+        get_provider({str}),
+        get_provider(lambda x: issubclass(x, InjectionError)),
+        get_provider(frozenset({int, float})),
+    ]
     is_provided = is_class_provided_by_any_provider_fn(providers)
     is_provided_empty = is_class_provided_by_any_provider_fn([])
 
@@ -425,8 +410,7 @@ def test_cache(tmp_path, cache_errors):
     if cache.exists():
         print(f"Cache file {cache} already exists. Weird. Deleting")
         cache.unlink()
-    settings = {"SCRAPY_POET_CACHE": cache,
-                "SCRAPY_POET_CACHE_ERRORS": cache_errors}
+    settings = {"SCRAPY_POET_CACHE": cache, "SCRAPY_POET_CACHE_ERRORS": cache_errors}
     injector = get_injector_for_testing(providers, settings)
     assert cache.exists()
 
@@ -435,8 +419,7 @@ def test_cache(tmp_path, cache_errors):
 
     response = get_response_for_testing(callback)
     plan = injector.build_plan(response.request)
-    instances = yield from injector.build_instances_from_providers(
-        response.request, response, plan)
+    instances = yield from injector.build_instances_from_providers(response.request, response, plan)
 
     validate_instances(instances)
 
@@ -446,8 +429,7 @@ def test_cache(tmp_path, cache_errors):
     response.request = Request.replace(response.request, url="http://willfail.page")
     with pytest.raises(ValueError):
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances_from_providers(
-            response.request, response, plan)
+        instances = yield from injector.build_instances_from_providers(response.request, response, plan)
 
     # Different providers. They return a different result, but the cache data should prevail.
     providers = {
@@ -458,8 +440,7 @@ def test_cache(tmp_path, cache_errors):
 
     response = get_response_for_testing(callback)
     plan = injector.build_plan(response.request)
-    instances = yield from injector.build_instances_from_providers(
-        response.request, response, plan)
+    instances = yield from injector.build_instances_from_providers(response.request, response, plan)
 
     validate_instances(instances)
 
@@ -468,5 +449,4 @@ def test_cache(tmp_path, cache_errors):
     response.request = Request.replace(response.request, url="http://willfail.page")
     with pytest.raises(Error):
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances_from_providers(
-            response.request, response, plan)
+        instances = yield from injector.build_instances_from_providers(response.request, response, plan)

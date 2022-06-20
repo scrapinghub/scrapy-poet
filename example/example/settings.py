@@ -8,10 +8,10 @@
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 from example.autoextract import AutoextractProductProvider
 
-BOT_NAME = 'example'
+BOT_NAME = "example"
 
-SPIDER_MODULES = ['example.spiders']
-NEWSPIDER_MODULE = 'example.spiders'
+SPIDER_MODULES = ["example.spiders"]
+NEWSPIDER_MODULE = "example.spiders"
 
 SCRAPY_POET_PROVIDERS = {AutoextractProductProvider: 500}
 
@@ -19,6 +19,5 @@ SCRAPY_POET_PROVIDERS = {AutoextractProductProvider: 500}
 ROBOTSTXT_OBEY = True
 
 DOWNLOADER_MIDDLEWARES = {
-   'scrapy_poet.InjectionMiddleware': 543,
+    "scrapy_poet.InjectionMiddleware": 543,
 }
-

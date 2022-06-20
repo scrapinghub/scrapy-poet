@@ -1,12 +1,10 @@
-from typing import Callable, Optional, Type
 from inspect import iscoroutinefunction
+from typing import Callable, Optional, Type
 
 from scrapy.http import Request, Response
-
 from web_poet.pages import ItemPage
 
-
-_CALLBACK_FOR_MARKER = '__scrapy_poet_callback'
+_CALLBACK_FOR_MARKER = "__scrapy_poet_callback"
 
 
 class DummyResponse(Response):
@@ -107,12 +105,10 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     your request object.
     """
     if not issubclass(page_cls, ItemPage):
-        raise TypeError(
-            f'{page_cls.__name__} should be a subclass of ItemPage.')
+        raise TypeError(f"{page_cls.__name__} should be a subclass of ItemPage.")
 
-    if getattr(page_cls.to_item, '__isabstractmethod__', False):
-        raise NotImplementedError(
-            f'{page_cls.__name__} should implement to_item method.')
+    if getattr(page_cls.to_item, "__isabstractmethod__", False):
+        raise NotImplementedError(f"{page_cls.__name__} should implement to_item method.")
 
     # When the callback is used as an instance method of the spider, it expects
     # to receive 'self' as its first argument. When used as a simple inline

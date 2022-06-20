@@ -8,20 +8,18 @@ from typing import Generator, Optional, Type, TypeVar
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
+from scrapy.utils.misc import create_instance, load_object
 from twisted.internet.defer import Deferred, inlineCallbacks
 
-from scrapy.utils.misc import create_instance, load_object
-
 from .api import DummyResponse
+from .injection import Injector
+from .overrides import OverridesRegistry
 from .page_input_providers import (
     HttpClientProvider,
     HttpResponseProvider,
     PageParamsProvider,
     RequestUrlProvider,
 )
-from .overrides import OverridesRegistry
-from .injection import Injector
-
 
 logger = logging.getLogger(__name__)
 
@@ -42,16 +40,16 @@ class InjectionMiddleware:
     * check if request downloads could be skipped
     * inject dependencies before request callbacks are executed
     """
+
     def __init__(self, crawler: Crawler) -> None:
         """Initialize the middleware"""
         self.crawler = crawler
         settings = self.crawler.settings
-        registry_cls = load_object(settings.get("SCRAPY_POET_OVERRIDES_REGISTRY",
-                                                OverridesRegistry))
+        registry_cls = load_object(settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", OverridesRegistry))
         self.overrides_registry = create_instance(registry_cls, settings, crawler)
-        self.injector = Injector(crawler,
-                                 default_providers=DEFAULT_PROVIDERS,
-                                 overrides_registry=self.overrides_registry)
+        self.injector = Injector(
+            crawler, default_providers=DEFAULT_PROVIDERS, overrides_registry=self.overrides_registry
+        )
 
     @classmethod
     def from_crawler(cls: Type[InjectionMiddlewareTV], crawler: Crawler) -> InjectionMiddlewareTV:
@@ -84,8 +82,9 @@ class InjectionMiddleware:
         return DummyResponse(url=request.url, request=request)
 
     @inlineCallbacks
-    def process_response(self, request: Request, response: Response,
-                         spider: Spider) -> Generator[Deferred[object], object, Response]:
+    def process_response(
+        self, request: Request, response: Response, spider: Spider
+    ) -> Generator[Deferred[object], object, Response]:
         """This method fills ``request.cb_kwargs`` with instances for
         the required Page Objects found in the callback signature.
 

@@ -10,18 +10,24 @@ Splash or Auto Extract API.
 """
 import abc
 import json
-from typing import Set, Union, Callable, ClassVar, Any, Sequence
+from typing import Any, Callable, ClassVar, Sequence, Set, Union
 
 import attr
 from scrapy import Request
-from scrapy.http import Response
 from scrapy.crawler import Crawler
+from scrapy.http import Response
 from scrapy.utils.request import request_fingerprint
+from web_poet import (
+    HttpClient,
+    HttpResponse,
+    HttpResponseHeaders,
+    PageParams,
+    RequestUrl,
+)
 
-from scrapy_poet.utils import scrapy_response_to_http_response
-from scrapy_poet.injection_errors import MalformedProvidedClassesError
 from scrapy_poet.downloader import create_scrapy_downloader
-from web_poet import HttpClient, HttpResponse, HttpResponseHeaders, PageParams, RequestUrl
+from scrapy_poet.injection_errors import MalformedProvidedClassesError
+from scrapy_poet.utils import scrapy_response_to_http_response
 
 
 class PageObjectInputProvider:
@@ -104,7 +110,8 @@ class PageObjectInputProvider:
         else:
             raise MalformedProvidedClassesError(
                 f"Unexpected type '{type_}' for 'provided_classes' attribute of"
-                f"'{cls}.'. Expected either 'set' or 'callable'")
+                f"'{cls}.'. Expected either 'set' or 'callable'"
+            )
 
     def __init__(self, crawler: Crawler):
         """Initializes the provider. Invoked only at spider start up."""
@@ -174,11 +181,7 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
         request_keys = {"url", "method", "body"}
-        request_data = {
-            k: str(v)
-            for k, v in request.to_dict().items()
-            if k in request_keys
-        }
+        request_data = {k: str(v) for k, v in request.to_dict().items() if k in request_keys}
         fp_data = {
             "SCRAPY_FINGERPRINT": request_fingerprint(request),
             **request_data,
@@ -203,6 +206,7 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
 class HttpClientProvider(PageObjectInputProvider):
     """This class provides ``web_poet.requests.HttpClient`` instances."""
+
     provided_classes = {HttpClient}
 
     def __call__(self, to_provide: Set[Callable], crawler: Crawler):
@@ -215,6 +219,7 @@ class HttpClientProvider(PageObjectInputProvider):
 
 class PageParamsProvider(PageObjectInputProvider):
     """This class provides ``web_poet.page_inputs.PageParams`` instances."""
+
     provided_classes = {PageParams}
 
     def __call__(self, to_provide: Set[Callable], request: Request):

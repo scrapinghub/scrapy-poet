@@ -1,14 +1,13 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Dict, Mapping, Callable, Iterable, Union, Tuple, Optional, List
+from typing import Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 
 from scrapy import Request
 from scrapy.crawler import Crawler
 from url_matcher import Patterns, URLMatcher
 from url_matcher.util import get_domain
 from web_poet.overrides import OverrideRule
-
 
 logger = logging.getLogger(__name__)
 
@@ -106,13 +105,9 @@ class OverridesRegistry(OverridesRegistryBase):
                     f"replacement and (3) the PO class to be replaced."
                 )
             pattern, use, instead_of = rule
-            rule = OverrideRule(
-                for_patterns=Patterns([pattern]), use=use, instead_of=instead_of
-            )
+            rule = OverrideRule(for_patterns=Patterns([pattern]), use=use, instead_of=instead_of)
         self.rules.append(rule)
-        self.matcher[rule.instead_of].add_or_update(
-            len(self.rules) - 1, rule.for_patterns
-        )
+        self.matcher[rule.instead_of].add_or_update(len(self.rules) - 1, rule.for_patterns)
 
     def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
         overrides: Dict[Callable, Callable] = {}

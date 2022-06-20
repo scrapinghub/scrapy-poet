@@ -1,7 +1,7 @@
-import attr
 from functools import partial
 from unittest import mock
 
+import attr
 import pytest
 import scrapy
 import twisted
@@ -9,7 +9,6 @@ import web_poet
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
 from scrapy.exceptions import IgnoreRequest
-from tests.utils import AsyncMock
 from twisted.internet import reactor
 from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
@@ -21,7 +20,11 @@ from web_poet.pages import ItemWebPage
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.utils import http_request_to_scrapy_request
 from tests.utils import (
-    crawl_single_item, make_crawler, HtmlResource, MockServer
+    AsyncMock,
+    HtmlResource,
+    MockServer,
+    crawl_single_item,
+    make_crawler,
 )
 
 
@@ -55,9 +58,7 @@ def fake_http_response():
 async def test_scrapy_poet_downloader(fake_http_response):
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
-    ) as mock_dtf:
+    with mock.patch("scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock) as mock_dtf:
 
         mock_dtf.return_value = fake_http_response
 
@@ -82,9 +83,7 @@ async def test_scrapy_poet_downloader_ignored_request():
     standard on additional request error handling."""
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
-    ) as mock_dtf:
+    with mock.patch("scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock) as mock_dtf:
         mock_dtf.side_effect = scrapy.exceptions.IgnoreRequest
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
         scrapy_downloader = create_scrapy_downloader(mock_downloader)
@@ -97,9 +96,7 @@ async def test_scrapy_poet_downloader_ignored_request():
 async def test_scrapy_poet_downloader_twisted_error():
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
-    ) as mock_dtf:
+    with mock.patch("scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock) as mock_dtf:
         mock_dtf.side_effect = twisted.internet.error.TimeoutError
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
         scrapy_downloader = create_scrapy_downloader(mock_downloader)
@@ -112,9 +109,7 @@ async def test_scrapy_poet_downloader_twisted_error():
 async def test_scrapy_poet_downloader_head_redirect(fake_http_response):
     req = web_poet.HttpRequest("https://example.com", method="HEAD")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock
-    ) as mock_dtf:
+    with mock.patch("scrapy_poet.downloader.maybe_deferred_to_future", new_callable=AsyncMock) as mock_dtf:
         mock_dtf.return_value = fake_http_response
         mock_downloader = mock.MagicMock(return_value=AsyncMock)
         scrapy_downloader = create_scrapy_downloader(mock_downloader)
@@ -158,17 +153,17 @@ def test_additional_requests_success():
             async def to_item(self):
                 response = await self.http_client.request(
                     server.root_url,
-                    body=b'bar',
+                    body=b"bar",
                 )
-                return {'foo': response.body.decode()}
+                return {"foo": response.body.decode()}
 
         class TestSpider(Spider):
-            name = 'test_spider'
+            name = "test_spider"
             start_urls = [server.root_url]
 
             custom_settings = {
-                'DOWNLOADER_MIDDLEWARES': {
-                    'scrapy_poet.InjectionMiddleware': 543,
+                "DOWNLOADER_MIDDLEWARES": {
+                    "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
 
@@ -179,7 +174,7 @@ def test_additional_requests_success():
         crawler = make_crawler(TestSpider, {})
         yield crawler.crawl()
 
-    assert items == [{'foo': 'bar'}]
+    assert items == [{"foo": "bar"}]
 
 
 class StatusResource(LeafResource):
@@ -204,18 +199,18 @@ def test_additional_requests_bad_response():
                 try:
                     await self.http_client.request(
                         server.root_url,
-                        body=b'400',
+                        body=b"400",
                     )
                 except HttpResponseError:
-                    return {'foo': 'bar'}
+                    return {"foo": "bar"}
 
         class TestSpider(Spider):
-            name = 'test_spider'
+            name = "test_spider"
             start_urls = [server.root_url]
 
             custom_settings = {
-                'DOWNLOADER_MIDDLEWARES': {
-                    'scrapy_poet.InjectionMiddleware': 543,
+                "DOWNLOADER_MIDDLEWARES": {
+                    "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
 
@@ -226,7 +221,7 @@ def test_additional_requests_bad_response():
         crawler = make_crawler(TestSpider, {})
         yield crawler.crawl()
 
-    assert items == [{'foo': 'bar'}]
+    assert items == [{"foo": "bar"}]
 
 
 class DelayedResource(LeafResource):
@@ -250,11 +245,10 @@ class DelayedResource(LeafResource):
 def test_additional_requests_connection_issue():
     items = []
 
-    with mock.patch('scrapy_poet.downloader.http_request_to_scrapy_request') \
-            as mock_http_request_to_scrapy_request:
+    with mock.patch("scrapy_poet.downloader.http_request_to_scrapy_request") as mock_http_request_to_scrapy_request:
         mock_http_request_to_scrapy_request.side_effect = partial(
             http_request_to_scrapy_request,
-            meta={'download_timeout': 0.001},
+            meta={"download_timeout": 0.001},
         )
 
         with MockServer(DelayedResource) as server:
@@ -270,15 +264,15 @@ def test_additional_requests_connection_issue():
                             body=b"0.002",
                         )
                     except HttpRequestError:
-                        return {'foo': 'bar'}
+                        return {"foo": "bar"}
 
             class TestSpider(Spider):
-                name = 'test_spider'
+                name = "test_spider"
                 start_urls = [server.root_url]
 
                 custom_settings = {
-                    'DOWNLOADER_MIDDLEWARES': {
-                        'scrapy_poet.InjectionMiddleware': 543,
+                    "DOWNLOADER_MIDDLEWARES": {
+                        "scrapy_poet.InjectionMiddleware": 543,
                     },
                 }
 
@@ -289,7 +283,7 @@ def test_additional_requests_connection_issue():
             crawler = make_crawler(TestSpider, {})
             yield crawler.crawl()
 
-    assert items == [{'foo': 'bar'}]
+    assert items == [{"foo": "bar"}]
 
 
 @inlineCallbacks
@@ -306,25 +300,25 @@ def test_additional_requests_ignored_request():
                 try:
                     await self.http_client.request(
                         server.root_url,
-                        body=b'ignore',
+                        body=b"ignore",
                     )
                 except HttpError as e:
-                    return {'exc': e.__class__}
+                    return {"exc": e.__class__}
 
         class TestDownloaderMiddleware:
             def process_response(self, request, response, spider):
-                if b'ignore' in response.body:
+                if b"ignore" in response.body:
                     raise IgnoreRequest
                 return response
 
         class TestSpider(Spider):
-            name = 'test_spider'
+            name = "test_spider"
             start_urls = [server.root_url]
 
             custom_settings = {
-                'DOWNLOADER_MIDDLEWARES': {
+                "DOWNLOADER_MIDDLEWARES": {
                     TestDownloaderMiddleware: 1,
-                    'scrapy_poet.InjectionMiddleware': 543,
+                    "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
 
@@ -335,7 +329,7 @@ def test_additional_requests_ignored_request():
         crawler = make_crawler(TestSpider, {})
         yield crawler.crawl()
 
-    assert items == [{'exc': HttpError}]
+    assert items == [{"exc": HttpError}]
 
 
 @pytest.mark.xfail(
@@ -363,25 +357,25 @@ def test_additional_requests_unhandled_downloader_middleware_exception():
                 try:
                     await self.http_client.request(
                         server.root_url,
-                        body=b'raise',
+                        body=b"raise",
                     )
                 except HttpError as e:
-                    return {'exc': e.__class__}
+                    return {"exc": e.__class__}
 
         class TestDownloaderMiddleware:
             def process_response(self, request, response, spider):
-                if b'raise' in response.body:
+                if b"raise" in response.body:
                     raise RuntimeError
                 return response
 
         class TestSpider(Spider):
-            name = 'test_spider'
+            name = "test_spider"
             start_urls = [server.root_url]
 
             custom_settings = {
-                'DOWNLOADER_MIDDLEWARES': {
+                "DOWNLOADER_MIDDLEWARES": {
                     TestDownloaderMiddleware: 1,
-                    'scrapy_poet.InjectionMiddleware': 543,
+                    "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
 
@@ -392,7 +386,7 @@ def test_additional_requests_unhandled_downloader_middleware_exception():
         crawler = make_crawler(TestSpider, {})
         yield crawler.crawl()
 
-    assert items == [{'exc': HttpError}]
+    assert items == [{"exc": HttpError}]
 
 
 @inlineCallbacks
@@ -416,26 +410,26 @@ def test_additional_requests_dont_filter():
             async def to_item(self):
                 response1 = await self.http_client.request(
                     server.root_url,
-                    body=b'a',
+                    body=b"a",
                 )
                 response2 = await self.http_client.request(
                     server.root_url,
-                    body=b'a',
+                    body=b"a",
                 )
                 return {response1.body.decode(): response2.body.decode()}
 
         class TestSpider(Spider):
-            name = 'test_spider'
+            name = "test_spider"
 
             custom_settings = {
-                'DOWNLOADER_MIDDLEWARES': {
-                    'scrapy_poet.InjectionMiddleware': 543,
+                "DOWNLOADER_MIDDLEWARES": {
+                    "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
 
             def start_requests(self):
-                yield Request(server.root_url, body=b'a')
-                yield Request(server.root_url, body=b'a')
+                yield Request(server.root_url, body=b"a")
+                yield Request(server.root_url, body=b"a")
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -444,4 +438,4 @@ def test_additional_requests_dont_filter():
         crawler = make_crawler(TestSpider, {})
         yield crawler.crawl()
 
-    assert items == [{'a': 'a'}]
+    assert items == [{"a": "a"}]

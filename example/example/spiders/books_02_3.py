@@ -14,15 +14,15 @@ from web_poet import ItemWebPage
 class BookPage(ItemWebPage):
     def to_item(self):
         return {
-            'url': self.url,
-            'name': self.css("title::text").get(),
+            "url": self.url,
+            "name": self.css("title::text").get(),
         }
 
 
 class BooksSpider(scrapy.Spider):
-    name = 'books_02_3'
-    start_urls = ['http://books.toscrape.com/']
+    name = "books_02_3"
+    start_urls = ["http://books.toscrape.com/"]
 
     def parse(self, response):
-        for url in response.css('.image_container a::attr(href)').getall():
+        for url in response.css(".image_container a::attr(href)").getall():
             yield response.follow(url, BookPage)

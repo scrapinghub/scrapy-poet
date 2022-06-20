@@ -1,5 +1,5 @@
-from unittest import mock
 from pathlib import PosixPath
+from unittest import mock
 
 import pytest
 from scrapy.http import Request, Response, TextResponse

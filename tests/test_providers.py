@@ -1,26 +1,26 @@
-from typing import Any, List, Set, Callable, Sequence
+import json
+from typing import Any, Callable, List, Sequence, Set
 from unittest import mock
 
 import attr
-import json
 import pytest
-from pytest_twisted import ensureDeferred, inlineCallbacks
-from scrapy_poet import HttpResponseProvider
-from twisted.python.failure import Failure
-
 import scrapy
+from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
+from twisted.python.failure import Failure
+from web_poet import HttpClient, HttpResponse
+
+from scrapy_poet import HttpResponseProvider
 from scrapy_poet.page_input_providers import (
     CacheDataProviderMixin,
     HttpClientProvider,
     PageObjectInputProvider,
     PageParamsProvider,
 )
-from tests.utils import crawl_single_item, HtmlResource, AsyncMock
-from web_poet import HttpResponse, HttpClient
+from tests.utils import AsyncMock, HtmlResource, crawl_single_item
 
 
 class ProductHtml(HtmlResource):
@@ -69,9 +69,7 @@ class PriceHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
         assert isinstance(crawler, Crawler)
         super().__init__(crawler)
 
-    def __call__(
-        self, to_provide, response: scrapy.http.Response, spider: scrapy.Spider
-    ):
+    def __call__(self, to_provide, response: scrapy.http.Response, spider: scrapy.Spider):
         assert isinstance(spider, scrapy.Spider)
         ret: List[Any] = []
         if Price in to_provide:
@@ -162,9 +160,7 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
 def test_name_first_spider(settings, tmp_path):
     cache = tmp_path / "cache.sqlite3"
     settings.set("SCRAPY_POET_CACHE", str(cache))
-    item, _, _ = yield crawl_single_item(
-        NameFirstMultiProviderSpider, ProductHtml, settings
-    )
+    item, _, _ = yield crawl_single_item(NameFirstMultiProviderSpider, ProductHtml, settings)
     assert cache.exists()
     assert item == {
         Price: Price("22€"),
@@ -175,9 +171,7 @@ def test_name_first_spider(settings, tmp_path):
 
     # Let's see that the cache is working. We use a different and wrong resource,
     # but it should be ignored by the cached version used
-    item, _, _ = yield crawl_single_item(
-        NameFirstMultiProviderSpider, NonProductHtml, settings
-    )
+    item, _, _ = yield crawl_single_item(NameFirstMultiProviderSpider, NonProductHtml, settings)
     assert item == {
         Price: Price("22€"),
         Name: Name("Chocolate"),
@@ -188,9 +182,7 @@ def test_name_first_spider(settings, tmp_path):
 
 @inlineCallbacks
 def test_price_first_spider(settings):
-    item, _, _ = yield crawl_single_item(
-        PriceFirstMultiProviderSpider, ProductHtml, settings
-    )
+    item, _, _ = yield crawl_single_item(PriceFirstMultiProviderSpider, ProductHtml, settings)
     assert item == {
         Price: Price("22€"),
         Name: Name("Chocolate"),
@@ -214,14 +206,13 @@ async def test_http_client_provider(settings):
     crawler = get_crawler(Spider, settings)
     crawler.engine = AsyncMock()
 
-    with mock.patch(
-        "scrapy_poet.page_input_providers.create_scrapy_downloader"
-    ) as mock_factory:
+    with mock.patch("scrapy_poet.page_input_providers.create_scrapy_downloader") as mock_factory:
         provider = HttpClientProvider(crawler)
         results = provider(set(), crawler)
         assert isinstance(results[0], HttpClient)
 
     results[0]._request_downloader == mock_factory.return_value
+
 
 def test_page_params_provider(settings):
     crawler = get_crawler(Spider, settings)
