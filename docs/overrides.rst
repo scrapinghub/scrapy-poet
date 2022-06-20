@@ -1,4 +1,4 @@
-.. _`overrides`:
+.. _overrides:
 
 =========
 Overrides
