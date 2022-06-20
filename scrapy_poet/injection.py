@@ -50,7 +50,7 @@ class Injector:
         self.load_providers(default_providers)
         self.init_cache()
 
-    def load_providers(self, default_providers: Optional[Mapping] = None):
+    def load_providers(self, default_providers: Optional[Mapping] = None):  # noqa: D102
         providers_dict = {**(default_providers or {}), **self.spider.settings.getdict("SCRAPY_POET_PROVIDERS")}
         provider_classes = build_component_list(providers_dict)
         logger.info(f"Loading providers:\n {pprint.pformat(provider_classes)}")
@@ -63,11 +63,11 @@ class Injector:
         # Caching the function for faster execution
         self.is_class_provided_by_any_provider = is_class_provided_by_any_provider_fn(self.providers)
 
-    def close(self) -> None:
+    def close(self) -> None:  # noqa: D102
         if self.cache:
             self.cache.close()
 
-    def init_cache(self):
+    def init_cache(self):  # noqa: D102
         self.cache = None
         cache_filename = self.spider.settings.get("SCRAPY_POET_CACHE")
         if cache_filename and isinstance(cache_filename, bool):
@@ -80,7 +80,7 @@ class Injector:
                 f"Cache enabled. File: '{cache_filename}'. Compressed: {compressed}. Caching errors: {self.caching_errors}"
             )
 
-    def available_dependencies_for_providers(self, request: Request, response: Response):
+    def available_dependencies_for_providers(self, request: Request, response: Response):  # noqa: D102
         deps = {
             Crawler: self.crawler,
             Spider: self.spider,
@@ -266,7 +266,7 @@ def is_class_provided_by_any_provider_fn(providers: List[PageObjectInputProvider
 def get_callback(request, spider):
     """Get ``request.callback`` of a :class:`scrapy.Request`"""
     if request.callback is None:
-        return getattr(spider, "parse")
+        return getattr(spider, "parse")  # noqa: B009
     return request.callback
 
 

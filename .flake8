@@ -14,6 +14,7 @@ ignore =
     # To be addressed:
     D100,  # Missing docstring in public module
     D101,  # Missing docstring in public class
+    D102,  # Missing docstring in public method
     D103,  # Missing docstring in public function
     D104,  # Missing docstring in public package
     D105,  # Missing docstring in magic method
@@ -31,5 +32,5 @@ per-file-ignores =
     # imports are there to expose submodule functions so they can be imported
     # directly from that module
     # F403: Ignore * imports in these files
-    web_poet/__init__.py:F401,F403
-    web_poet/page_inputs/__init__.py:F401,F403
+    scrapy_poet/__init__.py:F401,F403
+    scrapy_poet/page_inputs/__init__.py:F401,F403

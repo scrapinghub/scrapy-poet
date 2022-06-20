@@ -11,9 +11,7 @@ difference is that this example is using the ``@handle_urls`` decorator to
 store the rules in web-poet's registry.
 """
 import scrapy
-from url_matcher import Patterns
 from web_poet import ItemWebPage, WebPage, default_registry, handle_urls
-from web_poet.overrides import OverrideRule
 
 from scrapy_poet import callback_for
 

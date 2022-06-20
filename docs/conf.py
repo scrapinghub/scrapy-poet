@@ -83,7 +83,7 @@ html_theme = "sphinx_rtd_theme"
 # Add any paths that contain custom themes here, relative to this directory.
 # Add path to the RTD explicitly to robustify builds (otherwise might
 # fail in a clean Debian build env)
-import sphinx_rtd_theme
+import sphinx_rtd_theme  # noqa: E402
 
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 

@@ -1,6 +1,5 @@
 import os
 
-import attr
 from scrapy.http import Request, Response
 from scrapy.utils.project import inside_project, project_data_dir
 from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders

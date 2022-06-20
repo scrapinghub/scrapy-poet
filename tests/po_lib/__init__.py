@@ -2,9 +2,7 @@
 This package is just for overrides testing purposes.
 """
 import socket
-from typing import Any, Callable, Dict
 
-from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import ItemWebPage, handle_urls
 

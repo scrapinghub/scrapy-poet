@@ -19,13 +19,7 @@ from web_poet.pages import ItemWebPage
 
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.utils import http_request_to_scrapy_request
-from tests.utils import (
-    AsyncMock,
-    HtmlResource,
-    MockServer,
-    crawl_single_item,
-    make_crawler,
-)
+from tests.utils import AsyncMock, MockServer, make_crawler
 
 
 @pytest.fixture

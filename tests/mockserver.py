@@ -17,7 +17,7 @@ def get_ephemeral_port():
 
 class MockServer:
     def __init__(self, resource, port=None):
-        self.resource = "{}.{}".format(resource.__module__, resource.__name__)
+        self.resource = "{0}.{1}".format(resource.__module__, resource.__name__)
         self.proc = None
         host = socket.gethostbyname(socket.gethostname())
         self.port = port or get_ephemeral_port()
@@ -48,7 +48,7 @@ def main():
 
     def print_listening():
         host = http_port.getHost()
-        print("Mock server {} running at http://{}:{}".format(resource, host.host, host.port))
+        print("Mock server {0} running at http://{1}:{2}".format(resource, host.host, host.port))
 
     reactor.callWhenRunning(print_listening)
     reactor.run()

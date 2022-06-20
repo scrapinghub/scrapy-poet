@@ -85,7 +85,7 @@ def get_providers_for_testing():
     prov1 = get_provider_requiring_response({ClsReqResponse})
     prov2 = get_provider({Cls1, Cls2})
     # Duplicating them because they should work even in this situation
-    return {prov1: 1, prov2: 2, prov1: 3, prov2: 4}
+    return {prov1: 1, prov2: 2, prov1: 3, prov2: 4}  # noqa: F602
 
 
 @pytest.fixture

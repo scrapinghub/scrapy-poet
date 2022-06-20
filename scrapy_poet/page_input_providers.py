@@ -27,7 +27,6 @@ from web_poet import (
 
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
-from scrapy_poet.utils import scrapy_response_to_http_response
 
 
 class PageObjectInputProvider:

@@ -3,7 +3,6 @@ from typing import Any, Callable, List, Sequence, Set
 from unittest import mock
 
 import attr
-import pytest
 import scrapy
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
@@ -211,7 +210,7 @@ async def test_http_client_provider(settings):
         results = provider(set(), crawler)
         assert isinstance(results[0], HttpClient)
 
-    results[0]._request_downloader == mock_factory.return_value
+    assert results[0]._request_downloader == mock_factory.return_value
 
 
 def test_page_params_provider(settings):

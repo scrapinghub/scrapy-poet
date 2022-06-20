@@ -368,7 +368,7 @@ def test_cache_closed_on_spider_close(mock_sqlitedictcache, settings):
         crawler.spider = crawler._create_spider("example.com")
         return InjectionMiddleware(crawler)
 
-    mock_sqlitedictcache_instance = mock_sqlitedictcache.return_value = mock.Mock()
+    mock_sqlitedictcache.return_value = mock.Mock()
 
     # no cache
     no_cache_middleware = get_middleware(settings)
@@ -396,7 +396,7 @@ def test_web_poet_integration(settings):
 
     # Only import them in this test scope since they need to be synced with
     # the URL of the Page Object annotated with @handle_urls.
-    from tests.po_lib import DOMAIN, PORT, POOverriden
+    from tests.po_lib import PORT, POOverriden
 
     # Override rules are defined in `tests/po_lib/__init__.py`.
     rules = default_registry.get_overrides()
