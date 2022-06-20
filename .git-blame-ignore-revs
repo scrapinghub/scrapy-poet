@@ -1,0 +1,5 @@
+# Contains commits to be ignored due to linting
+
+# https://github.com/scrapinghub/scrapy-poet/pull/68
+58c903617911b3209ad68bfefe3fa1a86be629f4
+e4a1cfb7d1e7e55de39039ee3925be073ae6d412
