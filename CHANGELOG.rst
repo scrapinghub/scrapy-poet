@@ -13,7 +13,7 @@ support for ``async def to_item`` methods, making additional requests
 in the ``to_item`` method, new Page Object dependencies, and the new way
 to configure overrides.
 
-Full list of changes:
+Changes in line with ``web-poet >= 0.2.0``:
 
 * ``web_poet.HttpResponse`` replaces ``web_poet.ResponseData`` as a dependency
   to use.
@@ -26,9 +26,6 @@ Full list of changes:
   ``request.meta["page_params"]`` value.
 * Provider for ``web_poet.RequestUrl`` is added, which allows to access the
   request URL in the page object without triggering the download.
-* New ``scrapy_poet/dummy_response_count`` value appears in Scrapy stats;
-  it is the number of times ``DummyResponse`` is used instead of downloading
-  the response as usual.
 * We have these **backward incompatible** changes since the
   ``web_poet.OverrideRule`` follow a different structure:
 
@@ -36,8 +33,18 @@ Full list of changes:
       ``OverridesRegistry`` which provides a wide variety of features
       for better URL matching.
     * This resuls in a newer format in the ``SCRAPY_POET_OVERRIDES`` setting.
-* Removal the use of ``scrapy.utils.reqser`` deprecated module.
+
+Other changes:
+
+* New ``scrapy_poet/dummy_response_count`` value appears in Scrapy stats;
+  it is the number of times ``DummyResponse`` is used instead of downloading
+  the response as usual.
+* ``scrapy.utils.reqser`` deprecated module is no longer used by scrapy-poet.
+
+Dependency updates:
+
 * The minimum supported Scrapy version is now ``2.6.0``.
+* The minimum supported web-poet version is now ``0.2.0``.
 
 0.3.0 (2022-01-28)
 ------------------
