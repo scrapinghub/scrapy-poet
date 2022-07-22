@@ -1,13 +1,19 @@
 from collections import deque
 
-from pytest import importorskip
+from pytest import skip
 from pytest_twisted import inlineCallbacks
 from scrapy import Spider
 from web_poet.pages import ItemWebPage
 
 from tests.utils import EchoResource, MockServer, make_crawler
 
-Retry = importorskip("web_poet.exceptions.Retry")
+try:
+    from web_poet.exceptions import Retry
+except ImportError:
+    skip(
+        "The installed version of web-poet does not implement the Retry exception",
+        allow_module_level=True,
+    )
 
 
 @inlineCallbacks
