@@ -3,7 +3,7 @@ responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
 import logging
-from typing import Generator, Optional, Type, TypeVar
+from typing import Generator, List, Optional, Type, TypeVar
 
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler

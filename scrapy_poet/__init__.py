@@ -5,3 +5,8 @@ from .page_input_providers import (
     HttpResponseProvider,
     PageObjectInputProvider,
 )
+
+try:
+    from .spidermiddlewares import RetrySpiderMiddleware
+except ImportError:
+    pass

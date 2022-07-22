@@ -60,6 +60,9 @@ Add the following inside Scrapy's ``settings.py`` file:
     DOWNLOADER_MIDDLEWARES = {
         "scrapy_poet.InjectionMiddleware": 543,
     }
+    SPIDER_MIDDLEWARES = {
+        "scrapy_poet.RetrySpiderMiddleware": 275,
+    }
 
 Developing
 ==========
