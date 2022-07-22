@@ -1,14 +1,13 @@
-from pytest import importorskip
-
-Retry = importorskip("web_poet.exceptions.Retry")
-
 from collections import deque
 
+from pytest import importorskip
 from pytest_twisted import inlineCallbacks
 from scrapy import Spider
 from web_poet.pages import ItemWebPage
 
-from tests.utils import EchoResource, make_crawler, MockServer
+from tests.utils import EchoResource, MockServer, make_crawler
+
+Retry = importorskip("web_poet.exceptions.Retry")
 
 
 @inlineCallbacks
@@ -19,7 +18,6 @@ def test_retry_once():
     with MockServer(EchoResource) as server:
 
         class ItemPage(ItemWebPage):
-
             def to_item(self):
                 if retries.popleft():
                     raise Retry
@@ -60,7 +58,6 @@ def test_retry_max():
     with MockServer(EchoResource) as server:
 
         class ItemPage(ItemWebPage):
-
             def to_item(self):
                 if retries.popleft():
                     raise Retry
@@ -101,7 +98,6 @@ def test_retry_exceeded():
     with MockServer(EchoResource) as server:
 
         class ItemPage(ItemWebPage):
-
             def to_item(self):
                 if retries.popleft():
                     raise Retry
@@ -141,7 +137,6 @@ def test_retry_max_configuration():
     with MockServer(EchoResource) as server:
 
         class ItemPage(ItemWebPage):
-
             def to_item(self):
                 if retries.popleft():
                     raise Retry

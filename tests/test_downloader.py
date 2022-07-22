@@ -19,9 +19,9 @@ from tests.utils import (
     AsyncMock,
     DelayedResource,
     EchoResource,
-    make_crawler,
     MockServer,
     StatusResource,
+    make_crawler,
 )
 
 
