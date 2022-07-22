@@ -1,19 +1,11 @@
 from collections import deque
 
-from pytest import skip
 from pytest_twisted import inlineCallbacks
 from scrapy import Spider
+from web_poet.exceptions import Retry
 from web_poet.pages import ItemWebPage
 
 from tests.utils import EchoResource, MockServer, make_crawler
-
-try:
-    from web_poet.exceptions import Retry
-except ImportError:
-    skip(
-        "The installed version of web-poet does not implement the Retry exception",
-        allow_module_level=True,
-    )
 
 
 @inlineCallbacks
@@ -97,17 +89,13 @@ def test_retry_max():
 
 @inlineCallbacks
 def test_retry_exceeded():
-    # The default value of the RETRY_TIMES Scrapy setting is 2.
-    retries = deque([True, True, True])
     items = []
 
     with MockServer(EchoResource) as server:
 
         class ItemPage(ItemWebPage):
             def to_item(self):
-                if retries.popleft():
-                    raise Retry
-                return {"foo": "bar"}
+                raise Retry
 
         class TestSpider(Spider):
             name = "test_spider"
@@ -172,4 +160,40 @@ def test_retry_max_configuration():
     assert crawler.stats.get_value("downloader/request_count") == 4
     assert crawler.stats.get_value("retry/count") == 3
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 3
+    assert crawler.stats.get_value("retry/max_reached") is None
+
+
+@inlineCallbacks
+def test_non_retry_exception():
+    items = []
+
+    with MockServer(EchoResource) as server:
+
+        class ItemPage(ItemWebPage):
+            def to_item(self):
+                raise RuntimeError
+
+        class TestSpider(Spider):
+            name = "test_spider"
+            start_urls = [server.root_url]
+
+            custom_settings = {
+                "DOWNLOADER_MIDDLEWARES": {
+                    "scrapy_poet.InjectionMiddleware": 543,
+                },
+                "SPIDER_MIDDLEWARES": {
+                    "scrapy_poet.RetrySpiderMiddleware": 275,
+                },
+            }
+
+            def parse(self, response, page: ItemPage):
+                items.append(page.to_item())
+
+        crawler = make_crawler(TestSpider, {})
+        yield crawler.crawl()
+
+    assert items == []
+    assert crawler.stats.get_value("downloader/request_count") == 1
+    assert crawler.stats.get_value("retry/count") is None
+    assert crawler.stats.get_value("retry/reason_count/page_object_retry") is None
     assert crawler.stats.get_value("retry/max_reached") is None
