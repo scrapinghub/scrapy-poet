@@ -5,4 +5,4 @@ from .page_input_providers import (
     HttpResponseProvider,
     PageObjectInputProvider,
 )
-from .spidermiddlewares import RetrySpiderMiddleware
+from .spidermiddlewares import RetryMiddleware

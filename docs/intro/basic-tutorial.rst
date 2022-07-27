@@ -121,7 +121,7 @@ To use ``scrapy-poet``, enable its middlewares in ``settings.py``:
         'scrapy_poet.InjectionMiddleware': 543,
     }
     SPIDER_MIDDLEWARES = {
-        "scrapy_poet.RetrySpiderMiddleware": 275,
+        "scrapy_poet.RetryMiddleware": 275,
     }
 
 

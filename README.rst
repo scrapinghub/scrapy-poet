@@ -61,7 +61,7 @@ Add the following inside Scrapy's ``settings.py`` file:
         "scrapy_poet.InjectionMiddleware": 543,
     }
     SPIDER_MIDDLEWARES = {
-        "scrapy_poet.RetrySpiderMiddleware": 275,
+        "scrapy_poet.RetryMiddleware": 275,
     }
 
 Developing

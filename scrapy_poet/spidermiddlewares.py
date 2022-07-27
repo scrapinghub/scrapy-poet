@@ -6,7 +6,7 @@ from scrapy.http import Request, Response
 from web_poet.exceptions import Retry
 
 
-class RetrySpiderMiddleware:
+class RetryMiddleware:
     """Captures :exc:`web_poet.exceptions.Retry` exceptions from spider
     callbacks, and retries the source request."""
 

@@ -30,7 +30,7 @@ def test_retry_once():
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
                 "SPIDER_MIDDLEWARES": {
-                    "scrapy_poet.RetrySpiderMiddleware": 275,
+                    "scrapy_poet.RetryMiddleware": 275,
                 },
             }
 
@@ -70,7 +70,7 @@ def test_retry_max():
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
                 "SPIDER_MIDDLEWARES": {
-                    "scrapy_poet.RetrySpiderMiddleware": 275,
+                    "scrapy_poet.RetryMiddleware": 275,
                 },
             }
 
@@ -106,7 +106,7 @@ def test_retry_exceeded():
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
                 "SPIDER_MIDDLEWARES": {
-                    "scrapy_poet.RetrySpiderMiddleware": 275,
+                    "scrapy_poet.RetryMiddleware": 275,
                 },
             }
 
@@ -146,7 +146,7 @@ def test_retry_max_configuration():
                 },
                 "RETRY_TIMES": 3,
                 "SPIDER_MIDDLEWARES": {
-                    "scrapy_poet.RetrySpiderMiddleware": 275,
+                    "scrapy_poet.RetryMiddleware": 275,
                 },
             }
 
@@ -182,7 +182,7 @@ def test_non_retry_exception():
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
                 "SPIDER_MIDDLEWARES": {
-                    "scrapy_poet.RetrySpiderMiddleware": 275,
+                    "scrapy_poet.RetryMiddleware": 275,
                 },
             }
 
