@@ -8,6 +8,19 @@ from web_poet.pages import ItemWebPage
 from tests.utils import EchoResource, MockServer, make_crawler
 
 
+class BaseSpider(Spider):
+    name = "test_spider"
+
+    custom_settings = {
+        "DOWNLOADER_MIDDLEWARES": {
+            "scrapy_poet.InjectionMiddleware": 543,
+        },
+        "SPIDER_MIDDLEWARES": {
+            "scrapy_poet.RetryMiddleware": 275,
+        },
+    }
+
+
 @inlineCallbacks
 def test_retry_once():
     retries = deque([True, False])
@@ -21,18 +34,8 @@ def test_retry_once():
                     raise Retry
                 return {"foo": "bar"}
 
-        class TestSpider(Spider):
-            name = "test_spider"
+        class TestSpider(BaseSpider):
             start_urls = [server.root_url]
-
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-                "SPIDER_MIDDLEWARES": {
-                    "scrapy_poet.RetryMiddleware": 275,
-                },
-            }
 
             def parse(self, response, page: ItemPage):
                 items.append(page.to_item())
@@ -61,18 +64,8 @@ def test_retry_max():
                     raise Retry
                 return {"foo": "bar"}
 
-        class TestSpider(Spider):
-            name = "test_spider"
+        class TestSpider(BaseSpider):
             start_urls = [server.root_url]
-
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-                "SPIDER_MIDDLEWARES": {
-                    "scrapy_poet.RetryMiddleware": 275,
-                },
-            }
 
             def parse(self, response, page: ItemPage):
                 items.append(page.to_item())
@@ -97,18 +90,8 @@ def test_retry_exceeded():
             def to_item(self):
                 raise Retry
 
-        class TestSpider(Spider):
-            name = "test_spider"
+        class TestSpider(BaseSpider):
             start_urls = [server.root_url]
-
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-                "SPIDER_MIDDLEWARES": {
-                    "scrapy_poet.RetryMiddleware": 275,
-                },
-            }
 
             def parse(self, response, page: ItemPage):
                 items.append(page.to_item())
@@ -136,18 +119,12 @@ def test_retry_max_configuration():
                     raise Retry
                 return {"foo": "bar"}
 
-        class TestSpider(Spider):
-            name = "test_spider"
+        class TestSpider(BaseSpider):
             start_urls = [server.root_url]
 
             custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
+                **BaseSpider.custom_settings,
                 "RETRY_TIMES": 3,
-                "SPIDER_MIDDLEWARES": {
-                    "scrapy_poet.RetryMiddleware": 275,
-                },
             }
 
             def parse(self, response, page: ItemPage):
@@ -173,18 +150,8 @@ def test_non_retry_exception():
             def to_item(self):
                 raise RuntimeError
 
-        class TestSpider(Spider):
-            name = "test_spider"
+        class TestSpider(BaseSpider):
             start_urls = [server.root_url]
-
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-                "SPIDER_MIDDLEWARES": {
-                    "scrapy_poet.RetryMiddleware": 275,
-                },
-            }
 
             def parse(self, response, page: ItemPage):
                 items.append(page.to_item())
