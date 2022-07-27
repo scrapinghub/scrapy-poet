@@ -9,17 +9,20 @@ import web_poet
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
 from scrapy.exceptions import IgnoreRequest
-from twisted.internet import reactor
-from twisted.internet.task import deferLater
-from twisted.web.resource import Resource
-from twisted.web.server import NOT_DONE_YET
 from web_poet import HttpClient
 from web_poet.exceptions import HttpError, HttpRequestError, HttpResponseError
 from web_poet.pages import ItemWebPage
 
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.utils import http_request_to_scrapy_request
-from tests.utils import AsyncMock, MockServer, make_crawler
+from tests.utils import (
+    AsyncMock,
+    DelayedResource,
+    EchoResource,
+    MockServer,
+    StatusResource,
+    make_crawler,
+)
 
 
 @pytest.fixture
@@ -123,25 +126,6 @@ async def test_scrapy_poet_downloader_head_redirect(fake_http_response):
         assert scrapy_request.meta.get("dont_redirect") is True
 
 
-class LeafResource(Resource):
-    isLeaf = True
-
-    def deferRequest(self, request, delay, f, *a, **kw):
-        def _cancelrequest(_):
-            # silence CancelledError
-            d.addErrback(lambda _: None)
-            d.cancel()
-
-        d = deferLater(reactor, delay, f, *a, **kw)
-        request.notifyFinish().addErrback(_cancelrequest)
-        return d
-
-
-class EchoResource(LeafResource):
-    def render_GET(self, request):
-        return request.content.read()
-
-
 @inlineCallbacks
 def test_additional_requests_success():
     items = []
@@ -177,14 +161,6 @@ def test_additional_requests_success():
         yield crawler.crawl()
 
     assert items == [{"foo": "bar"}]
-
-
-class StatusResource(LeafResource):
-    def render_GET(self, request):
-        decoded_body = request.content.read().decode()
-        if decoded_body:
-            request.setResponseCode(int(decoded_body))
-        return b""
 
 
 @inlineCallbacks
@@ -224,23 +200,6 @@ def test_additional_requests_bad_response():
         yield crawler.crawl()
 
     assert items == [{"foo": "bar"}]
-
-
-class DelayedResource(LeafResource):
-    def render_GET(self, request):
-        decoded_body = request.content.read().decode()
-        seconds = float(decoded_body) if decoded_body else 0
-        self.deferRequest(
-            request,
-            seconds,
-            self._delayedRender,
-            request,
-            seconds,
-        )
-        return NOT_DONE_YET
-
-    def _delayedRender(self, request, seconds):
-        request.finish()
 
 
 @inlineCallbacks

@@ -113,12 +113,15 @@ extract a property from the ``to_item`` method:
 Configuring the project
 =======================
 
-To use ``scrapy-poet``, enable its downloader middleware in ``settings.py``:
+To use ``scrapy-poet``, enable its middlewares in ``settings.py``:
 
 .. code-block:: python
 
     DOWNLOADER_MIDDLEWARES = {
         'scrapy_poet.InjectionMiddleware': 543,
+    }
+    SPIDER_MIDDLEWARES = {
+        "scrapy_poet.RetryMiddleware": 275,
     }
 
 

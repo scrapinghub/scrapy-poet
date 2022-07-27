@@ -16,8 +16,9 @@ setup(
         "parsel >= 1.5.0",
         "scrapy >= 2.6.0",
         "sqlitedict >= 1.5.0",
+        "twisted >= 18.9.0",
         "url-matcher >= 0.2.0",
-        "web-poet >= 0.2.0",
+        "web-poet >= 0.4.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

@@ -5,7 +5,10 @@ from pytest_twisted import inlineCallbacks
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider
 from scrapy.utils.python import to_bytes
+from twisted.internet import reactor
+from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
+from twisted.web.server import NOT_DONE_YET
 
 from tests.mockserver import MockServer
 
@@ -23,6 +26,50 @@ class HtmlResource(Resource):
             request.setHeader(to_bytes(name), to_bytes(value))
         request.setResponseCode(self.status_code)
         return to_bytes(self.html)
+
+
+class LeafResource(Resource):
+    isLeaf = True
+
+    def deferRequest(self, request, delay, f, *a, **kw):
+        def _cancelrequest(_):
+            # silence CancelledError
+            d.addErrback(lambda _: None)
+            d.cancel()
+
+        d = deferLater(reactor, delay, f, *a, **kw)
+        request.notifyFinish().addErrback(_cancelrequest)
+        return d
+
+
+class DelayedResource(LeafResource):
+    def render_GET(self, request):
+        decoded_body = request.content.read().decode()
+        seconds = float(decoded_body) if decoded_body else 0
+        self.deferRequest(
+            request,
+            seconds,
+            self._delayedRender,
+            request,
+            seconds,
+        )
+        return NOT_DONE_YET
+
+    def _delayedRender(self, request, seconds):
+        request.finish()
+
+
+class EchoResource(LeafResource):
+    def render_GET(self, request):
+        return request.content.read()
+
+
+class StatusResource(LeafResource):
+    def render_GET(self, request):
+        decoded_body = request.content.read().decode()
+        if decoded_body:
+            request.setResponseCode(int(decoded_body))
+        return b""
 
 
 @inlineCallbacks
