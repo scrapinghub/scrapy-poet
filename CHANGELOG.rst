@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.5.1 (2022-07-28)
+------------------
+
+Fixes the minimum web-poet version being 0.5.0 instead of 0.4.0.
+
+
 0.5.0 (2022-07-28)
 ------------------
 
