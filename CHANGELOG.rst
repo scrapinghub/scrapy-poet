@@ -2,8 +2,8 @@
 Changelog
 =========
 
-0.5.0 (to be released)
-----------------------
+0.5.0 (2022-07-28)
+------------------
 
 This release implements support for page object retries, introduced in web-poet
 0.4.0.
