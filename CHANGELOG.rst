@@ -8,6 +8,13 @@ Changelog
 This release implements support for page object retries, introduced in web-poet
 0.4.0.
 
+To enable retry support, you need to configure a new spider middleware in your
+Scrapy settings::
+
+    SPIDER_MIDDLEWARES = {
+        "scrapy_poet.RetryMiddleware": 275,
+    }
+
 web-poet 0.4.0 is now the minimum required version of web-poet.
 
 
