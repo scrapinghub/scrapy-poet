@@ -2,6 +2,15 @@
 Changelog
 =========
 
+0.5.0 (to be released)
+----------------------
+
+This release implements support for page object retries, introduced in web-poet
+0.4.0.
+
+web-poet 0.4.0 is now the minimum required version of web-poet.
+
+
 0.4.0 (2022-06-20)
 ------------------
 
