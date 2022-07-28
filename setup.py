@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="scrapy-poet",
-    version="0.4.0",
+    version="0.5.0",
     description="Page Object pattern for Scrapy",
     long_description=open("README.rst").read(),
     long_description_content_type="text/x-rst",
@@ -18,7 +18,7 @@ setup(
         "sqlitedict >= 1.5.0",
         "twisted >= 18.9.0",
         "url-matcher >= 0.2.0",
-        "web-poet >= 0.4.0",
+        "web-poet >= 0.5.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
