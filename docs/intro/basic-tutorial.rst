@@ -42,19 +42,19 @@ called ``books`` and it will crawl and extract data from a target website.
     class BooksSpider(scrapy.Spider):
         """Crawl and extract books data"""
 
-        name = 'books'
-        start_urls = ['http://books.toscrape.com/']
+        name = "books"
+        start_urls = ["http://books.toscrape.com/"]
 
         def parse(self, response):
             """Discover book links and follow them"""
-            links = response.css('.image_container a')
+            links = response.css(".image_container a")
             yield from response.follow_all(links, self.parse_book)
 
         def parse_book(self, response):
             """Extract data from book pages"""
             yield {
-                'url': response.url,
-                'name': response.css("title::text").get(),
+                "url": response.url,
+                "name": response.css("title::text").get(),
             }
 
 Separating extraction logic
@@ -76,8 +76,8 @@ out of the spider class.
         def to_item(self):
             """Convert page into an item"""
             return {
-                'url': self.url,
-                'name': self.css("title::text").get(),
+                "url": self.url,
+                "name": self.css("title::text").get(),
             }
 
 Now we have a ``BookPage`` class that implements the ``to_item`` method.
@@ -106,8 +106,8 @@ extract a property from the ``to_item`` method:
 
         def to_item(self):
             return {
-                'url': self.url,
-                'name': self.title,
+                "url": self.url,
+                "name": self.title,
             }
 
 Configuring the project
@@ -118,7 +118,7 @@ To use ``scrapy-poet``, enable its middlewares in ``settings.py``:
 .. code-block:: python
 
     DOWNLOADER_MIDDLEWARES = {
-        'scrapy_poet.InjectionMiddleware': 543,
+        "scrapy_poet.InjectionMiddleware": 543,
     }
     SPIDER_MIDDLEWARES = {
         "scrapy_poet.RetryMiddleware": 275,
@@ -159,12 +159,12 @@ The full spider code would be looking like this:
     class BooksSpider(scrapy.Spider):
         """Crawl and extract books data"""
 
-        name = 'books'
-        start_urls = ['http://books.toscrape.com/']
+        name = "books"
+        start_urls = ["http://books.toscrape.com/"]
 
         def parse(self, response):
             """Discover book links and follow them"""
-            links = response.css('.image_container a')
+            links = response.css(".image_container a")
             yield from response.follow_all(links, self.parse_book)
 
         def parse_book(self, response, book_page: BookPage):
@@ -185,13 +185,13 @@ returning the result of the ``to_item`` method call. We could use
     class BooksSpider(scrapy.Spider):
         """Crawl and extract books data"""
 
-        name = 'books'
-        start_urls = ['http://books.toscrape.com/']
+        name = "books"
+        start_urls = ["http://books.toscrape.com/"]
         parse_book = callback_for(BookPage)
 
         def parse(self, response):
             """Discovers book links and follows them"""
-            links = response.css('.image_container a')
+            links = response.css(".image_container a")
             yield from response.follow_all(links, self.parse_book)
 
 
@@ -209,11 +209,11 @@ returning the result of the ``to_item`` method call. We could use
     .. code-block:: python
 
         class BooksSpider(scrapy.Spider):
-            name = 'books'
-            start_urls = ['http://books.toscrape.com/']
+            name = "books"
+            start_urls = ["http://books.toscrape.com/"]
 
             def parse(self, response):
-                links = response.css('.image_container a')
+                links = response.css(".image_container a")
                 yield from response.follow_all(links, self.parse_book)
 
             async def parse_book(self, response: DummyResponse, page: BookPage):
@@ -224,11 +224,11 @@ returning the result of the ``to_item`` method call. We could use
     .. code-block:: python
 
         class BooksSpider(scrapy.Spider):
-            name = 'books'
-            start_urls = ['http://books.toscrape.com/']
+            name = "books"
+            start_urls = ["http://books.toscrape.com/"]
 
             def parse(self, response):
-                links = response.css('.image_container a')
+                links = response.css(".image_container a")
                 yield from response.follow_all(links, self.parse_book)
 
             parse_book = callback_for(BookPage)
@@ -256,21 +256,21 @@ At the end of our job, the spider should look like this:
 
         def to_item(self):
             return {
-                'url': self.url,
-                'name': self.css("title::text").get(),
+                "url": self.url,
+                "name": self.css("title::text").get(),
             }
 
 
     class BooksSpider(scrapy.Spider):
         """Crawl and extract books data"""
 
-        name = 'books'
-        start_urls = ['http://books.toscrape.com/']
+        name = "books"
+        start_urls = ["http://books.toscrape.com/"]
         parse_book = callback_for(BookPage)  # extract items from book pages
 
         def parse(self, response):
             """Discover book links and follow them"""
-            links = response.css('.image_container a')
+            links = response.css(".image_container a")
             yield from response.follow_all(links, self.parse_book)
 
 
@@ -322,15 +322,15 @@ Object:
     class BookListPage(WebPage):
 
         def book_urls(self):
-            return self.css('.image_container a')
+            return self.css(".image_container a")
 
 Let's adapt the spider to use this new Page Object:
 
 .. code-block:: python
 
     class BooksSpider(scrapy.Spider):
-        name = 'books_spider'
-        start_urls = ['http://books.toscrape.com/']
+        name = "books_spider"
+        start_urls = ["http://books.toscrape.com/"]
         parse_book = callback_for(BookPage)  # extract items from book pages
 
         def parse(self, response, page: BookListPage):
@@ -374,15 +374,15 @@ existing Page Objects as subclasses of them:
     class BTSBookListPage(BookListPage):
 
         def book_urls(self):
-            return self.css('.image_container a::attr(href)').getall()
+            return self.css(".image_container a::attr(href)").getall()
 
 
     class BTSBookPage(BookPage):
 
         def to_item(self):
             return {
-                'url': self.url,
-                'name': self.css("title::text").get(),
+                "url": self.url,
+                "name": self.css("title::text").get(),
             }
 
 The spider won't work anymore after the change. The reason is that it
@@ -427,15 +427,15 @@ to implement new ones:
     class BPBookListPage(WebPage):
 
         def book_urls(self):
-            return self.css('article.post h4 a::attr(href)').getall()
+            return self.css("article.post h4 a::attr(href)").getall()
 
 
     class BPBookPage(ItemWebPage):
 
         def to_item(self):
             return {
-                'url': self.url,
-                'name': self.css("body div > h1::text").get().strip(),
+                "url": self.url,
+                "name": self.css("body div > h1::text").get().strip(),
             }
 
 The last step is configuring the overrides so that these new Page Objects

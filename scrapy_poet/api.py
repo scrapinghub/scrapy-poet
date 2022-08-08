@@ -42,11 +42,11 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     .. code-block:: python
 
         class BooksSpider(scrapy.Spider):
-            name = 'books'
-            start_urls = ['http://books.toscrape.com/']
+            name = "books"
+            start_urls = ["http://books.toscrape.com/"]
 
             def parse(self, response):
-                links = response.css('.image_container a')
+                links = response.css(".image_container a")
                 yield from response.follow_all(links, self.parse_book)
 
             def parse_book(self, response: DummyResponse, page: BookPage):
@@ -57,11 +57,11 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     .. code-block:: python
 
         class BooksSpider(scrapy.Spider):
-            name = 'books'
-            start_urls = ['http://books.toscrape.com/']
+            name = "books"
+            start_urls = ["http://books.toscrape.com/"]
 
             def parse(self, response):
-                links = response.css('.image_container a')
+                links = response.css(".image_container a")
                 yield from response.follow_all(links, self.parse_book)
 
             parse_book = callback_for(BookPage)
@@ -74,11 +74,11 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     .. code-block:: python
 
         class BooksSpider(scrapy.Spider):
-            name = 'books'
-            start_urls = ['http://books.toscrape.com/']
+            name = "books"
+            start_urls = ["http://books.toscrape.com/"]
 
             def parse(self, response):
-                links = response.css('.image_container a')
+                links = response.css(".image_container a")
                 yield from response.follow_all(links, self.parse_book)
 
             async def parse_book(self, response: DummyResponse, page: BookPage):
@@ -89,11 +89,11 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     .. code-block:: python
 
         class BooksSpider(scrapy.Spider):
-            name = 'books'
-            start_urls = ['http://books.toscrape.com/']
+            name = "books"
+            start_urls = ["http://books.toscrape.com/"]
 
             def parse(self, response):
-                links = response.css('.image_container a')
+                links = response.css(".image_container a")
                 yield from response.follow_all(links, self.parse_book)
 
             parse_book = callback_for(BookPage)

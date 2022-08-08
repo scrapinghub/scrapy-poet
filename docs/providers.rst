@@ -209,13 +209,13 @@ If neither spider callback nor any of the input providers are using
 
         def to_item(self):
             return {
-                'url': self.content.key,
-                'content': self.content.value,
+                "url": self.content.key,
+                "content": self.content.value,
             }
 
 
     class MySpider(scrapy.Spider):
-        name = 'my_spider'
+        name = "my_spider"
 
         def parse(self, response: DummyResponse, page: MyPageObject):
             # request will be IGNORED because neither spider callback
@@ -255,13 +255,13 @@ Page Object uses it, the request is not ignored, for example:
 
         def to_item(self):
             return {
-                'url': self.response.url,
-                'content': parse_content(self.response.html),
+                "url": self.response.url,
+                "content": parse_content(self.response.html),
             }
 
 
     class MySpider(scrapy.Spider):
-        name = 'my_spider'
+        name = "my_spider"
 
         def parse(self, response: DummyResponse, page: MyPageObject):
             # request will be PROCESSED because spider callback is not

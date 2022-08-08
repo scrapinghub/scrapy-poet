@@ -36,7 +36,7 @@ The HTTP client implementation that **scrapy-poet** provides to
 -   Duplicate requests are not filtered out.
 
 -   In line with the web-poet specification for additional requests,
-    ``Request.meta['dont_redirect']`` is set to ``True`` for requests with the
+    ``Request.meta["dont_redirect"]`` is set to ``True`` for requests with the
     ``HEAD`` HTTP method.
 
 Suppose we have the following Page Object:
