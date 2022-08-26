@@ -49,7 +49,7 @@ Suppose we have the following Page Object:
 
     @attr.define
     class ProductPage(web_poet.ItemWebPage):
-        http_client: web_poet.HttpClient
+        http: web_poet.HttpClient
 
         async def to_item(self):
             item = {
@@ -59,7 +59,7 @@ Suppose we have the following Page Object:
             }
 
             # Simulates clicking on a button that says "View All Images"
-            response: web_poet.HttpResponse = await self.http_client.get(
+            response: web_poet.HttpResponse = await self.http.get(
                 f"https://api.example.com/v2/images?id={item['product_id']}"
             )
             item["images"] = response.css(".product-images img::attr(src)").getall()
@@ -111,7 +111,7 @@ This basically acts as a switch to update the behavior of the Page Object:
 
     @attr.define
     class ProductPage(web_poet.ItemWebPage):
-        http_client: web_poet.HttpClient
+        http: web_poet.HttpClient
         page_params: web_poet.PageParams
 
         async def to_item(self):
@@ -123,7 +123,7 @@ This basically acts as a switch to update the behavior of the Page Object:
 
             # Simulates clicking on a button that says "View All Images"
             if self.page_params.get("enable_extracting_all_images")
-                response: web_poet.HttpResponse = await self.http_client.get(
+                response: web_poet.HttpResponse = await self.http.get(
                     f"https://api.example.com/v2/images?id={item['product_id']}"
                 )
                 item["images"] = response.css(".product-images img::attr(src)").getall()

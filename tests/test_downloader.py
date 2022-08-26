@@ -134,10 +134,10 @@ def test_additional_requests_success():
 
         @attr.define
         class ItemPage(ItemWebPage):
-            http_client: HttpClient
+            http: HttpClient
 
             async def to_item(self):
-                response = await self.http_client.request(
+                response = await self.http.request(
                     server.root_url,
                     body=b"bar",
                 )
@@ -171,11 +171,11 @@ def test_additional_requests_bad_response():
 
         @attr.define
         class ItemPage(ItemWebPage):
-            http_client: HttpClient
+            http: HttpClient
 
             async def to_item(self):
                 try:
-                    await self.http_client.request(
+                    await self.http.request(
                         server.root_url,
                         body=b"400",
                     )
@@ -218,11 +218,11 @@ def test_additional_requests_connection_issue():
 
             @attr.define
             class ItemPage(ItemWebPage):
-                http_client: HttpClient
+                http: HttpClient
 
                 async def to_item(self):
                     try:
-                        await self.http_client.request(
+                        await self.http.request(
                             server.root_url,
                             body=b"0.002",
                         )
@@ -257,11 +257,11 @@ def test_additional_requests_ignored_request():
 
         @attr.define
         class ItemPage(ItemWebPage):
-            http_client: HttpClient
+            http: HttpClient
 
             async def to_item(self):
                 try:
-                    await self.http_client.request(
+                    await self.http.request(
                         server.root_url,
                         body=b"ignore",
                     )
@@ -314,11 +314,11 @@ def test_additional_requests_unhandled_downloader_middleware_exception():
 
         @attr.define
         class ItemPage(ItemWebPage):
-            http_client: HttpClient
+            http: HttpClient
 
             async def to_item(self):
                 try:
-                    await self.http_client.request(
+                    await self.http.request(
                         server.root_url,
                         body=b"raise",
                     )
@@ -368,14 +368,14 @@ def test_additional_requests_dont_filter():
 
         @attr.define
         class ItemPage(ItemWebPage):
-            http_client: HttpClient
+            http: HttpClient
 
             async def to_item(self):
-                response1 = await self.http_client.request(
+                response1 = await self.http.request(
                     server.root_url,
                     body=b"a",
                 )
-                response2 = await self.http_client.request(
+                response2 = await self.http.request(
                     server.root_url,
                     body=b"a",
                 )
