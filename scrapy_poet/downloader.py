@@ -1,6 +1,6 @@
 import logging
 
-import scrapy
+from scrapy.exceptions import IgnoreRequest
 from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import HttpRequest
 from web_poet.exceptions import HttpError, HttpRequestError
@@ -30,7 +30,7 @@ def create_scrapy_downloader(download_func):
         deferred_or_future = maybe_deferred_to_future(deferred)
         try:
             response = await deferred_or_future
-        except scrapy.exceptions.IgnoreRequest as e:
+        except IgnoreRequest as e:
             # A Scrapy downloader middleware has caused the request to be
             # ignored.
             message = f"Additional request ignored: {scrapy_request}"
