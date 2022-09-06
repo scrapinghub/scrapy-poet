@@ -13,7 +13,7 @@ from scrapy.utils.test import get_crawler
 from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
 from web_poet import default_registry
-from web_poet.page_inputs import HttpResponse, RequestUrl
+from web_poet.page_inputs import HttpResponse, RequestUrl, ResponseUrl
 from web_poet.pages import ItemPage, ItemWebPage, WebPage
 
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
@@ -347,6 +347,65 @@ def test_skip_download_request_url(settings):
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 0
     assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 1
     assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
+
+
+class ResponseUrlSpider(scrapy.Spider):
+    url = None
+
+    def start_requests(self):
+        yield Request(url=self.url, callback=self.parse)
+
+    def parse(self, response: DummyResponse, url: ResponseUrl):
+        return {
+            "response": response,
+            "url": url,
+        }
+
+
+@inlineCallbacks
+def test_skip_download_response_url(settings):
+    item, url, crawler = yield crawl_single_item(
+        ResponseUrlSpider, ProductHtml, settings
+    )
+    assert isinstance(item["response"], Response) is True
+    # Even if the spider marked the response with DummyResponse, the response
+    # is still needed since ResponseUrl depends on it.
+    assert isinstance(item["response"], DummyResponse) is False
+    assert isinstance(item["url"], ResponseUrl)
+    assert str(item["url"]) == url
+    assert crawler.stats.get_stats().get("downloader/request_count", 0) == 1
+    assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 0
+    assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
+
+
+@attr.s(auto_attribs=True)
+class ResponseUrlPage(ItemPage):
+    url: ResponseUrl
+
+    def to_item(self):
+        return {'url': self.url}
+
+
+class ResponseUrlPageSpider(scrapy.Spider):
+    url = None
+
+    def start_requests(self):
+        yield Request(url=self.url, callback=self.parse)
+
+    def parse(self, response: DummyResponse, page: ResponseUrlPage):
+        return page.to_item()
+
+
+@inlineCallbacks
+def test_skip_download_response_url_page(settings):
+    item, url, crawler = yield crawl_single_item(
+        RequestUrlPageSpider, ProductHtml, settings)
+    assert tuple(item.keys()) == ('url',)
+    assert str(item['url']) == url
+    # Compared to the earlier test in test_skip_download_response_url(), the
+    # DummyResponse here worked since the response was handled in the PO.
+    assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
+    assert crawler.stats.get_stats().get('scrapy_poet/dummy_response_count', 0) == 1
 
 
 @attr.s(auto_attribs=True)
