@@ -383,7 +383,7 @@ class ResponseUrlPage(ItemPage):
     url: ResponseUrl
 
     def to_item(self):
-        return {'url': self.url}
+        return {"url": self.url}
 
 
 class ResponseUrlPageSpider(scrapy.Spider):
@@ -399,13 +399,14 @@ class ResponseUrlPageSpider(scrapy.Spider):
 @inlineCallbacks
 def test_skip_download_response_url_page(settings):
     item, url, crawler = yield crawl_single_item(
-        RequestUrlPageSpider, ProductHtml, settings)
-    assert tuple(item.keys()) == ('url',)
-    assert str(item['url']) == url
-    # Compared to the earlier test in test_skip_download_response_url(), the
-    # DummyResponse here worked since the response was handled in the PO.
-    assert crawler.stats.get_stats().get('downloader/request_count', 0) == 0
-    assert crawler.stats.get_stats().get('scrapy_poet/dummy_response_count', 0) == 1
+        ResponseUrlPageSpider, ProductHtml, settings
+    )
+    assert tuple(item.keys()) == ("url",)
+    assert str(item["url"]) == url
+    # Even if the spider marked the response with DummyResponse, the response
+    # is still needed since ResponseUrl depends on it.
+    assert crawler.stats.get_stats().get("downloader/request_count", 0) == 1
+    assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 0
 
 
 @attr.s(auto_attribs=True)
