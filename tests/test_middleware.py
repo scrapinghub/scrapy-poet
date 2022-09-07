@@ -379,11 +379,11 @@ def test_skip_download_response_url(settings):
 
 
 @attr.s(auto_attribs=True)
-class ResponseUrlPage(ItemPage):
-    url: ResponseUrl
+class ResponseUrlPage(WebPage):
+    response_url: ResponseUrl
 
     def to_item(self):
-        return {"url": self.url}
+        return {"response_url": self.response_url}
 
 
 class ResponseUrlPageSpider(scrapy.Spider):
@@ -401,8 +401,8 @@ def test_skip_download_response_url_page(settings):
     item, url, crawler = yield crawl_single_item(
         ResponseUrlPageSpider, ProductHtml, settings
     )
-    assert tuple(item.keys()) == ("url",)
-    assert str(item["url"]) == url
+    assert tuple(item.keys()) == ("response_url",)
+    assert str(item["response_url"]) == url
     # Even if the spider marked the response with DummyResponse, the response
     # is still needed since ResponseUrl depends on it.
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 1
