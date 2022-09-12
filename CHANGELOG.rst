@@ -2,6 +2,13 @@
 Changelog
 =========
 
+TBR
+---
+
+* Provider for ``web_poet.ResponseUrl`` is added, which allows to access the
+  response URL in the page object. This triggers a download unlike the provider
+  for ``web_poet.RequestUrl``.
+
 0.5.1 (2022-07-28)
 ------------------
 

@@ -23,6 +23,7 @@ from web_poet import (
     HttpResponseHeaders,
     PageParams,
     RequestUrl,
+    ResponseUrl,
 )
 
 from scrapy_poet.downloader import create_scrapy_downloader
@@ -238,5 +239,15 @@ class RequestUrlProvider(PageObjectInputProvider):
     name = "request_url"
 
     def __call__(self, to_provide: Set[Callable], request: Request):
-        """Builds a ``RequestUrl`` instance using a Scrapy ``Request``"""
+        """Builds a ``RequestUrl`` instance using a Scrapy ``Request``."""
         return [RequestUrl(url=request.url)]
+
+
+class ResponseUrlProvider(PageObjectInputProvider):
+
+    provided_classes = {ResponseUrl}
+    name = "response_url"
+
+    def __call__(self, to_provide: Set[Callable], response: Response):
+        """Builds a ``ResponseUrl`` instance using a Scrapy ``Response``."""
+        return [ResponseUrl(url=response.url)]
