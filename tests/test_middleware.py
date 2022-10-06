@@ -149,7 +149,7 @@ def test_optional_and_unions(settings):
 @attr.s(auto_attribs=True)
 class ProvidedWithDeferred:
     msg: str
-    response: HttpResponse  # it should be None because this class is provided
+    response: Optional[HttpResponse]  # it should be None because this class is provided
 
 
 @attr.s(auto_attribs=True)

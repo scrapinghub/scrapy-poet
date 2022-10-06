@@ -1,16 +1,18 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
 
 from scrapy import Request
 from scrapy.crawler import Crawler
 from url_matcher import Patterns, URLMatcher
+from web_poet import ItemPage
 from web_poet.rules import ApplyRule
 
 logger = logging.getLogger(__name__)
 
-RuleAsTuple = Union[Tuple[str, Callable, Callable], List]
+PageObject = Type[ItemPage]
+RuleAsTuple = Union[Tuple[str, PageObject, PageObject], List]
 RuleFromUser = Union[RuleAsTuple, ApplyRule]
 
 
@@ -90,7 +92,7 @@ class OverridesRegistry(OverridesRegistryBase):
 
     def __init__(self, rules: Optional[Iterable[RuleFromUser]] = None) -> None:
         self.rules: List[ApplyRule] = []
-        self.matcher: Dict[Callable, URLMatcher] = defaultdict(URLMatcher)
+        self.matcher: Dict[PageObject, URLMatcher] = defaultdict(URLMatcher)
         for rule in rules or []:
             self.add_rule(rule)
         logger.debug(f"List of parsed ApplyRules:\n{self.rules}")
@@ -108,7 +110,8 @@ class OverridesRegistry(OverridesRegistryBase):
                 for_patterns=Patterns([pattern]), use=use, instead_of=instead_of
             )
         self.rules.append(rule)
-        self.matcher[rule.instead_of].add_or_update(
+        # FIXME: This key will change with the new rule.to_return
+        self.matcher[rule.instead_of].add_or_update(  # type: ignore
             len(self.rules) - 1, rule.for_patterns
         )
 
