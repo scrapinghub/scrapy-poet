@@ -11,7 +11,7 @@ difference is that this example is using the ``@handle_urls`` decorator to
 store the rules in web-poet's registry.
 """
 import scrapy
-from web_poet import ItemWebPage, WebPage, default_registry, handle_urls
+from web_poet import WebPage, default_registry, handle_urls
 
 from scrapy_poet import callback_for
 
@@ -21,7 +21,7 @@ class BookListPage(WebPage):
         return []
 
 
-class BookPage(ItemWebPage):
+class BookPage(WebPage):
     def to_item(self):
         return None
 
@@ -68,7 +68,7 @@ class BooksSpider(scrapy.Spider):
     name = "books_04_overrides_03"
     start_urls = ["http://books.toscrape.com/", "https://bookpage.com/reviews"]
     # Configuring different page objects pages for different domains
-    custom_settings = {"SCRAPY_POET_OVERRIDES": default_registry.get_overrides()}
+    custom_settings = {"SCRAPY_POET_OVERRIDES": default_registry.get_rules()}
 
     def parse(self, response, page: BookListPage):
         yield from response.follow_all(page.book_urls(), callback_for(BookPage))

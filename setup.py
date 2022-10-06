@@ -18,7 +18,7 @@ setup(
         "sqlitedict >= 1.5.0",
         "twisted >= 18.9.0",
         "url-matcher >= 0.2.0",
-        "web-poet >= 0.4.0",
+        "web-poet @ git+https://git@github.com/scrapinghub/web-poet@handle_urls-with-item#egg=web-poet",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

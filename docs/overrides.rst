@@ -15,10 +15,10 @@ page.
     - `Example 1 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_01.py>`_:
       rules using tuples
     - `Example 2 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_02.py>`_:
-      rules using tuples and :py:class:`web_poet.overrides.OverrideRule`
+      rules using tuples and :py:class:`web_poet.ApplyRule`
     - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_03.py>`_:
       rules using :py:func:`web_poet.handle_urls` decorator and retrieving them
-      via :py:meth:`web_poet.overrides.PageObjectRegistry.get_overrides`
+      via :py:meth:`web_poet.PageObjectRegistry.get_rules`
 
 Page Objects refinement
 =======================
@@ -44,7 +44,7 @@ using the following Page Object:
 
 .. code-block:: python
 
-    class ISBNBookPage(ItemWebPage):
+    class ISBNBookPage(WebPage):
 
         def __init__(self, response: HttpResponse, book_page: BookPage):
             super().__init__(response)
@@ -81,7 +81,7 @@ the obtained item with the ISBN from the page HTML.
     .. code-block:: python
 
         @attr.define
-        class ISBNBookPage(ItemWebPage):
+        class ISBNBookPage(WebPage):
             book_page: BookPage
 
             def to_item(self):
@@ -95,17 +95,17 @@ Overrides rules
 
 The default way of configuring the override rules is using triplets
 of the form (``url pattern``, ``override_type``, ``overridden_type``). But more
-complex rules can be introduced if the class :py:class:`web_poet.overrides.OverrideRule`
+complex rules can be introduced if the class :py:class:`web_poet.ApplyRule`
 is used. The following example configures an override that is only applied for
 book pages from ``books.toscrape.com``:
 
 .. code-block:: python
 
-    from web_poet import OverrideRule
+    from web_poet import ApplyRule
 
 
     SCRAPY_POET_OVERRIDES = [
-        OverrideRule(
+        ApplyRule(
             for_patterns=Patterns(
                 include=["books.toscrape.com/cataloge/*index.html|"],
                 exclude=["/catalogue/category/"]),
@@ -155,7 +155,7 @@ for the domain ``toscrape.com``.
 
 In order to configure the ``scrapy-poet`` overrides automatically
 using these annotations, you can directly interact with `web-poet`_'s
-``default_registry`` (an instance of :py:class:`web_poet.overrides.PageObjectRegistry`).
+``default_registry`` (an instance of :py:class:`web_poet.PageObjectRegistry`).
 
 For example:
 
@@ -169,15 +169,15 @@ For example:
     consume_modules("external_package_A", "another_ext_package.lib")
 
     # To get all of the Override Rules that were declared via annotations.
-    SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
+    SCRAPY_POET_OVERRIDES = default_registry.get_rules()
 
-The :py:meth:`web_poet.overrides.PageObjectRegistry.get_overrides` method of the
-``default_registry`` above returns ``List[OverrideRule]`` that were declared
+The :py:meth:`web_poet.PageObjectRegistry.get_rules` method of the
+``default_registry`` above returns ``List[ApplyRule]`` that were declared
 using `web-poet`_'s :py:func:`web_poet.handle_urls` annotation. This is much
-more convenient that manually defining all of the :py:class:`web_poet.overrides.OverrideRule`.
+more convenient that manually defining all of the :py:class:`web_poet.ApplyRule`.
 
 Take note that since ``SCRAPY_POET_OVERRIDES`` is structured as
-``List[OverrideRule]``, you can easily modify it later on if needed.
+``List[ApplyRule]``, you can easily modify it later on if needed.
 
 .. note::
 

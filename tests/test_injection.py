@@ -11,7 +11,7 @@ from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import Injectable, ItemPage
 from web_poet.mixins import ResponseShortcutsMixin
-from web_poet.overrides import OverrideRule
+from web_poet.rules import ApplyRule
 
 from scrapy_poet import (
     CacheDataProviderMixin,
@@ -325,7 +325,7 @@ class TestInjectorOverrides:
         # when we configure them for domain other-example.com
         overrides = [
             (domain, PriceInDollarsPO, PricePO),
-            OverrideRule(
+            ApplyRule(
                 Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate
             ),
         ]

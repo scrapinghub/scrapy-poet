@@ -107,11 +107,6 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     if not issubclass(page_cls, ItemPage):
         raise TypeError(f"{page_cls.__name__} should be a subclass of ItemPage.")
 
-    if getattr(page_cls.to_item, "__isabstractmethod__", False):
-        raise NotImplementedError(
-            f"{page_cls.__name__} should implement to_item method."
-        )
-
     # When the callback is used as an instance method of the spider, it expects
     # to receive 'self' as its first argument. When used as a simple inline
     # function, it expects to receive a response as its first argument.

@@ -65,10 +65,10 @@ out of the spider class.
 
 .. code-block:: python
 
-    from web_poet.pages import ItemWebPage
+    from web_poet.pages import WebPage
 
 
-    class BookPage(ItemWebPage):
+    class BookPage(WebPage):
         """Individual book page on books.toscrape.com website, e.g.
         http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html
         """
@@ -93,10 +93,10 @@ extract a property from the ``to_item`` method:
 
 .. code-block:: python
 
-    from web_poet.pages import ItemWebPage
+    from web_poet.pages import WebPage
 
 
-    class BookPage(ItemWebPage):
+    class BookPage(WebPage):
         """Individual book page on books.toscrape.com website"""
 
         @property
@@ -245,11 +245,11 @@ At the end of our job, the spider should look like this:
 .. code-block:: python
 
     import scrapy
-    from web_poet.pages import ItemWebPage
+    from web_poet.pages import WebPage
     from scrapy_poet import callback_for
 
 
-    class BookPage(ItemWebPage):
+    class BookPage(WebPage):
         """Individual book page on books.toscrape.com website, e.g.
         http://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html
         """
@@ -353,7 +353,7 @@ existing Page Objects as subclasses of them:
 
 .. code-block:: python
 
-    from web_poet.pages import ItemWebPage, WebPage
+    from web_poet.pages import WebPage
 
 
     # ------ Base page objects ------
@@ -364,7 +364,7 @@ existing Page Objects as subclasses of them:
             return []
 
 
-    class BookPage(ItemWebPage):
+    class BookPage(WebPage):
 
         def to_item(self):
             return None
@@ -421,7 +421,7 @@ to implement new ones:
 
 .. code-block:: python
 
-    from web_poet.pages import ItemWebPage, WebPage
+    from web_poet.pages import WebPage
 
 
     class BPBookListPage(WebPage):
@@ -430,7 +430,7 @@ to implement new ones:
             return self.css("article.post h4 a::attr(href)").getall()
 
 
-    class BPBookPage(ItemWebPage):
+    class BPBookPage(WebPage):
 
         def to_item(self):
             return {
@@ -466,21 +466,21 @@ For example, the pattern ``books.toscrape.com/cataloge/category/``
 is accepted and it would restrict the override only to category pages.
 
 It is even possible to configure more complex patterns by using the
-:py:class:`web_poet.overrides.OverrideRule` class instead of a triplet in
+:py:class:`web_poet.rules.ApplyRule` class instead of a triplet in
 the configuration. Another way of declaring the earlier config
 for ``SCRAPY_POET_OVERRIDES`` would be the following:
 
 .. code-block:: python
 
     from url_matcher import Patterns
-    from web_poet import OverrideRule
+    from web_poet import ApplyRule
 
 
     SCRAPY_POET_OVERRIDES = [
-        OverrideRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookListPage, instead_of=BookListPage),
-        OverrideRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookPage, instead_of=BookPage),
-        OverrideRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookListPage, instead_of=BookListPage),
-        OverrideRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookPage, instead_of=BookPage),
+        ApplyRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookListPage, instead_of=BookListPage),
+        ApplyRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookPage, instead_of=BookPage),
+        ApplyRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookListPage, instead_of=BookListPage),
+        ApplyRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookPage, instead_of=BookPage),
     ]
 
 As you can see, this could get verbose. The earlier tuple config simply offers
@@ -494,8 +494,8 @@ a shortcut to be more concise.
 Manually defining overrides like this would be inconvenient, most
 especially for larger projects. Fortunately, `web-poet`_ has a cool feature to
 annotate Page Objects like :py:func:`web_poet.handle_urls` that would define
-and store the :py:class:`web_poet.overrides.OverrideRule` for you. All of the
-:py:class:`web_poet.overrides.OverrideRule` rules could then be simply read as:
+and store the :py:class:`web_poet.rules.ApplyRule` for you. All of the
+:py:class:`web_poet.rules.ApplyRule` rules could then be simply read as:
 
 .. code:: python
 
@@ -505,7 +505,7 @@ and store the :py:class:`web_poet.overrides.OverrideRule` for you. All of the
     # rules from other packages. Otherwise, it can be omitted.
     # More info about this caveat on web-poet docs.
     consume_modules("external_package_A", "another_ext_package.lib")
-    SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
+    SCRAPY_POET_OVERRIDES = default_registry.get_rules()
 
 For more info on this, you can refer to these docs:
 

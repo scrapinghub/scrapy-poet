@@ -6,7 +6,7 @@ the crawling logic (the spider is exactly the same).
 The default configured PO logic contains the logic for books.toscrape.com
 """
 import scrapy
-from web_poet import ItemWebPage, WebPage
+from web_poet import WebPage
 
 from scrapy_poet import callback_for
 
@@ -18,7 +18,7 @@ class BookListPage(WebPage):
         return self.css(".image_container a::attr(href)").getall()
 
 
-class BookPage(ItemWebPage):
+class BookPage(WebPage):
     """Logic to extract book info from pages like https://books.toscrape.com/catalogue/soumission_998/index.html"""
 
     def to_item(self):
@@ -35,7 +35,7 @@ class BPBookListPage(WebPage):
         return self.css("article.post h4 a::attr(href)").getall()
 
 
-class BPBookPage(ItemWebPage):
+class BPBookPage(WebPage):
     """Logic to extract from pages like https://bookpage.com/reviews/25879-laird-hunt-zorrie-fiction"""
 
     def to_item(self):

@@ -22,7 +22,7 @@ Creating providers
 Providers are responsible for building dependencies needed by Injectable
 objects. A good example would be the ``HttpResponseProvider``,
 which builds and provides a ``web_poet.HttpResponse`` instance for Injectables
-that need it, like the ``web_poet.ItemWebPage``.
+that need it, like the ``web_poet.WebPage``.
 
 .. code-block:: python
 
@@ -271,7 +271,7 @@ Page Object uses it, the request is not ignored, for example:
 .. note::
 
     The code above is just for example purposes. If you need to use ``Response``
-    instances in your Page Objects, use built-in ``ItemWebPage`` - it has
+    instances in your Page Objects, use built-in ``WebPage`` - it has
     ``response`` attribute with ``HttpResponse``; no additional configuration
     is needed, as there is ``HttpResponseProvider`` enabled in ``scrapy-poet``
     by default.

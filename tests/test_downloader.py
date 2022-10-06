@@ -11,7 +11,7 @@ from scrapy import Request, Spider
 from scrapy.exceptions import IgnoreRequest
 from web_poet import HttpClient
 from web_poet.exceptions import HttpError, HttpRequestError, HttpResponseError
-from web_poet.pages import ItemWebPage
+from web_poet.pages import WebPage
 
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.utils import http_request_to_scrapy_request
@@ -133,7 +133,7 @@ def test_additional_requests_success():
     with MockServer(EchoResource) as server:
 
         @attr.define
-        class ItemPage(ItemWebPage):
+        class ItemPage(WebPage):
             http: HttpClient
 
             async def to_item(self):
@@ -170,7 +170,7 @@ def test_additional_requests_bad_response():
     with MockServer(StatusResource) as server:
 
         @attr.define
-        class ItemPage(ItemWebPage):
+        class ItemPage(WebPage):
             http: HttpClient
 
             async def to_item(self):
@@ -217,7 +217,7 @@ def test_additional_requests_connection_issue():
         with MockServer(DelayedResource) as server:
 
             @attr.define
-            class ItemPage(ItemWebPage):
+            class ItemPage(WebPage):
                 http: HttpClient
 
                 async def to_item(self):
@@ -256,7 +256,7 @@ def test_additional_requests_ignored_request():
     with MockServer(EchoResource) as server:
 
         @attr.define
-        class ItemPage(ItemWebPage):
+        class ItemPage(WebPage):
             http: HttpClient
 
             async def to_item(self):
@@ -313,7 +313,7 @@ def test_additional_requests_unhandled_downloader_middleware_exception():
     with MockServer(EchoResource) as server:
 
         @attr.define
-        class ItemPage(ItemWebPage):
+        class ItemPage(WebPage):
             http: HttpClient
 
             async def to_item(self):
@@ -367,7 +367,7 @@ def test_additional_requests_dont_filter():
     with MockServer(EchoResource) as server:
 
         @attr.define
-        class ItemPage(ItemWebPage):
+        class ItemPage(WebPage):
             http: HttpClient
 
             async def to_item(self):

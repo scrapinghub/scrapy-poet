@@ -3,7 +3,7 @@ import pytest
 from pytest_twisted import inlineCallbacks
 from scrapy import Spider
 from scrapy.http import Request
-from web_poet.pages import ItemWebPage
+from web_poet.pages import WebPage
 
 from scrapy_poet.injection import SCRAPY_PROVIDED_CLASSES
 from scrapy_poet.page_input_providers import (
@@ -45,7 +45,7 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
             return [PageData(scrapy_class=scrapy_class.__name__)]
 
     @attr.s(auto_attribs=True)
-    class Page(ItemWebPage):
+    class Page(WebPage):
 
         page_data: PageData
 
@@ -81,7 +81,7 @@ def test_scrapy_dependencies_on_page_objects(scrapy_class, settings):
     """Scrapy dependencies should not be injected into Page Objects."""
 
     @attr.s(auto_attribs=True)
-    class Page(ItemWebPage):
+    class Page(WebPage):
 
         scrapy_obj: scrapy_class
 

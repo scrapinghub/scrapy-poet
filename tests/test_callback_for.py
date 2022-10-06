@@ -1,7 +1,7 @@
 import pytest
 import scrapy
 from pytest_twisted import ensureDeferred
-from web_poet.pages import ItemPage, ItemWebPage
+from web_poet.pages import ItemPage, WebPage
 
 from scrapy_poet import DummyResponse, callback_for
 
@@ -16,7 +16,7 @@ class FakeItemPageAsync(ItemPage):
         return "fake item page"
 
 
-class FakeItemWebPage(ItemWebPage):
+class FakeWebPage(WebPage):
     def to_item(self):
         return "fake item web page"
 
@@ -25,7 +25,7 @@ class MySpider(scrapy.Spider):
 
     name = "my_spider"
     parse_item = callback_for(FakeItemPage)
-    parse_web = callback_for(FakeItemWebPage)
+    parse_web = callback_for(FakeWebPage)
 
 
 class MySpiderAsync(scrapy.Spider):
@@ -139,17 +139,4 @@ def test_invalid_subclass():
         callback_for(MyClass)
 
     msg = "MyClass should be a subclass of ItemPage."
-    assert str(exc.value) == msg
-
-
-def test_not_implemented_method():
-    """Classes should implement to_item method."""
-
-    class MyClass(ItemPage):
-        pass
-
-    with pytest.raises(NotImplementedError) as exc:
-        callback_for(MyClass)
-
-    msg = "MyClass should implement to_item method."
     assert str(exc.value) == msg
