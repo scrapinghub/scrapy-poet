@@ -110,10 +110,14 @@ class OverridesRegistry(OverridesRegistryBase):
                 for_patterns=Patterns([pattern]), use=use, instead_of=instead_of
             )
         self.rules.append(rule)
-        # FIXME: This key will change with the new rule.to_return
-        self.matcher[rule.instead_of].add_or_update(  # type: ignore
-            len(self.rules) - 1, rule.for_patterns
-        )
+        if rule.instead_of:
+            self.matcher[rule.instead_of].add_or_update(
+                len(self.rules) - 1, rule.for_patterns
+            )
+        if rule.to_return:
+            self.matcher[rule.to_return].add_or_update(
+                len(self.rules) - 1, rule.for_patterns
+            )
 
     def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
         overrides: Dict[Callable, Callable] = {}
@@ -121,4 +125,12 @@ class OverridesRegistry(OverridesRegistryBase):
             rule_id = matcher.match(request.url)
             if rule_id is not None:
                 overrides[instead_of] = self.rules[rule_id].use
+        return overrides
+
+    def rules_overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
+        overrides: Dict[Callable, Callable] = {}
+        for instead_of, matcher in self.matcher.items():
+            rule_id = matcher.match(request.url)
+            if rule_id is not None:
+                overrides[instead_of] = self.rules[rule_id]
         return overrides

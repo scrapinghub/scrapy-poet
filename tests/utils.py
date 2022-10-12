@@ -4,6 +4,7 @@ from unittest import mock
 from pytest_twisted import inlineCallbacks
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider
+from scrapy.settings import Settings
 from scrapy.utils.python import to_bytes
 from twisted.internet import reactor
 from twisted.internet.task import deferLater
@@ -11,6 +12,20 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
 from tests.mockserver import MockServer
+
+
+def create_scrapy_settings(request):
+    """Default scrapy-poet settings"""
+    s = dict(
+        # collect scraped items to .collected_items attribute
+        ITEM_PIPELINES={
+            "tests.utils.CollectorPipeline": 100,
+        },
+        DOWNLOADER_MIDDLEWARES={
+            "scrapy_poet.InjectionMiddleware": 543,
+        },
+    )
+    return Settings(s)
 
 
 class HtmlResource(Resource):
@@ -98,7 +113,7 @@ def crawl_single_item(
     )
     assert len(items) == 1
     resp = items[0]
-    if "exception" in resp:
+    if isinstance(resp, dict) and "exception" in resp:
         raise resp["exception"]
     return resp, url, crawler
 

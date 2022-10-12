@@ -11,7 +11,7 @@ from scrapy.http import Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.conf import build_component_list
-from scrapy.utils.defer import maybeDeferred_coro
+from scrapy.utils.defer import deferred_from_coro, maybeDeferred_coro
 from scrapy.utils.misc import create_instance, load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet.pages import is_injectable
@@ -246,7 +246,37 @@ class Injector:
         """
         plan = self.build_plan(request)
         provider_instances = yield from self.build_instances(request, response, plan)
-        return plan.final_kwargs(provider_instances)
+        final_kwargs = plan.final_kwargs(provider_instances)
+        final_kwargs = yield self.convert_po_into_item(request, final_kwargs)
+        return final_kwargs
+
+    @inlineCallbacks
+    def convert_po_into_item(self, request: Request, final_kwargs: dict):
+        """Given a mapping of callback dependencies, call the ``to_item()``
+        method of a dependency to return the requested item.
+        """
+        callback_deps = andi.inspect(get_callback(request, self.spider))
+        rules = self.overrides_registry.rules_overrides_for(request)
+
+        # TODO: Support picking of specific fields based on typing.Annotated
+
+        to_convert = {}
+        for dependencies in callback_deps.values():
+            for dep in dependencies:
+                if (
+                    dep in rules
+                    and rules[dep].to_return == dep
+                    and is_injectable(rules[dep].use)
+                    and getattr(final_kwargs["item"], "to_item", None)
+                ):
+                    to_convert[rules[dep].use] = dep  # map PO => item type
+
+        for name, dep in final_kwargs.items():
+            item_cls = to_convert.get(dep.__class__)
+            if item_cls:
+                final_kwargs[name] = yield deferred_from_coro(dep.to_item())
+
+        return final_kwargs
 
 
 def check_all_providers_are_callable(providers):
