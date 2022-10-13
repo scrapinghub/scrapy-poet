@@ -121,15 +121,13 @@ def test_item_return_subclass() -> None:
     assert item == ParentProduct(name="subclass product's name")
 
 
-# FIXME: tests failing since the PO's to_item() method hasn't been affected by
-#        the 'to_return' parameter change.
-# TODO: Consider "skip_nonitem_fields" for the cases below
 @inlineCallbacks
-def test_item_return_replaced_by_to_return() -> None:
-    """The ``to_return`` parameter passed in ``@handle_urls()`` should be used
-    instead of the underlying ``Returns[ItemType]`` inside the Page Object.
+def test_item_to_return() -> None:
+    """The ``to_return`` parameter passed in ``@handle_urls()`` could be requested
+    to match the rule.
 
-    For example, in the code below, the returned item should be ``ReplacedProduct(...)``.
+    For example, when requesting for ``RelacedProduct``, a ``Product`` item should
+    be returned by ``ReplacedProductPage``.
 
     ..code-block::
 
@@ -138,17 +136,21 @@ def test_item_return_replaced_by_to_return() -> None:
             ...
     """
     item = yield crawl_item(ReplacedProduct)
-    assert item == ReplacedProduct(name="replaced product's name")
+    assert item == Product(name="replaced product's name")
+
+    # Requesting the underlying item type from the PO should still work.
+    item = yield crawl_item(Product)
+    assert item == Product(name="product's name")
 
 
-# FIXME: same case as above
 @inlineCallbacks
-def test_item_return_replaced_by_to_return_in_subclass() -> None:
-    """Same case as with the ``test_item_return_replaced_by_to_return()`` case
-    above but the ``to_return`` replacement is done in the subclass.
+def test_item_to_return_in_subclass() -> None:
+    """Same case as with the ``test_item_to_return()`` case above but the
+    ``to_return`` is declared in the subclass.
 
     In the example below, requesting a ``SubclassReplacedProduct`` item should
-    come from the ``SubclassReplacedProductPage`` page object.
+    return a ``ParentReplacedProduct`` which comes from the
+    ``SubclassReplacedProductPage`` page object.
 
     ..code-block::
 
@@ -161,18 +163,21 @@ def test_item_return_replaced_by_to_return_in_subclass() -> None:
             ...
     """
     item = yield crawl_item(SubclassReplacedProduct)
-    assert item == SubclassReplacedProduct(name="subclass replaced product's name")
+    assert item == ParentReplacedProduct(name="subclass replaced product's name")
+
+    # Requesting the underlying item type from the parent PO should still work.
+    item = yield crawl_item(ParentReplacedProduct)
+    assert item == ParentReplacedProduct(name="parent replaced product's name")
 
 
-# FIXME: tests failing since it returns a ``dict``; same case as above
 @inlineCallbacks
-def test_item_return_standalone() -> None:
-    """Despite the PageObject not having ``Returns[ItemType]``, a return type
-    should still be able to work using the ``to_return`` parameter passed in the
+def test_item_to_return_standalone() -> None:
+    """Despite the PageObject not having ``Returns[ItemType]``, requesting an
+    item type should still work using the ``to_return`` parameter from the
     ``@handle_urls()`` decorator.
 
-    For example, the following code below should return a ``StandaloneProduct``
-    item.
+    For example, requesting a ``StandaloneProduct`` should return a ``dict`` item
+    which is the default return type for ``web_poet.ItemPage`` subclasses.
 
     ..code-block::
 
@@ -181,7 +186,7 @@ def test_item_return_standalone() -> None:
             ...
     """
     item = yield crawl_item(StandaloneProduct)
-    assert item == StandaloneProduct(name="standalone product's name")
+    assert item == {"name": "standalone product's name"}
 
 
 @inlineCallbacks
