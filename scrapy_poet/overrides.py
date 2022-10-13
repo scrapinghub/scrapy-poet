@@ -2,6 +2,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
+from warnings import warn
 
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -110,6 +111,26 @@ class OverridesRegistry(OverridesRegistryBase):
                 for_patterns=Patterns([pattern]), use=use, instead_of=instead_of
             )
         self.rules.append(rule)
+
+        # A common case when a PO subclasses another one with the same URL
+        # pattern. See the test_item_return_subclass() test case.
+        matched = self.matcher[rule.to_return]
+        if [
+            pattern
+            for pattern in matched.patterns.values()
+            if pattern == rule.for_patterns
+        ]:
+            # TODO: It would be great to also list down the rules having the
+            # same URL pattern. But this would require some refactoring.
+            warn(
+                f"A similar URL pattern {list(matched.patterns.values())} has been "
+                f"declared earlier which uses to_return={rule.to_return}. When "
+                f"matching URLs against rules, the latest declared rule is used. "
+                f"Consider explicitly updating the priority of the rules containing "
+                f"the said URL pattern to easily match the expectations when reading "
+                f"the code."
+            )
+
         if rule.instead_of:
             self.matcher[rule.instead_of].add_or_update(
                 len(self.rules) - 1, rule.for_patterns
@@ -127,6 +148,7 @@ class OverridesRegistry(OverridesRegistryBase):
                 overrides[instead_of] = self.rules[rule_id].use
         return overrides
 
+    # TODO: Refactor later
     def rules_overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
         overrides: Dict[Callable, Callable] = {}
         for instead_of, matcher in self.matcher.items():

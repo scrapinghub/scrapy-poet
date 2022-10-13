@@ -9,19 +9,21 @@ populating override settings via:
 
 from typing import Any
 
+import pytest
 from pytest_twisted import inlineCallbacks
 from url_matcher import Patterns
 from web_poet import ApplyRule, default_registry
 
-from tests.po_lib import (
-    PORT,
-    URL,
+from tests.po_lib import PORT, URL
+from tests.po_lib.main import (
     ParentProduct,
     ParentProductPage,
     ParentReplacedProduct,
     ParentReplacedProductPage,
     POIntegrationPage,
     POOverridenPage,
+    PriorityParentProduct,
+    PriorityParentProductPage,
     Product,
     ProductFromInjectable,
     ProductFromInjectablePage,
@@ -30,6 +32,9 @@ from tests.po_lib import (
     ReplacedProductPage,
     StandaloneProduct,
     StandaloneProductPage,
+)
+from tests.po_lib.subclasses import (
+    PrioritySubclassProductPage,
     SubclassProductPage,
     SubclassReplacedProduct,
     SubclassReplacedProductPage,
@@ -37,14 +42,13 @@ from tests.po_lib import (
 from tests.test_middleware import ProductHtml, spider_for
 from tests.utils import crawl_single_item, create_scrapy_settings
 
-# The rules are defined in `tests/po_lib/__init__.py`.
+# The rules are defined in `tests/po_lib/`.
 RULES = default_registry.get_rules()
 
 
 def rules_settings() -> dict:
     settings = create_scrapy_settings(None)
-    # Converting it to a set removes potential duplicate ApplyRules
-    settings["SCRAPY_POET_OVERRIDES"] = set(RULES)
+    settings["SCRAPY_POET_OVERRIDES"] = RULES
     return settings
 
 
@@ -93,9 +97,9 @@ def test_item_return_subclass() -> None:
     """A Page Object should properly inherit the ``Return[ItemType]`` from its
     parent.
 
-    For the example below, asking for ParentProduct would return ``ParentProduct``
-    from the ``ParentProductPage`` since the rules have equal priority but the
-    ``ParentProductPage`` has been decleared first.
+    For the example below, asking for ``ParentProduct`` would return ``ParentProduct``
+    from the ``SubclassProductPage`` since the rules have equal priority but the
+    ``SubclassProductPage`` has been the latest one that's declared.
 
     ..code-block::
 
@@ -106,19 +110,31 @@ def test_item_return_subclass() -> None:
         @handle_urls(URL)
         class SubclassProductPage(ParentProductPage):
             ...
+    """
+    with pytest.warns(UserWarning, match="Consider explicitly updating the priority"):
+        item = yield crawl_item(ParentProduct)
+    assert item == ParentProduct(name="subclass product's name")
+
+
+@inlineCallbacks
+def test_item_return_subclass_priority() -> None:
+    """Same case as above but the
 
     If users want to use the ``ParentProduct`` coming from ``SubclassProductPage``,
     then they'd need to increase the priority:
 
     ..code-block::
 
-        @handle_urls(URL, priority=600)
-        class SubclassProductPage(ParentProductPage):
+        @handle_urls(URL)  # default priority is 500
+        class PriorityParentProductPage(ItemPage[PriorityParentProduct]):
             ...
 
+        @handle_urls(URL, priority=600)
+        class PrioritySubclassProductPage(PriorityParentProductPage):
+            ...
     """
-    item = yield crawl_item(ParentProduct)
-    assert item == ParentProduct(name="subclass product's name")
+    item = yield crawl_item(PriorityParentProduct)
+    assert item == PriorityParentProduct(name="priority subclass product's name")
 
 
 @inlineCallbacks
@@ -221,16 +237,18 @@ def test_created_apply_rules() -> None:
         # Item-based rules
         ApplyRule(URL, use=ProductPage, to_return=Product),
         ApplyRule(URL, use=ParentProductPage, to_return=ParentProduct),
-        ApplyRule(
-            Patterns([URL], priority=600),
-            use=SubclassProductPage,
-            to_return=ParentProduct,
-        ),
+        ApplyRule(URL, use=PriorityParentProductPage, to_return=PriorityParentProduct),
         ApplyRule(URL, use=ReplacedProductPage, to_return=ReplacedProduct),
         ApplyRule(URL, use=ParentReplacedProductPage, to_return=ParentReplacedProduct),
+        ApplyRule(URL, use=StandaloneProductPage, to_return=StandaloneProduct),
+        ApplyRule(URL, use=ProductFromInjectablePage, to_return=ProductFromInjectable),
+        ApplyRule(URL, use=SubclassProductPage, to_return=ParentProduct),
         ApplyRule(
             URL, use=SubclassReplacedProductPage, to_return=SubclassReplacedProduct
         ),
-        ApplyRule(URL, use=StandaloneProductPage, to_return=StandaloneProduct),
-        ApplyRule(URL, use=ProductFromInjectablePage, to_return=ProductFromInjectable),
+        ApplyRule(
+            Patterns([URL], priority=600),
+            use=PrioritySubclassProductPage,
+            to_return=PriorityParentProduct,
+        ),
     ]
