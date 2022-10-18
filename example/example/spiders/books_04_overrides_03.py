@@ -22,7 +22,7 @@ class BookListPage(WebPage):
 
 
 class BookPage(WebPage):
-    ...
+    pass
 
 
 @handle_urls("toscrape.com", overrides=BookListPage)

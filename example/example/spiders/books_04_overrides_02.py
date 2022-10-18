@@ -20,7 +20,7 @@ class BookListPage(WebPage):
 
 
 class BookPage(WebPage):
-    ...
+    pass
 
 
 class BTSBookListPage(BookListPage):
