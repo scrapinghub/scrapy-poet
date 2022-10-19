@@ -46,6 +46,11 @@ class SubclassReplacedProduct:
 
 
 @attrs.define
+class BothToReturnAndInsteadOfProduct:
+    name: str
+
+
+@attrs.define
 class StandaloneProduct:
     name: str
 
@@ -97,8 +102,15 @@ class StandaloneProductPage(ItemPage):
         return "standalone product's name"
 
 
-# TODO: cases where `instead_of` and `to_return` are present, including
-# permutations of the cases above
+class ReplacedToReturnAndInsteadOfProductPage(ItemPage):
+    pass
+
+
+@handle_urls(URL, instead_of=ReplacedToReturnAndInsteadOfProductPage)
+class BothToReturnAndInsteadOfProductPage(ItemPage[BothToReturnAndInsteadOfProduct]):
+    @field
+    def name(self) -> str:
+        return "to_return and instead_of product's name"
 
 
 @handle_urls(URL, to_return=ProductFromInjectable)

@@ -1,3 +1,4 @@
+from inspect import isasyncgenfunction
 from typing import Dict
 from unittest import mock
 
@@ -144,9 +145,14 @@ def capture_exceptions(callback):
     the provided callback and yields it under `exception` property. Also
     spider is closed on the first exception."""
 
-    def parse(*args, **kwargs):
+    async def parse(*args, **kwargs):
         try:
-            yield from callback(*args, **kwargs)
+            if isasyncgenfunction(callback):
+                async for x in callback(*args, **kwargs):
+                    yield x
+            else:
+                for x in callback(*args, **kwargs):
+                    yield x
         except Exception as e:
             yield {"exception": e}
             raise CloseSpider("Exception in callback detected")

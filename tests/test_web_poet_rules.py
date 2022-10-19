@@ -16,6 +16,8 @@ from web_poet import ApplyRule, default_registry
 
 from tests.po_lib import PORT, URL
 from tests.po_lib.main import (
+    BothToReturnAndInsteadOfProduct,
+    BothToReturnAndInsteadOfProductPage,
     ParentProduct,
     ParentProductPage,
     ParentReplacedProduct,
@@ -30,6 +32,7 @@ from tests.po_lib.main import (
     ProductPage,
     ReplacedProduct,
     ReplacedProductPage,
+    ReplacedToReturnAndInsteadOfProductPage,
     StandaloneProduct,
     StandaloneProductPage,
 )
@@ -206,6 +209,24 @@ def test_item_to_return_standalone() -> None:
 
 
 @inlineCallbacks
+def test_both_to_return_and_instead_of() -> None:
+    """Rules that contain both 'to_return' and 'instead_of' should work on
+    both cases when either are requested.
+    """
+    # item from 'to_return'
+    item = yield crawl_item(BothToReturnAndInsteadOfProduct)
+    assert item == BothToReturnAndInsteadOfProduct(
+        name="to_return and instead_of product's name"
+    )
+
+    # page from 'instead_of'
+    item = yield crawl_item(ReplacedToReturnAndInsteadOfProductPage)
+    assert item == BothToReturnAndInsteadOfProduct(
+        name="to_return and instead_of product's name"
+    )
+
+
+@inlineCallbacks
 def test_item_return_from_injectable() -> None:
     """The case wherein a PageObject inherits directly from ``web_poet.Injectable``
     should also work, provided that the ``to_item`` method is similar with
@@ -241,6 +262,12 @@ def test_created_apply_rules() -> None:
         ApplyRule(URL, use=ReplacedProductPage, to_return=ReplacedProduct),
         ApplyRule(URL, use=ParentReplacedProductPage, to_return=ParentReplacedProduct),
         ApplyRule(URL, use=StandaloneProductPage, to_return=StandaloneProduct),
+        ApplyRule(
+            URL,
+            use=BothToReturnAndInsteadOfProductPage,
+            to_return=BothToReturnAndInsteadOfProduct,
+            instead_of=ReplacedToReturnAndInsteadOfProductPage,
+        ),
         ApplyRule(URL, use=ProductFromInjectablePage, to_return=ProductFromInjectable),
         ApplyRule(URL, use=SubclassProductPage, to_return=ParentProduct),
         ApplyRule(
