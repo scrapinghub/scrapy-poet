@@ -221,12 +221,12 @@ def test_providers(settings, type_):
 
 
 @inlineCallbacks
-def test_providers_returning_wrong_classes(settings):
+def test_providers_returning_wrong_classes(settings, caplog):
     """Injection Middleware should raise a runtime error whenever a provider
     returns instances of classes that they're not supposed to provide.
     """
-    with pytest.raises(AssertionError):
-        yield crawl_single_item(spider_for(ExtraClassData), ProductHtml, settings)
+    yield crawl_single_item(spider_for(ExtraClassData), ProductHtml, settings)
+    assert "raise UndeclaredProvidedTypeError" in caplog.text
 
 
 class MultiArgsCallbackSpider(scrapy.Spider):
