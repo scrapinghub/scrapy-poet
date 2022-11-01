@@ -3,6 +3,7 @@ when used for callback dependencies.
 
 Most of the logic here tests the behavior of the ``scrapy_poet/injection.py``
 module.
+
 """
 
 import socket
@@ -56,7 +57,6 @@ def spider_for(injectable: Type):
     return InjectableSpider
 
 
-# TODO: rename this
 @inlineCallbacks
 def crawl_item_and_deps(PageObject) -> Any:
     """Helper function to easily return the item and injected dependencies from
@@ -70,13 +70,78 @@ def crawl_item_and_deps(PageObject) -> Any:
     return item, crawler.spider.collected_response_deps
 
 
-def assert_deps(deps, expected):
+def assert_deps(deps, expected, size=1):
     """Helper for easily checking the instances of the ``deps`` returned by
     ``crawl_item_and_deps()``.
     """
-    assert len(deps) == 1
+    assert len(deps) == size
+
+    # Only checks the first element for now since it's used alongside crawling
+    # a single item.
     assert not deps[0].keys() - expected.keys()
     assert all([True for k, v in expected.items() if isinstance(deps[0][k], v)])
+
+
+@handle_urls(URL)
+class UrlMatchPage(ItemPage):
+    def to_item(self) -> dict:
+        return {"msg": "PO URL Match"}
+
+
+@inlineCallbacks
+def test_url_only_match() -> None:
+    """Page Objects which only have URL in its ``@handle_urls`` annotation should
+    work.
+    """
+    item, deps = yield crawl_item_and_deps(UrlMatchPage)
+    assert item == {"msg": "PO URL Match"}
+    assert_deps(deps, {"page": UrlMatchPage})
+
+
+@handle_urls("example.com")
+class UrlNoMatchPage(ItemPage):
+    def to_item(self) -> dict:
+        return {"msg": "PO No URL Match"}
+
+
+@inlineCallbacks
+def test_url_only_no_match() -> None:
+    """Same case as with ``test_url_only_match()`` but the URL specified in the
+    ``@handle_urls`` annotation doesn't match the request/response URL that the
+    spider is crawling.
+
+    However, it should still work since we're forcing to use ``UrlNoMatchPage``
+    specifically as the Page Object input.
+    """
+    item, deps = yield crawl_item_and_deps(UrlNoMatchPage)
+    assert item == {"msg": "PO No URL Match"}
+    assert_deps(deps, {"page": UrlNoMatchPage})
+
+
+class NoRulePage(ItemPage):
+    def to_item(self) -> dict:
+        return {"msg": "NO Rule"}
+
+
+class NoRuleWebPage(WebPage):
+    def to_item(self) -> dict:
+        return {"msg": "NO Rule Web"}
+
+
+@inlineCallbacks
+def test_no_rule_declaration() -> None:
+    """A more extreme case of ``test_url_only_no_match()`` where the Page Object
+    doesn't have any rule declaration at all.
+
+    But it should still work since we're enforcing the dependency.
+    """
+    item, deps = yield crawl_item_and_deps(NoRulePage)
+    assert item == {"msg": "NO Rule"}
+    assert_deps(deps, {"page": NoRulePage})
+
+    item, deps = yield crawl_item_and_deps(NoRuleWebPage)
+    assert item == {"msg": "NO Rule Web"}
+    assert_deps(deps, {"page": NoRuleWebPage})
 
 
 class OverriddenPage(WebPage):
@@ -552,6 +617,9 @@ def test_created_apply_rules() -> None:
     RULES = default_registry.get_rules()
 
     assert RULES == [
+        # URL declaration only
+        ApplyRule(URL, use=UrlMatchPage),
+        ApplyRule("example.com", use=UrlNoMatchPage),
         # PageObject-based rules
         ApplyRule(URL, use=ReplacementPage, instead_of=OverriddenPage),
         # Item-based rules
