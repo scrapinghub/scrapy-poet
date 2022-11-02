@@ -20,6 +20,7 @@ from .page_input_providers import (
     PageParamsProvider,
     RequestUrlProvider,
     ResponseUrlProvider,
+    ItemProvider,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,6 +32,7 @@ DEFAULT_PROVIDERS = {
     PageParamsProvider: 700,
     RequestUrlProvider: 800,
     ResponseUrlProvider: 900,
+    ItemProvider: 1000,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")

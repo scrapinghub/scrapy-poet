@@ -11,13 +11,17 @@ Splash or Auto Extract API.
 import abc
 import json
 from typing import Any, Callable, ClassVar, Sequence, Set, Union
+from inspect import isclass
 
 import attr
+import andi
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.http import Response
 from scrapy.utils.request import request_fingerprint
+from web_poet.pages import is_injectable
 from web_poet import (
+    ItemPage,
     HttpClient,
     HttpResponse,
     HttpResponseHeaders,
@@ -28,6 +32,8 @@ from web_poet import (
 
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
+from scrapy_poet.utils import get_callback
+from scrapy_poet.overrides import OverridesRegistry
 
 
 class PageObjectInputProvider:
@@ -39,7 +45,7 @@ class PageObjectInputProvider:
     be declared in the class attribute ``provided_classes``.
 
     POIPs are initialized when the spider starts by invoking the ``__init__`` method,
-    which receives the crawler instance as argument.
+    which receives the ``scrapy_poet.injection.Injector`` instance as argument.
 
     The ``__call__`` method must be overridden, and it is inside this method
     where the actual instances must be build. The default ``__call__`` signature
@@ -62,6 +68,7 @@ class PageObjectInputProvider:
     - :class:`~scrapy.crawler.Crawler`
     - :class:`~scrapy.settings.Settings`
     - :class:`~scrapy.statscollectors.StatsCollector`
+    - :class:`~scrapy_poet.overrides.OverridesRegistry`
 
     Finally, ``__call__`` function can execute asynchronous code. Just
     either prepend the declaration with ``async`` to use futures or annotate it with
@@ -97,23 +104,28 @@ class PageObjectInputProvider:
     provided_classes: ClassVar[Union[Set[Callable], Callable[[Callable], bool]]]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
-    @classmethod
-    def is_provided(cls, type_: Callable):
+    def is_provided(self, type_: Callable) -> bool:
         """
         Return ``True`` if the given type is provided by this provider based
         on the value of the attribute ``provided_classes``
         """
-        if isinstance(cls.provided_classes, Set):
-            return type_ in cls.provided_classes
-        elif callable(cls.provided_classes):
-            return cls.provided_classes(type_)
+        if isinstance(self.provided_classes, Set):
+            return type_ in self.provided_classes
+        elif callable(self.provided_classes):
+            return self.provided_classes(type_)
         else:
             raise MalformedProvidedClassesError(
-                f"Unexpected type '{type_}' for 'provided_classes' attribute of"
-                f"'{cls}.'. Expected either 'set' or 'callable'"
+                f"Unexpected type '{type_}' for 'provided_classes' attribute of "
+                f"'{self}.'. Expected either 'set' or 'callable'"
             )
 
-    def __init__(self, crawler: Crawler):
+    # TODO: docstring
+    # TODO: finalize what to pass
+    def dependency_for(self, cls, request):
+        pass
+
+    # FIXME: Can't import the class annotation due to circular dep.
+    def __init__(self, injector):
         """Initializes the provider. Invoked only at spider start up."""
         pass
 
@@ -251,3 +263,45 @@ class ResponseUrlProvider(PageObjectInputProvider):
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``ResponseUrl`` instance using a Scrapy ``Response``."""
         return [ResponseUrl(url=response.url)]
+
+
+class ItemProvider(PageObjectInputProvider):
+
+    name = "item"
+
+    def __init__(self, injector):
+        self.registry = injector.overrides_registry
+        self._po = None
+
+    def provided_classes(self, *args, **kwargs):
+        """If the item is in any of the ``to_return`` in the rules, then it can
+        definitely provide by using the corresponding page object in ``use``.
+        """
+        cls = args[-1]
+        print("TYPE:", cls)  # TODO: remove later
+
+        # TODO: The search operation in the registry could be expensive when
+        # there are lots of rules. We could cache it up since this method will
+        # be called again later by the ``Injector`` when making dependencies.
+        return isclass(cls) and self.registry.search(to_return=cls)
+
+    def dependency_for(self, cls, request):
+        self._po = self.registry.page_object_for_item(request).get(cls)
+        return self._po
+
+
+    # TODO: Clean this up
+    def return_function(self):
+        def foo(po: self._po):
+            pass
+        return foo
+
+    async def __call__(
+        self,
+        to_provide: Set[Callable],
+        **kwargs,
+    ):
+        print("TO_PROVIDE:", to_provide)
+        print("kwargs:", kwargs)
+        item = await kwargs["po"].to_item()
+        return [item]

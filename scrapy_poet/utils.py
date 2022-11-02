@@ -43,3 +43,10 @@ def scrapy_response_to_http_response(response: Response) -> HttpResponse:
         headers=HttpResponseHeaders.from_bytes_dict(response.headers),
         **kwargs,
     )
+
+
+def get_callback(request, spider):
+    """Get ``request.callback`` of a :class:`scrapy.Request`"""
+    if request.callback is None:
+        return getattr(spider, "parse")  # noqa: B009
+    return request.callback

@@ -7,7 +7,7 @@ from warnings import warn
 from scrapy import Request
 from scrapy.crawler import Crawler
 from url_matcher import Patterns, URLMatcher
-from web_poet import ItemPage
+from web_poet import ItemPage, RulesRegistry
 from web_poet.rules import ApplyRule
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class OverridesRegistryBase(ABC):
         pass
 
 
-class OverridesRegistry(OverridesRegistryBase):
+class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
     """
     Overrides registry that reads the overrides from the ``SCRAPY_POET_OVERRIDES``
     in the spider settings. It is a list and each rule can be a tuple or an
@@ -92,13 +92,14 @@ class OverridesRegistry(OverridesRegistryBase):
         return cls(crawler.settings.getlist("SCRAPY_POET_OVERRIDES", []))
 
     def __init__(self, rules: Optional[Iterable[RuleFromUser]] = None) -> None:
-        self.rules: List[ApplyRule] = []
-        self.matcher: Dict[PageObject, URLMatcher] = defaultdict(URLMatcher)
-        for rule in rules or []:
-            self.add_rule(rule)
-        logger.debug(f"List of parsed ApplyRules:\n{self.rules}")
+        super().__init__(rules=rules)
+        self.overrides_matcher: Dict[PageObject, URLMatcher] = defaultdict(URLMatcher)
+        self.item_matcher: Dict[Any, URLMatcher] = defaultdict(URLMatcher)
+        for rule_id, rule in enumerate(self._rules):
+            self.add_rule(rule_id, rule)
+        logger.debug(f"List of parsed ApplyRules:\n{self._rules}")
 
-    def add_rule(self, rule: RuleFromUser) -> None:
+    def add_rule(self, rule_id: int, rule: RuleFromUser) -> None:
         if isinstance(rule, (tuple, list)):
             if len(rule) != 3:
                 raise ValueError(
@@ -110,11 +111,10 @@ class OverridesRegistry(OverridesRegistryBase):
             rule = ApplyRule(
                 for_patterns=Patterns([pattern]), use=use, instead_of=instead_of
             )
-        self.rules.append(rule)
 
         # A common case when a PO subclasses another one with the same URL
         # pattern. See the test_item_return_subclass() test case.
-        matched = self.matcher[rule.to_return]
+        matched = self.overrides_matcher[rule.to_return]
         if [
             pattern
             for pattern in matched.patterns.values()
@@ -132,27 +132,25 @@ class OverridesRegistry(OverridesRegistryBase):
             )
 
         if rule.instead_of:
-            self.matcher[rule.instead_of].add_or_update(
-                len(self.rules) - 1, rule.for_patterns
+            self.overrides_matcher[rule.instead_of].add_or_update(
+                rule_id, rule.for_patterns
             )
         if rule.to_return:
-            self.matcher[rule.to_return].add_or_update(
-                len(self.rules) - 1, rule.for_patterns
+            self.item_matcher[rule.to_return].add_or_update(
+                rule_id, rule.for_patterns
             )
 
-    def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
-        overrides: Dict[Callable, Callable] = {}
-        for instead_of, matcher in self.matcher.items():
+    # TODO: better name
+    def _run_matcher(self, request: Request, matcher) -> Mapping[Callable, Callable]:
+        result: Dict[Callable, Callable] = {}
+        for target, matcher in matcher.items():
             rule_id = matcher.match(request.url)
             if rule_id is not None:
-                overrides[instead_of] = self.rules[rule_id].use
-        return overrides
+                result[target] = self._rules[rule_id].use
+        return result
 
-    # TODO: Refactor later
-    def rules_overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
-        overrides: Dict[Callable, Callable] = {}
-        for instead_of, matcher in self.matcher.items():
-            rule_id = matcher.match(request.url)
-            if rule_id is not None:
-                overrides[instead_of] = self.rules[rule_id]
-        return overrides
+    def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
+        return self._run_matcher(request, self.overrides_matcher)
+
+    def page_object_for_item(self, request: Request) -> Mapping[Callable, Callable]:
+        return self._run_matcher(request, self.item_matcher)
