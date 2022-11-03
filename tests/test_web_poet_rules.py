@@ -585,6 +585,8 @@ def test_page_object_with_item_dependency() -> None:
     by the Page Object assigned in one of the rules' ``use`` parameter.
     """
 
+    # FIXME: This first test case fails
+
     # item from 'to_return'
     item, deps = yield crawl_item_and_deps(MainProductB)
     assert item == MainProductB(
