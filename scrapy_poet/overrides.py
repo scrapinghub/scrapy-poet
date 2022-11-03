@@ -1,20 +1,30 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+)
 from warnings import warn
 
 from scrapy import Request
 from scrapy.crawler import Crawler
 from url_matcher import Patterns, URLMatcher
-from web_poet import ItemPage
+from web_poet import ItemPage, RulesRegistry
 from web_poet.rules import ApplyRule
 
 logger = logging.getLogger(__name__)
 
 PageObject = Type[ItemPage]
 RuleAsTuple = Union[Tuple[str, PageObject, PageObject], List]
-RuleFromUser = Union[RuleAsTuple, ApplyRule]
 
 
 class OverridesRegistryBase(ABC):
@@ -28,7 +38,7 @@ class OverridesRegistryBase(ABC):
         pass
 
 
-class OverridesRegistry(OverridesRegistryBase):
+class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
     """
     Overrides registry that reads the overrides from the ``SCRAPY_POET_OVERRIDES``
     in the spider settings. It is a list and each rule can be a tuple or an
@@ -91,14 +101,16 @@ class OverridesRegistry(OverridesRegistryBase):
     def from_crawler(cls, crawler: Crawler) -> Crawler:
         return cls(crawler.settings.getlist("SCRAPY_POET_OVERRIDES", []))
 
-    def __init__(self, rules: Optional[Iterable[RuleFromUser]] = None) -> None:
-        self.rules: List[ApplyRule] = []
-        self.matcher: Dict[PageObject, URLMatcher] = defaultdict(URLMatcher)
-        for rule in rules or []:
-            self.add_rule(rule)
-        logger.debug(f"List of parsed ApplyRules:\n{self.rules}")
+    def __init__(self, rules: Optional[Iterable[ApplyRule]] = None) -> None:
+        super().__init__(rules=rules)
+        self.overrides_matcher: Dict[PageObject, URLMatcher] = defaultdict(URLMatcher)
+        self.item_matcher: Dict[Any, URLMatcher] = defaultdict(URLMatcher)
+        for rule_id, rule in enumerate(self._rules):
+            self.add_rule(rule_id, rule)
+        logger.debug(f"List of parsed ApplyRules:\n{self._rules}")
 
-    def add_rule(self, rule: RuleFromUser) -> None:
+    def add_rule(self, rule_id: int, rule: ApplyRule) -> None:
+        # TODO: deprecate this, alongside the tests and docs; Update CHANGELOG
         if isinstance(rule, (tuple, list)):
             if len(rule) != 3:
                 raise ValueError(
@@ -110,11 +122,10 @@ class OverridesRegistry(OverridesRegistryBase):
             rule = ApplyRule(
                 for_patterns=Patterns([pattern]), use=use, instead_of=instead_of
             )
-        self.rules.append(rule)
 
         # A common case when a PO subclasses another one with the same URL
         # pattern. See the test_item_return_subclass() test case.
-        matched = self.matcher[rule.to_return]
+        matched = self.item_matcher[rule.to_return]
         if [
             pattern
             for pattern in matched.patterns.values()
@@ -132,27 +143,26 @@ class OverridesRegistry(OverridesRegistryBase):
             )
 
         if rule.instead_of:
-            self.matcher[rule.instead_of].add_or_update(
-                len(self.rules) - 1, rule.for_patterns
+            self.overrides_matcher[rule.instead_of].add_or_update(
+                rule_id, rule.for_patterns
             )
         if rule.to_return:
-            self.matcher[rule.to_return].add_or_update(
-                len(self.rules) - 1, rule.for_patterns
-            )
+            self.item_matcher[rule.to_return].add_or_update(rule_id, rule.for_patterns)
+
+    # TODO: These URL matching functionalities could be moved to web-poet.
+
+    def _run_matcher(
+        self, request: Request, url_matcher
+    ) -> Mapping[Callable, Callable]:
+        result: Dict[Callable, Callable] = {}
+        for target, matcher in url_matcher.items():
+            rule_id = matcher.match(request.url)
+            if rule_id is not None:
+                result[target] = self._rules[rule_id].use
+        return result
 
     def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
-        overrides: Dict[Callable, Callable] = {}
-        for instead_of, matcher in self.matcher.items():
-            rule_id = matcher.match(request.url)
-            if rule_id is not None:
-                overrides[instead_of] = self.rules[rule_id].use
-        return overrides
+        return self._run_matcher(request, self.overrides_matcher)
 
-    # TODO: Refactor later
-    def rules_overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
-        overrides: Dict[Callable, Callable] = {}
-        for instead_of, matcher in self.matcher.items():
-            rule_id = matcher.match(request.url)
-            if rule_id is not None:
-                overrides[instead_of] = self.rules[rule_id]
-        return overrides
+    def page_object_for_item(self, request: Request) -> Mapping[Callable, Callable]:
+        return self._run_matcher(request, self.item_matcher)

@@ -12,8 +12,7 @@ from scrapy.utils.log import configure_logging
 from scrapy.utils.test import get_crawler
 from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
-from web_poet.page_inputs import HttpResponse, RequestUrl, ResponseUrl
-from web_poet.pages import ItemPage, WebPage
+from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
 
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
 from scrapy_poet.cache import SqlitedictCache
@@ -102,7 +101,11 @@ def test_overrides(settings):
     domain = get_domain(host)
     port = get_ephemeral_port()
     settings["SCRAPY_POET_OVERRIDES"] = [
-        (f"{domain}:{port}", OverridenBreadcrumbsExtraction, BreadcrumbsExtraction)
+        ApplyRule(
+            f"{domain}:{port}",
+            use=OverridenBreadcrumbsExtraction,
+            instead_of=BreadcrumbsExtraction,
+        )
     ]
     item, url, _ = yield crawl_single_item(
         spider_for(ProductPage), ProductHtml, settings, port=port

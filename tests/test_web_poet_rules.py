@@ -75,6 +75,8 @@ def assert_deps(deps, expected, size=1):
     ``crawl_item_and_deps()``.
     """
     assert len(deps) == size
+    if size == 0:
+        return
 
     # Only checks the first element for now since it's used alongside crawling
     # a single item.
@@ -84,7 +86,7 @@ def assert_deps(deps, expected, size=1):
 
 @handle_urls(URL)
 class UrlMatchPage(ItemPage):
-    def to_item(self) -> dict:
+    async def to_item(self) -> dict:
         return {"msg": "PO URL Match"}
 
 
@@ -100,7 +102,7 @@ def test_url_only_match() -> None:
 
 @handle_urls("example.com")
 class UrlNoMatchPage(ItemPage):
-    def to_item(self) -> dict:
+    async def to_item(self) -> dict:
         return {"msg": "PO No URL Match"}
 
 
@@ -119,12 +121,12 @@ def test_url_only_no_match() -> None:
 
 
 class NoRulePage(ItemPage):
-    def to_item(self) -> dict:
+    async def to_item(self) -> dict:
         return {"msg": "NO Rule"}
 
 
 class NoRuleWebPage(WebPage):
-    def to_item(self) -> dict:
+    async def to_item(self) -> dict:
         return {"msg": "NO Rule Web"}
 
 
@@ -145,13 +147,13 @@ def test_no_rule_declaration() -> None:
 
 
 class OverriddenPage(WebPage):
-    def to_item(self) -> dict:
+    async def to_item(self) -> dict:
         return {"msg": "PO that will be replaced"}
 
 
 @handle_urls(URL, instead_of=OverriddenPage)
 class ReplacementPage(WebPage):
-    def to_item(self) -> dict:
+    async def to_item(self) -> dict:
         return {"msg": "PO replacement"}
 
 
@@ -302,20 +304,22 @@ class ReplacedProductPage(ItemPage[Product]):
 
 
 @inlineCallbacks
-def test_item_to_return_in_handle_urls() -> None:
+def test_item_to_return_in_handle_urls(caplog) -> None:
     """Even if ``@handle_urls`` could derive the value for the ``to_return``
     parameter when the class inherits from something like ``ItemPage[ItemType]``,
     any value passed through its ``to_return`` parameter should take precedence.
 
     Note that that this produces some inconsistencies between the rule's item
-    class vs the class that is actually returned.
+    class vs the class that is actually returned. Using the ``to_return``
+    parameter in ``@handle_urls`` isn't recommended because of this.
 
-    Using the ``to_return`` parameter in ``@handle_urls`` isn't recommended
-    because of this.
+    This also causes an ``UndeclaredProvidedTypeError`` since the item provider
+    has received a different type of item class from the page object.
     """
     item, deps = yield crawl_item_and_deps(ReplacedProduct)
-    assert item == Product(name="replaced product name")
-    assert_deps(deps, {"item": Product})
+    assert "raise UndeclaredProvidedTypeError" in caplog.text
+    assert item is None
+    assert_deps(deps, {}, size=0)
 
     # Requesting the underlying item type from the PO should still work.
     item, deps = yield crawl_item_and_deps(Product)
@@ -353,13 +357,14 @@ class SubclassReplacedProductPage(ParentReplacedProductPage):
 
 
 @inlineCallbacks
-def test_item_to_return_in_handle_urls_subclass() -> None:
+def test_item_to_return_in_handle_urls_subclass(caplog) -> None:
     """Same case as with the ``test_item_to_return_in_handle_urls()`` case above
     but the ``to_return`` is declared in the subclass.
     """
     item, deps = yield crawl_item_and_deps(SubclassReplacedProduct)
-    assert item == ParentReplacedProduct(name="subclass replaced product name")
-    assert_deps(deps, {"item": ParentReplacedProduct})
+    assert "raise UndeclaredProvidedTypeError" in caplog.text
+    assert item is None
+    assert_deps(deps, {}, size=0)
 
     # Requesting the underlying item type from the parent PO should still work.
     item, deps = yield crawl_item_and_deps(ParentReplacedProduct)
@@ -390,13 +395,14 @@ class StandaloneProductPage(ItemPage):
 
 
 @inlineCallbacks
-def test_item_to_return_standalone() -> None:
+def test_item_to_return_standalone(caplog) -> None:
     """Same case as with ``test_item_to_return_in_handle_urls()`` above but the
-    Page Object doesn't inherit from somethine like ``ItemPage[ItemClass]``
+    Page Object doesn't inherit from something like ``ItemPage[ItemClass]``
     """
     item, deps = yield crawl_item_and_deps(StandaloneProduct)
-    assert item == {"name": "standalone product name"}
-    assert_deps(deps, {"item": dict})
+    assert "raise UndeclaredProvidedTypeError" in caplog.text
+    assert item is None
+    assert_deps(deps, {}, size=0)
 
     # calling the actual Page Object should still work
     item, deps = yield crawl_item_and_deps(StandaloneProductPage)
@@ -477,7 +483,7 @@ def test_item_return_from_injectable() -> None:
 
 @handle_urls(URL)
 class PageObjectDependencyPage(ItemPage):
-    def to_item(self) -> str:
+    async def to_item(self) -> dict:
         return {"name": "item dependency"}
 
 
@@ -501,8 +507,8 @@ class ProductWithPageObjectDepPage(ItemPage[MainProductA]):
         return "(with item dependency) product name"
 
     @field
-    def item_from_po_dependency(self) -> dict:
-        return self.injected_page.to_item()
+    async def item_from_po_dependency(self) -> dict:
+        return await self.injected_page.to_item()
 
 
 @inlineCallbacks
@@ -648,7 +654,13 @@ def test_created_apply_rules() -> None:
             to_return=BiProduct,
             instead_of=ReplacedBiProductPage,
         ),
-        ApplyRule(URL, use=ProductFromInjectablePage, to_return=ProductFromInjectable),
+        ApplyRule(
+            URL,
+            # We're ignoring the typing here since it expects the argument for
+            # use to be a subclass of ItemPage.
+            use=ProductFromInjectablePage,  # type: ignore[arg-type]
+            to_return=ProductFromInjectable,
+        ),
         ApplyRule(URL, use=PageObjectDependencyPage),
         ApplyRule(
             URL,

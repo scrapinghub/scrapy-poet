@@ -116,11 +116,13 @@ class TestInjector:
                 == provider.require_response
             )
 
-        # Asserting that we are not leaking providers references
+        # Asserting that some providers could still have access to some parts
+        # of the injector since the injector is passed when instantiating the
+        # provider.
         weak_ref = weakref.ref(injector.providers[0])
         assert weak_ref()
         del injector
-        assert weak_ref() is None
+        assert weak_ref()
 
     def test_non_callable_provider_error(self):
         """Checks that a exception is raised when a provider is not callable"""
@@ -200,8 +202,9 @@ class TestInjector:
             ClsNoProviderRequired: ClsNoProviderRequired(),
         }
 
+        dependencies = {cls for cls, _ in plan.dependencies}
         instances = yield from injector.build_instances_from_providers(
-            request, response, plan
+            request, response, dependencies
         )
         assert instances == {
             Cls1: Cls1(),
@@ -223,8 +226,9 @@ class TestInjector:
         response = get_response_for_testing(callback)
         plan = injector.build_plan(response.request)
         with pytest.raises(UndeclaredProvidedTypeError) as exinf:
+            dependencies = {cls for cls, _ in plan.dependencies}
             yield from injector.build_instances_from_providers(
-                response.request, response, plan
+                response.request, response, dependencies
             )
 
         assert "Provider" in str(exinf.value)
@@ -249,8 +253,9 @@ class TestInjector:
 
         response = get_response_for_testing(callback)
         plan = injector.build_plan(response.request)
+        dependencies = {cls for cls, _ in plan.dependencies}
         instances = yield from injector.build_instances_from_providers(
-            response.request, response, plan
+            response.request, response, dependencies
         )
 
         assert instances[str] == min(str_list)
@@ -324,12 +329,12 @@ class TestInjectorOverrides:
         # The request domain is example.com, so overrides shouldn't be applied
         # when we configure them for domain other-example.com
         overrides = [
-            (domain, PriceInDollarsPO, PricePO),
+            ApplyRule(Patterns([domain]), use=PriceInDollarsPO, instead_of=PricePO),
             ApplyRule(
                 Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate
             ),
         ]
-        registry = OverridesRegistry(overrides)
+        registry = OverridesRegistry(rules=overrides)
         injector = get_injector_for_testing(providers, overrides_registry=registry)
 
         def callback(
@@ -462,8 +467,9 @@ def test_cache(tmp_path, cache_errors):
 
     response = get_response_for_testing(callback)
     plan = injector.build_plan(response.request)
+    dependencies = {cls for cls, _ in plan.dependencies}
     instances = yield from injector.build_instances_from_providers(
-        response.request, response, plan
+        response.request, response, dependencies
     )
 
     validate_instances(instances)
@@ -474,8 +480,9 @@ def test_cache(tmp_path, cache_errors):
     response.request = Request.replace(response.request, url="http://willfail.page")
     with pytest.raises(ValueError):
         plan = injector.build_plan(response.request)
+        dependencies = {cls for cls, _ in plan.dependencies}
         instances = yield from injector.build_instances_from_providers(
-            response.request, response, plan
+            response.request, response, dependencies
         )
 
     # Different providers. They return a different result, but the cache data should prevail.
@@ -487,8 +494,9 @@ def test_cache(tmp_path, cache_errors):
 
     response = get_response_for_testing(callback)
     plan = injector.build_plan(response.request)
+    dependencies = {cls for cls, _ in plan.dependencies}
     instances = yield from injector.build_instances_from_providers(
-        response.request, response, plan
+        response.request, response, dependencies
     )
 
     validate_instances(instances)
@@ -498,6 +506,7 @@ def test_cache(tmp_path, cache_errors):
     response.request = Request.replace(response.request, url="http://willfail.page")
     with pytest.raises(Error):
         plan = injector.build_plan(response.request)
+        dependencies = {cls for cls, _ in plan.dependencies}
         instances = yield from injector.build_instances_from_providers(
-            response.request, response, plan
+            response.request, response, dependencies
         )

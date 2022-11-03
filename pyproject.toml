@@ -4,3 +4,10 @@ line-length = 88
 [tool.isort]
 profile = "black"
 multi_line_output = 3
+
+[[tool.mypy.overrides]]
+module = "tests.test_web_poet_rules.*"
+# Ignore this type of error since mypy expects an Iterable return
+# when test cases are decorated with @inlineCallbacks. However, the
+# tests doesn't return anything at all.
+disable_error_code = "misc"

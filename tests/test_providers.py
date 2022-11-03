@@ -6,13 +6,13 @@ import attr
 import scrapy
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
-from scrapy.crawler import Crawler
 from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
 from twisted.python.failure import Failure
 from web_poet import HttpClient, HttpResponse
 
 from scrapy_poet import HttpResponseProvider
+from scrapy_poet.injection import Injector
 from scrapy_poet.page_input_providers import (
     CacheDataProviderMixin,
     HttpClientProvider,
@@ -64,9 +64,9 @@ class PriceHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
     name = "price_html"
     provided_classes = {Price, Html}
 
-    def __init__(self, crawler: Crawler):
-        assert isinstance(crawler, Crawler)
-        super().__init__(crawler)
+    def __init__(self, injector: Injector):
+        assert isinstance(injector, Injector)
+        super().__init__(injector)
 
     def __call__(
         self, to_provide, response: scrapy.http.Response, spider: scrapy.Spider

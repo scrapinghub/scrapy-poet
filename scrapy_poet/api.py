@@ -124,7 +124,7 @@ def callback_for(page_or_item_cls: Type[ItemPage]) -> Callable:
 
     else:
 
-        def parse(*args, item: page_or_item_cls, **kwargs):
+        def parse(*args, item, **kwargs):
             yield item
 
     setattr(parse, _CALLBACK_FOR_MARKER, True)

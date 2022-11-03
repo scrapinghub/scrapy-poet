@@ -11,7 +11,7 @@ from scrapy.http import Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.conf import build_component_list
-from scrapy.utils.defer import deferred_from_coro, maybeDeferred_coro
+from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import create_instance, load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet.pages import is_injectable
@@ -57,7 +57,7 @@ class Injector:
         }
         provider_classes = build_component_list(providers_dict)
         logger.info(f"Loading providers:\n {pprint.pformat(provider_classes)}")
-        self.providers = [load_object(cls)(self.crawler) for cls in provider_classes]
+        self.providers = [load_object(cls)(self) for cls in provider_classes]
         check_all_providers_are_callable(self.providers)
         # Caching whether each provider requires the scrapy response
         self.is_provider_requiring_scrapy_response = {
@@ -141,13 +141,68 @@ class Injector:
             overrides=self.overrides_registry.overrides_for(request).get,
         )
 
+    def provider_requirements(self, request: Request, plan: andi.Plan) -> Set[Any]:
+        """Return a set of classes which indicate any requirements needed by a
+        provider in order to successfully provide for the given ``request`` and
+        ``plan``.
+        """
+        provider_requirements = set()
+        for cls, _ in plan.dependencies:
+            for provider in self.providers:
+                if not provider.is_provided(cls):
+                    continue
+                classes = provider.requirements_for(cls, request)
+                if classes:
+                    provider_requirements.update(set(classes))
+        return provider_requirements
+
+    @inlineCallbacks
+    def build_provider_requirements(
+        self, request: Request, response: Response, plan: andi.Plan
+    ):
+        """This builds out any requirements that a provider might need before
+        calling them.
+
+        The instances that are built here would later be used in andi's
+        'externally_provided' parameter when calling the providers.
+        """
+
+        provider_requirements = self.provider_requirements(request, plan)
+        provider_requirements_instances = (
+            yield from self.build_instances_from_providers(
+                request, response, provider_requirements
+            )
+        )
+
+        # TODO: recursive requirements resolution on POs that need
+        # items which are fulfilled by other POs.
+
+        for prov_req in provider_requirements:
+            for cls, kwargs_spec in andi.plan(prov_req, is_injectable=is_injectable):
+                if cls not in provider_requirements_instances.keys():
+                    provider_requirements_instances[cls] = cls(
+                        **kwargs_spec.kwargs(provider_requirements_instances)
+                    )
+
+        return provider_requirements_instances
+
     @inlineCallbacks
     def build_instances(self, request: Request, response: Response, plan: andi.Plan):
         """Build the instances dict from a plan including external dependencies."""
-        # First we build the external dependencies using the providers
-        instances = yield from self.build_instances_from_providers(
+
+        provider_requirements_instances = yield self.build_provider_requirements(
             request, response, plan
         )
+
+        dependencies = {cls for cls, _ in plan.dependencies}
+
+        instances = yield from self.build_instances_from_providers(
+            request,
+            response,
+            dependencies,
+            externally_provided=provider_requirements_instances,
+        )
+
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
         for cls, kwargs_spec in plan.dependencies:
@@ -158,17 +213,22 @@ class Injector:
 
     @inlineCallbacks
     def build_instances_from_providers(
-        self, request: Request, response: Response, plan: andi.Plan
+        self,
+        request: Request,
+        response: Response,
+        dependencies: Set,
+        externally_provided=None,
     ):
         """Build dependencies handled by registered providers"""
         instances: Dict[Callable, Any] = {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response
         )
-        dependencies_set = {cls for cls, _ in plan.dependencies}
+        externally_provided = externally_provided or {}
+        externally_provided.update(scrapy_provided_dependencies)
         for provider in self.providers:
             provided_classes = {
-                cls for cls in dependencies_set if provider.is_provided(cls)
+                cls for cls in dependencies if provider.is_provided(cls)
             }
             provided_classes -= instances.keys()  # ignore already provided types
             if not provided_classes:
@@ -197,11 +257,11 @@ class Injector:
 
             if not objs:
                 kwargs = andi.plan(
-                    provider,
+                    provider.dynamic_call_signature or provider,
                     is_injectable=is_injectable,
-                    externally_provided=scrapy_provided_dependencies,
+                    externally_provided=externally_provided,
                     full_final_kwargs=False,
-                ).final_kwargs(scrapy_provided_dependencies)
+                ).final_kwargs(externally_provided)
                 try:
 
                     # Invoke the provider to get the data
@@ -246,37 +306,7 @@ class Injector:
         """
         plan = self.build_plan(request)
         provider_instances = yield from self.build_instances(request, response, plan)
-        final_kwargs = plan.final_kwargs(provider_instances)
-        final_kwargs = yield self.convert_po_into_item(request, final_kwargs)
-        return final_kwargs
-
-    @inlineCallbacks
-    def convert_po_into_item(self, request: Request, final_kwargs: dict):
-        """Given a mapping of callback dependencies, call the ``to_item()``
-        method of a dependency to return the requested item.
-        """
-        callback_deps = andi.inspect(get_callback(request, self.spider))
-        rules = self.overrides_registry.rules_overrides_for(request)
-
-        # TODO: Support picking of specific fields based on typing.Annotated
-
-        to_convert = {}
-        for dependencies in callback_deps.values():
-            for dep in dependencies:
-                if (
-                    dep in rules
-                    and rules[dep].to_return == dep
-                    and is_injectable(rules[dep].use)
-                    and getattr(final_kwargs["item"], "to_item", None)
-                ):
-                    to_convert[rules[dep].use] = dep  # map PO => item type
-
-        for name, dep in final_kwargs.items():
-            item_cls = to_convert.get(dep.__class__)
-            if item_cls:
-                final_kwargs[name] = yield deferred_from_coro(dep.to_item())
-
-        return final_kwargs
+        return plan.final_kwargs(provider_instances)
 
 
 def check_all_providers_are_callable(providers):

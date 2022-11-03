@@ -17,6 +17,7 @@ from .overrides import OverridesRegistry
 from .page_input_providers import (
     HttpClientProvider,
     HttpResponseProvider,
+    ItemProvider,
     PageParamsProvider,
     RequestUrlProvider,
     ResponseUrlProvider,
@@ -31,6 +32,7 @@ DEFAULT_PROVIDERS = {
     PageParamsProvider: 700,
     RequestUrlProvider: 800,
     ResponseUrlProvider: 900,
+    ItemProvider: 1000,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")
