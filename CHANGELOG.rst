@@ -10,8 +10,12 @@ TBR
   for ``web_poet.RequestUrl``.
 * Now requires web-poet >= 0.6.0.
 
-    * Updates all examples in the docs and tests from the deprecated
-      ``web_poet.ItemWebPage`` into ``web_poet.WebPage``.
+    * All examples in the docs and tests now use ``web_poet.WebPage``
+      instead of ``web_poet.ItemWebPage``.
+    * The new ``instead_of`` parameter of the ``@handle_urls`` decorator
+      is now preferred instead of the deprecated ``overrides`` parameter.
+    * ``web_poet.callback_for`` doesn't require an implemented ``to_item``
+      method anymore.
     * The Registry now uses ``web_poet.ApplyRule`` instead of
       ``web_poet.OverrideRule``.
 

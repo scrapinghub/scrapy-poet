@@ -25,7 +25,7 @@ class BookPage(WebPage):
     pass
 
 
-@handle_urls("toscrape.com", overrides=BookListPage)
+@handle_urls("toscrape.com", instead_of=BookListPage)
 class BTSBookListPage(BookListPage):
     """Logic to extract listings from pages like https://books.toscrape.com"""
 
@@ -33,7 +33,7 @@ class BTSBookListPage(BookListPage):
         return self.css(".image_container a::attr(href)").getall()
 
 
-@handle_urls("toscrape.com", overrides=BookPage)
+@handle_urls("toscrape.com", instead_of=BookPage)
 class BTSBookPage(BookPage):
     """Logic to extract book info from pages like https://books.toscrape.com/catalogue/soumission_998/index.html"""
 
@@ -44,7 +44,7 @@ class BTSBookPage(BookPage):
         }
 
 
-@handle_urls("bookpage.com", overrides=BookListPage)
+@handle_urls("bookpage.com", instead_of=BookListPage)
 class BPBookListPage(BookListPage):
     """Logic to extract listings from pages like https://bookpage.com/reviews"""
 
@@ -52,7 +52,7 @@ class BPBookListPage(BookListPage):
         return self.css("article.post h4 a::attr(href)").getall()
 
 
-@handle_urls("bookpage.com", overrides=BookPage)
+@handle_urls("bookpage.com", instead_of=BookPage)
 class BPBookPage(BookPage):
     """Logic to extract from pages like https://bookpage.com/reviews/25879-laird-hunt-zorrie-fiction"""
 

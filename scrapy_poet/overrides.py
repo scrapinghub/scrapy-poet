@@ -70,7 +70,7 @@ class OverridesRegistry(OverridesRegistryBase):
     the following code below. It finds all the rules annotated using web-poet_'s
     :py:func:`web_poet.handle_urls` as a decorator that were registered into
     ``web_poet.default_registry`` (an instance of
-    :py:class:`web_poet.rules.PageObjectRegistry`).
+    :py:class:`web_poet.rules.RulesRegistry`).
 
     .. code-block:: python
 

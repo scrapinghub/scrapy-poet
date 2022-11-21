@@ -18,7 +18,7 @@ page.
       rules using tuples and :py:class:`web_poet.ApplyRule`
     - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_03.py>`_:
       rules using :py:func:`web_poet.handle_urls` decorator and retrieving them
-      via :py:meth:`web_poet.PageObjectRegistry.get_rules`
+      via :py:meth:`web_poet.rules.RulesRegistry.get_rules`
 
 Page Objects refinement
 =======================
@@ -140,7 +140,7 @@ Let's see an example:
     from web_poet import handle_urls
 
 
-    @handle_urls("toscrape.com", BookPage)
+    @handle_urls("toscrape.com", instead_of=BookPage)
     class BTSBookPage(BookPage):
 
         def to_item(self):
@@ -155,7 +155,7 @@ for the domain ``toscrape.com``.
 
 In order to configure the ``scrapy-poet`` overrides automatically
 using these annotations, you can directly interact with `web-poet`_'s
-``default_registry`` (an instance of :py:class:`web_poet.PageObjectRegistry`).
+``default_registry`` (an instance of :py:class:`web_poet.rules.RulesRegistry`).
 
 For example:
 
@@ -171,7 +171,7 @@ For example:
     # To get all of the Override Rules that were declared via annotations.
     SCRAPY_POET_OVERRIDES = default_registry.get_rules()
 
-The :py:meth:`web_poet.PageObjectRegistry.get_rules` method of the
+The :py:meth:`web_poet.rules.RulesRegistry.get_rules` method of the
 ``default_registry`` above returns ``List[ApplyRule]`` that were declared
 using `web-poet`_'s :py:func:`web_poet.handle_urls` annotation. This is much
 more convenient that manually defining all of the :py:class:`web_poet.ApplyRule`.
