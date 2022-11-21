@@ -11,8 +11,7 @@ from web_poet.rules import ApplyRule
 
 logger = logging.getLogger(__name__)
 
-PageObject = Type[ItemPage]
-RuleAsTuple = Union[Tuple[str, PageObject, PageObject], List]
+RuleAsTuple = Union[Tuple[str, Type[ItemPage], Type[ItemPage]], List]
 RuleFromUser = Union[RuleAsTuple, ApplyRule]
 
 
@@ -92,7 +91,7 @@ class OverridesRegistry(OverridesRegistryBase):
 
     def __init__(self, rules: Optional[Iterable[RuleFromUser]] = None) -> None:
         self.rules: List[ApplyRule] = []
-        self.matcher: Dict[PageObject, URLMatcher] = defaultdict(URLMatcher)
+        self.matcher: Dict[Type[ItemPage], URLMatcher] = defaultdict(URLMatcher)
         for rule in rules or []:
             self.add_rule(rule)
         logger.debug(f"List of parsed ApplyRules:\n{self.rules}")
