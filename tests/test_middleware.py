@@ -14,7 +14,7 @@ from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
 from web_poet import default_registry
 from web_poet.page_inputs import HttpResponse, RequestUrl, ResponseUrl
-from web_poet.pages import ItemPage, ItemWebPage, WebPage
+from web_poet.pages import ItemPage, WebPage
 
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
 from scrapy_poet.cache import SqlitedictCache
@@ -64,7 +64,7 @@ class BreadcrumbsExtraction(WebPage):
 
 
 @attr.s(auto_attribs=True)
-class ProductPage(ItemWebPage):
+class ProductPage(WebPage):
     breadcrumbs: BreadcrumbsExtraction
 
     def to_item(self):
@@ -118,7 +118,7 @@ def test_overrides(settings):
 
 
 @attr.s(auto_attribs=True)
-class OptionalAndUnionPage(ItemWebPage):
+class OptionalAndUnionPage(WebPage):
     breadcrumbs: BreadcrumbsExtraction
     opt_check_1: Optional[BreadcrumbsExtraction]
     opt_check_2: Optional[str]  # str is not Injectable, so None expected here
@@ -149,7 +149,7 @@ def test_optional_and_unions(settings):
 @attr.s(auto_attribs=True)
 class ProvidedWithDeferred:
     msg: str
-    response: HttpResponse  # it should be None because this class is provided
+    response: Optional[HttpResponse]  # it should be None because this class is provided
 
 
 @attr.s(auto_attribs=True)
@@ -201,7 +201,7 @@ class ExtraClassDataProvider(PageObjectInputProvider):
 
 
 @attr.s(auto_attribs=True)
-class ProvidedWithDeferredPage(ItemWebPage):
+class ProvidedWithDeferredPage(WebPage):
     provided: ProvidedWithDeferred
 
     def to_item(self):
@@ -472,7 +472,7 @@ def test_web_poet_integration(settings):
 
         from web_poet import default_registry
 
-        SCRAPY_POET_OVERRIDES = default_registry.get_overrides()
+        SCRAPY_POET_OVERRIDES = default_registry.get_rules()
     """
 
     # Only import them in this test scope since they need to be synced with
@@ -480,9 +480,9 @@ def test_web_poet_integration(settings):
     from tests.po_lib import PORT, POOverriden
 
     # Override rules are defined in `tests/po_lib/__init__.py`.
-    rules = default_registry.get_overrides()
+    rules = default_registry.get_rules()
 
-    # Converting it to a set removes potential duplicate OverrideRules
+    # Converting it to a set removes potential duplicate ApplyRules
     settings["SCRAPY_POET_OVERRIDES"] = set(rules)
 
     item, url, _ = yield crawl_single_item(

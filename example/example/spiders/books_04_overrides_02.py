@@ -8,8 +8,8 @@ at all is applied.
 """
 import scrapy
 from url_matcher import Patterns
-from web_poet import ItemWebPage, WebPage
-from web_poet.overrides import OverrideRule
+from web_poet import WebPage
+from web_poet.rules import ApplyRule
 
 from scrapy_poet import callback_for
 
@@ -19,9 +19,8 @@ class BookListPage(WebPage):
         return []
 
 
-class BookPage(ItemWebPage):
-    def to_item(self):
-        return None
+class BookPage(WebPage):
+    pass
 
 
 class BTSBookListPage(BookListPage):
@@ -67,12 +66,12 @@ class BooksSpider(scrapy.Spider):
             ("toscrape.com", BTSBookListPage, BookListPage),
             ("toscrape.com", BTSBookPage, BookPage),
             # We could also use the long-form version if we want to.
-            OverrideRule(
+            ApplyRule(
                 for_patterns=Patterns(["bookpage.com"]),
                 use=BPBookListPage,
                 instead_of=BookListPage,
             ),
-            OverrideRule(
+            ApplyRule(
                 for_patterns=Patterns(["bookpage.com"]),
                 use=BPBookPage,
                 instead_of=BookPage,

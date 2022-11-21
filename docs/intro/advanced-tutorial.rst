@@ -48,7 +48,7 @@ Suppose we have the following Page Object:
 
 
     @attr.define
-    class ProductPage(web_poet.ItemWebPage):
+    class ProductPage(web_poet.WebPage):
         http: web_poet.HttpClient
 
         async def to_item(self):
@@ -110,7 +110,7 @@ This basically acts as a switch to update the behavior of the Page Object:
 
 
     @attr.define
-    class ProductPage(web_poet.ItemWebPage):
+    class ProductPage(web_poet.WebPage):
         http: web_poet.HttpClient
         page_params: web_poet.PageParams
 

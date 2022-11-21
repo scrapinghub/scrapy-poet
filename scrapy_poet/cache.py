@@ -16,7 +16,7 @@ class _Cache(abc.ABC):
     def __setitem__(self, fingerprint: str, value) -> None:
         pass
 
-    def close(self):
+    def close(self) -> None:  # noqa: B027
         pass
 
 

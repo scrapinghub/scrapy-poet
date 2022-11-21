@@ -2,7 +2,7 @@
 Scrapy spider which uses Page Objects both for crawling and extraction.
 """
 import scrapy
-from web_poet import ItemWebPage, WebPage
+from web_poet import WebPage
 
 from scrapy_poet import callback_for
 
@@ -12,7 +12,7 @@ class BookListPage(WebPage):
         return self.css(".image_container a::attr(href)").getall()
 
 
-class BookPage(ItemWebPage):
+class BookPage(WebPage):
     def to_item(self):
         return {
             "url": self.url,

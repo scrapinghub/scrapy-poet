@@ -3,10 +3,10 @@ Scrapy spider which uses Page Objects to make extraction code more reusable.
 BookPage is now independent of Scrapy.
 """
 import scrapy
-from web_poet import ItemWebPage
+from web_poet import WebPage
 
 
-class BookPage(ItemWebPage):
+class BookPage(WebPage):
     def to_item(self):
         return {
             "url": self.url,
