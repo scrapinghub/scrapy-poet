@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Callable
 from unittest import mock
 
 import attr
@@ -26,13 +27,13 @@ from tests.utils import (
 
 
 @pytest.fixture
-def scrapy_downloader():
+def scrapy_downloader() -> Callable:
     mock_downloader = AsyncMock()
     return create_scrapy_downloader(mock_downloader)
 
 
 @ensureDeferred
-async def test_incompatible_scrapy_request(scrapy_downloader):
+async def test_incompatible_scrapy_request(scrapy_downloader) -> None:
     """The Request must be web_poet.HttpRequest and not anything else."""
 
     req = scrapy.Request("https://example.com")
@@ -42,7 +43,7 @@ async def test_incompatible_scrapy_request(scrapy_downloader):
 
 
 @pytest.fixture
-def fake_http_response():
+def fake_http_response() -> web_poet.HttpResponse:
     return web_poet.HttpResponse(
         "https://example.com",
         b"some content",
@@ -52,7 +53,7 @@ def fake_http_response():
 
 
 @ensureDeferred
-async def test_scrapy_poet_downloader(fake_http_response):
+async def test_scrapy_poet_downloader(fake_http_response) -> None:
     req = web_poet.HttpRequest("https://example.com")
 
     with mock.patch(
@@ -77,7 +78,7 @@ async def test_scrapy_poet_downloader(fake_http_response):
 
 
 @ensureDeferred
-async def test_scrapy_poet_downloader_ignored_request():
+async def test_scrapy_poet_downloader_ignored_request() -> None:
     """It should handle IgnoreRequest from Scrapy according to the web poet
     standard on additional request error handling."""
     req = web_poet.HttpRequest("https://example.com")
@@ -94,7 +95,7 @@ async def test_scrapy_poet_downloader_ignored_request():
 
 
 @ensureDeferred
-async def test_scrapy_poet_downloader_twisted_error():
+async def test_scrapy_poet_downloader_twisted_error() -> None:
     req = web_poet.HttpRequest("https://example.com")
 
     with mock.patch(
@@ -109,7 +110,7 @@ async def test_scrapy_poet_downloader_twisted_error():
 
 
 @ensureDeferred
-async def test_scrapy_poet_downloader_head_redirect(fake_http_response):
+async def test_scrapy_poet_downloader_head_redirect(fake_http_response) -> None:
     req = web_poet.HttpRequest("https://example.com", method="HEAD")
 
     with mock.patch(
@@ -127,7 +128,7 @@ async def test_scrapy_poet_downloader_head_redirect(fake_http_response):
 
 
 @inlineCallbacks
-def test_additional_requests_success():
+def test_additional_requests_success() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
@@ -164,7 +165,7 @@ def test_additional_requests_success():
 
 
 @inlineCallbacks
-def test_additional_requests_bad_response():
+def test_additional_requests_bad_response() -> None:
     items = []
 
     with MockServer(StatusResource) as server:
@@ -203,7 +204,7 @@ def test_additional_requests_bad_response():
 
 
 @inlineCallbacks
-def test_additional_requests_connection_issue():
+def test_additional_requests_connection_issue() -> None:
     items = []
 
     with mock.patch(
@@ -250,7 +251,7 @@ def test_additional_requests_connection_issue():
 
 
 @inlineCallbacks
-def test_additional_requests_ignored_request():
+def test_additional_requests_ignored_request() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
@@ -307,7 +308,7 @@ def test_additional_requests_ignored_request():
     strict=True,
 )
 @inlineCallbacks
-def test_additional_requests_unhandled_downloader_middleware_exception():
+def test_additional_requests_unhandled_downloader_middleware_exception() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
@@ -353,7 +354,7 @@ def test_additional_requests_unhandled_downloader_middleware_exception():
 
 
 @inlineCallbacks
-def test_additional_requests_dont_filter():
+def test_additional_requests_dont_filter() -> None:
     """Verify that while duplicate regular requests are filtered out,
     additional requests are not (neither relative to the main requests not
     relative to each other).

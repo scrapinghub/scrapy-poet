@@ -30,7 +30,7 @@ class ProductHtml(HtmlResource):
 
 @inlineCallbacks
 @pytest.mark.parametrize("scrapy_class", SCRAPY_PROVIDED_CLASSES)
-def test_scrapy_dependencies_on_providers(scrapy_class, settings):
+def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
     """Scrapy dependencies should be injected into Providers."""
 
     @attr.s(auto_attribs=True)
@@ -41,7 +41,7 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
 
         provided_classes = {PageData}
 
-        def __call__(self, to_provide, obj: scrapy_class):
+        def __call__(self, to_provide, obj: scrapy_class):  # type: ignore[valid-type]
             return [PageData(scrapy_class=scrapy_class.__name__)]
 
     @attr.s(auto_attribs=True)
@@ -77,13 +77,13 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings):
 
 @inlineCallbacks
 @pytest.mark.parametrize("scrapy_class", SCRAPY_PROVIDED_CLASSES)
-def test_scrapy_dependencies_on_page_objects(scrapy_class, settings):
+def test_scrapy_dependencies_on_page_objects(scrapy_class, settings) -> None:
     """Scrapy dependencies should not be injected into Page Objects."""
 
     @attr.s(auto_attribs=True)
     class Page(WebPage):
 
-        scrapy_obj: scrapy_class
+        scrapy_obj: scrapy_class  # type: ignore[valid-type]
 
         def to_item(self):
             return {
