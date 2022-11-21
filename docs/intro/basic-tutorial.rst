@@ -512,7 +512,7 @@ For more info on this, you can refer to these docs:
     * ``scrapy-poet``'s :ref:`overrides` Tutorial section.
     * External `web-poet`_ docs.
 
-        * Specifically, the :external:ref:`intro-overrides` Tutorial section.
+        * Specifically, the :external:ref:`rules-intro` Tutorial section.
 
 Next steps
 ==========

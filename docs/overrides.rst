@@ -129,7 +129,7 @@ along with where it is applied. This can be done by decorating the
 Page Objects with :py:func:`web_poet.handle_urls` provided by `web-poet`_.
 
 .. tip::
-    Make sure to read the :external:ref:`intro-overrides` Tutorial section of
+    Make sure to read the :external:ref:`rules-intro` Tutorial section of
     `web-poet`_ to learn all of its other functionalities that is not covered
     in this section.
 
@@ -183,7 +183,7 @@ Take note that since ``SCRAPY_POET_OVERRIDES`` is structured as
 
     For more info and advanced features of `web-poet`_'s :py:func:`web_poet.handle_urls`
     and its registry, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
-    documentation, specifically its :external:ref:`intro-overrides` tutorial
+    documentation, specifically its :external:ref:`rules-intro` tutorial
     section.
 
 
