@@ -8,7 +8,7 @@ TBR
 * Provider for ``web_poet.ResponseUrl`` is added, which allows to access the
   response URL in the page object. This triggers a download unlike the provider
   for ``web_poet.RequestUrl``.
-* Move from web-poet 0.5.0 to 0.6.0.
+* Now requires web-poet >= 0.6.0.
 
     * Updates all examples in the docs and tests from the deprecated
       ``web_poet.ItemWebPage`` into ``web_poet.WebPage``.
