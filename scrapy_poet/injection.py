@@ -419,7 +419,7 @@ def is_provider_requiring_scrapy_response(provider):
 
 def get_injector_for_testing(
     providers: Mapping,
-    additional_settings: Dict = None,
+    additional_settings: Optional[Dict] = None,
     overrides_registry: Optional[OverridesRegistryBase] = None,
 ) -> Injector:
     """

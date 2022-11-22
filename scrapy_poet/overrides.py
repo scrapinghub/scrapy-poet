@@ -23,8 +23,8 @@ from web_poet.rules import ApplyRule
 
 logger = logging.getLogger(__name__)
 
-PageObject = Type[ItemPage]
-RuleAsTuple = Union[Tuple[str, PageObject, PageObject], List]
+RuleAsTuple = Union[Tuple[str, Type[ItemPage], Type[ItemPage]], List]
+RuleFromUser = Union[RuleAsTuple, ApplyRule]
 
 
 class OverridesRegistryBase(ABC):
@@ -81,7 +81,7 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
     the following code below. It finds all the rules annotated using web-poet_'s
     :py:func:`web_poet.handle_urls` as a decorator that were registered into
     ``web_poet.default_registry`` (an instance of
-    :py:class:`web_poet.rules.PageObjectRegistry`).
+    :py:class:`web_poet.rules.RulesRegistry`).
 
     .. code-block:: python
 
@@ -103,7 +103,9 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
 
     def __init__(self, rules: Optional[Iterable[ApplyRule]] = None) -> None:
         super().__init__(rules=rules)
-        self.overrides_matcher: Dict[PageObject, URLMatcher] = defaultdict(URLMatcher)
+        self.overrides_matcher: Dict[Type[ItemPage], URLMatcher] = defaultdict(
+            URLMatcher
+        )
         self.item_matcher: Dict[Any, URLMatcher] = defaultdict(URLMatcher)
         for rule_id, rule in enumerate(self._rules):
             self.add_rule(rule_id, rule)

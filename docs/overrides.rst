@@ -18,7 +18,7 @@ page.
       rules using tuples and :py:class:`web_poet.ApplyRule`
     - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_03.py>`_:
       rules using :py:func:`web_poet.handle_urls` decorator and retrieving them
-      via :py:meth:`web_poet.PageObjectRegistry.get_rules`
+      via :py:meth:`web_poet.rules.RulesRegistry.get_rules`
 
 Page Objects refinement
 =======================
@@ -129,7 +129,7 @@ along with where it is applied. This can be done by decorating the
 Page Objects with :py:func:`web_poet.handle_urls` provided by `web-poet`_.
 
 .. tip::
-    Make sure to read the :external:ref:`intro-overrides` Tutorial section of
+    Make sure to read the :external:ref:`rules-intro` Tutorial section of
     `web-poet`_ to learn all of its other functionalities that is not covered
     in this section.
 
@@ -140,7 +140,7 @@ Let's see an example:
     from web_poet import handle_urls
 
 
-    @handle_urls("toscrape.com", BookPage)
+    @handle_urls("toscrape.com", instead_of=BookPage)
     class BTSBookPage(BookPage):
 
         def to_item(self):
@@ -155,7 +155,7 @@ for the domain ``toscrape.com``.
 
 In order to configure the ``scrapy-poet`` overrides automatically
 using these annotations, you can directly interact with `web-poet`_'s
-``default_registry`` (an instance of :py:class:`web_poet.PageObjectRegistry`).
+``default_registry`` (an instance of :py:class:`web_poet.rules.RulesRegistry`).
 
 For example:
 
@@ -171,7 +171,7 @@ For example:
     # To get all of the Override Rules that were declared via annotations.
     SCRAPY_POET_OVERRIDES = default_registry.get_rules()
 
-The :py:meth:`web_poet.PageObjectRegistry.get_rules` method of the
+The :py:meth:`web_poet.rules.RulesRegistry.get_rules` method of the
 ``default_registry`` above returns ``List[ApplyRule]`` that were declared
 using `web-poet`_'s :py:func:`web_poet.handle_urls` annotation. This is much
 more convenient that manually defining all of the :py:class:`web_poet.ApplyRule`.
@@ -183,7 +183,7 @@ Take note that since ``SCRAPY_POET_OVERRIDES`` is structured as
 
     For more info and advanced features of `web-poet`_'s :py:func:`web_poet.handle_urls`
     and its registry, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
-    documentation, specifically its :external:ref:`intro-overrides` tutorial
+    documentation, specifically its :external:ref:`rules-intro` tutorial
     section.
 
 
