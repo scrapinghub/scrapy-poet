@@ -1,3 +1,4 @@
+import os
 from inspect import isasyncgenfunction
 from typing import Dict
 from unittest import mock
@@ -6,30 +7,57 @@ from pytest_twisted import inlineCallbacks
 from scrapy import signals
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider
+from scrapy.http import Request, Response
 from scrapy.settings import Settings
+from scrapy.utils.project import inside_project, project_data_dir
 from scrapy.utils.python import to_bytes
 from twisted.internet import reactor
 from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
+from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders
 
-from tests.mockserver import MockServer
+from scrapy_poet.utils.mockserver import MockServer
 
 
-def create_scrapy_settings(request):
-    """Default scrapy-poet settings"""
-    s = dict(
-        # collect scraped items to crawler.spider.collected_items
-        ITEM_PIPELINES={
-            "tests.utils.CollectorPipeline": 100,
-        },
-        DOWNLOADER_MIDDLEWARES={
-            # collect injected dependencies to crawler.spider.collected_response_deps
-            "tests.utils.InjectedDependenciesCollectorMiddleware": 542,
-            "scrapy_poet.InjectionMiddleware": 543,
-        },
+def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
+    """Return a path to a folder where Scrapy is storing data.
+
+    Usually that's a .scrapy folder inside the project.
+    """
+    # This code is extracted from scrapy.utils.project.data_path function,
+    # which does too many things.
+    path = project_data_dir() if inside_project() else default_dir
+    if createdir:
+        os.makedirs(path, exist_ok=True)
+    return path
+
+
+def http_request_to_scrapy_request(request: HttpRequest, **kwargs) -> Request:
+    return Request(
+        url=str(request.url),
+        method=request.method,
+        headers=request.headers,
+        body=request.body,
+        **kwargs,
     )
-    return Settings(s)
+
+
+def scrapy_response_to_http_response(response: Response) -> HttpResponse:
+    """Convenience method to convert a ``scrapy.http.Response`` into a
+    ``web_poet.HttpResponse``.
+    """
+    kwargs = {}
+    encoding = getattr(response, "_encoding", None)
+    if encoding:
+        kwargs["encoding"] = encoding
+    return HttpResponse(
+        url=response.url,
+        body=response.body,
+        status=response.status,
+        headers=HttpResponseHeaders.from_bytes_dict(response.headers),
+        **kwargs,
+    )
 
 
 class HtmlResource(Resource):
@@ -159,6 +187,22 @@ class InjectedDependenciesCollectorMiddleware:
     def process_response(self, request, response, spider):
         spider.collected_response_deps.append(request.cb_kwargs)
         return response
+
+
+def create_scrapy_settings(request):
+    """Default scrapy-poet settings"""
+    s = dict(
+        # collect scraped items to crawler.spider.collected_items
+        ITEM_PIPELINES={
+            CollectorPipeline: 100,
+        },
+        DOWNLOADER_MIDDLEWARES={
+            # collect injected dependencies to crawler.spider.collected_response_deps
+            InjectedDependenciesCollectorMiddleware: 542,
+            "scrapy_poet.InjectionMiddleware": 543,
+        },
+    )
+    return Settings(s)
 
 
 def capture_exceptions(callback):

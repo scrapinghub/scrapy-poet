@@ -19,7 +19,7 @@ from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
     PageParamsProvider,
 )
-from tests.utils import AsyncMock, HtmlResource, crawl_single_item
+from scrapy_poet.utils import AsyncMock, HtmlResource, crawl_single_item
 
 
 class ProductHtml(HtmlResource):

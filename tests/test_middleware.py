@@ -17,8 +17,13 @@ from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl,
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
 from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from tests.mockserver import get_ephemeral_port
-from tests.utils import HtmlResource, capture_exceptions, crawl_items, crawl_single_item
+from scrapy_poet.utils import (
+    HtmlResource,
+    capture_exceptions,
+    crawl_items,
+    crawl_single_item,
+)
+from scrapy_poet.utils.mockserver import get_ephemeral_port
 
 
 class ProductHtml(HtmlResource):

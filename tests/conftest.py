@@ -1,6 +1,6 @@
 import pytest
 
-from tests.utils import create_scrapy_settings
+from scrapy_poet.utils import create_scrapy_settings
 
 
 @pytest.fixture()

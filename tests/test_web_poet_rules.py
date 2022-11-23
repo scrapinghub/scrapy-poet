@@ -28,9 +28,13 @@ from web_poet import (
 
 from scrapy_poet import callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
-from tests.mockserver import get_ephemeral_port
+from scrapy_poet.utils import (
+    capture_exceptions,
+    crawl_single_item,
+    create_scrapy_settings,
+)
+from scrapy_poet.utils.mockserver import get_ephemeral_port
 from tests.test_middleware import ProductHtml
-from tests.utils import capture_exceptions, crawl_single_item, create_scrapy_settings
 
 DOMAIN = get_domain(socket.gethostbyname(socket.gethostname()))
 PORT = get_ephemeral_port()
