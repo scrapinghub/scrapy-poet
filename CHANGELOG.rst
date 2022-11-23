@@ -19,6 +19,9 @@ TBR
     * The Registry now uses ``web_poet.ApplyRule`` instead of
       ``web_poet.OverrideRule``.
 
+* Fixes the error when using ``scrapy shell`` alongside the
+  ``scrapy_poet.InjectionMiddleware``.
+
 
 0.5.1 (2022-07-28)
 ------------------

@@ -53,7 +53,7 @@ class Injector:
     def load_providers(self, default_providers: Optional[Mapping] = None):  # noqa: D102
         providers_dict = {
             **(default_providers or {}),
-            **self.spider.settings.getdict("SCRAPY_POET_PROVIDERS"),
+            **self.crawler.settings.getdict("SCRAPY_POET_PROVIDERS"),
         }
         provider_classes = build_component_list(providers_dict)
         logger.info(f"Loading providers:\n {pprint.pformat(provider_classes)}")
@@ -75,14 +75,14 @@ class Injector:
 
     def init_cache(self):  # noqa: D102
         self.cache = None
-        cache_filename = self.spider.settings.get("SCRAPY_POET_CACHE")
+        cache_filename = self.crawler.settings.get("SCRAPY_POET_CACHE")
         if cache_filename and isinstance(cache_filename, bool):
             cache_filename = os.path.join(
                 get_scrapy_data_path(createdir=True), "scrapy-poet-cache.sqlite3"
             )
         if cache_filename:
-            compressed = self.spider.settings.getbool("SCRAPY_POET_CACHE_GZIP", True)
-            self.caching_errors = self.spider.settings.getbool(
+            compressed = self.crawler.settings.getbool("SCRAPY_POET_CACHE_GZIP", True)
+            self.caching_errors = self.crawler.settings.getbool(
                 "SCRAPY_POET_CACHE_ERRORS", False
             )
             self.cache = SqlitedictCache(cache_filename, compressed=compressed)
@@ -96,7 +96,7 @@ class Injector:
         deps = {
             Crawler: self.crawler,
             Spider: self.spider,
-            Settings: self.spider.settings,
+            Settings: self.crawler.settings,
             StatsCollector: self.crawler.stats,
             Request: request,
             Response: response,
