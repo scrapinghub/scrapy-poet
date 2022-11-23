@@ -321,10 +321,6 @@ def is_callback_requiring_scrapy_response(callback: Callable):
         # Let's assume response is going to be used.
         return True
 
-    if "DeferredResultT" in str(first_parameter.annotation):
-        # Handle case for using `scrapy shell`
-        return True
-
     if first_parameter.annotation is first_parameter.empty:
         # There's no type annotation, so we're probably using response here.
         return True
