@@ -110,26 +110,13 @@ extract a property from the ``to_item`` method:
                 "name": self.title,
             }
 
-Configuring the project
-=======================
-
-To use ``scrapy-poet``, enable its middlewares in ``settings.py``:
-
-.. code-block:: python
-
-    DOWNLOADER_MIDDLEWARES = {
-        "scrapy_poet.InjectionMiddleware": 543,
-    }
-    SPIDER_MIDDLEWARES = {
-        "scrapy_poet.RetryMiddleware": 275,
-    }
-
-
-``BookPage`` class we created previously can be used without ``scrapy-poet``,
+The ``BookPage`` class we created can be used without ``scrapy-poet``,
 and even without Scrapy (note that imports were from ``web_poet`` so far).
+``scrapy-poet`` makes it easy to use `web-poet`_ Page Objects (such as
+``BookPage``) in Scrapy spiders.
 
-``scrapy-poet`` makes it easy to use `web-poet`_ Page Objects
-(such as ``BookPage``) in Scrapy spiders.
+See the :ref:`intro-install` page on how to install and configure ``scrapy-poet``
+in your project.
 
 Changing spider
 ===============

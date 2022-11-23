@@ -18,6 +18,21 @@ If you’re already familiar with installation of Python packages, you can insta
 
 Scrapy 2.6.0 or above is required and it has to be installed separately.
 
+Configuring the project
+=======================
+
+To use ``scrapy-poet``, enable its middlewares in the ``settings.py`` file
+of your Scrapy project:
+
+.. code-block:: python
+
+    DOWNLOADER_MIDDLEWARES = {
+        "scrapy_poet.InjectionMiddleware": 543,
+    }
+    SPIDER_MIDDLEWARES = {
+        "scrapy_poet.RetryMiddleware": 275,
+    }
+
 Things that are good to know
 ============================
 
