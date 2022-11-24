@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="scrapy-poet",
-    version="0.5.1",
+    version="0.6.0",
     description="Page Object pattern for Scrapy",
     long_description=open("README.rst").read(),
     long_description_content_type="text/x-rst",
