@@ -620,6 +620,11 @@ def test_page_object_with_item_dependency() -> None:
     )
     assert_deps(deps, {"page": ProductWithItemDepPage})
 
+    # Calling the  original dependency should still work
+    item, deps = yield crawl_item_and_deps(ItemDependency)
+    assert item == ItemDependency(name="item dependency")
+    assert_deps(deps, {"item": ItemDependency})
+
 
 def test_created_apply_rules() -> None:
     """Checks if the ``ApplyRules`` were created properly by ``@handle_urls`` in

@@ -11,7 +11,7 @@ Splash or Auto Extract API.
 import abc
 import json
 from inspect import isclass
-from typing import Any, Callable, ClassVar, List, Sequence, Set, Union
+from typing import Any, Callable, ClassVar, List, Optional, Sequence, Set, Union
 
 import attr
 from scrapy import Request
@@ -113,7 +113,7 @@ class PageObjectInputProvider:
                 f"'{self}.'. Expected either 'set' or 'callable'"
             )
 
-    def requirements_for(self, cls, request) -> List[Any]:
+    def requirements_for(self, cls, request) -> Optional[List[Any]]:
         """For a provider to work, there might be some additional requirements
         that it needs from its side.
 
@@ -127,8 +127,7 @@ class PageObjectInputProvider:
 
     # TODO: andi could be enhanced to avoid this workaround of declaring a
     # dynamic call signature.
-    @property
-    def dynamic_call_signature(self):
+    def dynamic_call_signature(self, provided_classes, request):
         """Return a function with the call signature to be used instead of
         ``__call__()``.
 
@@ -290,7 +289,6 @@ class ItemProvider(PageObjectInputProvider):
 
     def __init__(self, injector):
         self.registry = injector.overrides_registry
-        self._cached_provider_dependency = None
 
     def provided_classes(self, *args, **kwargs):
         """If the item is in any of the ``to_return`` in the rules, then it can
@@ -303,25 +301,26 @@ class ItemProvider(PageObjectInputProvider):
         # called multiple times by the ``Injector`` when making dependencies.
         return isclass(cls) and self.registry.search(to_return=cls)
 
-    def requirements_for(self, cls, request) -> List[Any]:
+    def requirements_for(self, cls, request) -> Optional[List[Any]]:
         """Return the PO class that is capable of returning the item class
         instance via its ``.to_item()`` method.
 
         ``request`` provides additional context for matching the URL patterns.
         """
-        self._cached_provider_dependency = self.registry.page_object_for_item(
-            request
-        ).get(cls)
-        return [self._cached_provider_dependency]
+        provider_dependency = self.registry.page_object_for_item(request).get(cls)
+        return [provider_dependency]
 
-    @property
-    def dynamic_call_signature(self):
+    def dynamic_call_signature(self, provided_classes, request):
         """This is overridden since we need to accommodate different item classes
         which couldn't be easily declared in the ``__call__()``.
         """
 
-        # Ignore the typing since its dynamic and mypy complains.
-        def func(po: self._cached_provider_dependency):  # type: ignore
+        provided_class = list(provided_classes)[0]
+        provider_dependency = self.requirements_for(provided_class, request)
+        provider_dependency = provider_dependency[0]
+
+        # Ignore the typing since it's dynamic and mypy complains.
+        def func(po: provider_dependency):  # type: ignore
             pass
 
         return func

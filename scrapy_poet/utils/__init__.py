@@ -17,8 +17,6 @@ from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders
 
-from scrapy_poet.utils.mockserver import MockServer
-
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
     """Return a path to a folder where Scrapy is storing data.
@@ -125,6 +123,13 @@ def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None, port=Non
     to the spider as ``url`` argument.
     Return ``(items, resource_url, crawler)`` tuple.
     """
+    # Imported here instead of outside the function to prevent this error:
+    #   RuntimeWarning: 'scrapy_poet.utils.mockserver' found in sys.modules after
+    #   import of package 'scrapy_poet.utils', but prior to execution of
+    #   'scrapy_poet.utils.mockserver'; this may result in unpredictable
+    #   behaviour
+    from scrapy_poet.utils.mockserver import MockServer
+
     spider_kwargs = {} if spider_kwargs is None else spider_kwargs
     crawler = make_crawler(spider_cls, settings)
     with MockServer(resource_cls, port=port) as s:

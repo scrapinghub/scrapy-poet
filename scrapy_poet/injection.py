@@ -167,18 +167,36 @@ class Injector:
         'externally_provided' parameter when calling the providers.
         """
 
+        provider_requirements_instances = {}
         provider_requirements = self.provider_requirements(request, plan)
-        provider_requirements_instances = (
-            yield from self.build_instances_from_providers(
-                request, response, provider_requirements
-            )
-        )
-
-        # TODO: recursive requirements resolution on POs that need
-        # items which are fulfilled by other POs.
 
         for prov_req in provider_requirements:
-            for cls, kwargs_spec in andi.plan(prov_req, is_injectable=is_injectable):
+            sub_plan = andi.plan(
+                prov_req,
+                is_injectable=is_injectable,
+                externally_provided=self.is_class_provided_by_any_provider,
+            )
+
+            # This is a recursive dependency resolution. For example, a PO that
+            # has an item dependency that needs another PO to produce it.
+            instances = yield from self.build_instances(request, response, sub_plan)
+            provider_requirements_instances.update(instances)
+
+            provider_requirements = provider_requirements.union(
+                self.provider_requirements(request, sub_plan)
+            )
+
+        instances = yield from self.build_instances_from_providers(
+            request, response, provider_requirements
+        )
+        provider_requirements_instances.update(instances)
+
+        for prov_req in provider_requirements:
+            for cls, kwargs_spec in andi.plan(
+                prov_req,
+                is_injectable=is_injectable,
+                externally_provided=self.is_class_provided_by_any_provider,
+            ):
                 if cls not in provider_requirements_instances.keys():
                     provider_requirements_instances[cls] = cls(
                         **kwargs_spec.kwargs(provider_requirements_instances)
@@ -257,7 +275,8 @@ class Injector:
 
             if not objs:
                 kwargs = andi.plan(
-                    provider.dynamic_call_signature or provider,
+                    provider.dynamic_call_signature(provided_classes, request)
+                    or provider,
                     is_injectable=is_injectable,
                     externally_provided=externally_provided,
                     full_final_kwargs=False,
