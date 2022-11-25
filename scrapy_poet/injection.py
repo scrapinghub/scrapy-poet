@@ -179,8 +179,9 @@ class Injector:
 
             # This is a recursive dependency resolution. For example, a PO that
             # has an item dependency that needs another PO to produce it.
-            instances = yield from self.build_instances(request, response, sub_plan)
+            instances, provider_instances = yield from self.build_instances(request, response, sub_plan)
             provider_requirements_instances.update(instances)
+            provider_requirements_instances.update(provider_instances)
 
             provider_requirements = provider_requirements.union(
                 self.provider_requirements(request, sub_plan)
@@ -221,13 +222,27 @@ class Injector:
             externally_provided=provider_requirements_instances,
         )
 
+        from pprint import pprint
+        print("\n", "="*40)
+        pprint(plan)
+        print("."*40, "provider_requirements_instances")
+        pprint(provider_requirements_instances)
+        print("."*40, "dependencies")
+        pprint(dependencies)
+        print("."*40, "instances")
+        pprint(instances)
+
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
         for cls, kwargs_spec in plan.dependencies:
-            if cls not in instances.keys():
-                instances[cls] = cls(**kwargs_spec.kwargs(instances))
+            if cls not in instances:
+                if cls in provider_requirements_instances:
+                    instances[cls] = provider_requirements_instances[cls]
+                else:
+                    # FIXME: This part is flakey on the last test
+                    instances[cls] = cls(**kwargs_spec.kwargs(instances))
 
-        return instances
+        return instances, provider_requirements_instances
 
     @inlineCallbacks
     def build_instances_from_providers(
@@ -285,8 +300,12 @@ class Injector:
 
                     # Invoke the provider to get the data
                     objs = yield maybeDeferred_coro(
-                        provider, set(provided_classes), **kwargs
+                        provider, provided_classes, **kwargs
                     )
+
+                    # from tests.test_web_poet_rules import MainProductB, ItemDependency
+                    # if {MainProductB, ItemDependency} == dependencies:
+                        # breakpoint()
 
                 except Exception as e:
                     if (
@@ -324,8 +343,8 @@ class Injector:
         dictionary with the built instances.
         """
         plan = self.build_plan(request)
-        provider_instances = yield from self.build_instances(request, response, plan)
-        return plan.final_kwargs(provider_instances)
+        instances, _ = yield from self.build_instances(request, response, plan)
+        return plan.final_kwargs(instances)
 
 
 def check_all_providers_are_callable(providers):

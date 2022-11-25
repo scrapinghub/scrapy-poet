@@ -589,8 +589,6 @@ def test_page_object_with_item_dependency() -> None:
     by the Page Object assigned in one of the rules' ``use`` parameter.
     """
 
-    # FIXME: This first test case fails
-
     # item from 'to_return'
     item, deps = yield crawl_item_and_deps(MainProductB)
     assert item == MainProductB(
@@ -620,10 +618,87 @@ def test_page_object_with_item_dependency() -> None:
     )
     assert_deps(deps, {"page": ProductWithItemDepPage})
 
-    # Calling the  original dependency should still work
+    # Calling the original dependency should still work
     item, deps = yield crawl_item_and_deps(ItemDependency)
     assert item == ItemDependency(name="item dependency")
     assert_deps(deps, {"item": ItemDependency})
+
+
+@attrs.define
+class MainProductC:
+    name: str
+    item_dependency: ItemDependency
+    main_product_b_dependency: MainProductB
+
+
+@handle_urls(URL)
+@attrs.define
+class ProductDeepDependencyPage(ItemPage[MainProductC]):
+    injected_item: ItemDependency
+    main_product_b_dependency: MainProductB
+
+    @field
+    def name(self) -> str:
+        return "(with deep item dependency) product name"
+
+    @field
+    def item_dependency(self) -> ItemDependency:
+        return self.injected_item
+
+    @field
+    def main_product_b_dependency(self) -> MainProductB:
+        return self.main_product_b_dependency
+
+
+@inlineCallbacks
+def test_page_object_with_deep_item_dependency() -> None:
+    """This builds upon the earlier ``test_page_object_with_item_dependency()``
+    but with another layer of item dependencies.
+    """
+
+    # item from 'to_return'
+    item, deps = yield crawl_item_and_deps(MainProductC)
+    assert item == MainProductC(
+        name="(with deep item dependency) product name",
+        item_dependency=ItemDependency(name="item dependency"),
+        main_product_b_dependency=MainProductB(
+            name="(with item dependency) product name",
+            item_dependency=ItemDependency(name="item dependency"),
+        )
+    )
+    assert_deps(deps, {"item": MainProductC})
+
+    # calling the actual Page Objects should still work
+
+    item, deps = yield crawl_item_and_deps(ProductDeepDependencyPage)
+    assert item == MainProductC(
+        name="(with deep item dependency) product name",
+        item_dependency=ItemDependency(name="item dependency"),
+        main_product_b_dependency=MainProductB(
+            name="(with item dependency) product name",
+            item_dependency=ItemDependency(name="item dependency"),
+        )
+    )
+    assert_deps(deps, {"page": ProductDeepDependencyPage})
+
+    item, deps = yield crawl_item_and_deps(ItemDependencyPage)
+    assert item == ItemDependency(name="item dependency")
+    assert_deps(deps, {"page": ItemDependencyPage})
+
+    item, deps = yield crawl_item_and_deps(ProductWithItemDepPage)
+    assert item == MainProductB(
+        name="(with item dependency) product name",
+        item_dependency=ItemDependency(name="item dependency"),
+    )
+    assert_deps(deps, {"page": ProductWithItemDepPage})
+
+    # Calling the original dependency should still work
+    item, deps = yield crawl_item_and_deps(ItemDependency)
+    assert item == ItemDependency(name="item dependency")
+    assert_deps(deps, {"item": ItemDependency})
+
+
+# TODO: Test for a PO needing 3 items intead of 1
 
 
 def test_created_apply_rules() -> None:
@@ -686,4 +761,5 @@ def test_created_apply_rules() -> None:
             to_return=MainProductB,
             instead_of=ReplacedProductItemDepPage,
         ),
+        ApplyRule(URL, use=ProductDeepDependencyPage, to_return=MainProductC),
     ]

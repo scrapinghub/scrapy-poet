@@ -287,6 +287,8 @@ class ItemProvider(PageObjectInputProvider):
 
     name = "item"
 
+    _prefix_po = "_po_"
+
     def __init__(self, injector):
         self.registry = injector.overrides_registry
 
@@ -315,13 +317,48 @@ class ItemProvider(PageObjectInputProvider):
         which couldn't be easily declared in the ``__call__()``.
         """
 
-        provided_class = list(provided_classes)[0]
-        provider_dependency = self.requirements_for(provided_class, request)
-        provider_dependency = provider_dependency[0]
+        # provided_class = list(provided_classes)[0]
+        # provider_dependency = self.requirements_for(provided_class, request)
+        # provider_dependency = provider_dependency[0]
 
-        # Ignore the typing since it's dynamic and mypy complains.
-        def func(po: provider_dependency):  # type: ignore
-            pass
+        # # Ignore the typing since it's dynamic and mypy complains.
+        # def func(_po_1: provider_dependency):  # type: ignore
+            # pass
+
+        # FIXME: support multiple provided_classes
+
+        provider_dependencies = []
+        for cls in provided_classes:
+            reqs = self.requirements_for(cls, request)
+            provider_dependencies.extend(reqs)
+
+            # FIXME: This doesn't produce correct one
+            # for r in reqs:
+                # if self.provided_classes(r):  # only allow POs
+                    # provider_dependencies.append(r)
+
+        # NOTES: This doesn't work since `dep` instance cannot be referred to
+        # inside the `exec()`.
+        # signature = ""
+        # for i, dep in enumerate(provider_dependencies):
+            # signature += f"{self._prefix_po}{i}: {dep}"
+        # exec("def func(" + signature + "): pass", globals())
+
+        # NOTES: Stopped here; func cannot be returned since it's not existing?
+
+        # TODO: Opt to update andi so we can avoid the following:
+        # andi.plan(
+        #   provider.dynamic_call_signature(provided_classes, request),
+        #   ...
+
+        # TODO: remove this temporary workaround after the following is
+        # addressed: https://github.com/scrapinghub/andi/issues/23
+        if len(provider_dependencies) == 1:
+            def func(_po_0: provider_dependencies[0]):  # type: ignore
+                pass
+        elif len(provider_dependencies) == 2:
+            def func(_po_0: provider_dependencies[0], _po_1: provider_dependencies[1]):  # type: ignore
+                pass
 
         return func
 
@@ -330,5 +367,19 @@ class ItemProvider(PageObjectInputProvider):
         to_provide: Set[Callable],
         **kwargs,
     ):
-        item = await kwargs["po"].to_item()
-        return [item]
+        results = []
+
+        # Find the POs passed via kwargs that start with self._prefix_po
+        for name in kwargs:
+            if not name.startswith(self._prefix_po):
+                continue
+            item = await kwargs[name].to_item()
+            results.append(item)
+        return results
+
+        # FIXME: There might be some POs here that have their '.to_item()'
+        # method called twice, which could be expensive in terms of ARs. The
+        # injector should prevent passing POs that it already has instances
+        # with here.
+
+    # FIXME: to_provide isn't used at all in any provider. Could be refactored.
