@@ -179,6 +179,112 @@ def test_basic_overrides() -> None:
     assert_deps(deps, {"page": ReplacementPage})
 
 
+class ChickenPage(WebPage):
+    async def to_item(self) -> dict:
+        return {"msg": "chicken page"}
+
+
+@handle_urls(URL, instead_of=ChickenPage)
+class EggPage(WebPage):
+    async def to_item(self) -> dict:
+        return {"msg": "egg page"}
+
+
+# We define it here since if made as a decorator, EggPage doesn't exist yet.
+handle_urls(URL, instead_of=EggPage)(ChickenPage)
+
+
+@inlineCallbacks
+def test_mutual_overrides() -> None:
+    """Two Page Objects that override each other should not present any problems.
+
+    In practice, this isn't useful at all.
+
+    FIXME: We could present a warning to the user if this is detected.
+    """
+    item, deps = yield crawl_item_and_deps(ChickenPage)
+    assert item == {"msg": "egg page"}
+    assert_deps(deps, {"page": EggPage})
+
+    item, deps = yield crawl_item_and_deps(EggPage)
+    assert item == {"msg": "chicken page"}
+    assert_deps(deps, {"page": ChickenPage})
+
+
+@handle_urls(URL)
+class NewHopePage(WebPage):
+    async def to_item(self) -> dict:
+        return {"msg": "new hope"}
+
+
+@handle_urls(URL, instead_of=NewHopePage)
+class EmpireStrikesBackPage(WebPage):
+    async def to_item(self) -> dict:
+        return {"msg": "empire strikes back"}
+
+
+@handle_urls(URL, instead_of=EmpireStrikesBackPage)
+class ReturnOfTheJediPage(WebPage):
+    async def to_item(self) -> dict:
+        return {"msg": "return of the jedi"}
+
+
+@inlineCallbacks
+def test_chained_overrides() -> None:
+    """If 3 overrides are connected to each other, there wouldn't be any
+    transitivity than spans 3 POs.
+    """
+    item, deps = yield crawl_item_and_deps(NewHopePage)
+    assert item == {"msg": "empire strikes back"}
+    assert_deps(deps, {"page": EmpireStrikesBackPage})
+
+    # Calling the other PO should still work
+
+    item, deps = yield crawl_item_and_deps(EmpireStrikesBackPage)
+    assert item == {"msg": "return of the jedi"}
+    assert_deps(deps, {"page": ReturnOfTheJediPage})
+
+    item, deps = yield crawl_item_and_deps(ReturnOfTheJediPage)
+    assert item == {"msg": "return of the jedi"}
+    assert_deps(deps, {"page": ReturnOfTheJediPage})
+
+
+@handle_urls(URL)
+class FirstPage(WebPage):
+    async def to_item(self) -> dict:
+        return {"msg": "First page"}
+
+
+@handle_urls(URL)
+class SecondPage(WebPage):
+    async def to_item(self) -> dict:
+        return {"msg": "Second page"}
+
+
+@handle_urls(URL, instead_of=FirstPage)
+@handle_urls(URL, instead_of=SecondPage)
+class MultipleRulePage(WebPage):
+    async def to_item(self) -> dict:
+        return {"msg": "multiple rule page"}
+
+
+@inlineCallbacks
+def test_multiple_rules_single_page_object() -> None:
+    """A single PO could have multiple other rules."""
+    item, deps = yield crawl_item_and_deps(FirstPage)
+    assert item == {"msg": "multiple rule page"}
+    assert_deps(deps, {"page": MultipleRulePage})
+
+    item, deps = yield crawl_item_and_deps(SecondPage)
+    assert item == {"msg": "multiple rule page"}
+    assert_deps(deps, {"page": MultipleRulePage})
+
+    # Calling the replacement should also still work
+    item, deps = yield crawl_item_and_deps(MultipleRulePage)
+    assert item == {"msg": "multiple rule page"}
+    assert_deps(deps, {"page": MultipleRulePage})
+
+
 @attrs.define
 class Product:
     name: str
@@ -589,8 +695,6 @@ def test_page_object_with_item_dependency() -> None:
     by the Page Object assigned in one of the rules' ``use`` parameter.
     """
 
-    # FIXME: This first test case fails
-
     # item from 'to_return'
     item, deps = yield crawl_item_and_deps(MainProductB)
     assert item == MainProductB(
@@ -620,10 +724,88 @@ def test_page_object_with_item_dependency() -> None:
     )
     assert_deps(deps, {"page": ProductWithItemDepPage})
 
-    # Calling the  original dependency should still work
+    # Calling the original dependency should still work
     item, deps = yield crawl_item_and_deps(ItemDependency)
     assert item == ItemDependency(name="item dependency")
     assert_deps(deps, {"item": ItemDependency})
+
+
+@attrs.define
+class MainProductC:
+    name: str
+    item_dependency: ItemDependency
+    main_product_b_dependency: MainProductB
+
+
+@handle_urls(URL)
+@attrs.define
+class ProductDeepDependencyPage(ItemPage[MainProductC]):
+    injected_item: ItemDependency
+    main_product_b_dependency: MainProductB
+
+    @field
+    def name(self) -> str:
+        return "(with deep item dependency) product name"
+
+    @field
+    def item_dependency(self) -> ItemDependency:
+        return self.injected_item
+
+    @field
+    def main_product_b_dependency(self) -> MainProductB:
+        return self.main_product_b_dependency
+
+
+@inlineCallbacks
+def test_page_object_with_deep_item_dependency() -> None:
+    """This builds upon the earlier ``test_page_object_with_item_dependency()``
+    but with another layer of item dependencies.
+    """
+
+    # item from 'to_return'
+    item, deps = yield crawl_item_and_deps(MainProductC)
+    assert item == MainProductC(
+        name="(with deep item dependency) product name",
+        item_dependency=ItemDependency(name="item dependency"),
+        main_product_b_dependency=MainProductB(
+            name="(with item dependency) product name",
+            item_dependency=ItemDependency(name="item dependency"),
+        ),
+    )
+    assert_deps(deps, {"item": MainProductC})
+
+    # calling the actual Page Objects should still work
+
+    item, deps = yield crawl_item_and_deps(ProductDeepDependencyPage)
+    assert item == MainProductC(
+        name="(with deep item dependency) product name",
+        item_dependency=ItemDependency(name="item dependency"),
+        main_product_b_dependency=MainProductB(
+            name="(with item dependency) product name",
+            item_dependency=ItemDependency(name="item dependency"),
+        ),
+    )
+    assert_deps(deps, {"page": ProductDeepDependencyPage})
+
+    item, deps = yield crawl_item_and_deps(ItemDependencyPage)
+    assert item == ItemDependency(name="item dependency")
+    assert_deps(deps, {"page": ItemDependencyPage})
+
+    item, deps = yield crawl_item_and_deps(ProductWithItemDepPage)
+    assert item == MainProductB(
+        name="(with item dependency) product name",
+        item_dependency=ItemDependency(name="item dependency"),
+    )
+    assert_deps(deps, {"page": ProductWithItemDepPage})
+
+    # Calling the original dependency should still work
+    item, deps = yield crawl_item_and_deps(ItemDependency)
+    assert item == ItemDependency(name="item dependency")
+    assert_deps(deps, {"item": ItemDependency})
+
+
+# TODO: Test for a PO needing 3 items intead of 1
+# TODO: deadlock item
 
 
 def test_created_apply_rules() -> None:
@@ -639,6 +821,15 @@ def test_created_apply_rules() -> None:
         ApplyRule("example.com", use=UrlNoMatchPage),
         # PageObject-based rules
         ApplyRule(URL, use=ReplacementPage, instead_of=OverriddenPage),
+        ApplyRule(URL, use=EggPage, instead_of=ChickenPage),
+        ApplyRule(URL, use=ChickenPage, instead_of=EggPage),
+        ApplyRule(URL, use=NewHopePage),
+        ApplyRule(URL, use=EmpireStrikesBackPage, instead_of=NewHopePage),
+        ApplyRule(URL, use=ReturnOfTheJediPage, instead_of=EmpireStrikesBackPage),
+        ApplyRule(URL, use=FirstPage),
+        ApplyRule(URL, use=SecondPage),
+        ApplyRule(URL, use=MultipleRulePage, instead_of=SecondPage),
+        ApplyRule(URL, use=MultipleRulePage, instead_of=FirstPage),
         # Item-based rules
         ApplyRule(URL, use=ProductPage, to_return=Product),
         ApplyRule(URL, use=ParentProductPage, to_return=ProductFromParent),
@@ -686,4 +877,5 @@ def test_created_apply_rules() -> None:
             to_return=MainProductB,
             instead_of=ReplacedProductItemDepPage,
         ),
+        ApplyRule(URL, use=ProductDeepDependencyPage, to_return=MainProductC),
     ]
