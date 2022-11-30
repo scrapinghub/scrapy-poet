@@ -170,27 +170,26 @@ class Injector:
         provider_requirements_instances = {}
         provider_requirements = self.provider_requirements(request, plan)
 
+        # This recursively gets the provider requirements. For example, a PO
+        # that has an item dependency that needs another PO to produce it.
         for prov_req in provider_requirements:
             sub_plan = andi.plan(
                 prov_req,
                 is_injectable=is_injectable,
                 externally_provided=self.is_class_provided_by_any_provider,
             )
-
-            # This is a recursive dependency resolution. For example, a PO that
-            # has an item dependency that needs another PO to produce it.
             instances = yield from self.build_instances(request, response, sub_plan)
             provider_requirements_instances.update(instances)
-
             provider_requirements = provider_requirements.union(
                 self.provider_requirements(request, sub_plan)
             )
 
-        instances = yield from self.build_instances_from_providers(
+        instances_from_providers = yield from self.build_instances_from_providers(
             request, response, provider_requirements
         )
-        provider_requirements_instances.update(instances)
+        provider_requirements_instances.update(instances_from_providers)
 
+        # Now we can build up the provider requirements.
         for prov_req in provider_requirements:
             for cls, kwargs_spec in andi.plan(
                 prov_req,
@@ -208,12 +207,16 @@ class Injector:
     def build_instances(self, request: Request, response: Response, plan: andi.Plan):
         """Build the instances dict from a plan including external dependencies."""
 
+        # If a provider wants to build a Car, the provider can ask for its own
+        # requirements, like a mechanic, some tools, etc. which aren't part of
+        # the car, but rather helps build it.
         provider_requirements_instances = yield self.build_provider_requirements(
             request, response, plan
         )
 
         dependencies = {cls for cls, _ in plan.dependencies}
 
+        # First we build the external dependencies using the providers
         instances = yield from self.build_instances_from_providers(
             request,
             response,

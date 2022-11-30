@@ -234,7 +234,7 @@ def test_providers_returning_wrong_classes(settings, caplog):
     returns instances of classes that they're not supposed to provide.
     """
     yield crawl_single_item(spider_for(ExtraClassData), ProductHtml, settings)
-    assert "raise UndeclaredProvidedTypeError" in caplog.text
+    assert "UndeclaredProvidedTypeError:" in caplog.text
 
 
 class MultiArgsCallbackSpider(scrapy.Spider):

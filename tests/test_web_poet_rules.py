@@ -427,7 +427,7 @@ def test_item_to_return_in_handle_urls(caplog) -> None:
     has received a different type of item class from the page object.
     """
     item, deps = yield crawl_item_and_deps(ReplacedProduct)
-    assert "raise UndeclaredProvidedTypeError" in caplog.text
+    assert "UndeclaredProvidedTypeError:" in caplog.text
     assert item is None
     assert_deps(deps, {}, size=0)
 
@@ -472,7 +472,7 @@ def test_item_to_return_in_handle_urls_subclass(caplog) -> None:
     but the ``to_return`` is declared in the subclass.
     """
     item, deps = yield crawl_item_and_deps(SubclassReplacedProduct)
-    assert "raise UndeclaredProvidedTypeError" in caplog.text
+    assert "UndeclaredProvidedTypeError:" in caplog.text
     assert item is None
     assert_deps(deps, {}, size=0)
 
@@ -510,7 +510,7 @@ def test_item_to_return_standalone(caplog) -> None:
     Page Object doesn't inherit from something like ``ItemPage[ItemClass]``
     """
     item, deps = yield crawl_item_and_deps(StandaloneProduct)
-    assert "raise UndeclaredProvidedTypeError" in caplog.text
+    assert "UndeclaredProvidedTypeError:" in caplog.text
     assert item is None
     assert_deps(deps, {}, size=0)
 
@@ -741,7 +741,7 @@ class MainProductC:
 @attrs.define
 class ProductDeepDependencyPage(ItemPage[MainProductC]):
     injected_item: ItemDependency
-    main_product_b_dependency: MainProductB
+    main_product_b_dependency_item: MainProductB
 
     @field
     def name(self) -> str:
@@ -753,7 +753,7 @@ class ProductDeepDependencyPage(ItemPage[MainProductC]):
 
     @field
     def main_product_b_dependency(self) -> MainProductB:
-        return self.main_product_b_dependency
+        return self.main_product_b_dependency_item
 
 
 @inlineCallbacks
