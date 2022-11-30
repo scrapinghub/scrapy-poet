@@ -804,8 +804,60 @@ def test_page_object_with_deep_item_dependency() -> None:
     assert_deps(deps, {"item": ItemDependency})
 
 
+@attrs.define
+class BluePill:
+    name: str
+    other_pill: str
+
+
+@attrs.define
+class RedPill:
+    name: str
+    other_pill: str
+
+
+@handle_urls(URL)
+@attrs.define
+class BlueDeadlockPage(ItemPage[BluePill]):
+    other_injected_pill: RedPill
+
+    @field
+    def name(self) -> str:
+        return "blue"
+
+    @field
+    def other_pill(self) -> str:
+        return self.other_injected_pill.name
+
+
+@handle_urls(URL)
+@attrs.define
+class RedDeadlockPage(ItemPage[RedPill]):
+    other_injected_pill: BluePill
+
+    @field
+    def name(self) -> str:
+        return "red"
+
+    @field
+    def other_pill(self) -> str:
+        return self.other_injected_pill.name
+
+
+@inlineCallbacks
+def test_page_object_with_item_dependency_deadlock(caplog) -> None:
+    """Items with Page Objects which depend on each other resulting in a deadlock
+    should have a corresponding error raised.
+    """
+
+    item, deps = yield crawl_item_and_deps(BluePill)
+    assert "ProviderDependencyDeadlockError" in caplog.text
+
+    item, deps = yield crawl_item_and_deps(RedPill)
+    assert "ProviderDependencyDeadlockError" in caplog.text
+
+
 # TODO: Test for a PO needing 3 items intead of 1
-# TODO: deadlock item
 
 
 def test_created_apply_rules() -> None:
@@ -878,4 +930,6 @@ def test_created_apply_rules() -> None:
             instead_of=ReplacedProductItemDepPage,
         ),
         ApplyRule(URL, use=ProductDeepDependencyPage, to_return=MainProductC),
+        ApplyRule(URL, use=BlueDeadlockPage, to_return=BluePill),
+        ApplyRule(URL, use=RedDeadlockPage, to_return=RedPill),
     ]

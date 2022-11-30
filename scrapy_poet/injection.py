@@ -21,6 +21,7 @@ from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.injection_errors import (
     InjectionError,
     NonCallableProviderError,
+    ProviderDependencyDeadlockError,
     UndeclaredProvidedTypeError,
 )
 from scrapy_poet.overrides import OverridesRegistry, OverridesRegistryBase
@@ -158,7 +159,11 @@ class Injector:
 
     @inlineCallbacks
     def build_provider_requirements(
-        self, request: Request, response: Response, plan: andi.Plan
+        self,
+        request: Request,
+        response: Response,
+        plan: andi.Plan,
+        seen_plans: List[andi.Plan],
     ):
         """This builds out any requirements that a provider might need before
         calling them.
@@ -178,7 +183,19 @@ class Injector:
                 is_injectable=is_injectable,
                 externally_provided=self.is_class_provided_by_any_provider,
             )
-            instances = yield from self.build_instances(request, response, sub_plan)
+
+            # Detects if there are any deadlocks from non-leaf nodes
+            if len(sub_plan) > 1:
+                if seen_plans and sub_plan in seen_plans:
+                    raise ProviderDependencyDeadlockError(
+                        f"Deadlock detected! A loop has been detected to trying to "
+                        f"resolve this plan: {sub_plan}"
+                    )
+                seen_plans.append(sub_plan)
+
+            instances = yield from self.build_instances(
+                request, response, sub_plan, seen_plans=seen_plans
+            )
             provider_requirements_instances.update(instances)
             provider_requirements = provider_requirements.union(
                 self.provider_requirements(request, sub_plan)
@@ -204,14 +221,20 @@ class Injector:
         return provider_requirements_instances
 
     @inlineCallbacks
-    def build_instances(self, request: Request, response: Response, plan: andi.Plan):
+    def build_instances(
+        self,
+        request: Request,
+        response: Response,
+        plan: andi.Plan,
+        seen_plans: List[andi.Plan],
+    ):
         """Build the instances dict from a plan including external dependencies."""
 
         # If a provider wants to build a Car, the provider can ask for its own
         # requirements, like a mechanic, some tools, etc. which aren't part of
         # the car, but rather helps build it.
         provider_requirements_instances = yield self.build_provider_requirements(
-            request, response, plan
+            request, response, plan, seen_plans
         )
 
         dependencies = {cls for cls, _ in plan.dependencies}
@@ -327,7 +350,9 @@ class Injector:
         dictionary with the built instances.
         """
         plan = self.build_plan(request)
-        instances = yield from self.build_instances(request, response, plan)
+        instances = yield from self.build_instances(
+            request, response, plan, seen_plans=[]
+        )
         return plan.final_kwargs(instances)
 
 

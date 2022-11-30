@@ -12,3 +12,7 @@ class UndeclaredProvidedTypeError(InjectionError):
 
 class MalformedProvidedClassesError(InjectionError):
     pass
+
+
+class ProviderDependencyDeadlockError(InjectionError):
+    pass
