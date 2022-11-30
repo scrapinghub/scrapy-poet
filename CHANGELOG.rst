@@ -2,22 +2,28 @@
 Changelog
 =========
 
-TBR
----
+0.6.0 (2022-11-24)
+------------------
 
-* Provider for ``web_poet.ResponseUrl`` is added, which allows to access the
-  response URL in the page object. This triggers a download unlike the provider
-  for ``web_poet.RequestUrl``.
-* Now requires web-poet >= 0.6.0.
+* Now requires ``web-poet >= 0.6.0``.
 
     * All examples in the docs and tests now use ``web_poet.WebPage``
       instead of ``web_poet.ItemWebPage``.
     * The new ``instead_of`` parameter of the ``@handle_urls`` decorator
       is now preferred instead of the deprecated ``overrides`` parameter.
-    * ``web_poet.callback_for`` doesn't require an implemented ``to_item``
+    * ``scrapy_poet.callback_for`` doesn't require an implemented ``to_item``
       method anymore.
+    * The new ``web_poet.rules.RulesRegistry`` is used instead of the old
+      ``web_poet.overrides.PageObjectRegistry``.
     * The Registry now uses ``web_poet.ApplyRule`` instead of
       ``web_poet.OverrideRule``.
+
+* Provider for ``web_poet.ResponseUrl`` is added, which allows to access the
+  response URL in the page object. This triggers a download unlike the provider
+  for ``web_poet.RequestUrl``.
+* Fixes the error when using ``scrapy shell`` while the
+  ``scrapy_poet.InjectionMiddleware`` is enabled.
+* Fixes and improvements on code and docs.
 
 
 0.5.1 (2022-07-28)
