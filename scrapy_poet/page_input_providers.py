@@ -10,6 +10,7 @@ Splash or Auto Extract API.
 """
 import abc
 import json
+from dataclasses import make_dataclass
 from inspect import isclass
 from typing import Any, Callable, ClassVar, List, Optional, Sequence, Set, Union
 
@@ -127,6 +128,7 @@ class PageObjectInputProvider:
 
     # TODO: andi could be enhanced to avoid this workaround of declaring a
     # dynamic call signature.
+    # https://github.com/scrapinghub/andi/issues/23
     def dynamic_call_signature(self, provided_classes, request):
         """Return a function with the call signature to be used instead of
         ``__call__()``.
@@ -142,7 +144,7 @@ class PageObjectInputProvider:
         """
         pass
 
-    # FIXME: Can't import the class annotation due to circular dep.
+    # FIXME: Can't import the Injector as class annotation due to circular dep.
     def __init__(self, injector):
         """Initializes the provider. Invoked only at spider start up."""
         pass
@@ -287,6 +289,8 @@ class ItemProvider(PageObjectInputProvider):
 
     name = "item"
 
+    _prefix_po = "_po_"
+
     def __init__(self, injector):
         self.registry = injector.overrides_registry
 
@@ -301,34 +305,50 @@ class ItemProvider(PageObjectInputProvider):
         # called multiple times by the ``Injector`` when making dependencies.
         return isclass(cls) and self.registry.search(to_return=cls)
 
-    def requirements_for(self, cls, request) -> Optional[List[Any]]:
+    def requirements_for(self, cls, request) -> List[Any]:
         """Return the PO class that is capable of returning the item class
         instance via its ``.to_item()`` method.
 
         ``request`` provides additional context for matching the URL patterns.
         """
         provider_dependency = self.registry.page_object_for_item(request).get(cls)
-        return [provider_dependency]
+        if provider_dependency:
+            return [provider_dependency]
+        return []
 
     def dynamic_call_signature(self, provided_classes, request):
         """This is overridden since we need to accommodate different item classes
         which couldn't be easily declared in the ``__call__()``.
         """
 
-        provided_class = list(provided_classes)[0]
-        provider_dependency = self.requirements_for(provided_class, request)
-        provider_dependency = provider_dependency[0]
+        provider_dependencies = []
 
-        # Ignore the typing since it's dynamic and mypy complains.
-        def func(po: provider_dependency):  # type: ignore
-            pass
+        for i, cls in enumerate(provided_classes):
+            for dep in self.requirements_for(cls, request):
+                provider_dependencies.append((f"{self._prefix_po}{i}", dep))
 
-        return func
+        # https://github.com/scrapinghub/andi/issues/23#issuecomment-1331682180
+        proxy_signature = make_dataclass("ProxySignature", provider_dependencies)
+
+        return proxy_signature
 
     async def __call__(
         self,
         to_provide: Set[Callable],
         **kwargs,
     ):
-        item = await kwargs["po"].to_item()
-        return [item]
+        results = []
+
+        # Find the POs passed via kwargs that start with self._prefix_po
+        for name in kwargs:
+            if name.startswith(self._prefix_po):
+                item = await kwargs[name].to_item()
+                results.append(item)
+        return results
+
+        # FIXME: There might be some POs here that have their '.to_item()'
+        # method called twice, which could be expensive in terms of ARs. The
+        # injector should prevent passing POs that it already has instances
+        # with here.
+
+    # FIXME: to_provide isn't used at all in any provider. Could be refactored.

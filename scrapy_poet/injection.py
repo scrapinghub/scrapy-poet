@@ -224,7 +224,7 @@ class Injector:
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
         for cls, kwargs_spec in plan.dependencies:
-            if cls not in instances.keys():
+            if cls not in instances:
                 instances[cls] = cls(**kwargs_spec.kwargs(instances))
 
         return instances
@@ -324,8 +324,8 @@ class Injector:
         dictionary with the built instances.
         """
         plan = self.build_plan(request)
-        provider_instances = yield from self.build_instances(request, response, plan)
-        return plan.final_kwargs(provider_instances)
+        instances = yield from self.build_instances(request, response, plan)
+        return plan.final_kwargs(instances)
 
 
 def check_all_providers_are_callable(providers):
