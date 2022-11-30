@@ -193,7 +193,9 @@ class TestInjector:
         response = get_response_for_testing(callback)
         request = response.request
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances(request, response, plan)
+        instances = yield from injector.build_instances(
+            request, response, plan, seen_plans=[]
+        )
         assert instances == {
             Cls1: Cls1(),
             Cls2: Cls2(),
