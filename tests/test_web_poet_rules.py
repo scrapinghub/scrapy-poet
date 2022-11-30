@@ -7,6 +7,7 @@ module.
 """
 
 import socket
+from collections import defaultdict
 from typing import Any, Type
 
 import attrs
@@ -59,6 +60,36 @@ def spider_for(injectable: Type):
             yield scrapy.Request(self.url, capture_exceptions(callback_for(injectable)))
 
     return InjectableSpider
+
+
+class PageObjectCounterMixin:
+    """Inherited by some POs in a few of the tests which has a deep dependency
+    tree.
+
+    This is mostly used to ensure that class instances are not duplicated when
+    building out the dependency tree as they could get expensive.
+
+    For example, a PO could have its ``.to_item()`` method called multiple times
+    to produce the same item. This is extremely wasteful should there be any
+    additional requests used to produce the item.
+
+    The dependency resolution inside the ``Injector`` should cache up such
+    instances and prevent them from being built again.
+    """
+
+    instances = defaultdict(list)
+    to_item_call_count = 0
+
+    def __attrs_pre_init__(self):
+        self.instances[type(self)].append(self)
+
+    @classmethod
+    def assert_instance_count(cls, count, type_):
+        assert len(cls.instances[type_]) == count, type_
+
+    @classmethod
+    def clear_instances(cls):
+        cls.instances = defaultdict(list)
 
 
 @inlineCallbacks
@@ -658,8 +689,11 @@ class ItemDependency:
     name: str
 
 
+# TODO: test this with WebPage which results in deadlock error
+
 @handle_urls(URL)
-class ItemDependencyPage(ItemPage[ItemDependency]):
+@attrs.define
+class ItemDependencyPage(ItemPage[ItemDependency], PageObjectCounterMixin):
     @field
     def name(self) -> str:
         return "item dependency"
@@ -677,7 +711,7 @@ class ReplacedProductItemDepPage(ItemPage):
 
 @handle_urls(URL, instead_of=ReplacedProductItemDepPage)
 @attrs.define
-class ProductWithItemDepPage(ItemPage[MainProductB]):
+class ProductWithItemDepPage(ItemPage[MainProductB], PageObjectCounterMixin):
     injected_item: ItemDependency
 
     @field
@@ -739,7 +773,7 @@ class MainProductC:
 
 @handle_urls(URL)
 @attrs.define
-class ProductDeepDependencyPage(ItemPage[MainProductC]):
+class ProductDeepDependencyPage(ItemPage[MainProductC], PageObjectCounterMixin):
     injected_item: ItemDependency
     main_product_b_dependency_item: MainProductB
 
@@ -763,6 +797,7 @@ def test_page_object_with_deep_item_dependency() -> None:
     """
 
     # item from 'to_return'
+    PageObjectCounterMixin.clear_instances()
     item, deps = yield crawl_item_and_deps(MainProductC)
     assert item == MainProductC(
         name="(with deep item dependency) product name",
@@ -773,9 +808,13 @@ def test_page_object_with_deep_item_dependency() -> None:
         ),
     )
     assert_deps(deps, {"item": MainProductC})
+    PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductWithItemDepPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductDeepDependencyPage)
 
     # calling the actual Page Objects should still work
 
+    PageObjectCounterMixin.clear_instances()
     item, deps = yield crawl_item_and_deps(ProductDeepDependencyPage)
     assert item == MainProductC(
         name="(with deep item dependency) product name",
@@ -786,22 +825,49 @@ def test_page_object_with_deep_item_dependency() -> None:
         ),
     )
     assert_deps(deps, {"page": ProductDeepDependencyPage})
+    PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductWithItemDepPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductDeepDependencyPage)
 
+    PageObjectCounterMixin.clear_instances()
     item, deps = yield crawl_item_and_deps(ItemDependencyPage)
     assert item == ItemDependency(name="item dependency")
     assert_deps(deps, {"page": ItemDependencyPage})
+    PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
+    PageObjectCounterMixin.assert_instance_count(0, ProductWithItemDepPage)
+    PageObjectCounterMixin.assert_instance_count(0, ProductDeepDependencyPage)
 
+    PageObjectCounterMixin.clear_instances()
     item, deps = yield crawl_item_and_deps(ProductWithItemDepPage)
     assert item == MainProductB(
         name="(with item dependency) product name",
         item_dependency=ItemDependency(name="item dependency"),
     )
     assert_deps(deps, {"page": ProductWithItemDepPage})
+    PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductWithItemDepPage)
+    PageObjectCounterMixin.assert_instance_count(0, ProductDeepDependencyPage)
 
-    # Calling the original dependency should still work
+    # Calling the other item dependencies should still work
+
+    PageObjectCounterMixin.clear_instances()
+    item, deps = yield crawl_item_and_deps(MainProductB)
+    assert item == MainProductB(
+        name="(with item dependency) product name",
+        item_dependency=ItemDependency(name="item dependency"),
+    )
+    assert_deps(deps, {"item": MainProductB})
+    PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductWithItemDepPage)
+    PageObjectCounterMixin.assert_instance_count(0, ProductDeepDependencyPage)
+
+    PageObjectCounterMixin.clear_instances()
     item, deps = yield crawl_item_and_deps(ItemDependency)
     assert item == ItemDependency(name="item dependency")
     assert_deps(deps, {"item": ItemDependency})
+    PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
+    PageObjectCounterMixin.assert_instance_count(0, ProductWithItemDepPage)
+    PageObjectCounterMixin.assert_instance_count(0, ProductDeepDependencyPage)
 
 
 @attrs.define

@@ -193,10 +193,12 @@ class Injector:
                     )
                 seen_plans.append(sub_plan)
 
-            instances = yield from self.build_instances(
+            instances, provider_instances = yield from self.build_instances(
                 request, response, sub_plan, seen_plans=seen_plans
             )
             provider_requirements_instances.update(instances)
+            provider_requirements_instances.update(provider_instances)
+
             provider_requirements = provider_requirements.union(
                 self.provider_requirements(request, sub_plan)
             )
@@ -251,9 +253,12 @@ class Injector:
         # following the andi plan.
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances:
-                instances[cls] = cls(**kwargs_spec.kwargs(instances))
+                if cls in provider_requirements_instances:
+                    instances[cls] = provider_requirements_instances[cls]
+                else:
+                    instances[cls] = cls(**kwargs_spec.kwargs(instances))
 
-        return instances
+        return instances, provider_requirements_instances
 
     @inlineCallbacks
     def build_instances_from_providers(
@@ -350,7 +355,7 @@ class Injector:
         dictionary with the built instances.
         """
         plan = self.build_plan(request)
-        instances = yield from self.build_instances(
+        instances, _ = yield from self.build_instances(
             request, response, plan, seen_plans=[]
         )
         return plan.final_kwargs(instances)

@@ -193,7 +193,7 @@ class TestInjector:
         response = get_response_for_testing(callback)
         request = response.request
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances(
+        instances, provider_instances = yield from injector.build_instances(
             request, response, plan, seen_plans=[]
         )
         assert instances == {
@@ -203,6 +203,7 @@ class TestInjector:
             ClsReqResponse: ClsReqResponse(),
             ClsNoProviderRequired: ClsNoProviderRequired(),
         }
+        assert provider_instances == {}
 
         dependencies = {cls for cls, _ in plan.dependencies}
         instances = yield from injector.build_instances_from_providers(
