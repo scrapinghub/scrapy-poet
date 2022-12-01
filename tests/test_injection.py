@@ -194,7 +194,7 @@ class TestInjector:
         request = response.request
         plan = injector.build_plan(response.request)
         instances, provider_instances = yield from injector.build_instances(
-            request, response, plan, seen_plans=[]
+            request, response, plan
         )
         assert instances == {
             Cls1: Cls1(),
