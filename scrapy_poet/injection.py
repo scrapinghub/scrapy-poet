@@ -270,7 +270,16 @@ class Injector:
             provided_classes = {
                 cls for cls in dependencies if provider.is_provided(cls)
             }
-            provided_classes -= instances.keys()  # ignore already provided types
+
+            # Ignore already provided types from other providers.
+            provided_classes -= instances.keys()
+
+            # Ignore instances that are already provided from past recursive runs.
+            for prov_cls in provided_classes:
+                if prov_cls in externally_provided:
+                    instances[prov_cls] = externally_provided[prov_cls]
+            provided_classes = provided_classes - set(externally_provided.keys())
+
             if not provided_classes:
                 continue
 
