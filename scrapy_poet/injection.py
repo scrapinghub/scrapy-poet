@@ -163,7 +163,6 @@ class Injector:
         request: Request,
         response: Response,
         plan: andi.Plan,
-        seen_plans: List[andi.Plan],
     ):
         """This builds out any requirements that a provider might need before
         calling them.
@@ -184,18 +183,16 @@ class Injector:
                 externally_provided=self.is_class_provided_by_any_provider,
             )
 
-            # Detects if there are any deadlocks from non-leaf nodes
-            if len(sub_plan) > 1:
-                if seen_plans and sub_plan in seen_plans:
-                    raise ProviderDependencyDeadlockError(
-                        f"Deadlock detected! A loop has been detected to trying to "
-                        f"resolve this plan: {sub_plan}"
-                    )
-                seen_plans.append(sub_plan)
+            try:
+                instances, provider_instances = yield from self.build_instances(
+                    request, response, sub_plan
+                )
+            except RecursionError:
+                raise ProviderDependencyDeadlockError(
+                    f"Deadlock detected! A loop has been detected to trying to "
+                    f"resolve this plan: {sub_plan}"
+                )
 
-            instances, provider_instances = yield from self.build_instances(
-                request, response, sub_plan, seen_plans=seen_plans
-            )
             provider_requirements_instances.update(instances)
             provider_requirements_instances.update(provider_instances)
 
@@ -223,20 +220,14 @@ class Injector:
         return provider_requirements_instances
 
     @inlineCallbacks
-    def build_instances(
-        self,
-        request: Request,
-        response: Response,
-        plan: andi.Plan,
-        seen_plans: List[andi.Plan],
-    ):
+    def build_instances(self, request: Request, response: Response, plan: andi.Plan):
         """Build the instances dict from a plan including external dependencies."""
 
         # If a provider wants to build a Car, the provider can ask for its own
         # requirements, like a mechanic, some tools, etc. which aren't part of
         # the car, but rather helps build it.
         provider_requirements_instances = yield self.build_provider_requirements(
-            request, response, plan, seen_plans
+            request, response, plan
         )
 
         dependencies = {cls for cls, _ in plan.dependencies}
@@ -355,9 +346,7 @@ class Injector:
         dictionary with the built instances.
         """
         plan = self.build_plan(request)
-        instances, _ = yield from self.build_instances(
-            request, response, plan, seen_plans=[]
-        )
+        instances, _ = yield from self.build_instances(request, response, plan)
         return plan.final_kwargs(instances)
 
 

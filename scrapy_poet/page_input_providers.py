@@ -328,9 +328,9 @@ class ItemProvider(PageObjectInputProvider):
                 provider_dependencies.append((f"{self._prefix_po}{i}", dep))
 
         # https://github.com/scrapinghub/andi/issues/23#issuecomment-1331682180
-        proxy_signature = make_dataclass("ProxySignature", provider_dependencies)
+        fake_call_signature = make_dataclass("ProxySignature", provider_dependencies)
 
-        return proxy_signature
+        return fake_call_signature
 
     async def __call__(
         self,
@@ -345,10 +345,5 @@ class ItemProvider(PageObjectInputProvider):
                 item = await kwargs[name].to_item()
                 results.append(item)
         return results
-
-        # FIXME: There might be some POs here that have their '.to_item()'
-        # method called twice, which could be expensive in terms of ARs. The
-        # injector should prevent passing POs that it already has instances
-        # with here.
 
     # FIXME: to_provide isn't used at all in any provider. Could be refactored.
