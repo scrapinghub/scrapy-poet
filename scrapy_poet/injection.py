@@ -163,6 +163,7 @@ class Injector:
         request: Request,
         response: Response,
         plan: andi.Plan,
+        cached_instances: Optional[Dict[Callable[..., Any], Any]] = None,
     ):
         """This builds out any requirements that a provider might need before
         calling them.
@@ -171,7 +172,8 @@ class Injector:
         'externally_provided' parameter when calling the providers.
         """
 
-        provider_requirements_instances = {}
+        cached_instances = cached_instances or {}
+
         provider_requirements = self.provider_requirements(request, plan)
 
         # This recursively gets the provider requirements. For example, a PO
@@ -184,8 +186,8 @@ class Injector:
             )
 
             try:
-                instances, provider_instances = yield from self.build_instances(
-                    request, response, sub_plan
+                instances = yield from self.build_instances(
+                    request, response, sub_plan, cached_instances=cached_instances
                 )
             except RecursionError:
                 raise ProviderDependencyDeadlockError(
@@ -193,17 +195,19 @@ class Injector:
                     f"resolve this plan: {sub_plan}"
                 )
 
-            provider_requirements_instances.update(instances)
-            provider_requirements_instances.update(provider_instances)
+            cached_instances.update(instances)
 
             provider_requirements = provider_requirements.union(
                 self.provider_requirements(request, sub_plan)
             )
 
         instances_from_providers = yield from self.build_instances_from_providers(
-            request, response, provider_requirements
+            request,
+            response,
+            provider_requirements,
+            externally_provided=cached_instances,
         )
-        provider_requirements_instances.update(instances_from_providers)
+        cached_instances.update(instances_from_providers)
 
         # Now we can build up the provider requirements.
         for prov_req in provider_requirements:
@@ -212,23 +216,29 @@ class Injector:
                 is_injectable=is_injectable,
                 externally_provided=self.is_class_provided_by_any_provider,
             ):
-                if cls not in provider_requirements_instances.keys():
-                    provider_requirements_instances[cls] = cls(
-                        **kwargs_spec.kwargs(provider_requirements_instances)
-                    )
+                if cls not in cached_instances.keys():
+                    cached_instances[cls] = cls(**kwargs_spec.kwargs(cached_instances))
 
-        return provider_requirements_instances
+        return cached_instances
 
     @inlineCallbacks
-    def build_instances(self, request: Request, response: Response, plan: andi.Plan):
+    def build_instances(
+        self,
+        request: Request,
+        response: Response,
+        plan: andi.Plan,
+        cached_instances: Dict[Callable[..., Any], Any],
+    ):
         """Build the instances dict from a plan including external dependencies."""
 
         # If a provider wants to build a Car, the provider can ask for its own
         # requirements, like a mechanic, some tools, etc. which aren't part of
         # the car, but rather helps build it.
         provider_requirements_instances = yield self.build_provider_requirements(
-            request, response, plan
+            request, response, plan, cached_instances=cached_instances
         )
+
+        cached_instances.update(provider_requirements_instances)
 
         dependencies = {cls for cls, _ in plan.dependencies}
 
@@ -237,19 +247,19 @@ class Injector:
             request,
             response,
             dependencies,
-            externally_provided=provider_requirements_instances,
+            externally_provided=cached_instances,
         )
 
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances:
-                if cls in provider_requirements_instances:
-                    instances[cls] = provider_requirements_instances[cls]
+                if cls in cached_instances:
+                    instances[cls] = cached_instances[cls]
                 else:
                     instances[cls] = cls(**kwargs_spec.kwargs(instances))
 
-        return instances, provider_requirements_instances
+        return instances
 
     @inlineCallbacks
     def build_instances_from_providers(
@@ -355,7 +365,9 @@ class Injector:
         dictionary with the built instances.
         """
         plan = self.build_plan(request)
-        instances, _ = yield from self.build_instances(request, response, plan)
+        instances = yield from self.build_instances(
+            request, response, plan, cached_instances={}
+        )
         return plan.final_kwargs(instances)
 
 

@@ -217,19 +217,20 @@ def test_basic_overrides() -> None:
     assert_deps(deps, {"page": ReplacementPage})
 
 
-class ChickenPage(WebPage):
+class LeftPage(WebPage):
     async def to_item(self) -> dict:
-        return {"msg": "chicken page"}
+        return {"msg": "left page"}
 
 
-@handle_urls(URL, instead_of=ChickenPage)
-class EggPage(WebPage):
+@handle_urls(URL, instead_of=LeftPage)
+class RightPage(WebPage):
     async def to_item(self) -> dict:
-        return {"msg": "egg page"}
+        return {"msg": "right page"}
 
 
-# We define it here since if made as a decorator, EggPage doesn't exist yet.
-handle_urls(URL, instead_of=EggPage)(ChickenPage)
+# We define it here since it errors out if made as a decorator
+# since RightPage doesn't exist yet.
+handle_urls(URL, instead_of=RightPage)(LeftPage)
 
 
 @inlineCallbacks
@@ -238,15 +239,15 @@ def test_mutual_overrides() -> None:
 
     In practice, this isn't useful at all.
 
-    FIXME: We could present a warning to the user if this is detected.
+    TODO: We could present a warning to the user if this is detected.
     """
-    item, deps = yield crawl_item_and_deps(ChickenPage)
-    assert item == {"msg": "egg page"}
-    assert_deps(deps, {"page": EggPage})
+    item, deps = yield crawl_item_and_deps(LeftPage)
+    assert item == {"msg": "right page"}
+    assert_deps(deps, {"page": RightPage})
 
-    item, deps = yield crawl_item_and_deps(EggPage)
-    assert item == {"msg": "chicken page"}
-    assert_deps(deps, {"page": ChickenPage})
+    item, deps = yield crawl_item_and_deps(RightPage)
+    assert item == {"msg": "left page"}
+    assert_deps(deps, {"page": LeftPage})
 
 
 @handle_urls(URL)
@@ -894,43 +895,127 @@ def test_page_object_with_deep_item_dependency() -> None:
 
 
 @attrs.define
-class BluePill:
+class MainProductD:
     name: str
-    other_pill: str
-
-
-@attrs.define
-class RedPill:
-    name: str
-    other_pill: str
+    item_dependency: ItemDependency
+    main_product_b_dependency: MainProductB
+    first_main_product_c_dependency: MainProductC
+    # second_main_product_c_dependency: MainProductC
 
 
 @handle_urls(URL)
 @attrs.define
-class BlueDeadlockPage(ItemPage[BluePill]):
-    other_injected_pill: RedPill
+class ProductDuplicateDeepDependencyPage(PageObjectCounterMixin, ItemPage[MainProductD]):
+    injected_item: ItemDependency
+    main_product_b_dependency_item: MainProductB
+    first_main_product_c_dependency_item: MainProductC
+    # second_main_product_c_dependency_item: MainProductC
 
     @field
     def name(self) -> str:
-        return "blue"
+        return "(with duplicate deep item dependency) product name"
 
     @field
-    def other_pill(self) -> str:
-        return self.other_injected_pill.name
+    def item_dependency(self) -> ItemDependency:
+        return self.injected_item
+
+    @field
+    def main_product_b_dependency(self) -> MainProductB:
+        return self.main_product_b_dependency_item
+
+    @field
+    def first_main_product_c_dependency(self) -> MainProductC:
+        return self.first_main_product_c_dependency_item
+
+    # @field
+    # def second_main_product_c_dependency(self) -> MainProductC:
+        # return self.second_main_product_c_dependency_item
+
+
+@inlineCallbacks
+def test_page_object_with_duplicate_deep_item_dependency() -> None:
+    """This yet builds upon the earlier ``test_page_object_with_deep_item_dependency()``
+    making it deeper.
+
+    However, this one has some duplicated dependencies
+    """
+
+    # item from 'to_return'
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(MainProductD)
+    assert item == MainProductD(
+        name="(with duplicate deep item dependency) product name",
+        item_dependency=ItemDependency(name="item dependency"),
+        main_product_b_dependency=MainProductB(
+            name="(with item dependency) product name",
+            item_dependency=ItemDependency(name="item dependency"),
+        ),
+        first_main_product_c_dependency=MainProductC(
+            name="(with deep item dependency) product name",
+            item_dependency=ItemDependency(name="item dependency"),
+            main_product_b_dependency=MainProductB(
+                name="(with item dependency) product name",
+                item_dependency=ItemDependency(name="item dependency"),
+            )
+        ),
+        # second_main_product_c_dependency=MainProductC(
+            # name="(with deep item dependency) product name",
+            # item_dependency=ItemDependency(name="item dependency"),
+            # main_product_b_dependency=MainProductB(
+                # name="(with item dependency) product name",
+                # item_dependency=ItemDependency(name="item dependency"),
+            # )
+        # )
+    )
+    assert_deps(deps, {"item": MainProductD})
+    PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductWithItemDepPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductDeepDependencyPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductDuplicateDeepDependencyPage)
+    assert ItemDependencyPage.to_item_call_count == 1
+    assert ProductWithItemDepPage.to_item_call_count == 1
+    assert ProductDeepDependencyPage.to_item_call_count == 1
+    assert ProductDuplicateDeepDependencyPage.to_item_call_count == 1
+
+
+@attrs.define
+class ChickenPage:
+    name: str
+    other: str
+
+
+@attrs.define
+class EggPage:
+    name: str
+    other: str
 
 
 @handle_urls(URL)
 @attrs.define
-class RedDeadlockPage(ItemPage[RedPill]):
-    other_injected_pill: BluePill
+class ChickenDeadlockPage(ItemPage[ChickenPage]):
+    other_injected: EggPage
 
     @field
     def name(self) -> str:
-        return "red"
+        return "chicken"
 
     @field
-    def other_pill(self) -> str:
-        return self.other_injected_pill.name
+    def other(self) -> str:
+        return self.other_injected.name
+
+
+@handle_urls(URL)
+@attrs.define
+class EggDeadlockPage(ItemPage[EggPage]):
+    other_injected: ChickenPage
+
+    @field
+    def name(self) -> str:
+        return "egg"
+
+    @field
+    def other(self) -> str:
+        return self.other_injected.name
 
 
 @inlineCallbacks
@@ -939,14 +1024,11 @@ def test_page_object_with_item_dependency_deadlock(caplog) -> None:
     should have a corresponding error raised.
     """
 
-    item, deps = yield crawl_item_and_deps(BluePill)
+    item, deps = yield crawl_item_and_deps(ChickenPage)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
-    item, deps = yield crawl_item_and_deps(RedPill)
+    item, deps = yield crawl_item_and_deps(EggPage)
     assert "ProviderDependencyDeadlockError" in caplog.text
-
-
-# TODO: Test for a PO needing 3 items intead of 1
 
 
 def test_created_apply_rules() -> None:
@@ -962,8 +1044,8 @@ def test_created_apply_rules() -> None:
         ApplyRule("example.com", use=UrlNoMatchPage),
         # PageObject-based rules
         ApplyRule(URL, use=ReplacementPage, instead_of=OverriddenPage),
-        ApplyRule(URL, use=EggPage, instead_of=ChickenPage),
-        ApplyRule(URL, use=ChickenPage, instead_of=EggPage),
+        ApplyRule(URL, use=RightPage, instead_of=LeftPage),
+        ApplyRule(URL, use=LeftPage, instead_of=RightPage),
         ApplyRule(URL, use=NewHopePage),
         ApplyRule(URL, use=EmpireStrikesBackPage, instead_of=NewHopePage),
         ApplyRule(URL, use=ReturnOfTheJediPage, instead_of=EmpireStrikesBackPage),
@@ -1019,6 +1101,7 @@ def test_created_apply_rules() -> None:
             instead_of=ReplacedProductItemDepPage,
         ),
         ApplyRule(URL, use=ProductDeepDependencyPage, to_return=MainProductC),
-        ApplyRule(URL, use=BlueDeadlockPage, to_return=BluePill),
-        ApplyRule(URL, use=RedDeadlockPage, to_return=RedPill),
+        ApplyRule(URL, use=ProductDuplicateDeepDependencyPage, to_return=MainProductD),
+        ApplyRule(URL, use=ChickenDeadlockPage, to_return=ChickenPage),
+        ApplyRule(URL, use=EggDeadlockPage, to_return=EggPage),
     ]
