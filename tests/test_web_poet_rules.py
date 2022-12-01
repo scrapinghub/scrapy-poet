@@ -900,16 +900,18 @@ class MainProductD:
     item_dependency: ItemDependency
     main_product_b_dependency: MainProductB
     first_main_product_c_dependency: MainProductC
-    # second_main_product_c_dependency: MainProductC
+    second_main_product_c_dependency: MainProductC
 
 
 @handle_urls(URL)
 @attrs.define
-class ProductDuplicateDeepDependencyPage(PageObjectCounterMixin, ItemPage[MainProductD]):
+class ProductDuplicateDeepDependencyPage(
+    PageObjectCounterMixin, ItemPage[MainProductD]
+):
     injected_item: ItemDependency
     main_product_b_dependency_item: MainProductB
     first_main_product_c_dependency_item: MainProductC
-    # second_main_product_c_dependency_item: MainProductC
+    second_main_product_c_dependency_item: MainProductC
 
     @field
     def name(self) -> str:
@@ -927,9 +929,9 @@ class ProductDuplicateDeepDependencyPage(PageObjectCounterMixin, ItemPage[MainPr
     def first_main_product_c_dependency(self) -> MainProductC:
         return self.first_main_product_c_dependency_item
 
-    # @field
-    # def second_main_product_c_dependency(self) -> MainProductC:
-        # return self.second_main_product_c_dependency_item
+    @field
+    def second_main_product_c_dependency(self) -> MainProductC:
+        return self.second_main_product_c_dependency_item
 
 
 @inlineCallbacks
@@ -956,16 +958,16 @@ def test_page_object_with_duplicate_deep_item_dependency() -> None:
             main_product_b_dependency=MainProductB(
                 name="(with item dependency) product name",
                 item_dependency=ItemDependency(name="item dependency"),
-            )
+            ),
         ),
-        # second_main_product_c_dependency=MainProductC(
-            # name="(with deep item dependency) product name",
-            # item_dependency=ItemDependency(name="item dependency"),
-            # main_product_b_dependency=MainProductB(
-                # name="(with item dependency) product name",
-                # item_dependency=ItemDependency(name="item dependency"),
-            # )
-        # )
+        second_main_product_c_dependency=MainProductC(
+            name="(with deep item dependency) product name",
+            item_dependency=ItemDependency(name="item dependency"),
+            main_product_b_dependency=MainProductB(
+                name="(with item dependency) product name",
+                item_dependency=ItemDependency(name="item dependency"),
+            ),
+        ),
     )
     assert_deps(deps, {"item": MainProductD})
     PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
