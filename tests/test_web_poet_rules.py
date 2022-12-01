@@ -979,6 +979,44 @@ def test_page_object_with_duplicate_deep_item_dependency() -> None:
     assert ProductDeepDependencyPage.to_item_call_count == 1
     assert ProductDuplicateDeepDependencyPage.to_item_call_count == 1
 
+    # calling the actual Page Objects should still work
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(ProductDuplicateDeepDependencyPage)
+    assert item == MainProductD(
+        name="(with duplicate deep item dependency) product name",
+        item_dependency=ItemDependency(name="item dependency"),
+        main_product_b_dependency=MainProductB(
+            name="(with item dependency) product name",
+            item_dependency=ItemDependency(name="item dependency"),
+        ),
+        first_main_product_c_dependency=MainProductC(
+            name="(with deep item dependency) product name",
+            item_dependency=ItemDependency(name="item dependency"),
+            main_product_b_dependency=MainProductB(
+                name="(with item dependency) product name",
+                item_dependency=ItemDependency(name="item dependency"),
+            ),
+        ),
+        second_main_product_c_dependency=MainProductC(
+            name="(with deep item dependency) product name",
+            item_dependency=ItemDependency(name="item dependency"),
+            main_product_b_dependency=MainProductB(
+                name="(with item dependency) product name",
+                item_dependency=ItemDependency(name="item dependency"),
+            ),
+        ),
+    )
+    assert_deps(deps, {"page": ProductDuplicateDeepDependencyPage})
+    PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductWithItemDepPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductDeepDependencyPage)
+    PageObjectCounterMixin.assert_instance_count(1, ProductDuplicateDeepDependencyPage)
+    assert ItemDependencyPage.to_item_call_count == 1
+    assert ProductWithItemDepPage.to_item_call_count == 1
+    assert ProductDeepDependencyPage.to_item_call_count == 1
+    assert ProductDuplicateDeepDependencyPage.to_item_call_count == 1
+
 
 @attrs.define
 class ChickenPage:

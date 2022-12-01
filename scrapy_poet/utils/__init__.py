@@ -3,7 +3,6 @@ from inspect import isasyncgenfunction
 from typing import Dict
 from unittest import mock
 
-from pytest_twisted import inlineCallbacks
 from scrapy import signals
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider
@@ -12,6 +11,7 @@ from scrapy.settings import Settings
 from scrapy.utils.project import inside_project, project_data_dir
 from scrapy.utils.python import to_bytes
 from twisted.internet import reactor
+from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
