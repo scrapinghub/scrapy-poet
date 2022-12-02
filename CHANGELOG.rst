@@ -2,6 +2,12 @@
 Changelog
 =========
 
+TBR
+---
+
+* ``SCRAPY_POET_OVERRIDES`` and ``OverridesRegistry`` now doesn't accept tuples.
+  Strictly only ``web_poet.ApplyRule`` instances are used.
+
 0.6.0 (2022-11-24)
 ------------------
 

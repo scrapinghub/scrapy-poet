@@ -1,30 +1,16 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-)
+from typing import Any, Callable, Dict, Iterable, Mapping, Optional, Type
 from warnings import warn
 
 from scrapy import Request
 from scrapy.crawler import Crawler
-from url_matcher import Patterns, URLMatcher
+from url_matcher import URLMatcher
 from web_poet import ItemPage, RulesRegistry
 from web_poet.rules import ApplyRule
 
 logger = logging.getLogger(__name__)
-
-RuleAsTuple = Union[Tuple[str, Type[ItemPage], Type[ItemPage]], List]
-RuleFromUser = Union[RuleAsTuple, ApplyRule]
 
 
 class OverridesRegistryBase(ABC):
@@ -41,33 +27,24 @@ class OverridesRegistryBase(ABC):
 class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
     """
     Overrides registry that reads the overrides from the ``SCRAPY_POET_OVERRIDES``
-    in the spider settings. It is a list and each rule can be a tuple or an
-    instance of the class :py:class:`web_poet.rules.ApplyRule`.
-
-    If a tuple is provided:
-
-        - the **first** element is the pattern to match the URL,
-        - the **second** element is the type to be used instead of the type in
-          the **third** element.
-
-    Another way to see it for the URLs that match the pattern ``tuple[0]`` use
-    ``tuple[1]`` instead of ``tuple[2]``.
+    in the spider settings. It is a list of rules which are instances of the
+    class :py:class:`web_poet.rules.ApplyRule`.
 
     Example of overrides configuration:
 
     .. code-block:: python
 
-        from url_matcher import Patterns
         from web_poet.rules import ApplyRule
 
 
         SCRAPY_POET_OVERRIDES = [
-            # Option 1
-            ("books.toscrape.com", ISBNBookPage, BookPage),
-
-            # Option 2
             ApplyRule(
-                for_patterns=Patterns(["books.toscrape.com"]),
+                books.toscrape.com,
+                use=ISBNBookPage,
+                instead_of=BookPage,
+            ),
+            ApplyRule(
+                "books.toscrape.com",
                 use=MyBookListPage,
                 instead_of=BookListPage,
             ),
@@ -112,19 +89,6 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
         logger.debug(f"List of parsed ApplyRules:\n{self._rules}")
 
     def add_rule(self, rule_id: int, rule: ApplyRule) -> None:
-        # TODO: deprecate this, alongside the tests and docs; Update CHANGELOG
-        if isinstance(rule, (tuple, list)):
-            if len(rule) != 3:
-                raise ValueError(
-                    f"Invalid rule: {rule}. Rules as tuples must have "
-                    f"3 elements: (1) the pattern, (2) the PO class used as a "
-                    f"replacement and (3) the PO class to be replaced."
-                )
-            pattern, use, instead_of = rule
-            rule = ApplyRule(
-                for_patterns=Patterns([pattern]), use=use, instead_of=instead_of
-            )
-
         # A common case when a PO subclasses another one with the same URL
         # pattern. See the test_item_return_subclass() test case.
         matched = self.item_matcher[rule.to_return]

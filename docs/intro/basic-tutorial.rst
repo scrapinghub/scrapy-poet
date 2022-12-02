@@ -432,11 +432,13 @@ are used for the domain
 
 .. code-block:: python
 
+    from web_poet import ApplyRule
+
     "SCRAPY_POET_OVERRIDES": [
-        ("toscrape.com", BTSBookListPage, BookListPage),
-        ("toscrape.com", BTSBookPage, BookPage),
-        ("bookpage.com", BPBookListPage, BookListPage),
-        ("bookpage.com", BPBookPage, BookPage)
+        ApplyRule("toscrape.com", use=BTSBookListPage, instead_of=BookListPage),
+        ApplyRule("toscrape.com", use=BTSBookPage, instead_of=BookPage),
+        ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),
+        ApplyRule("bookpage.com", use=BPBookPage, instead_of=BookPage)
     ]
 
 The spider is now ready to extract books from both sites 😀.
@@ -451,27 +453,6 @@ In the examples above we have been configuring the overrides
 for a particular domain, but more complex URL patterns are also possible.
 For example, the pattern ``books.toscrape.com/cataloge/category/``
 is accepted and it would restrict the override only to category pages.
-
-It is even possible to configure more complex patterns by using the
-:py:class:`web_poet.rules.ApplyRule` class instead of a triplet in
-the configuration. Another way of declaring the earlier config
-for ``SCRAPY_POET_OVERRIDES`` would be the following:
-
-.. code-block:: python
-
-    from url_matcher import Patterns
-    from web_poet import ApplyRule
-
-
-    SCRAPY_POET_OVERRIDES = [
-        ApplyRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookListPage, instead_of=BookListPage),
-        ApplyRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookPage, instead_of=BookPage),
-        ApplyRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookListPage, instead_of=BookListPage),
-        ApplyRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookPage, instead_of=BookPage),
-    ]
-
-As you can see, this could get verbose. The earlier tuple config simply offers
-a shortcut to be more concise.
 
 .. note::
 

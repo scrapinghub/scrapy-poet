@@ -13,9 +13,9 @@ page.
     Some real-world examples on this topic can be found in:
 
     - `Example 1 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_01.py>`_:
-      rules using tuples
+      small example
     - `Example 2 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_02.py>`_:
-      rules using tuples and :py:class:`web_poet.ApplyRule`
+      larger example
     - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_03.py>`_:
       rules using :py:func:`web_poet.handle_urls` decorator and retrieving them
       via :py:meth:`web_poet.rules.RulesRegistry.get_rules`
