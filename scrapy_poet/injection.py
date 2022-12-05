@@ -21,7 +21,6 @@ from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.injection_errors import (
     InjectionError,
     NonCallableProviderError,
-    ProviderDependencyDeadlockError,
     UndeclaredProvidedTypeError,
 )
 from scrapy_poet.overrides import OverridesRegistry, OverridesRegistryBase
@@ -142,154 +141,35 @@ class Injector:
             overrides=self.overrides_registry.overrides_for(request).get,
         )
 
-    def provider_requirements(self, request: Request, plan: andi.Plan) -> Set[Any]:
-        """Return a set of classes which indicate any requirements needed by a
-        provider in order to successfully provide for the given ``request`` and
-        ``plan``.
-        """
-        provider_requirements = set()
-        for cls, _ in plan.dependencies:
-            for provider in self.providers:
-                if not provider.is_provided(cls):
-                    continue
-                classes = provider.requirements_for(cls, request)
-                if classes:
-                    provider_requirements.update(set(classes))
-        return provider_requirements
-
     @inlineCallbacks
-    def build_provider_requirements(
-        self,
-        request: Request,
-        response: Response,
-        plan: andi.Plan,
-        cached_instances: Optional[Dict[Callable[..., Any], Any]] = None,
-    ):
-        """This builds out any requirements that a provider might need before
-        calling them.
-
-        The instances that are built here would later be used in andi's
-        'externally_provided' parameter when calling the providers.
-        """
-
-        cached_instances = cached_instances or {}
-
-        provider_requirements = self.provider_requirements(request, plan)
-
-        # This recursively gets the provider requirements. For example, a PO
-        # that has an item dependency that needs another PO to produce it.
-        for prov_req in provider_requirements:
-            sub_plan = andi.plan(
-                prov_req,
-                is_injectable=is_injectable,
-                externally_provided=self.is_class_provided_by_any_provider,
-            )
-
-            try:
-                instances = yield from self.build_instances(
-                    request, response, sub_plan, cached_instances=cached_instances
-                )
-            except RecursionError:
-                raise ProviderDependencyDeadlockError(
-                    f"Deadlock detected! A loop has been detected to trying to "
-                    f"resolve this plan: {sub_plan}"
-                )
-
-            cached_instances.update(instances)
-
-            provider_requirements = provider_requirements.union(
-                self.provider_requirements(request, sub_plan)
-            )
-
-        instances_from_providers = yield from self.build_instances_from_providers(
-            request,
-            response,
-            provider_requirements,
-            externally_provided=cached_instances,
-        )
-        cached_instances.update(instances_from_providers)
-
-        # Now we can build up the provider requirements.
-        for prov_req in provider_requirements:
-            for cls, kwargs_spec in andi.plan(
-                prov_req,
-                is_injectable=is_injectable,
-                externally_provided=self.is_class_provided_by_any_provider,
-            ):
-                if cls not in cached_instances.keys():
-                    cached_instances[cls] = cls(**kwargs_spec.kwargs(cached_instances))
-
-        return cached_instances
-
-    @inlineCallbacks
-    def build_instances(
-        self,
-        request: Request,
-        response: Response,
-        plan: andi.Plan,
-        cached_instances: Dict[Callable[..., Any], Any],
-    ):
+    def build_instances(self, request: Request, response: Response, plan: andi.Plan):
         """Build the instances dict from a plan including external dependencies."""
-
-        # If a provider wants to build a Car, the provider can ask for its own
-        # requirements, like a mechanic, some tools, etc. which aren't part of
-        # the car, but rather helps build it.
-        provider_requirements_instances = yield self.build_provider_requirements(
-            request, response, plan, cached_instances=cached_instances
-        )
-
-        cached_instances.update(provider_requirements_instances)
-
-        dependencies = {cls for cls, _ in plan.dependencies}
-
         # First we build the external dependencies using the providers
         instances = yield from self.build_instances_from_providers(
-            request,
-            response,
-            dependencies,
-            externally_provided=cached_instances,
+            request, response, plan
         )
-
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
         for cls, kwargs_spec in plan.dependencies:
-            if cls not in instances:
-                if cls in cached_instances:
-                    instances[cls] = cached_instances[cls]
-                else:
-                    instances[cls] = cls(**kwargs_spec.kwargs(instances))
-
+            if cls not in instances.keys():
+                instances[cls] = cls(**kwargs_spec.kwargs(instances))
         return instances
 
     @inlineCallbacks
     def build_instances_from_providers(
-        self,
-        request: Request,
-        response: Response,
-        dependencies: Set,
-        externally_provided=None,
+        self, request: Request, response: Response, plan: andi.Plan
     ):
         """Build dependencies handled by registered providers"""
         instances: Dict[Callable, Any] = {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response
         )
-        externally_provided = externally_provided or {}
-        externally_provided.update(scrapy_provided_dependencies)
+        plan_dependencies = {cls for cls, _ in plan.dependencies}
         for provider in self.providers:
             provided_classes = {
-                cls for cls in dependencies if provider.is_provided(cls)
+                cls for cls in plan_dependencies if provider.is_provided(cls)
             }
-
-            # Ignore already provided types from other providers.
-            provided_classes -= instances.keys()
-
-            # Ignore instances that are already provided from past recursive runs.
-            for prov_cls in provided_classes:
-                if prov_cls in externally_provided:
-                    instances[prov_cls] = externally_provided[prov_cls]
-            provided_classes = provided_classes - set(externally_provided.keys())
-
+            provided_classes -= instances.keys()  # ignore already provided types
             if not provided_classes:
                 continue
 
@@ -316,14 +196,12 @@ class Injector:
 
             if not objs:
                 kwargs = andi.plan(
-                    provider.dynamic_call_signature(provided_classes, request)
-                    or provider,
+                    provider,
                     is_injectable=is_injectable,
-                    externally_provided=externally_provided,
+                    externally_provided=scrapy_provided_dependencies,
                     full_final_kwargs=False,
-                ).final_kwargs(externally_provided)
+                ).final_kwargs(scrapy_provided_dependencies)
                 try:
-
                     # Invoke the provider to get the data
                     objs = yield maybeDeferred_coro(
                         provider, set(provided_classes), **kwargs
@@ -365,10 +243,8 @@ class Injector:
         dictionary with the built instances.
         """
         plan = self.build_plan(request)
-        instances = yield from self.build_instances(
-            request, response, plan, cached_instances={}
-        )
-        return plan.final_kwargs(instances)
+        provider_instances = yield from self.build_instances(request, response, plan)
+        return plan.final_kwargs(provider_instances)
 
 
 def check_all_providers_are_callable(providers):

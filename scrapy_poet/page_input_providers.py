@@ -12,8 +12,10 @@ import abc
 import json
 from dataclasses import make_dataclass
 from inspect import isclass
-from typing import Any, Callable, ClassVar, List, Optional, Sequence, Set, Union
+from typing import Any, Callable, ClassVar, Dict, Optional, Sequence, Set, Type, Union
+from weakref import WeakKeyDictionary
 
+import andi
 import attr
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -27,9 +29,13 @@ from web_poet import (
     RequestUrl,
     ResponseUrl,
 )
+from web_poet.pages import is_injectable
 
 from scrapy_poet.downloader import create_scrapy_downloader
-from scrapy_poet.injection_errors import MalformedProvidedClassesError
+from scrapy_poet.injection_errors import (
+    MalformedProvidedClassesError,
+    ProviderDependencyDeadlockError,
+)
 
 
 class PageObjectInputProvider:
@@ -114,40 +120,10 @@ class PageObjectInputProvider:
                 f"'{self}.'. Expected either 'set' or 'callable'"
             )
 
-    def requirements_for(self, cls, request) -> Optional[List[Any]]:
-        """For a provider to work, there might be some additional requirements
-        that it needs from its side.
-
-        Subclasses should override this method to return such requirements.
-
-        ``cls`` contains the class that the provider needs to provide.
-
-        ``request`` could provide additional context.
-        """
-        pass
-
-    # TODO: andi could be enhanced to avoid this workaround of declaring a
-    # dynamic call signature.
-    # https://github.com/scrapinghub/andi/issues/23
-    def dynamic_call_signature(self, provided_classes, request):
-        """Return a function with the call signature to be used instead of
-        ``__call__()``.
-
-        Subclasses should override this if the dependencies they declare in
-        the ``__call__()`` are dynamic.
-
-        For example, declaring the dependencies via type annotations wouldn't
-        work when the provider needs to provide for a wide variety of classes.
-
-        When this is overridden, the Injector detects it and uses it instead of
-        the ``__call__()`` method when deriving the ``andi.Plan``.
-        """
-        pass
-
     # FIXME: Can't import the Injector as class annotation due to circular dep.
     def __init__(self, injector):
         """Initializes the provider. Invoked only at spider start up."""
-        pass
+        self.injector = injector
 
     # Remember that is expected for all children to implement the ``__call__``
     # method. The simplest signature for it is:
@@ -289,10 +265,14 @@ class ItemProvider(PageObjectInputProvider):
 
     name = "item"
 
-    _prefix_po = "_po_"
-
     def __init__(self, injector):
-        self.registry = injector.overrides_registry
+        super().__init__(injector)
+        self.registry = self.injector.overrides_registry
+
+        # The key that's used here is the ``scrapy.Request`` instance to ensure
+        # that the cached instances under it are properly garbage collected
+        # after processing such request.
+        self._cached_instances = WeakKeyDictionary()
 
     def provided_classes(self, *args, **kwargs):
         """If the item is in any of the ``to_return`` in the rules, then it can
@@ -305,45 +285,54 @@ class ItemProvider(PageObjectInputProvider):
         # called multiple times by the ``Injector`` when making dependencies.
         return isclass(cls) and self.registry.search(to_return=cls)
 
-    def requirements_for(self, cls, request) -> List[Any]:
-        """Return the PO class that is capable of returning the item class
-        instance via its ``.to_item()`` method.
+    def update_cache(self, request: Request, mapping: Dict[Type, Any]) -> None:
+        if request not in self._cached_instances:
+            self._cached_instances[request] = {}
+        self._cached_instances[request].update(mapping)
 
-        ``request`` provides additional context for matching the URL patterns.
-        """
-        provider_dependency = self.registry.page_object_for_item(request).get(cls)
-        if provider_dependency:
-            return [provider_dependency]
-        return []
-
-    def dynamic_call_signature(self, provided_classes, request):
-        """This is overridden since we need to accommodate different item classes
-        which couldn't be easily declared in the ``__call__()``.
-        """
-
-        provider_dependencies = []
-
-        for i, cls in enumerate(provided_classes):
-            for dep in self.requirements_for(cls, request):
-                provider_dependencies.append((f"{self._prefix_po}{i}", dep))
-
-        # https://github.com/scrapinghub/andi/issues/23#issuecomment-1331682180
-        fake_call_signature = make_dataclass("ProxySignature", provider_dependencies)
-
-        return fake_call_signature
+    def get_from_cache(self, request: Request, cls: Callable) -> Optional[Any]:
+        return self._cached_instances.get(request, {}).get(cls)
 
     async def __call__(
         self,
         to_provide: Set[Callable],
-        **kwargs,
+        request: Request,
+        response: Response,
     ):
         results = []
-
-        # Find the POs passed via kwargs that start with self._prefix_po
-        for name in kwargs:
-            if name.startswith(self._prefix_po):
-                item = await kwargs[name].to_item()
+        for cls in to_provide:
+            item = self.get_from_cache(request, cls)
+            if item:
                 results.append(item)
-        return results
+                continue
 
-    # FIXME: to_provide isn't used at all in any provider. Could be refactored.
+            page_object_cls = self.registry.page_object_for_item(request).get(cls)
+            if not page_object_cls:
+                continue
+
+            # https://github.com/scrapinghub/andi/issues/23#issuecomment-1331682180
+            fake_call_signature = make_dataclass(
+                "ProxySignature", [("page_object", page_object_cls)]
+            )
+            plan = andi.plan(
+                fake_call_signature,
+                is_injectable=is_injectable,
+                externally_provided=self.injector.is_class_provided_by_any_provider,
+            )
+
+            try:
+                instances = await self.injector.build_instances(request, response, plan)
+            except RecursionError:
+                raise ProviderDependencyDeadlockError(
+                    f"Deadlock detected! A loop has been detected to trying to "
+                    f"resolve this plan: {plan}"
+                )
+
+            page_object = instances[page_object_cls]
+            item = await page_object.to_item()
+
+            self.update_cache(request, instances)
+            self.update_cache(request, {type(item): item})
+
+            results.append(item)
+        return results

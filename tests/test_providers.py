@@ -16,6 +16,7 @@ from scrapy_poet.injection import Injector
 from scrapy_poet.page_input_providers import (
     CacheDataProviderMixin,
     HttpClientProvider,
+    ItemProvider,
     PageObjectInputProvider,
     PageParamsProvider,
 )
@@ -207,7 +208,8 @@ def test_price_first_spider(settings):
 
 def test_response_data_provider_fingerprint(settings):
     crawler = get_crawler(Spider, settings)
-    rdp = HttpResponseProvider(crawler)
+    injector = Injector(crawler)
+    rdp = HttpResponseProvider(injector)
     request = scrapy.http.Request("https://example.com")
 
     # The fingerprint should be readable since it's JSON-encoded.
@@ -219,11 +221,12 @@ def test_response_data_provider_fingerprint(settings):
 async def test_http_client_provider(settings):
     crawler = get_crawler(Spider, settings)
     crawler.engine = AsyncMock()
+    injector = Injector(crawler)
 
     with mock.patch(
         "scrapy_poet.page_input_providers.create_scrapy_downloader"
     ) as mock_factory:
-        provider = HttpClientProvider(crawler)
+        provider = HttpClientProvider(injector)
         results = provider(set(), crawler)
         assert isinstance(results[0], HttpClient)
 
@@ -232,7 +235,8 @@ async def test_http_client_provider(settings):
 
 def test_page_params_provider(settings):
     crawler = get_crawler(Spider, settings)
-    provider = PageParamsProvider(crawler)
+    injector = Injector(crawler)
+    provider = PageParamsProvider(injector)
     request = scrapy.http.Request("https://example.com")
 
     results = provider(set(), request)
@@ -251,3 +255,31 @@ def test_page_params_provider(settings):
     results = provider(set(), request)
 
     assert results[0] == expected_data
+
+
+def test_item_provider_cache(settings):
+    """Note that the bulk of the tests for the ``ItemProvider`` alongside the
+    ``Injector`` is tested in ``tests/test_web_poet_rules.py``.
+
+    We'll only test its caching behavior here if its properly garbage collected.
+    """
+
+    crawler = get_crawler(Spider, settings)
+    injector = Injector(crawler)
+    provider = ItemProvider(injector)
+
+    assert len(provider._cached_instances) == 0
+
+    def inside():
+        request = Request("https://example.com")
+        provider.update_cache(request, {Name: Name("test")})
+        assert len(provider._cached_instances) == 1
+
+        cached_instance = provider.get_from_cache(request, Name)
+        assert isinstance(cached_instance, Name)
+
+    # The cache should be empty after the ``inside`` scope has finished which
+    # means that the corresponding ``request`` and the contents under it are
+    # garbage collected.
+    inside()
+    assert len(provider._cached_instances) == 0

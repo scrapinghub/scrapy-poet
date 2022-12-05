@@ -193,9 +193,7 @@ class TestInjector:
         response = get_response_for_testing(callback)
         request = response.request
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances(
-            request, response, plan, cached_instances={}
-        )
+        instances = yield from injector.build_instances(request, response, plan)
         assert instances == {
             Cls1: Cls1(),
             Cls2: Cls2(),
@@ -204,9 +202,8 @@ class TestInjector:
             ClsNoProviderRequired: ClsNoProviderRequired(),
         }
 
-        dependencies = {cls for cls, _ in plan.dependencies}
         instances = yield from injector.build_instances_from_providers(
-            request, response, dependencies
+            request, response, plan
         )
         assert instances == {
             Cls1: Cls1(),
@@ -228,9 +225,8 @@ class TestInjector:
         response = get_response_for_testing(callback)
         plan = injector.build_plan(response.request)
         with pytest.raises(UndeclaredProvidedTypeError) as exinf:
-            dependencies = {cls for cls, _ in plan.dependencies}
             yield from injector.build_instances_from_providers(
-                response.request, response, dependencies
+                response.request, response, plan
             )
 
         assert "Provider" in str(exinf.value)
@@ -255,9 +251,8 @@ class TestInjector:
 
         response = get_response_for_testing(callback)
         plan = injector.build_plan(response.request)
-        dependencies = {cls for cls, _ in plan.dependencies}
         instances = yield from injector.build_instances_from_providers(
-            response.request, response, dependencies
+            response.request, response, plan
         )
 
         assert instances[str] == min(str_list)
@@ -469,9 +464,8 @@ def test_cache(tmp_path, cache_errors):
 
     response = get_response_for_testing(callback)
     plan = injector.build_plan(response.request)
-    dependencies = {cls for cls, _ in plan.dependencies}
     instances = yield from injector.build_instances_from_providers(
-        response.request, response, dependencies
+        response.request, response, plan
     )
 
     validate_instances(instances)
@@ -482,9 +476,8 @@ def test_cache(tmp_path, cache_errors):
     response.request = Request.replace(response.request, url="http://willfail.page")
     with pytest.raises(ValueError):
         plan = injector.build_plan(response.request)
-        dependencies = {cls for cls, _ in plan.dependencies}
         instances = yield from injector.build_instances_from_providers(
-            response.request, response, dependencies
+            response.request, response, plan
         )
 
     # Different providers. They return a different result, but the cache data should prevail.
@@ -496,9 +489,8 @@ def test_cache(tmp_path, cache_errors):
 
     response = get_response_for_testing(callback)
     plan = injector.build_plan(response.request)
-    dependencies = {cls for cls, _ in plan.dependencies}
     instances = yield from injector.build_instances_from_providers(
-        response.request, response, dependencies
+        response.request, response, plan
     )
 
     validate_instances(instances)
@@ -508,7 +500,6 @@ def test_cache(tmp_path, cache_errors):
     response.request = Request.replace(response.request, url="http://willfail.page")
     with pytest.raises(Error):
         plan = injector.build_plan(response.request)
-        dependencies = {cls for cls, _ in plan.dependencies}
         instances = yield from injector.build_instances_from_providers(
-            response.request, response, dependencies
+            response.request, response, plan
         )
