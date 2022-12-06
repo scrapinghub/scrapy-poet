@@ -5,8 +5,76 @@ Changelog
 TBR
 ---
 
-* ``SCRAPY_POET_OVERRIDES`` and ``OverridesRegistry`` now doesn't accept tuples.
-  Strictly only ``web_poet.ApplyRule`` instances are used.
+This release enables scrapy-poet to fully support item types as dependencies in
+page objects and spider callbacks. The following is now possible:
+ 
+.. code-block:: python
+
+    import attrs
+    import scrapy
+    from web_poet import WebPage, handle_urls, field
+
+    @attrs.define
+    class Image:
+        url: str
+
+    @handle_urls("example.com")
+    class ProductImagePage(WebPage[Image]):
+        @field
+        def url(self) -> str:
+            return self.css("#product img ::attr(href)").get("")
+
+    @attrs.define
+    class Product:
+        name: str
+        image: Image
+
+    @handle_urls("example.com")
+    class ProductPage(WebPage[Product]):
+        # ✨ NEW: Notice that the PO can ask for items as dependencies.
+        # An instance of ``Image`` is injected behind the scenes by calling the
+        # ``.to_item()`` method of ``ProductImagePage``.
+        image: Image
+
+        @field
+        def name(self) -> str:
+            return self.css("h1.name ::text").get("")
+
+        @field
+        def image(self) -> Image:
+            return self.image
+
+    class MySpider(scrapy.Spider):
+        name = "myspider"
+        start_urls = ["https://example.com/products/some-product"]
+
+        # ✨ NEW: Notice that we're directly using the item here and not the PO.
+        def parse(self, response, item: Product):
+            return item
+
+In line with this, the following changes were made:
+
+    * Added a new ``scrapy_poet.page_input_providers.ItemProvider`` which makes
+      the usage above possible.
+    * The ``scrapy_poet.PageObjectInputProvider`` base class now accepts an
+      instance of ``scrapy_poet.injection.Injector`` in its constructor instead
+      of ``scrapy.crawler.Crawler``.
+    * An item type is now supported by ``scrapy_poet.callback_for`` alongside
+      the usual page objects.
+    * ``scrapy_poet.overrides.OverridesRegistry`` has been overhauled:
+
+        * It is now subclassed from ``web_poet.RulesRegistry``.
+        * It also allows retrieval of rules based on the returned item class.
+        * ``OverridesRegistry`` (alongside ``SCRAPY_POET_OVERRIDES``) won't
+          accept tuples as rules anymore. Only ``web_poet.ApplyRule``
+          instances are allowed.
+
+    * New exception: ``scrapy_poet.injector_error.ProviderDependencyDeadlockError``.
+
+Other changes:
+
+    * Moved some of the utility functions from the test module were moved into
+      ``scrapy_poet.utils``.
 
 0.6.0 (2022-11-24)
 ------------------
