@@ -8,7 +8,7 @@ and ``scrapy_poet/overrides.py`` modules.
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, Type
+from typing import Any, Dict, List, Tuple, Type
 
 import attrs
 import scrapy
@@ -73,8 +73,8 @@ class PageObjectCounterMixin:
     to produce the same item. This is extremely wasteful should there be any
     additional requests used to produce the item.
 
-    The dependency resolution inside the ``Injector`` should cache up such
-    instances and prevent them from being built again.
+    ``ItemProvider`` should cache up such instances and prevent them from being
+    built again.
     """
 
     instances: Dict[Type, Any] = defaultdict(list)
@@ -99,11 +99,11 @@ class PageObjectCounterMixin:
 
 
 @inlineCallbacks
-def crawl_item_and_deps(PageObject) -> Any:
+def crawl_item_and_deps(PageObject) -> Tuple[Any, Any]:
     """Helper function to easily return the item and injected dependencies from
     a simulated Scrapy callback which asks for either of these dependencies:
-        - Page Object
-        - Item Type
+        - page object
+        - item type
     """
     item, _, crawler = yield crawl_single_item(
         spider_for(PageObject), ProductHtml, rules_settings(), port=PORT
@@ -111,9 +111,13 @@ def crawl_item_and_deps(PageObject) -> Any:
     return item, crawler.spider.collected_response_deps
 
 
-def assert_deps(deps, expected, size=1):
+def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int = 1):
     """Helper for easily checking the instances of the ``deps`` returned by
     ``crawl_item_and_deps()``.
+
+    The ``deps`` and ``expected`` follow a dict-formatted **kwargs parameters
+    that is passed to the spider callback. Currently, either "page" or "item"
+    are supported as keys since ``scrapy_poet.callback`` is used.
     """
     assert len(deps) == size
     if size == 0:
@@ -154,7 +158,7 @@ def test_url_only_no_match() -> None:
     spider is crawling.
 
     However, it should still work since we're forcing to use ``UrlNoMatchPage``
-    specifically as the Page Object input.
+    specifically as the page object input.
     """
     item, deps = yield crawl_item_and_deps(UrlNoMatchPage)
     assert item == {"msg": "PO No URL Match"}
@@ -173,7 +177,7 @@ class NoRuleWebPage(WebPage):
 
 @inlineCallbacks
 def test_no_rule_declaration() -> None:
-    """A more extreme case of ``test_url_only_no_match()`` where the Page Object
+    """A more extreme case of ``test_url_only_no_match()`` where the page object
     doesn't have any rule declaration at all.
 
     But it should still work since we're enforcing the dependency.
@@ -202,8 +206,8 @@ class ReplacementPage(WebPage):
 def test_basic_overrides() -> None:
     """Basic overrides use case.
 
-    If a Page Object is asked for and it's available in a rule's ``instead_of``
-    parameter, it would be replaced by the Page Object inside the rule's ``use``
+    If a page object is asked for and it's available in a rule's ``instead_of``
+    parameter, it would be replaced by the page object inside the rule's ``use``
     parameter.
     """
     item, deps = yield crawl_item_and_deps(OverriddenPage)
@@ -234,11 +238,23 @@ handle_urls(URL, instead_of=RightPage)(LeftPage)
 
 @inlineCallbacks
 def test_mutual_overrides() -> None:
-    """Two Page Objects that override each other should not present any problems.
+    """Two page objects that override each other should not present any problems.
 
     In practice, this isn't useful at all.
 
     TODO: We could present a warning to the user if this is detected.
+    THOUGHTS:
+        Although I doubt this would be common in most code bases since this would
+        only be possible if we do `handle_urls(URL, instead_of=RightPage)(LeftPage)`
+        which is highly unnatural.
+
+        Another instance that it might occur is when users don't use `handle_urls()`
+        to write the rules but create a list of `ApplyRules` manually and passing
+        them to the `SCRAPY_POET_OVERRIDES` setting. I'm also not sure how common
+        this would be against simply using `@handle_urls()`.
+
+        Let's hold off this potential warning mechanism until we observe that it
+        actually affects users.
     """
     item, deps = yield crawl_item_and_deps(LeftPage)
     assert item == {"msg": "right page"}
@@ -270,7 +286,7 @@ class ReturnOfTheJediPage(WebPage):
 @inlineCallbacks
 def test_chained_overrides() -> None:
     """If 3 overrides are connected to each other, there wouldn't be any
-    transitivity than spans 3 POs.
+    transitivity than spans the 3 POs.
     """
     item, deps = yield crawl_item_and_deps(NewHopePage)
     assert item == {"msg": "empire strikes back"}
@@ -308,7 +324,7 @@ class MultipleRulePage(WebPage):
 
 @inlineCallbacks
 def test_multiple_rules_single_page_object() -> None:
-    """A single PO could have multiple other rules."""
+    """A single PO could be used by multiple other rules."""
     item, deps = yield crawl_item_and_deps(FirstPage)
     assert item == {"msg": "multiple rule page"}
     assert_deps(deps, {"page": MultipleRulePage})
@@ -339,15 +355,15 @@ class ProductPage(ItemPage[Product]):
 def test_basic_item_return() -> None:
     """Basic item use case.
 
-    If an item class is asked for and it's available in a rule's ``to_return``
-    parameter, an item class's instance shall be produced by the Page Object
+    If an item class is asked for and it's available in some rule's ``to_return``
+    parameter, an item class's instance shall be produced by the page object
     declared inside the rule's ``use`` parameter.
     """
     item, deps = yield crawl_item_and_deps(Product)
     assert item == Product(name="product name")
     assert_deps(deps, {"item": Product})
 
-    # calling the actual Page Object should also work
+    # calling the actual page object should also work
     item, deps = yield crawl_item_and_deps(ProductPage)
     assert item == Product(name="product name")
     assert_deps(deps, {"page": ProductPage})
@@ -374,12 +390,13 @@ class SubclassProductPage(ParentProductPage):
 
 @inlineCallbacks
 def test_item_return_subclass() -> None:
-    """A Page Object should properly derive the ``Return[ItemType]`` that it
+    """A page object should properly derive the ``Return[ItemType]`` that it
     inherited from its parent.
 
     In this test case, there's a clash for the ``url_matcher.Patterns`` since
     they're exactly the same. This produces a warning message. For conflicts
-    like this, scrapy-poet follows the latest ``ApplyRule``.
+    like this, scrapy-poet follows the first ``ApplyRule`` it finds inside the
+    ``SCRAPY_POET_OVERRIDES`` setting.
 
     To remove this warning, the user should update the priority in
     ``url_matcher.Patterns`` which is set in ``ApplyRule.for_patterns``.
@@ -399,7 +416,7 @@ def test_item_return_subclass() -> None:
     assert item == ProductFromParent(name="subclass product name")
     assert_deps(deps, {"item": ProductFromParent})
 
-    # calling the actual Page Objects should still work
+    # calling the actual page objects should still work
 
     item, deps = yield crawl_item_and_deps(ParentProductPage)
     assert item == ProductFromParent(name="parent product name")
@@ -438,7 +455,7 @@ def test_item_return_subclass_priority() -> None:
     assert item == PriorityProductFromParent(name="priority parent product name")
     assert_deps(deps, {"item": PriorityProductFromParent})
 
-    # calling the actual Page Objects should still work
+    # calling the actual page objects should still work
 
     item, deps = yield crawl_item_and_deps(PriorityParentProductPage)
     assert item == PriorityProductFromParent(name="priority parent product name")
@@ -484,7 +501,7 @@ def test_item_to_return_in_handle_urls(caplog) -> None:
     assert item == Product(name="product name")
     assert_deps(deps, {"item": Product})
 
-    # calling the actual Page Objects should still work
+    # calling the actual page objects should still work
     item, deps = yield crawl_item_and_deps(ReplacedProductPage)
     assert item == Product(name="replaced product name")
     assert_deps(deps, {"page": ReplacedProductPage})
@@ -529,7 +546,7 @@ def test_item_to_return_in_handle_urls_subclass(caplog) -> None:
     assert item == ParentReplacedProduct(name="parent replaced product name")
     assert_deps(deps, {"item": ParentReplacedProduct})
 
-    # calling the actual Page Objects should still work
+    # calling the actual page objects should still work
 
     item, deps = yield crawl_item_and_deps(ParentReplacedProductPage)
     assert item == ParentReplacedProduct(name="parent replaced product name")
@@ -555,54 +572,53 @@ class StandaloneProductPage(ItemPage):
 @inlineCallbacks
 def test_item_to_return_standalone(caplog) -> None:
     """Same case as with ``test_item_to_return_in_handle_urls()`` above but the
-    Page Object doesn't inherit from something like ``ItemPage[ItemClass]``
+    page object doesn't inherit from something like ``ItemPage[ItemClass]``
     """
     item, deps = yield crawl_item_and_deps(StandaloneProduct)
     assert "UndeclaredProvidedTypeError:" in caplog.text
     assert item is None
     assert_deps(deps, {}, size=0)
 
-    # calling the actual Page Object should still work
+    # calling the actual page object should still work
     item, deps = yield crawl_item_and_deps(StandaloneProductPage)
     assert item == {"name": "standalone product name"}
     assert_deps(deps, {"page": StandaloneProductPage})
 
 
 @attrs.define
-class BiProduct:
+class Morty:
     name: str
 
 
-class ReplacedBiProductPage(ItemPage):
-    pass
-
-
-@handle_urls(URL, instead_of=ReplacedBiProductPage)
-class BiProductPage(ItemPage[BiProduct]):
+@handle_urls(URL)
+class RickSanchezPage(ItemPage[Morty]):
     @field
     def name(self) -> str:
-        return "to_return and instead_of product name"
+        return "from basic rick"
+
+
+@handle_urls(URL, instead_of=RickSanchezPage)
+class RickSanchezC137Page(ItemPage[Morty]):
+    @field
+    def name(self) -> str:
+        return "wubba lubba dub dub"
 
 
 @inlineCallbacks
-def test_both_to_return_and_instead_of() -> None:
-    """Rules that contain both ``to_return`` and ``instead_of`` should work on
-    both cases when either are requested.
-    """
-    # item from 'to_return'
-    item, deps = yield crawl_item_and_deps(BiProduct)
-    assert item == BiProduct(name="to_return and instead_of product name")
-    assert_deps(deps, {"item": BiProduct})
+def test_item_return_with_overrides() -> None:
+    item, deps = yield crawl_item_and_deps(Morty)
+    assert item == Morty(name="wubba lubba dub dub")
+    assert_deps(deps, {"item": RickSanchezC137Page})
 
     # page from 'instead_of'
-    item, deps = yield crawl_item_and_deps(ReplacedBiProductPage)
-    assert item == BiProduct(name="to_return and instead_of product name")
-    assert_deps(deps, {"page": BiProductPage})
+    item, deps = yield crawl_item_and_deps(RickSanchezPage)
+    assert item == Morty(name="wubba lubba dub dub")
+    assert_deps(deps, {"page": RickSanchezC137Page})
 
-    # calling the actual Page Object should still work
-    item, deps = yield crawl_item_and_deps(BiProductPage)
-    assert item == BiProduct(name="to_return and instead_of product name")
-    assert_deps(deps, {"page": BiProductPage})
+    # calling the actual page object should still work
+    item, deps = yield crawl_item_and_deps(RickSanchezC137Page)
+    assert item == Morty(name="wubba lubba dub dub")
+    assert_deps(deps, {"page": RickSanchezC137Page})
 
 
 @attrs.define
@@ -630,12 +646,12 @@ def test_item_return_from_injectable() -> None:
     assert item == ProductFromInjectable(name="product from injectable")
     assert_deps(deps, {"item": ProductFromInjectable})
 
-    # calling the actual Page Object should not work since it's not inheriting
+    # calling the actual page object should not work since it's not inheriting
     # from ``web_poet.ItemPage``.
     item, deps = yield crawl_item_and_deps(ProductFromInjectablePage)
     assert item is None
 
-    # However, the Page Object should still be injected into the callback method.
+    # However, the page object should still be injected into the callback method.
     assert_deps(deps, {"item": ProductFromInjectablePage})
 
 
@@ -687,7 +703,7 @@ def test_page_object_with_page_object_dependency() -> None:
     )
     assert_deps(deps, {"page": ProductWithPageObjectDepPage})
 
-    # calling the actual Page Objects should still work
+    # calling the actual page objects should still work
 
     item, deps = yield crawl_item_and_deps(PageObjectDependencyPage)
     assert item == {"name": "item dependency"}
@@ -740,8 +756,8 @@ class ProductWithItemDepPage(PageObjectCounterMixin, ItemPage[MainProductB]):
 
 @inlineCallbacks
 def test_page_object_with_item_dependency() -> None:
-    """Page Objects with dependencies like item classes should have them resolved
-    by the Page Object assigned in one of the rules' ``use`` parameter.
+    """Page objects with dependencies like item classes should have them resolved
+    by the page object assigned in one of the rules' ``use`` parameter.
     """
 
     # item from 'to_return'
@@ -760,7 +776,7 @@ def test_page_object_with_item_dependency() -> None:
     )
     assert_deps(deps, {"page": ProductWithItemDepPage})
 
-    # calling the actual Page Objects should still work
+    # calling the actual page objects should still work
 
     item, deps = yield crawl_item_and_deps(ItemDependencyPage)
     assert item == ItemDependency(name="item dependency")
@@ -830,7 +846,7 @@ def test_page_object_with_deep_item_dependency() -> None:
     assert ProductWithItemDepPage.to_item_call_count == 1
     assert ProductDeepDependencyPage.to_item_call_count == 1
 
-    # calling the actual Page Objects should still work
+    # calling the actual page objects should still work
 
     PageObjectCounterMixin.clear()
     item, deps = yield crawl_item_and_deps(ProductDeepDependencyPage)
@@ -988,7 +1004,7 @@ def test_page_object_with_duplicate_deep_item_dependency() -> None:
     assert ProductDeepDependencyPage.to_item_call_count == 1
     assert ProductDuplicateDeepDependencyPage.to_item_call_count == 1
 
-    # calling the actual Page Objects should still work
+    # calling the actual page objects should still work
 
     PageObjectCounterMixin.clear()
     item, deps = yield crawl_item_and_deps(ProductDuplicateDeepDependencyPage)
@@ -1069,7 +1085,7 @@ class EggDeadlockPage(ItemPage[EggPage]):
 
 @inlineCallbacks
 def test_page_object_with_item_dependency_deadlock(caplog) -> None:
-    """Items with Page Objects which depend on each other resulting in a deadlock
+    """Items with page objects which depend on each other resulting in a deadlock
     should have a corresponding error raised.
     """
 
@@ -1122,11 +1138,12 @@ def test_created_apply_rules() -> None:
             URL, use=SubclassReplacedProductPage, to_return=SubclassReplacedProduct
         ),
         ApplyRule(URL, use=StandaloneProductPage, to_return=StandaloneProduct),
+        ApplyRule(URL, use=RickSanchezPage, to_return=Morty),
         ApplyRule(
             URL,
-            use=BiProductPage,
-            to_return=BiProduct,
-            instead_of=ReplacedBiProductPage,
+            use=RickSanchezC137Page,
+            to_return=Morty,
+            instead_of=RickSanchezPage,
         ),
         ApplyRule(
             URL,
