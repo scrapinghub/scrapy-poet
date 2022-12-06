@@ -153,6 +153,7 @@ class Injector:
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances.keys():
                 instances[cls] = cls(**kwargs_spec.kwargs(instances))
+
         return instances
 
     @inlineCallbacks
@@ -202,6 +203,7 @@ class Injector:
                     full_final_kwargs=False,
                 ).final_kwargs(scrapy_provided_dependencies)
                 try:
+
                     # Invoke the provider to get the data
                     objs = yield maybeDeferred_coro(
                         provider, set(provided_classes), **kwargs

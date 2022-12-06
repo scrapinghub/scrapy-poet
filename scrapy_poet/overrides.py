@@ -38,16 +38,8 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
 
 
         SCRAPY_POET_OVERRIDES = [
-            ApplyRule(
-                books.toscrape.com,
-                use=ISBNBookPage,
-                instead_of=BookPage,
-            ),
-            ApplyRule(
-                "books.toscrape.com",
-                use=MyBookListPage,
-                instead_of=BookListPage,
-            ),
+            ApplyRule("books.toscrape.com", use=ISBNBookPage, instead_of=BookPage),
+            ApplyRule("books.toscrape.com", use=MyBookListPage, instead_of=BookListPage),
         ]
 
     .. _web-poet: https://web-poet.readthedocs.io
@@ -83,29 +75,32 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
         self.overrides_matcher: Dict[Type[ItemPage], URLMatcher] = defaultdict(
             URLMatcher
         )
-        self.item_matcher: Dict[Any, URLMatcher] = defaultdict(URLMatcher)
+        self.item_matcher: Dict[Type[Any], URLMatcher] = defaultdict(URLMatcher)
         for rule_id, rule in enumerate(self._rules):
             self.add_rule(rule_id, rule)
         logger.debug(f"List of parsed ApplyRules:\n{self._rules}")
 
     def add_rule(self, rule_id: int, rule: ApplyRule) -> None:
         # A common case when a PO subclasses another one with the same URL
-        # pattern. See the test_item_return_subclass() test case.
+        # pattern. See the ``test_item_return_subclass()`` test case in
+        # ``tests/test_web_poet_rules.py``.
         matched = self.item_matcher[rule.to_return]
-        if [
+        pattern_dupes = [
             pattern
             for pattern in matched.patterns.values()
             if pattern == rule.for_patterns
-        ]:
-            # TODO: It would be great to also list down the rules having the
-            # same URL pattern. But this would require some refactoring.
+        ]
+        if pattern_dupes:
+            rules = [
+                r
+                for p in pattern_dupes
+                for r in self.search(for_patterns=p, to_return=rule.to_return)
+            ]
             warn(
-                f"A similar URL pattern {list(matched.patterns.values())} has been "
-                f"declared earlier which uses to_return={rule.to_return}. When "
-                f"matching URLs against rules, the latest declared rule is used. "
-                f"Consider explicitly updating the priority of the rules containing "
-                f"the said URL pattern to easily match the expectations when reading "
-                f"the code."
+                f"Similar URL patterns {pattern_dupes} were declared earlier "
+                f"which uses to_return={rule.to_return}. This earlier rule "
+                f"will be used when matching against URLs. Consider updating "
+                f"the priority of these rules: {rules}."
             )
 
         if rule.instead_of:
@@ -116,19 +111,22 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
             self.item_matcher[rule.to_return].add_or_update(rule_id, rule.for_patterns)
 
     # TODO: These URL matching functionalities could be moved to web-poet.
+    # ``overrides_for`` in web-poet could be ``str`` or ``_Url`` subclass.
 
-    def _run_matcher(
-        self, request: Request, url_matcher
+    def rules_for_url(
+        self, url: str, url_matcher: Dict[Any, URLMatcher]
     ) -> Mapping[Callable, Callable]:
         result: Dict[Callable, Callable] = {}
         for target, matcher in url_matcher.items():
-            rule_id = matcher.match(request.url)
+            rule_id = matcher.match(url)
             if rule_id is not None:
                 result[target] = self._rules[rule_id].use
         return result
 
     def overrides_for(self, request: Request) -> Mapping[Callable, Callable]:
-        return self._run_matcher(request, self.overrides_matcher)
+        return self.rules_for_url(request.url, self.overrides_matcher)
 
-    def page_object_for_item(self, request: Request) -> Mapping[Callable, Callable]:
-        return self._run_matcher(request, self.item_matcher)
+    def page_object_for_item(
+        self, url: str, po_cls: Type[Any]
+    ) -> Mapping[Callable, Callable]:
+        return self.rules_for_url(url, self.item_matcher).get(po_cls)

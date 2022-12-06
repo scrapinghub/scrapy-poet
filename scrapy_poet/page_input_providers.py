@@ -279,10 +279,6 @@ class ItemProvider(PageObjectInputProvider):
         definitely provide by using the corresponding page object in ``use``.
         """
         cls = args[-1]
-
-        # TODO: The search operation in the registry could be expensive when
-        # there are lots of rules. We could cache it up since this method is
-        # called multiple times by the ``Injector`` when making dependencies.
         return isclass(cls) and self.registry.search(to_return=cls)
 
     def update_cache(self, request: Request, mapping: Dict[Type, Any]) -> None:
@@ -306,13 +302,13 @@ class ItemProvider(PageObjectInputProvider):
                 results.append(item)
                 continue
 
-            page_object_cls = self.registry.page_object_for_item(request).get(cls)
+            page_object_cls = self.registry.page_object_for_item(request.url, cls)
             if not page_object_cls:
                 continue
 
             # https://github.com/scrapinghub/andi/issues/23#issuecomment-1331682180
             fake_call_signature = make_dataclass(
-                "ProxySignature", [("page_object", page_object_cls)]
+                "FakeCallSignature", [("page_object", page_object_cls)]
             )
             plan = andi.plan(
                 fake_call_signature,

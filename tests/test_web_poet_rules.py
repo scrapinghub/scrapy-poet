@@ -2,16 +2,15 @@
 when used for callback dependencies.
 
 Most of the logic here tests the behavior of the ``scrapy_poet/injection.py``
-module.
-
+and ``scrapy_poet/overrides.py`` modules.
 """
 
 import socket
+import warnings
 from collections import defaultdict
 from typing import Any, Dict, Type
 
 import attrs
-import pytest
 import scrapy
 from pytest_twisted import inlineCallbacks
 from url_matcher import Patterns
@@ -383,10 +382,20 @@ def test_item_return_subclass() -> None:
     like this, scrapy-poet follows the latest ``ApplyRule``.
 
     To remove this warning, the user should update the priority in
-    ``url_matcher.Patterns``.
+    ``url_matcher.Patterns`` which is set in ``ApplyRule.for_patterns``.
     """
-    with pytest.warns(UserWarning, match="Consider explicitly updating the priority"):
+
+    # There should be a warning to the user about clashing rules.
+    rules = [
+        ApplyRule(URL, use=ParentProductPage, to_return=ProductFromParent),
+        ApplyRule(URL, use=SubclassProductPage, to_return=ProductFromParent),
+    ]
+    msg = f"Consider updating the priority of these rules: {rules}"
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
         item, deps = yield crawl_item_and_deps(ProductFromParent)
+        assert any([True for w in caught_warnings if msg in str(w.message)])
+
     assert item == ProductFromParent(name="subclass product name")
     assert_deps(deps, {"item": ProductFromParent})
 
