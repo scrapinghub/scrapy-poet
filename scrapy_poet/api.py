@@ -105,13 +105,14 @@ def callback_for(page_or_item_cls: Any) -> Callable:
     disk queues, because in this case Scrapy is able to serialize
     your request object.
     """
+    # When the callback is used as an instance method of the spider, it expects
+    # to receive 'self' as its first argument. When used as a simple inline
+    # function, it expects to receive a response as its first argument.
+    #
+    # To avoid a TypeError, we need to receive a list of unnamed arguments and
+    # a dict of named arguments after our injectable.
     if issubclass(page_or_item_cls, ItemPage):
-        # When the callback is used as an instance method of the spider, it expects
-        # to receive 'self' as its first argument. When used as a simple inline
-        # function, it expects to receive a response as its first argument.
-        #
-        # To avoid a TypeError, we need to receive a list of unnamed arguments and
-        # a dict of named arguments after our injectable.
+
         def parse(*args, page: page_or_item_cls, **kwargs):  # type: ignore
             yield page.to_item()  # type: ignore
 

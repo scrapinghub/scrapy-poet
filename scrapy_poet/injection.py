@@ -165,10 +165,10 @@ class Injector:
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response
         )
-        plan_dependencies = {cls for cls, _ in plan.dependencies}
+        dependencies_set = {cls for cls, _ in plan.dependencies}
         for provider in self.providers:
             provided_classes = {
-                cls for cls in plan_dependencies if provider.is_provided(cls)
+                cls for cls in dependencies_set if provider.is_provided(cls)
             }
             provided_classes -= instances.keys()  # ignore already provided types
             if not provided_classes:

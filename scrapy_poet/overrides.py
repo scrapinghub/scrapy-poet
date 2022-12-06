@@ -75,7 +75,9 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
         self.overrides_matcher: Dict[Type[ItemPage], URLMatcher] = defaultdict(
             URLMatcher
         )
-        self.item_matcher: Dict[Type[Any], URLMatcher] = defaultdict(URLMatcher)
+        self.item_matcher: Dict[Optional[Type[Any]], URLMatcher] = defaultdict(
+            URLMatcher
+        )
         for rule_id, rule in enumerate(self._rules):
             self.add_rule(rule_id, rule)
         logger.debug(f"List of parsed ApplyRules:\n{self._rules}")
@@ -128,5 +130,5 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
 
     def page_object_for_item(
         self, url: str, po_cls: Type[Any]
-    ) -> Mapping[Callable, Callable]:
+    ) -> Optional[Callable[..., Any]]:
         return self.rules_for_url(url, self.item_matcher).get(po_cls)
