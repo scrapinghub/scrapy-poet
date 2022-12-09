@@ -12,7 +12,18 @@ import abc
 import json
 from dataclasses import make_dataclass
 from inspect import isclass
-from typing import Any, Callable, ClassVar, Dict, Optional, Sequence, Set, Type, Union
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Type,
+    Union,
+)
 from weakref import WeakKeyDictionary
 
 import andi
@@ -102,7 +113,7 @@ class PageObjectInputProvider:
     is provided by this provider.
     """
 
-    provided_classes: ClassVar[Union[Set[Callable], Callable[[Callable], bool]]]
+    provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
     def is_provided(self, type_: Callable) -> bool:
@@ -274,11 +285,10 @@ class ItemProvider(PageObjectInputProvider):
         # after processing such request.
         self._cached_instances = WeakKeyDictionary()
 
-    def provided_classes(self, *args, **kwargs):
+    def provided_classes(self, cls):
         """If the item is in any of the ``to_return`` in the rules, then it can
         definitely provide by using the corresponding page object in ``use``.
         """
-        cls = args[-1]
         return isclass(cls) and self.registry.search(to_return=cls)
 
     def update_cache(self, request: Request, mapping: Dict[Type, Any]) -> None:
@@ -294,7 +304,7 @@ class ItemProvider(PageObjectInputProvider):
         to_provide: Set[Callable],
         request: Request,
         response: Response,
-    ):
+    ) -> List[Any]:
         results = []
         for cls in to_provide:
             item = self.get_from_cache(request, cls)
@@ -317,17 +327,19 @@ class ItemProvider(PageObjectInputProvider):
             )
 
             try:
-                instances = await self.injector.build_instances(request, response, plan)
+                po_instances = await self.injector.build_instances(
+                    request, response, plan
+                )
             except RecursionError:
                 raise ProviderDependencyDeadlockError(
                     f"Deadlock detected! A loop has been detected to trying to "
                     f"resolve this plan: {plan}"
                 )
 
-            page_object = instances[page_object_cls]
+            page_object = po_instances[page_object_cls]
             item = await page_object.to_item()
 
-            self.update_cache(request, instances)
+            self.update_cache(request, po_instances)
             self.update_cache(request, {type(item): item})
 
             results.append(item)

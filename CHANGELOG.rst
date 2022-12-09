@@ -60,7 +60,8 @@ In line with this, the following changes were made:
       instance of ``scrapy_poet.injection.Injector`` in its constructor instead
       of ``scrapy.crawler.Crawler``.
     * An item type is now supported by ``scrapy_poet.callback_for`` alongside
-      the usual page objects.
+      the usual page objects. This means that it won't raise a ``TypeError``
+      anymore when not passing a subclass of ``web_poet.ItemPage``.
     * ``scrapy_poet.overrides.OverridesRegistry`` has been overhauled:
 
         * It is now subclassed from ``web_poet.RulesRegistry``.
