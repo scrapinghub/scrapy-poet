@@ -30,6 +30,7 @@ page objects and spider callbacks. The following is now possible:
         image: Image
 
     @handle_urls("example.com")
+    @attrs.define
     class ProductPage(WebPage[Product]):
         # ✨ NEW: Notice that the PO can ask for items as dependencies.
         # An instance of ``Image`` is injected behind the scenes by calling the
@@ -59,16 +60,23 @@ In line with this, the following changes were made:
     * The ``scrapy_poet.PageObjectInputProvider`` base class now accepts an
       instance of ``scrapy_poet.injection.Injector`` in its constructor instead
       of ``scrapy.crawler.Crawler``.
+
+        * This is backwards incompatible. Although you can still access the
+          ``scrapy.crawler.Crawler`` via ``Injector.crawler`` attribute.
+
     * An item type is now supported by ``scrapy_poet.callback_for`` alongside
       the usual page objects. This means that it won't raise a ``TypeError``
       anymore when not passing a subclass of ``web_poet.ItemPage``.
     * ``scrapy_poet.overrides.OverridesRegistry`` has been overhauled:
 
-        * It is now subclassed from ``web_poet.RulesRegistry``.
-        * It also allows retrieval of rules based on the returned item class.
+        * It is now subclassed from ``web_poet.RulesRegistry`` which allows
+          outright access to its registry methods.
+        * It now allows retrieval of rules based on the returned item class.
         * ``OverridesRegistry`` (alongside ``SCRAPY_POET_OVERRIDES``) won't
           accept tuples as rules anymore. Only ``web_poet.ApplyRule``
           instances are allowed.
+
+            * This is backward incompabible.
 
     * New exception: ``scrapy_poet.injector_error.ProviderDependencyDeadlockError``.
 
