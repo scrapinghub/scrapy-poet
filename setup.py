@@ -10,6 +10,9 @@ setup(
     author_email="kmike84@gmail.com",
     url="https://github.com/scrapinghub/scrapy-poet",
     packages=find_packages(exclude=["tests", "example"]),
+    entry_points={
+        "scrapy.commands": ["create_po_test = scrapy_poet.commands:CreatePOTestCommand"]
+    },
     install_requires=[
         "andi >= 0.4.1",
         "attrs >= 21.3.0",
