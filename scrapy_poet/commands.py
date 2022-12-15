@@ -1,5 +1,4 @@
 import sys
-from hashlib import sha1
 from pathlib import Path
 from typing import Type
 
@@ -90,11 +89,6 @@ class CreatePOTestCommand(ScrapyCommand):
             print(f"Error: {po_name} is not a descendant of ItemPage")
             sys.exit(1)
 
-        fixture_dir = basedir / po_name / sha1(url.encode()).hexdigest()
-        if fixture_dir.exists():
-            print(f"Error: {fixture_dir} already exists")
-            sys.exit(1)
-
         spider_cls = spider_for(po_type)
         self.settings.setdict(additional_settings())
         crawler = Crawler(spider_cls, self.settings)
@@ -103,5 +97,5 @@ class CreatePOTestCommand(ScrapyCommand):
 
         deps = saved_dependencies
         item = saved_items[0]
-        save_fixture(fixture_dir, deps, item)
+        fixture_dir = save_fixture(basedir / po_name, deps, item)
         print(f"\nThe test fixture has been written to {fixture_dir}.")
