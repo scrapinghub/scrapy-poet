@@ -181,11 +181,12 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
         request_keys = {"url", "method", "body"}
+        _request = request.replace(callback=None, errback=None)
         request_data = {
-            k: str(v) for k, v in request.to_dict().items() if k in request_keys
+            k: str(v) for k, v in _request.to_dict().items() if k in request_keys
         }
         fp_data = {
-            "SCRAPY_FINGERPRINT": request_fingerprint(request),
+            "SCRAPY_FINGERPRINT": request_fingerprint(_request),
             **request_data,
         }
         return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
