@@ -1,9 +1,11 @@
+import datetime
 import sys
 from pathlib import Path
 from typing import Type
 
 import andi
 import scrapy
+from freezegun import freeze_time
 from scrapy import Request
 from scrapy.commands import ScrapyCommand
 from scrapy.crawler import Crawler
@@ -91,11 +93,17 @@ class CreatePOTestCommand(ScrapyCommand):
 
         spider_cls = spider_for(po_type)
         self.settings.setdict(additional_settings())
-        crawler = Crawler(spider_cls, self.settings)
-        self.crawler_process.crawl(crawler, url=url)
-        self.crawler_process.start()
+
+        frozen_time = datetime.datetime.utcnow().isoformat()
+        with freeze_time(frozen_time):
+            crawler = Crawler(spider_cls, self.settings)
+            self.crawler_process.crawl(crawler, url=url)
+            self.crawler_process.start()
 
         deps = saved_dependencies
         item = saved_items[0]
-        fixture_dir = save_fixture(basedir / po_name, deps, item)
+        meta = {
+            "frozen_time": frozen_time,
+        }
+        fixture_dir = save_fixture(basedir / po_name, deps, item, meta=meta)
         print(f"\nThe test fixture has been written to {fixture_dir}.")

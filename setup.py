@@ -16,6 +16,7 @@ setup(
     install_requires=[
         "andi >= 0.4.1",
         "attrs >= 21.3.0",
+        "freezegun",
         "parsel >= 1.5.0",
         "scrapy >= 2.6.0",
         "sqlitedict >= 1.5.0",
