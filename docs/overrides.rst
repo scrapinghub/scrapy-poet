@@ -59,7 +59,7 @@ And then override it for a particular domain using ``settings.py``:
 
 .. code-block:: python
 
-    SCRAPY_POET_OVERRIDES = [
+    SCRAPY_POET_RULES = [
         ("example.com", ISBNBookPage, BookPage)
     ]
 
@@ -104,7 +104,7 @@ book pages from ``books.toscrape.com``:
     from web_poet import ApplyRule
 
 
-    SCRAPY_POET_OVERRIDES = [
+    SCRAPY_POET_RULES = [
         ApplyRule(
             for_patterns=Patterns(
                 include=["books.toscrape.com/cataloge/*index.html|"],
@@ -169,14 +169,14 @@ For example:
     consume_modules("external_package_A", "another_ext_package.lib")
 
     # To get all of the Override Rules that were declared via annotations.
-    SCRAPY_POET_OVERRIDES = default_registry.get_rules()
+    SCRAPY_POET_RULES = default_registry.get_rules()
 
 The :py:meth:`web_poet.rules.RulesRegistry.get_rules` method of the
 ``default_registry`` above returns ``List[ApplyRule]`` that were declared
 using `web-poet`_'s :py:func:`web_poet.handle_urls` annotation. This is much
 more convenient that manually defining all of the :py:class:`web_poet.ApplyRule`.
 
-Take note that since ``SCRAPY_POET_OVERRIDES`` is structured as
+Take note that since ``SCRAPY_POET_RULES`` is structured as
 ``List[ApplyRule]``, you can easily modify it later on if needed.
 
 .. note::
@@ -194,14 +194,14 @@ The overrides registry is responsible for informing whether there exists an
 override for a particular type for a given request. The default overrides
 registry allows to configure these rules using patterns that follow the
 `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_ syntax. These rules can be configured using the
-``SCRAPY_POET_OVERRIDES`` setting, as it has been seen in the :ref:`intro-tutorial`
+``SCRAPY_POET_RULES`` setting, as it has been seen in the :ref:`intro-tutorial`
 example.
 
 But the registry implementation can be changed at convenience. A different
 registry implementation can be configured using the property
-``SCRAPY_POET_OVERRIDES_REGISTRY`` in ``settings.py``. The new registry
-must be a subclass of :class:`scrapy_poet.overrides.OverridesRegistryBase` and
-must implement the method :meth:`scrapy_poet.overrides.OverridesRegistryBase.overrides_for`.
+``SCRAPY_POET_REGISTRY`` in ``settings.py``. The new registry
+must be a subclass of :class:`scrapy_poet.registry.OverridesRegistryBase` and
+must implement the method :meth:`scrapy_poet.registry.OverridesRegistryBase.overrides_for`.
 As other Scrapy components, it can be initialized from the ``from_crawler`` class
 method if implemented. This might be handy to be able to access settings, stats,
 request meta, etc.

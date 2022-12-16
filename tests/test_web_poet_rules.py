@@ -2,7 +2,7 @@
 when used for callback dependencies.
 
 Most of the logic here tests the behavior of the ``scrapy_poet/injection.py``
-and ``scrapy_poet/overrides.py`` modules.
+and ``scrapy_poet/registry.py`` modules.
 """
 
 import socket
@@ -44,7 +44,7 @@ URL = f"{DOMAIN}:{PORT}"
 
 def rules_settings() -> dict:
     settings = create_scrapy_settings(None)
-    settings["SCRAPY_POET_OVERRIDES"] = default_registry.get_rules()
+    settings["SCRAPY_POET_RULES"] = default_registry.get_rules()
     return settings
 
 
@@ -250,7 +250,7 @@ def test_mutual_overrides() -> None:
 
         Another instance that it might occur is when users don't use `handle_urls()`
         to write the rules but create a list of `ApplyRules` manually and passing
-        them to the `SCRAPY_POET_OVERRIDES` setting. I'm also not sure how common
+        them to the `SCRAPY_POET_RULES` setting. I'm also not sure how common
         this would be against simply using `@handle_urls()`.
 
         Let's hold off this potential warning mechanism until we observe that it
@@ -396,7 +396,7 @@ def test_item_return_subclass() -> None:
     In this test case, there's a clash for the ``url_matcher.Patterns`` since
     they're exactly the same. This produces a warning message. For conflicts
     like this, scrapy-poet follows the first ``ApplyRule`` it finds inside the
-    ``SCRAPY_POET_OVERRIDES`` setting.
+    ``SCRAPY_POET_RULES`` setting.
 
     To remove this warning, the user should update the priority in
     ``url_matcher.Patterns`` which is set in ``ApplyRule.for_patterns``.

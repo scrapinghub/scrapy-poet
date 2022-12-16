@@ -23,8 +23,8 @@ from scrapy_poet.injection_errors import (
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
-from scrapy_poet.overrides import OverridesRegistry, OverridesRegistryBase
 from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.registry import OverridesAndItemRegistry, OverridesRegistryBase
 
 from .utils import get_scrapy_data_path
 
@@ -42,11 +42,11 @@ class Injector:
         crawler: Crawler,
         *,
         default_providers: Optional[Mapping] = None,
-        overrides_registry: Optional[OverridesRegistryBase] = None,
+        registry: Optional[OverridesRegistryBase] = None,
     ):
         self.crawler = crawler
         self.spider = crawler.spider
-        self.overrides_registry = overrides_registry or OverridesRegistry()
+        self.registry = registry or OverridesAndItemRegistry()
         self.load_providers(default_providers)
         self.init_cache()
 
@@ -138,7 +138,7 @@ class Injector:
             callback,
             is_injectable=is_injectable,
             externally_provided=self.is_class_provided_by_any_provider,
-            overrides=self.overrides_registry.overrides_for(request).get,
+            overrides=self.registry.overrides_for(request).get,
         )
 
     @inlineCallbacks
@@ -360,7 +360,7 @@ def is_provider_requiring_scrapy_response(provider):
 def get_injector_for_testing(
     providers: Mapping,
     additional_settings: Optional[Dict] = None,
-    overrides_registry: Optional[OverridesRegistryBase] = None,
+    registry: Optional[OverridesRegistryBase] = None,
 ) -> Injector:
     """
     Return an :class:`Injector` using a fake crawler.
@@ -378,9 +378,9 @@ def get_injector_for_testing(
     spider = MySpider()
     spider.settings = settings
     crawler.spider = spider
-    if not overrides_registry:
-        overrides_registry = create_instance(OverridesRegistry, settings, crawler)
-    return Injector(crawler, overrides_registry=overrides_registry)
+    if not registry:
+        registry = create_instance(OverridesAndItemRegistry, settings, crawler)
+    return Injector(crawler, registry=registry)
 
 
 def get_response_for_testing(callback: Callable) -> Response:

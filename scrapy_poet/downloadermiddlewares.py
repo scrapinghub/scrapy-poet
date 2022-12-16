@@ -3,6 +3,7 @@ responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
 import logging
+import warnings
 from typing import Generator, Optional, Type, TypeVar
 
 from scrapy import Spider, signals
@@ -13,7 +14,6 @@ from twisted.internet.defer import Deferred, inlineCallbacks
 
 from .api import DummyResponse
 from .injection import Injector
-from .overrides import OverridesRegistry
 from .page_input_providers import (
     HttpClientProvider,
     HttpResponseProvider,
@@ -22,6 +22,7 @@ from .page_input_providers import (
     RequestUrlProvider,
     ResponseUrlProvider,
 )
+from .registry import OverridesAndItemRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -49,14 +50,25 @@ class InjectionMiddleware:
         """Initialize the middleware"""
         self.crawler = crawler
         settings = self.crawler.settings
-        registry_cls = load_object(
-            settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", OverridesRegistry)
-        )
-        self.overrides_registry = create_instance(registry_cls, settings, crawler)
+
+        if settings.get("SCRAPY_POET_OVERRIDES_REGISTRY"):
+            msg = (
+                "The SCRAPY_POET_OVERRIDES_REGISTRY setting is deprecated. "
+                "Use SCRAPY_POET_REGISTRY instead."
+            )
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
+            registry_cls = load_object(
+                settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", OverridesAndItemRegistry)
+            )
+        else:
+            registry_cls = load_object(
+                settings.get("SCRAPY_POET_REGISTRY", OverridesAndItemRegistry)
+            )
+        self.registry = create_instance(registry_cls, settings, crawler)
         self.injector = Injector(
             crawler,
             default_providers=DEFAULT_PROVIDERS,
-            overrides_registry=self.overrides_registry,
+            registry=self.registry,
         )
 
     @classmethod

@@ -61,7 +61,7 @@ class BooksSpider(scrapy.Spider):
     start_urls = ["http://books.toscrape.com/", "https://bookpage.com/reviews"]
     # Configuring different page objects pages for different domains
     custom_settings = {
-        "SCRAPY_POET_OVERRIDES": [
+        "SCRAPY_POET_RULES": [
             ApplyRule("toscrape.com", use=BTSBookListPage, instead_of=BookListPage),
             ApplyRule("toscrape.com", use=BTSBookPage, instead_of=BookPage),
             ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),

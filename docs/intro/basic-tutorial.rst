@@ -376,17 +376,17 @@ The spider won't work anymore after the change. The reason is that it
 is using the new base Page Objects and they are empty.
 Let's fix it by instructing ``scrapy-poet`` to use the Books To Scrape (BTS)
 Page Objects for URLs belonging to the domain ``toscrape.com``. This must
-be done by configuring ``SCRAPY_POET_OVERRIDES`` into ``settings.py``:
+be done by configuring ``SCRAPY_POET_RULES`` into ``settings.py``:
 
 .. code-block:: python
 
-    "SCRAPY_POET_OVERRIDES": [
+    "SCRAPY_POET_RULES": [
         ("toscrape.com", BTSBookListPage, BookListPage),
         ("toscrape.com", BTSBookPage, BookPage)
     ]
 
 The spider is back to life!
-``SCRAPY_POET_OVERRIDES`` contain rules that overrides the Page Objects
+``SCRAPY_POET_RULES`` contain rules that overrides the Page Objects
 used for a particular domain. In this particular case, Page Objects
 ``BTSBookListPage`` and ``BTSBookPage`` will be used instead of
 ``BookListPage`` and ``BookPage`` for any request whose domain is
@@ -427,14 +427,14 @@ to implement new ones:
 
 The last step is configuring the overrides so that these new Page Objects
 are used for the domain
-``bookpage.com``. This is how ``SCRAPY_POET_OVERRIDES`` should look like into
+``bookpage.com``. This is how ``SCRAPY_POET_RULES`` should look like into
 ``settings.py``:
 
 .. code-block:: python
 
     from web_poet import ApplyRule
 
-    "SCRAPY_POET_OVERRIDES": [
+    "SCRAPY_POET_RULES": [
         ApplyRule("toscrape.com", use=BTSBookListPage, instead_of=BookListPage),
         ApplyRule("toscrape.com", use=BTSBookPage, instead_of=BookPage),
         ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),
@@ -473,7 +473,7 @@ and store the :py:class:`web_poet.rules.ApplyRule` for you. All of the
     # rules from other packages. Otherwise, it can be omitted.
     # More info about this caveat on web-poet docs.
     consume_modules("external_package_A", "another_ext_package.lib")
-    SCRAPY_POET_OVERRIDES = default_registry.get_rules()
+    SCRAPY_POET_RULES = default_registry.get_rules()
 
 For more info on this, you can refer to these docs:
 

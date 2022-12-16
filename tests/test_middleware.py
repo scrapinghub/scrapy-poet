@@ -17,6 +17,7 @@ from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl,
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
 from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.registry import OverridesAndItemRegistry
 from scrapy_poet.utils import (
     HtmlResource,
     capture_exceptions,
@@ -105,7 +106,7 @@ def test_overrides(settings):
     host = socket.gethostbyname(socket.gethostname())
     domain = get_domain(host)
     port = get_ephemeral_port()
-    settings["SCRAPY_POET_OVERRIDES"] = [
+    settings["SCRAPY_POET_RULES"] = [
         ApplyRule(
             f"{domain}:{port}",
             use=OverridenBreadcrumbsExtraction,
@@ -122,6 +123,19 @@ def test_overrides(settings):
         "description": "The best chocolate ever",
         "category": "overriden_breadcrumb",
     }
+
+
+def test_deprecation_setting_SCRAPY_POET_OVERRIDES_REGISTRY(settings) -> None:
+    settings["SCRAPY_POET_OVERRIDES_REGISTRY"] = OverridesAndItemRegistry
+    crawler = get_crawler(Spider, settings)
+
+    msg = (
+        "The SCRAPY_POET_OVERRIDES_REGISTRY setting is deprecated. "
+        "Use SCRAPY_POET_REGISTRY instead."
+    )
+    with pytest.warns(DeprecationWarning, match=msg):
+        middleware = InjectionMiddleware(crawler)
+        assert isinstance(middleware.registry, OverridesAndItemRegistry)
 
 
 @attr.s(auto_attribs=True)

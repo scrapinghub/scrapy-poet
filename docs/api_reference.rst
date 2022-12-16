@@ -44,8 +44,8 @@ Injection errors
 .. automodule:: scrapy_poet.injection_errors
    :members:
 
-Overrides
-=========
+Registry
+========
 
-.. automodule:: scrapy_poet.overrides
+.. automodule:: scrapy_poet.registry
    :members:

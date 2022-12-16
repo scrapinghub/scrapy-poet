@@ -64,17 +64,21 @@ In line with this, the following changes were made:
         * This is backwards incompatible. Although you can still access the
           ``scrapy.crawler.Crawler`` via ``Injector.crawler`` attribute.
 
+    * The ``scrapy_poet.injection.Injector``'s attribute and constructor parameter 
+      called ``overrides_registry`` is now simply called ``registry``.
+      This is backwards incompatible.
     * An item type is now supported by ``scrapy_poet.callback_for`` alongside
       the usual page objects. This means that it won't raise a ``TypeError``
       anymore when not passing a subclass of ``web_poet.ItemPage``.
-    * ``scrapy_poet.overrides.OverridesRegistry`` has been overhauled:
+    * ``scrapy_poet.overrides.OverridesRegistry`` has been deprecated and
+      overhauled into ``scrapy_poet.rules.OverridesAndItemRegistry``:
 
         * It is now subclassed from ``web_poet.RulesRegistry`` which allows
           outright access to its registry methods.
         * It now allows retrieval of rules based on the returned item class.
-        * ``OverridesRegistry`` (alongside ``SCRAPY_POET_OVERRIDES``) won't
-          accept tuples as rules anymore. Only ``web_poet.ApplyRule``
-          instances are allowed.
+        * The registry doesn't accept tuples as rules anymore. Only
+          ``web_poet.ApplyRule`` instances are allowed. The same goes for
+          ``SCRAPY_POET_RULES`` (and the deprecated ``SCRAPY_POET_OVERRIDES``).
 
             * This is backward incompabible.
 
@@ -84,6 +88,17 @@ Other changes:
 
     * Moved some of the utility functions from the test module into
       ``scrapy_poet.utils``.
+
+Deprecations:
+
+    * The ``scrapy_poet.overrides`` module has been replaced by
+      ``scrapy_poet.registry``.
+    * The ``scrapy_poet.overrides.OverridesRegistry`` class is now replaced by
+      ``scrapy_poet.registry.OverridesAndItemRegistry``.
+    * The ``SCRAPY_POET_OVERRIDES_REGISTRY`` setting has been replaced by
+      ``SCRAPY_POET_REGISTRY``.
+    * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
+      ``SCRAPY_POET_RULES``.
 
 0.6.0 (2022-11-24)
 ------------------

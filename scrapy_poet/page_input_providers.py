@@ -278,7 +278,7 @@ class ItemProvider(PageObjectInputProvider):
 
     def __init__(self, injector):
         super().__init__(injector)
-        self.registry = self.injector.overrides_registry
+        self.registry = self.injector.registry
 
         # The key that's used here is the ``scrapy.Request`` instance to ensure
         # that the cached instances under it are properly garbage collected

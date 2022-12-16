@@ -30,7 +30,7 @@ from scrapy_poet.injection_errors import (
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
-from scrapy_poet.overrides import OverridesRegistry
+from scrapy_poet.registry import OverridesAndItemRegistry
 
 
 def get_provider(classes, content=None):
@@ -325,14 +325,14 @@ class TestInjectorOverrides:
         domain = "example.com" if override_should_happen else "other-example.com"
         # The request domain is example.com, so overrides shouldn't be applied
         # when we configure them for domain other-example.com
-        overrides = [
+        rules = [
             ApplyRule(Patterns([domain]), use=PriceInDollarsPO, instead_of=PricePO),
             ApplyRule(
                 Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate
             ),
         ]
-        registry = OverridesRegistry(rules=overrides)
-        injector = get_injector_for_testing(providers, overrides_registry=registry)
+        registry = OverridesAndItemRegistry(rules=rules)
+        injector = get_injector_for_testing(providers, registry=registry)
 
         def callback(
             response: DummyResponse, price_po: PricePO, rate_po: EurDollarRate
