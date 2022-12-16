@@ -88,6 +88,7 @@ Other changes:
 
     * Moved some of the utility functions from the test module into
       ``scrapy_poet.utils``.
+    * Documentation improvements.
 
 Deprecations:
 

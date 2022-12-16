@@ -477,7 +477,7 @@ and store the :py:class:`web_poet.rules.ApplyRule` for you. All of the
 
 For more info on this, you can refer to these docs:
 
-    * ``scrapy-poet``'s :ref:`overrides` Tutorial section.
+    * ``scrapy-poet``'s :ref:`rules-from-web-poet` Tutorial section.
     * External `web-poet`_ docs.
 
         * Specifically, the :external:ref:`rules-intro` Tutorial section.
@@ -488,7 +488,8 @@ Next steps
 Now that you know how ``scrapy-poet`` is supposed to work, what about trying to
 apply it to an existing or new Scrapy project?
 
-Also, please check the :ref:`overrides` and :ref:`providers` sections as well as
-refer to spiders in the "example" folder: https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
+Also, please check the :ref:`rules-from-web-poet` and :ref:`providers` sections
+as well as refer to spiders in the "example" folder:
+https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
 
 .. _Scrapy Tutorial: https://docs.scrapy.org/en/latest/intro/tutorial.html

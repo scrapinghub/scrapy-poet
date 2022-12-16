@@ -42,7 +42,7 @@ To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
    :caption: Advanced
    :maxdepth: 1
 
-   overrides
+   rules-from-web-poet
    providers
 
 .. toctree::

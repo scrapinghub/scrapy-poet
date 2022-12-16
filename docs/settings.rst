@@ -33,7 +33,8 @@ depends on the currently set Registry. The default is currently
 :class:`~.OverridesAndItemRegistry`. This can be overriden by the setting below:
 ``SCRAPY_POET_OVERRIDES_REGISTRY``.
 
-There are sections dedicated for this at :ref:`intro-tutorial` and :ref:`overrides`.
+There are sections dedicated for this at :ref:`intro-tutorial` and
+:ref:`rules-from-web-poet`.
 
 SCRAPY_POET_OVERRIDES_REGISTRY
 ------------------------------
@@ -49,7 +50,7 @@ Sets an alternative Registry to replace the default :class:`~.OverridesAndItemRe
 To use this, set a ``str`` which denotes the absolute object path of the new
 Registry.
 
-More info at :ref:`overrides`.
+More info at :ref:`rules-from-web-poet`.
 
 
 SCRAPY_POET_CACHE

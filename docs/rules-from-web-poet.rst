@@ -1,6 +1,23 @@
-.. _overrides:
+.. _rules-from-web-poet:
 
-=========
+===================
+Rules from web-poet
+===================
+
+scrapy-poet fully supports the functionalities of :class:`web_poet.rules.ApplyRule`.
+It has its own registry called :class:`scrapy_poet.registry.OverridesAndItemRegistry`
+which provides functionalties for:
+
+    * Returning the page object override if it exists for a given URL.
+    * Returning the page object capable of producing an item for a given URL.
+
+A list of :class:`web_poet.rules.ApplyRule` can be configured by passing it
+to the ``SCRAPY_POET_RULES`` setting.
+
+In this section, we go over its ``instead_of`` parameter for overrides and
+``to_return`` for item returns.
+
+
 Overrides
 =========
 This functionality opens the door to configure specific Page Objects depending
@@ -21,7 +38,7 @@ page.
       via :py:meth:`web_poet.rules.RulesRegistry.get_rules`
 
 Page Objects refinement
-=======================
+-----------------------
 
 Any ``Injectable`` or page input can be overridden. But the overriding
 mechanism stops for the children of any already overridden type. This opens
@@ -60,7 +77,7 @@ And then override it for a particular domain using ``settings.py``:
 .. code-block:: python
 
     SCRAPY_POET_RULES = [
-        ("example.com", ISBNBookPage, BookPage)
+        ApplyRule("example.com", use=ISBNBookPage, instead_of=BookPage)
     ]
 
 This new Page Object gets the original ``BookPage`` as dependency and enrich
@@ -91,13 +108,10 @@ the obtained item with the ISBN from the page HTML.
 
 
 Overrides rules
-===============
+---------------
 
-The default way of configuring the override rules is using triplets
-of the form (``url pattern``, ``override_type``, ``overridden_type``). But more
-complex rules can be introduced if the class :py:class:`web_poet.ApplyRule`
-is used. The following example configures an override that is only applied for
-book pages from ``books.toscrape.com``:
+The following example configures an override that is only applied for book pages
+from ``books.toscrape.com``:
 
 .. code-block:: python
 
@@ -121,7 +135,7 @@ documentation.
 
 
 Decorate Page Objects with the rules
-====================================
+------------------------------------
 
 Having the rules along with the Page Objects is a good idea,
 as you can identify with a single sight what the Page Object is doing
@@ -187,21 +201,79 @@ Take note that since ``SCRAPY_POET_RULES`` is structured as
     section.
 
 
-Overrides registry
-==================
+Item Returns
+============
 
-The overrides registry is responsible for informing whether there exists an
-override for a particular type for a given request. The default overrides
-registry allows to configure these rules using patterns that follow the
-`url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_ syntax. These rules can be configured using the
-``SCRAPY_POET_RULES`` setting, as it has been seen in the :ref:`intro-tutorial`
-example.
+scrapy-poet also supports a convenient way of asking for items directly:
 
-But the registry implementation can be changed at convenience. A different
-registry implementation can be configured using the property
-``SCRAPY_POET_REGISTRY`` in ``settings.py``. The new registry
-must be a subclass of :class:`scrapy_poet.registry.OverridesRegistryBase` and
-must implement the method :meth:`scrapy_poet.registry.OverridesRegistryBase.overrides_for`.
-As other Scrapy components, it can be initialized from the ``from_crawler`` class
-method if implemented. This might be handy to be able to access settings, stats,
-request meta, etc.
+.. code-block:: python
+
+    import attrs
+    import scrapy
+    from web_poet import WebPage, handle_urls, field
+
+    @attrs.define
+    class Image:
+        url: str
+
+    @handle_urls("example.com")
+    class ProductImagePage(WebPage[Image]):
+        @field
+        def url(self) -> str:
+            return self.css("#product img ::attr(href)").get("")
+
+    @attrs.define
+    class Product:
+        name: str
+        image: Image
+
+    @handle_urls("example.com")
+    @attrs.define
+    class ProductPage(WebPage[Product]):
+        # The ``Image`` class is declared as a dependency.
+        image: Image
+
+        @field
+        def name(self) -> str:
+            return self.css("h1.name ::text").get("")
+
+        @field
+        def image(self) -> Image:
+            return self.image
+
+    class MySpider(scrapy.Spider):
+        name = "myspider"
+        start_urls = ["https://example.com/products/some-product"]
+
+        # We can directly use the item here instead of the page object.
+        def parse(self, response, item: Product):
+            return item
+
+From this example, we can see that:
+
+    * Page objects can directly ask for items as dependencies.
+
+      The ``Image`` item instance directly comes from ``ProductImagePage`` (by
+      calling its ``.to_item()`` method behind the scenes) and is provided to
+      ``ProductPage``.
+
+    * Similarly, spider callbacks can directly ask for items as dependencies.
+
+      The ``Product`` item instance directly comes from ``ProductPage``.
+
+The longer alternative way to do this is by declaring the page object itself as
+the dependency and then calling its ``.to_item()`` method. 
+
+For more information about this, check out web-poet's tutorial on 
+:ref:`rules-item-class-example`.
+
+
+Registry
+========
+
+As mentioned above, scrapy-poet has its own registry called
+:class:`scrapy_poet.registry.OverridesAndItemRegistry`.
+This registry implementation can be changed if needed. A different registry can
+be configured by passing its class path to the ``SCRAPY_POET_REGISTRY`` setting.
+Such registries must be a subclass of :class:`scrapy_poet.registry.OverridesRegistryBase`
+and must implement the :meth:`scrapy_poet.registry.OverridesRegistryBase.overrides_for` method.

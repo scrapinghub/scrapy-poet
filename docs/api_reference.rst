@@ -14,7 +14,7 @@ API
 Injection Middleware
 ====================
 
-.. automodule:: scrapy_poet.middleware
+.. automodule:: scrapy_poet.downloadermiddlewares
    :members:
 
 Page Input Providers
@@ -49,3 +49,4 @@ Registry
 
 .. automodule:: scrapy_poet.registry
    :members:
+   :show-inheritance:
