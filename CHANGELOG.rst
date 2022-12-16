@@ -2,6 +2,11 @@
 Changelog
 =========
 
+TBR
+---
+
+* Official support for Python 3.11
+
 0.6.0 (2022-11-24)
 ------------------
 
