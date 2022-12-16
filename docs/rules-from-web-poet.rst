@@ -15,7 +15,8 @@ A list of :class:`web_poet.rules.ApplyRule` can be configured by passing it
 to the ``SCRAPY_POET_RULES`` setting.
 
 In this section, we go over its ``instead_of`` parameter for overrides and
-``to_return`` for item returns.
+``to_return`` for item returns. However, please make sure you also read web-poet's
+:ref:`rules-intro` tutorial to see all of the expected behaviors of the rules.
 
 
 Overrides
@@ -36,6 +37,7 @@ page.
     - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_03.py>`_:
       rules using :py:func:`web_poet.handle_urls` decorator and retrieving them
       via :py:meth:`web_poet.rules.RulesRegistry.get_rules`
+
 
 Page Objects refinement
 -----------------------
@@ -204,7 +206,12 @@ Take note that since ``SCRAPY_POET_RULES`` is structured as
 Item Returns
 ============
 
-scrapy-poet also supports a convenient way of asking for items directly:
+scrapy-poet also supports a convenient way of asking for items directly. This
+is made possible by the ``to_return`` parameter of :class:`web_poet.rules.ApplyRule`.
+The ``to_return`` specifies which item a page object is capable of returning for
+a given URL.
+
+Let's check out an example:
 
 .. code-block:: python
 
@@ -212,9 +219,11 @@ scrapy-poet also supports a convenient way of asking for items directly:
     import scrapy
     from web_poet import WebPage, handle_urls, field
 
+
     @attrs.define
     class Image:
         url: str
+
 
     @handle_urls("example.com")
     class ProductImagePage(WebPage[Image]):
@@ -222,10 +231,12 @@ scrapy-poet also supports a convenient way of asking for items directly:
         def url(self) -> str:
             return self.css("#product img ::attr(href)").get("")
 
+
     @attrs.define
     class Product:
         name: str
         image: Image
+
 
     @handle_urls("example.com")
     @attrs.define
@@ -241,11 +252,12 @@ scrapy-poet also supports a convenient way of asking for items directly:
         def image(self) -> Image:
             return self.image
 
+
     class MySpider(scrapy.Spider):
         name = "myspider"
         start_urls = ["https://example.com/products/some-product"]
 
-        # We can directly use the item here instead of the page object.
+        # We can directly ask for the item here instead of the page object.
         def parse(self, response, item: Product):
             return item
 
@@ -253,19 +265,54 @@ From this example, we can see that:
 
     * Page objects can directly ask for items as dependencies.
 
+      This is made possible by the ``ApplyRule("example.com", use=ProductImagePage,
+      to_return=Image)`` instance created from the ``@handle_urls`` decorator
+      on ``ProductImagePage``.
+
       The ``Image`` item instance directly comes from ``ProductImagePage`` (by
       calling its ``.to_item()`` method behind the scenes) and is provided to
       ``ProductPage``.
 
     * Similarly, spider callbacks can directly ask for items as dependencies.
 
+      This is made possible by the ``ApplyRule("example.com", use=ProductPage,
+      to_return=Product)`` instance created from the ``@handle_urls`` decorator
+      on ``ProductPage``.
+
       The ``Product`` item instance directly comes from ``ProductPage``.
 
-The longer alternative way to do this is by declaring the page object itself as
-the dependency and then calling its ``.to_item()`` method. 
+.. note::
 
-For more information about this, check out web-poet's tutorial on 
-:ref:`rules-item-class-example`.
+    The slightly longer alternative way to do this is by declaring the page
+    object itself as the dependency and then calling its ``.to_item()`` method.
+    For example:
+
+    .. code-block:: python
+
+        @handle_urls("example.com")
+        @attrs.define
+        class ProductPage(WebPage[Product]):
+            product_image_page: ProductImagePage
+
+            @field
+            def name(self) -> str:
+                return self.css("h1.name ::text").get("")
+
+            @field
+            async def image(self) -> Image:
+                return await self.product_image_page.to_item()
+
+
+        class MySpider(scrapy.Spider):
+            name = "myspider"
+            start_urls = ["https://example.com/products/some-product"]
+
+            async def parse(self, response, product_page: ProductPage):
+                return await product_page.to_item()
+
+For more information about all the expected behavior for the ``to_return``
+parameter in :class:`web_poet.rules.ApplyRule`, check out web-poet's tutorial
+regarding :ref:`rules-item-class-example`.
 
 
 Registry
