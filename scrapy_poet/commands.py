@@ -1,5 +1,4 @@
 import datetime
-import sys
 from pathlib import Path
 from typing import Type
 
@@ -9,6 +8,7 @@ from freezegun import freeze_time
 from scrapy import Request
 from scrapy.commands import ScrapyCommand
 from scrapy.crawler import Crawler
+from scrapy.exceptions import UsageError
 from scrapy.http import Response
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
@@ -80,16 +80,21 @@ def additional_settings() -> dict:
 
 
 class CreatePOTestCommand(ScrapyCommand):
+    def syntax(self):
+        return "<Page Object type name> <URL>"
+
+    def short_desc(self):
+        return "Generate a web-poet test for the provided Page Object and URL"
+
     def run(self, args, opts):
-        assert len(args) == 3
-        basedir = Path(args[0])
-        po_name = args[1]
-        url = args[2]
+        if len(args) != 2:
+            raise UsageError()
+        po_name = args[0]
+        url = args[1]
 
         po_type = load_object(po_name)
         if not issubclass(po_type, ItemPage):
-            print(f"Error: {po_name} is not a descendant of ItemPage")
-            sys.exit(1)
+            raise UsageError(f"Error: {po_name} is not a descendant of ItemPage")
 
         spider_cls = spider_for(po_type)
         self.settings.setdict(additional_settings())
@@ -105,5 +110,6 @@ class CreatePOTestCommand(ScrapyCommand):
         meta = {
             "frozen_time": frozen_time,
         }
+        basedir = Path(self.settings.get("SCRAPY_POET_TESTS_DIR", "fixtures"))
         fixture_dir = save_fixture(basedir / po_name, deps, item, meta=meta)
         print(f"\nThe test fixture has been written to {fixture_dir}.")
