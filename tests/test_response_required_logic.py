@@ -218,8 +218,9 @@ def test_is_response_going_to_be_used():
     injector = Injector(crawler)
 
     @inlineCallbacks
-    def check_response_required(expected, callback):
-        request = scrapy.Request("http://example.com", callback=callback)
+    def check_response_required(expected, callback, url=None):
+        url = url or "http://example.com"
+        request = scrapy.Request(url, callback=callback)
         assert injector.is_scrapy_response_required(request) is expected
         yield injector.build_callback_dependencies(request, response(request))
 
@@ -235,3 +236,7 @@ def test_is_response_going_to_be_used():
     yield from check_response_required(False, spider.parse10)
     yield from check_response_required(True, spider.parse11)
     yield from check_response_required(True, spider.parse12)
+
+    # See: https://github.com/scrapinghub/scrapy-poet/issues/48
+    robots_url = "htts://example.com/robots.txt"
+    yield from check_response_required(True, None, url=robots_url)

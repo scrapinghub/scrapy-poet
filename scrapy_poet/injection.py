@@ -121,6 +121,10 @@ class Injector:
         """
         Check whether the request's response is going to be used.
         """
+        # See: https://github.com/scrapinghub/scrapy-poet/issues/48
+        if request.callback is None and request.url.endswith("robots.txt"):
+            return True
+
         callback = get_callback(request, self.spider)
         if is_callback_requiring_scrapy_response(callback):
             return True
