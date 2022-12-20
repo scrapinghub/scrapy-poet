@@ -78,3 +78,14 @@ developing Page Objects.
 
 It's `recommended` to set this off into ``False`` by default since you might miss
 out on sporadic errors.
+
+
+SCRAPY_POET_TESTS_DIR
+---------------------
+
+Default: ``None``
+
+Sets the location where the ``create_po_test`` command creates tests. When set
+to ``None``, uses the ``fixtures`` directory in the current directory.
+
+More info at :ref:`testing`.
