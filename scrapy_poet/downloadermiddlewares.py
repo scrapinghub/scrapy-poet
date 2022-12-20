@@ -107,6 +107,13 @@ class InjectionMiddleware:
         and an injectable attribute,
         the user-defined ``cb_kwargs`` takes precedence.
         """
+        if request.callback is None:
+            spider.logger.warning(
+                f"{request} has callback=None. No dependencies will be built "
+                f"by scrapy-poet."
+            )
+            return response
+
         # Find out the dependencies
         final_kwargs = yield from self.injector.build_callback_dependencies(
             request,
