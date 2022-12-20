@@ -5,9 +5,9 @@ Changelog
 TBR
 ---
 
-* Fix interaction with ``scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware``
-  where it could skip downloading the "robots.txt" file if the spider has annotated
-  the ``parse()`` method with ``scrapy_poet.DummyResponse``. For instance:
+* Fix cases where some downloads are skipped for ``Requests`` that doesn't specify
+  a callback which defaults to the ``parse()`` method. It only happens when the
+  ``parse()`` method is annotated with ``scrapy_poet.DummyResponse``. For instance:
   ``def parse(self, response: DummyResponse)``.
 * Official support for Python 3.11
 
