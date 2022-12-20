@@ -148,13 +148,15 @@ def test_additional_requests_success() -> None:
 
         class TestSpider(Spider):
             name = "test_spider"
-            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
+
+            def start_requests(self):
+                yield Request(server.root_url, self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -187,13 +189,15 @@ def test_additional_requests_bad_response() -> None:
 
         class TestSpider(Spider):
             name = "test_spider"
-            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
+
+            def start_requests(self):
+                yield Request(server.root_url, self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -234,13 +238,15 @@ def test_additional_requests_connection_issue() -> None:
 
             class TestSpider(Spider):
                 name = "test_spider"
-                start_urls = [server.root_url]
 
                 custom_settings = {
                     "DOWNLOADER_MIDDLEWARES": {
                         "scrapy_poet.InjectionMiddleware": 543,
                     },
                 }
+
+                def start_requests(self):
+                    yield Request(server.root_url, self.parse)
 
                 async def parse(self, response, page: ItemPage):
                     item = await page.to_item()
@@ -279,7 +285,6 @@ def test_additional_requests_ignored_request() -> None:
 
         class TestSpider(Spider):
             name = "test_spider"
-            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
@@ -287,6 +292,9 @@ def test_additional_requests_ignored_request() -> None:
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
+
+            def start_requests(self):
+                yield Request(server.root_url, self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -336,7 +344,6 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
 
         class TestSpider(Spider):
             name = "test_spider"
-            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
@@ -344,6 +351,9 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
+
+            def start_requests(self):
+                yield Request(server.root_url, self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -394,8 +404,8 @@ def test_additional_requests_dont_filter() -> None:
             }
 
             def start_requests(self):
-                yield Request(server.root_url, body=b"a")
-                yield Request(server.root_url, body=b"a")
+                yield Request(server.root_url, callback=self.parse, body=b"a")
+                yield Request(server.root_url, callback=self.parse, body=b"a")
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()

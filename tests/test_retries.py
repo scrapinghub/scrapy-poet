@@ -1,7 +1,7 @@
 from collections import deque
 
 from pytest_twisted import inlineCallbacks
-from scrapy import Spider
+from scrapy import Request, Spider
 from web_poet.exceptions import Retry
 from web_poet.pages import WebPage
 
@@ -35,7 +35,8 @@ def test_retry_once():
                 return {"foo": "bar"}
 
         class TestSpider(BaseSpider):
-            start_urls = [server.root_url]
+            def start_requests(self):
+                yield Request(server.root_url, self.parse)
 
             def parse(self, response, page: ItemPage):
                 items.append(page.to_item())
@@ -65,7 +66,8 @@ def test_retry_max():
                 return {"foo": "bar"}
 
         class TestSpider(BaseSpider):
-            start_urls = [server.root_url]
+            def start_requests(self):
+                yield Request(server.root_url, self.parse)
 
             def parse(self, response, page: ItemPage):
                 items.append(page.to_item())
@@ -91,7 +93,8 @@ def test_retry_exceeded():
                 raise Retry
 
         class TestSpider(BaseSpider):
-            start_urls = [server.root_url]
+            def start_requests(self):
+                yield Request(server.root_url, self.parse)
 
             def parse(self, response, page: ItemPage):
                 items.append(page.to_item())
@@ -120,12 +123,13 @@ def test_retry_max_configuration():
                 return {"foo": "bar"}
 
         class TestSpider(BaseSpider):
-            start_urls = [server.root_url]
-
             custom_settings = {
                 **BaseSpider.custom_settings,
                 "RETRY_TIMES": 3,
             }
+
+            def start_requests(self):
+                yield Request(server.root_url, self.parse)
 
             def parse(self, response, page: ItemPage):
                 items.append(page.to_item())
@@ -151,7 +155,8 @@ def test_non_retry_exception():
                 raise RuntimeError
 
         class TestSpider(BaseSpider):
-            start_urls = [server.root_url]
+            def start_requests(self):
+                yield Request(server.root_url, self.parse)
 
             def parse(self, response, page: ItemPage):
                 items.append(page.to_item())
