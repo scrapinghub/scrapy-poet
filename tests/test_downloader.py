@@ -1,3 +1,4 @@
+import sys
 import warnings
 from functools import partial
 from typing import Callable
@@ -508,5 +509,13 @@ def test_parse_callback_none_deps(caplog) -> None:
     expected_msg = "has callback=None. No dependencies will be built by scrapy-poet."
     assert expected_msg in caplog.text
 
-    expected_msg = "TypeError: parse() missing 1 required positional argument: 'page'"
+    if sys.version_info < (3, 10):
+        expected_msg = (
+            "TypeError: parse() missing 1 required positional argument: 'page'"
+        )
+    else:
+        expected_msg = (
+            "TypeError: test_parse_callback_none_deps.<locals>.TestSpider.parse() "
+            "missing 1 required positional argument: 'page'"
+        )
     assert expected_msg in caplog.text
