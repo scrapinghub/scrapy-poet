@@ -2,6 +2,7 @@ import inspect
 import logging
 import os
 import pprint
+import warnings
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 
 import andi
@@ -121,12 +122,8 @@ class Injector:
         """
         Check whether the request's response is going to be used.
         """
-        # See: https://github.com/scrapinghub/scrapy-poet/issues/48
-        if request.callback is None and request.url.endswith("robots.txt"):
-            return True
-
         callback = get_callback(request, self.spider)
-        if is_callback_requiring_scrapy_response(callback):
+        if is_callback_requiring_scrapy_response(callback, request):
             return True
 
         for provider in self.discover_callback_providers(request):
@@ -307,7 +304,7 @@ def get_callback(request, spider):
     return request.callback
 
 
-def is_callback_requiring_scrapy_response(callback: Callable):
+def is_callback_requiring_scrapy_response(callback: Callable, request: Request):
     """
     Check whether the request's callback method requires the response.
     Basically, it won't be required if the response argument in the
@@ -330,6 +327,16 @@ def is_callback_requiring_scrapy_response(callback: Callable):
         return True
 
     if issubclass(first_parameter.annotation, DummyResponse):
+        # See: https://github.com/scrapinghub/scrapy-poet/issues/48
+        if request.callback is None:
+            warnings.warn(
+                f"{request} has callback=None which defaults to the parse() "
+                f"method which is annotated with scrapy_poet.DummyResponse. "
+                f"We're assuming this isn't intended and would simply ignore "
+                f"scrapy_poet.DummyResponse."
+            )
+            return True
+
         # Type annotation is DummyResponse, so we're probably NOT using it.
         return False
 

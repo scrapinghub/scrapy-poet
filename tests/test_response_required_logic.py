@@ -1,4 +1,6 @@
+import warnings
 from typing import Any, Dict
+from unittest.mock import MagicMock
 
 import attr
 import scrapy
@@ -185,21 +187,52 @@ def test_is_provider_using_response():
 
 def test_is_callback_using_response():
     spider = MySpider()
-    assert is_callback_requiring_scrapy_response(spider.parse) is True
-    assert is_callback_requiring_scrapy_response(spider.parse2) is True
-    assert is_callback_requiring_scrapy_response(spider.parse3) is False
-    assert is_callback_requiring_scrapy_response(spider.parse4) is False
-    assert is_callback_requiring_scrapy_response(spider.parse5) is True
-    assert is_callback_requiring_scrapy_response(spider.parse6) is False
-    assert is_callback_requiring_scrapy_response(spider.parse7) is True
-    assert is_callback_requiring_scrapy_response(spider.parse8) is False
-    assert is_callback_requiring_scrapy_response(spider.parse9) is True
-    assert is_callback_requiring_scrapy_response(spider.parse10) is False
-    assert is_callback_requiring_scrapy_response(spider.parse11) is True
-    assert is_callback_requiring_scrapy_response(spider.parse12) is True
+    mock_request = MagicMock()
+    assert is_callback_requiring_scrapy_response(spider.parse, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse2, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse3, mock_request) is False
+    assert is_callback_requiring_scrapy_response(spider.parse4, mock_request) is False
+    assert is_callback_requiring_scrapy_response(spider.parse5, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse6, mock_request) is False
+    assert is_callback_requiring_scrapy_response(spider.parse7, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse8, mock_request) is False
+    assert is_callback_requiring_scrapy_response(spider.parse9, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse10, mock_request) is False
+    assert is_callback_requiring_scrapy_response(spider.parse11, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse12, mock_request) is True
     # Callbacks created with the callback_for function won't make use of
     # the response, but their providers might use them.
-    assert is_callback_requiring_scrapy_response(spider.callback_for_parse) is False
+    assert (
+        is_callback_requiring_scrapy_response(spider.callback_for_parse, mock_request)
+        is False
+    )
+
+    # See: https://github.com/scrapinghub/scrapy-poet/issues/48
+    mock_request.callback = None
+    expected_warning = (
+        "has callback=None which defaults to the parse() method which is annotated "
+        "with scrapy_poet.DummyResponse. We're assuming this isn't intended and "
+        "would simply ignore scrapy_poet.DummyResponse"
+    )
+
+    assert is_callback_requiring_scrapy_response(spider.parse, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse2, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse5, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse7, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse9, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse11, mock_request) is True
+    assert is_callback_requiring_scrapy_response(spider.parse12, mock_request) is True
+
+    for method in (
+        spider.parse3,
+        spider.parse4,
+        spider.parse6,
+        spider.parse8,
+        spider.parse10,
+    ):
+        with warnings.catch_warnings(record=True) as w:
+            assert is_callback_requiring_scrapy_response(method, mock_request) is True
+            assert expected_warning in str(w[0].message)
 
 
 @inlineCallbacks
@@ -218,9 +251,8 @@ def test_is_response_going_to_be_used():
     injector = Injector(crawler)
 
     @inlineCallbacks
-    def check_response_required(expected, callback, url=None):
-        url = url or "http://example.com"
-        request = scrapy.Request(url, callback=callback)
+    def check_response_required(expected, callback):
+        request = scrapy.Request("http://example.com", callback=callback)
         assert injector.is_scrapy_response_required(request) is expected
         yield injector.build_callback_dependencies(request, response(request))
 
@@ -236,7 +268,3 @@ def test_is_response_going_to_be_used():
     yield from check_response_required(False, spider.parse10)
     yield from check_response_required(True, spider.parse11)
     yield from check_response_required(True, spider.parse12)
-
-    # See: https://github.com/scrapinghub/scrapy-poet/issues/48
-    robots_url = "htts://example.com/robots.txt"
-    yield from check_response_required(True, None, url=robots_url)
