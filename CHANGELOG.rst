@@ -91,7 +91,8 @@ In line with this, the following changes were made:
 Other changes:
 
     * Moved some of the utility functions from the test module into
-      ``scrapy_poet.utils``.
+      ``scrapy_poet.utils.testing``.
+    * Official support for Python 3.11
 
 0.6.0 (2022-11-24)
 ------------------
