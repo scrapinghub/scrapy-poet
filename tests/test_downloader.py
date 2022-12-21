@@ -1,5 +1,4 @@
 import sys
-import warnings
 from functools import partial
 from typing import Callable
 from unittest import mock
@@ -448,15 +447,13 @@ def test_parse_callback_none(caplog) -> None:
 
         crawler = make_crawler(TestSpider, {})
 
-        with warnings.catch_warnings(record=True) as w:
+        expected_warning = (
+            r"has callback=None which defaults to the parse\(\) method which is "
+            r"annotated with scrapy_poet.DummyResponse. We're assuming this isn't "
+            r"intended and would simply ignore scrapy_poet.DummyResponse."
+        )
+        with pytest.warns(UserWarning, match=expected_warning):
             yield crawler.crawl()
-
-            expected_warning = (
-                "has callback=None which defaults to the parse() method which is annotated "
-                "with scrapy_poet.DummyResponse. We're assuming this isn't intended and "
-                "would simply ignore scrapy_poet.DummyResponse"
-            )
-            assert expected_warning in str(w[0].message)
 
     assert not isinstance(collected["response"], DummyResponse)
 
@@ -496,15 +493,13 @@ def test_parse_callback_none_deps(caplog) -> None:
 
         crawler = make_crawler(TestSpider, {})
 
-        with warnings.catch_warnings(record=True) as w:
+        expected_warning = (
+            r"has callback=None which defaults to the parse\(\) method which is "
+            r"annotated with scrapy_poet.DummyResponse. We're assuming this isn't "
+            r"intended and would simply ignore scrapy_poet.DummyResponse."
+        )
+        with pytest.warns(UserWarning, match=expected_warning):
             yield crawler.crawl()
-
-            expected_warning = (
-                "has callback=None which defaults to the parse() method which is annotated "
-                "with scrapy_poet.DummyResponse. We're assuming this isn't intended and "
-                "would simply ignore scrapy_poet.DummyResponse"
-            )
-            assert expected_warning in str(w[0].message)
 
     expected_msg = "has callback=None. No dependencies will be built by scrapy-poet."
     assert expected_msg in caplog.text
