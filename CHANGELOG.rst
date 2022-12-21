@@ -71,7 +71,7 @@ In line with this, the following changes were made:
       the usual page objects. This means that it won't raise a ``TypeError``
       anymore when not passing a subclass of ``web_poet.ItemPage``.
     * ``scrapy_poet.overrides.OverridesRegistry`` has been deprecated and
-      overhauled into ``scrapy_poet.rules.OverridesAndItemRegistry``:
+      overhauled into ``scrapy_poet.registry.OverridesAndItemRegistry``:
 
         * It is now subclassed from ``web_poet.RulesRegistry`` which allows
           outright access to its registry methods.

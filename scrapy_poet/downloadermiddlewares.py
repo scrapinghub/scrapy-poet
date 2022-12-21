@@ -58,7 +58,7 @@ class InjectionMiddleware:
             )
             warnings.warn(msg, DeprecationWarning, stacklevel=2)
             registry_cls = load_object(
-                settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", OverridesAndItemRegistry)
+                settings["SCRAPY_POET_OVERRIDES_REGISTRY"]
             )
         else:
             registry_cls = load_object(
