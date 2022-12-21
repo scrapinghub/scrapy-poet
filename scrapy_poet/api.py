@@ -1,5 +1,5 @@
 from inspect import iscoroutinefunction
-from typing import Any, Callable, Optional
+from typing import Callable, Optional, Type
 
 from scrapy.http import Request, Response
 from web_poet.pages import ItemPage
@@ -29,7 +29,7 @@ class DummyResponse(Response):
         super().__init__(url=url, request=request)
 
 
-def callback_for(page_or_item_cls: Any) -> Callable:
+def callback_for(page_or_item_cls: Type) -> Callable:
     """Create a callback for an :class:`web_poet.pages.ItemPage` subclass or an
     item type.
 

@@ -75,9 +75,7 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
         self.overrides_matcher: Dict[Type[ItemPage], URLMatcher] = defaultdict(
             URLMatcher
         )
-        self.item_matcher: Dict[Optional[Type[Any]], URLMatcher] = defaultdict(
-            URLMatcher
-        )
+        self.item_matcher: Dict[Optional[Type], URLMatcher] = defaultdict(URLMatcher)
         for rule_id, rule in enumerate(self._rules):
             self.add_rule(rule_id, rule)
         logger.debug(f"List of parsed ApplyRules:\n{self._rules}")
@@ -100,9 +98,10 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
             ]
             warn(
                 f"Similar URL patterns {pattern_dupes} were declared earlier "
-                f"which uses to_return={rule.to_return}. This earlier rule "
-                f"will be used when matching against URLs. Consider updating "
-                f"the priority of these rules: {rules}."
+                f"that use to_return={rule.to_return}. The first, highest-priority "
+                f"rule added to SCRAPY_POET_REGISTRY will be used when matching "
+                f"against URLs. Consider updating the priority of these rules: "
+                f"{rules}."
             )
 
         if rule.instead_of:
