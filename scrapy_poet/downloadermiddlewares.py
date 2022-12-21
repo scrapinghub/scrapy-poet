@@ -57,13 +57,14 @@ class InjectionMiddleware:
                 "Use SCRAPY_POET_REGISTRY instead."
             )
             warnings.warn(msg, DeprecationWarning, stacklevel=2)
-            registry_cls = load_object(
-                settings["SCRAPY_POET_OVERRIDES_REGISTRY"]
+        registry_cls = load_object(
+            settings.get(
+                "SCRAPY_POET_REGISTRY",
+                settings.get(
+                    "SCRAPY_POET_OVERRIDES_REGISTRY", OverridesAndItemRegistry
+                ),
             )
-        else:
-            registry_cls = load_object(
-                settings.get("SCRAPY_POET_REGISTRY", OverridesAndItemRegistry)
-            )
+        )
         self.registry = create_instance(registry_cls, settings, crawler)
         self.injector = Injector(
             crawler,

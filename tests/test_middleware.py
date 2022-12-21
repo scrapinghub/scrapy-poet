@@ -137,6 +137,19 @@ def test_deprecation_setting_SCRAPY_POET_OVERRIDES_REGISTRY(settings) -> None:
         middleware = InjectionMiddleware(crawler)
         assert isinstance(middleware.registry, OverridesAndItemRegistry)
 
+    # If both settings are present, the newer SCRAPY_POET_REGISTRY setting is used.
+
+    class FakeRegistry:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    settings["SCRAPY_POET_REGISTRY"] = FakeRegistry
+    crawler = get_crawler(Spider, settings)
+
+    with pytest.warns(DeprecationWarning, match=msg):
+        middleware = InjectionMiddleware(crawler)
+        assert isinstance(middleware.registry, FakeRegistry)
+
 
 @attr.s(auto_attribs=True)
 class OptionalAndUnionPage(WebPage):

@@ -71,9 +71,10 @@ class OverridesAndItemRegistry(OverridesRegistryBase, RulesRegistry):
                 "Use SCRAPY_POET_RULES instead."
             )
             warn(msg, DeprecationWarning, stacklevel=2)
-            rules = crawler.settings.getlist("SCRAPY_POET_OVERRIDES", [])
-        else:
-            rules = crawler.settings.getlist("SCRAPY_POET_RULES", [])
+        rules = crawler.settings.getlist(
+            "SCRAPY_POET_RULES",
+            crawler.settings.getlist("SCRAPY_POET_OVERRIDES", []),
+        )
         return cls(rules=rules)
 
     def __init__(self, rules: Optional[Iterable[ApplyRule]] = None) -> None:
