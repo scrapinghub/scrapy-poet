@@ -29,12 +29,12 @@ from web_poet.pages import ItemT
 
 from scrapy_poet import callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
-from scrapy_poet.utils import (
+from scrapy_poet.utils.mockserver import get_ephemeral_port
+from scrapy_poet.utils.testing import (
     capture_exceptions,
     crawl_single_item,
     create_scrapy_settings,
 )
-from scrapy_poet.utils.mockserver import get_ephemeral_port
 from tests.test_middleware import ProductHtml
 
 DOMAIN = get_domain(socket.gethostbyname(socket.gethostname()))
