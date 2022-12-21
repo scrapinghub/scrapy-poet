@@ -69,5 +69,9 @@ class BooksSpider(scrapy.Spider):
     # Configuring different page objects pages for different domains
     custom_settings = {"SCRAPY_POET_OVERRIDES": default_registry.get_rules()}
 
-    def parse(self, response, page: BookListPage):
+    def start_requests(self):
+        for url in self.start_urls:
+            yield scrapy.Request(url, self.parse_home)
+
+    def parse_home(self, response, page: BookListPage):
         yield from response.follow_all(page.book_urls(), callback_for(BookPage))

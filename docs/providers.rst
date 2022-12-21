@@ -217,7 +217,10 @@ If neither spider callback nor any of the input providers are using
     class MySpider(scrapy.Spider):
         name = "my_spider"
 
-        def parse(self, response: DummyResponse, page: MyPageObject):
+        def start_requests(self):
+            yield scrapy.Request("http://books.toscrape.com/", self.parse_page)
+
+        def parse_page(self, response: DummyResponse, page: MyPageObject):
             # request will be IGNORED because neither spider callback
             # not MyPageObject seem like to be making use of its response
             yield page.to_item()
@@ -263,7 +266,10 @@ Page Object uses it, the request is not ignored, for example:
     class MySpider(scrapy.Spider):
         name = "my_spider"
 
-        def parse(self, response: DummyResponse, page: MyPageObject):
+        def start_requests(self):
+            yield scrapy.Request("http://books.toscrape.com/", self.parse_page)
+
+        def parse_page(self, response: DummyResponse, page: MyPageObject):
             # request will be PROCESSED because spider callback is not
             # making use of its response, but MyPageObject seems like to be
             yield page.to_item()

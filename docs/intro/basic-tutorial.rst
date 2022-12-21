@@ -43,9 +43,11 @@ called ``books`` and it will crawl and extract data from a target website.
         """Crawl and extract books data"""
 
         name = "books"
-        start_urls = ["http://books.toscrape.com/"]
 
-        def parse(self, response):
+        def start_requests(self):
+            yield scrapy.Request("http://books.toscrape.com/", self.parse_home)
+
+        def parse_home(self, response):
             """Discover book links and follow them"""
             links = response.css(".image_container a")
             yield from response.follow_all(links, self.parse_book)
@@ -147,9 +149,11 @@ The full spider code would be looking like this:
         """Crawl and extract books data"""
 
         name = "books"
-        start_urls = ["http://books.toscrape.com/"]
 
-        def parse(self, response):
+        def start_requests(self):
+            yield scrapy.Request("http://books.toscrape.com/", self.parse_home)
+
+        def parse_home(self, response):
             """Discover book links and follow them"""
             links = response.css(".image_container a")
             yield from response.follow_all(links, self.parse_book)
@@ -173,10 +177,12 @@ returning the result of the ``to_item`` method call. We could use
         """Crawl and extract books data"""
 
         name = "books"
-        start_urls = ["http://books.toscrape.com/"]
         parse_book = callback_for(BookPage)
 
-        def parse(self, response):
+        def start_requests(self):
+            yield scrapy.Request("http://books.toscrape.com/", self.parse_home)
+
+        def parse_home(self, response):
             """Discovers book links and follows them"""
             links = response.css(".image_container a")
             yield from response.follow_all(links, self.parse_book)
@@ -197,9 +203,11 @@ returning the result of the ``to_item`` method call. We could use
 
         class BooksSpider(scrapy.Spider):
             name = "books"
-            start_urls = ["http://books.toscrape.com/"]
 
-            def parse(self, response):
+            def start_requests(self):
+                yield scrapy.Request("http://books.toscrape.com/", self.parse_home)
+
+            def parse_home(self, response):
                 links = response.css(".image_container a")
                 yield from response.follow_all(links, self.parse_book)
 
@@ -212,9 +220,11 @@ returning the result of the ``to_item`` method call. We could use
 
         class BooksSpider(scrapy.Spider):
             name = "books"
-            start_urls = ["http://books.toscrape.com/"]
 
-            def parse(self, response):
+            def start_requests(self):
+                yield scrapy.Request("http://books.toscrape.com/", self.parse_home)
+
+            def parse_home(self, response):
                 links = response.css(".image_container a")
                 yield from response.follow_all(links, self.parse_book)
 
@@ -252,10 +262,12 @@ At the end of our job, the spider should look like this:
         """Crawl and extract books data"""
 
         name = "books"
-        start_urls = ["http://books.toscrape.com/"]
         parse_book = callback_for(BookPage)  # extract items from book pages
 
-        def parse(self, response):
+        def start_requests(self):
+            yield scrapy.Request("http://books.toscrape.com/", self.parse_home)
+
+        def parse_home(self, response):
             """Discover book links and follow them"""
             links = response.css(".image_container a")
             yield from response.follow_all(links, self.parse_book)
@@ -317,10 +329,12 @@ Let's adapt the spider to use this new Page Object:
 
     class BooksSpider(scrapy.Spider):
         name = "books_spider"
-        start_urls = ["http://books.toscrape.com/"]
         parse_book = callback_for(BookPage)  # extract items from book pages
 
-        def parse(self, response, page: BookListPage):
+        def start_requests(self):
+            yield scrapy.Request("http://books.toscrape.com/", self.parse_home)
+
+        def parse_home(self, response, page: BookListPage):
             yield from response.follow_all(page.book_urls(), self.parse_book)
 
 All the extraction logic that is specific to the site is now responsibility
@@ -330,6 +344,39 @@ work providing that the Page Objects do their work.
 In fact, the spider only responsibility becomes expressing the crawling strategy:
 "fetch a list of item URLs, follow them, and extract the resultant items".
 The code gets clearer and simpler.
+
+.. warning::
+
+    We could've defined our spider as:
+
+    .. code-block:: python
+
+        class BooksSpider(scrapy.Spider):
+            name = "books_spider"
+            parse_book = callback_for(BookPage)  # extract items from book pages
+            start_urls = ["http://books.toscrape.com/"]
+
+            def parse(self, response, page: BookListPage):
+                yield from response.follow_all(page.book_urls(), self.parse_book)
+
+    However, this would result in the following warning message::
+
+        <GET https://books.toscrape.com/> has callback=None.
+        No dependencies will be built by scrapy-poet. 
+
+    This means that ``page`` isn't injected into the ``parse()`` method, leading
+    to this error::
+
+        TypeError: parse() missing 1 required positional argument: 'page'
+
+    This happens whenever a ``scrapy.Request`` doesn't declare a callback. When
+    the callback is ``None``, it refers to the ``parse()`` method by default.
+
+    In this case, using ``start_urls`` would implicitly call the ``start_requests()``
+    method behind the scenes where the ``scrapy.Request`` has ``callback == None``.
+
+    One way to avoid this is to always declare the callback in ``scrapy.Request``,
+    just like in the original example.
 
 Configure *overrides* for Books to Scrape
 -----------------------------------------

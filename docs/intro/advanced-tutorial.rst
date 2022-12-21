@@ -86,10 +86,14 @@ It can be directly used inside the spider as:
             "https://example.com/category/product/item?id=989",
         ]
 
-        async def parse(self, response, page: ProductPage):
+        def start_requests(self):
+            for url in self.start_urls:
+                yield scrapy.Request(url, self.parse_product)
+
+        async def parse_product(self, response, page: ProductPage):
             return await page.to_item()
 
-Note that we needed to update the ``parse()`` method to be an ``async`` method,
+Note that we needed to update the ``parse_product()`` method to be an ``async`` method,
 since the ``to_item()`` method of the Page Object we're using is an ``async``
 method as well.
 
@@ -160,9 +164,9 @@ Let's see it in action:
             for url in start_urls:
                 yield scrapy.Request(
                     url=url,
-                    callback=self.parse,
+                    callback=self.parse_product,
                     meta={"page_params": {"enable_extracting_all_images": True}}
                 )
 
-        async def parse(self, response, page: ProductPage):
+        async def parse_product(self, response, page: ProductPage):
             return await page.to_item()
