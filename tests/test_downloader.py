@@ -441,9 +441,10 @@ def test_parse_callback_none() -> None:
             yield crawler.crawl()
 
         assert (
-            r"has callback=None which defaults to the parse() method which is "
-            r"annotated with scrapy_poet.DummyResponse. We're assuming this isn't "
-            r"intended and would simply ignore scrapy_poet.DummyResponse."
+            "Requests with callback=None defaults to the parse() method. If "
+            "the parse() method is annotated with scrapy_poet.DummyResponse, "
+            "we're assuming this isn't intended and would simply ignore "
+            "scrapy_poet.DummyResponse."
         ) in str(record.list[0].message)
         assert (
             "A request has been encountered with callback=None which "
@@ -491,9 +492,10 @@ def test_parse_callback_none_deps(caplog) -> None:
             yield crawler.crawl()
 
         assert (
-            r"has callback=None which defaults to the parse() method which is "
-            r"annotated with scrapy_poet.DummyResponse. We're assuming this isn't "
-            r"intended and would simply ignore scrapy_poet.DummyResponse."
+            "Requests with callback=None defaults to the parse() method. If "
+            "the parse() method is annotated with scrapy_poet.DummyResponse, "
+            "we're assuming this isn't intended and would simply ignore "
+            "scrapy_poet.DummyResponse."
         ) in str(record.list[0].message)
         assert (
             "A request has been encountered with callback=None which "

@@ -1,7 +1,7 @@
-import warnings
 from typing import Any, Dict
 
 import attr
+import pytest
 import scrapy
 from pytest_twisted import inlineCallbacks
 from scrapy.crawler import Crawler
@@ -209,9 +209,10 @@ def test_is_callback_using_response():
     # See: https://github.com/scrapinghub/scrapy-poet/issues/48
     request.callback = None
     expected_warning = (
-        "has callback=None which defaults to the parse() method which is annotated "
-        "with scrapy_poet.DummyResponse. We're assuming this isn't intended and "
-        "would simply ignore scrapy_poet.DummyResponse"
+        "Requests with callback=None defaults to the parse() method. If "
+        "the parse() method is annotated with scrapy_poet.DummyResponse, "
+        "we're assuming this isn't intended and would simply ignore "
+        "scrapy_poet.DummyResponse."
     )
 
     assert is_callback_requiring_scrapy_response(spider.parse, request) is True
@@ -229,9 +230,9 @@ def test_is_callback_using_response():
         spider.parse8,
         spider.parse10,
     ):
-        with warnings.catch_warnings(record=True) as w:
+        with pytest.warns(UserWarning) as record:
             assert is_callback_requiring_scrapy_response(method, request) is True
-            assert expected_warning in str(w[0].message)
+            assert expected_warning in str(record.list[0].message)
 
 
 @inlineCallbacks
