@@ -3,6 +3,7 @@ responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
 import logging
+import warnings
 from typing import Generator, Optional, Type, TypeVar
 
 from scrapy import Spider, signals
@@ -12,7 +13,7 @@ from scrapy.utils.misc import create_instance, load_object
 from twisted.internet.defer import Deferred, inlineCallbacks
 
 from .api import DummyResponse
-from .injection import Injector
+from .injection import Injector, get_callback, get_response_annotation
 from .overrides import OverridesRegistry
 from .page_input_providers import (
     HttpClientProvider,
@@ -108,11 +109,17 @@ class InjectionMiddleware:
         the user-defined ``cb_kwargs`` takes precedence.
         """
         if request.callback is None:
-            spider.logger.warning(
-                f"{request} has callback=None. No dependencies will be built "
-                f"by scrapy-poet."
-            )
-            return response
+            callback = get_callback(request, spider)  # should return parse()
+            response_annotation = get_response_annotation(callback)
+
+            if issubclass(response_annotation.annotation, DummyResponse):
+                warnings.warn(
+                    "A request has been encountered with callback=None which "
+                    "defaults to the parse() method. On such cases, when the "
+                    "parse() method is annotated with DummyResponse, "
+                    "no dependencies will be built by scrapy-poet."
+                )
+                return response
 
         # Find out the dependencies
         final_kwargs = yield from self.injector.build_callback_dependencies(

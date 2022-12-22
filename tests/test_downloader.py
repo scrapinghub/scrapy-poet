@@ -148,15 +148,13 @@ def test_additional_requests_success() -> None:
 
         class TestSpider(Spider):
             name = "test_spider"
+            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
-
-            def start_requests(self):
-                yield Request(server.root_url, self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -189,15 +187,13 @@ def test_additional_requests_bad_response() -> None:
 
         class TestSpider(Spider):
             name = "test_spider"
+            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
-
-            def start_requests(self):
-                yield Request(server.root_url, self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -238,15 +234,13 @@ def test_additional_requests_connection_issue() -> None:
 
             class TestSpider(Spider):
                 name = "test_spider"
+                start_urls = [server.root_url]
 
                 custom_settings = {
                     "DOWNLOADER_MIDDLEWARES": {
                         "scrapy_poet.InjectionMiddleware": 543,
                     },
                 }
-
-                def start_requests(self):
-                    yield Request(server.root_url, self.parse)
 
                 async def parse(self, response, page: ItemPage):
                     item = await page.to_item()
@@ -285,6 +279,7 @@ def test_additional_requests_ignored_request() -> None:
 
         class TestSpider(Spider):
             name = "test_spider"
+            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
@@ -292,9 +287,6 @@ def test_additional_requests_ignored_request() -> None:
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
-
-            def start_requests(self):
-                yield Request(server.root_url, self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -344,6 +336,7 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
 
         class TestSpider(Spider):
             name = "test_spider"
+            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
@@ -351,9 +344,6 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
-
-            def start_requests(self):
-                yield Request(server.root_url, self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -404,8 +394,8 @@ def test_additional_requests_dont_filter() -> None:
             }
 
             def start_requests(self):
-                yield Request(server.root_url, callback=self.parse, body=b"a")
-                yield Request(server.root_url, callback=self.parse, body=b"a")
+                yield Request(server.root_url, body=b"a")
+                yield Request(server.root_url, body=b"a")
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -418,7 +408,7 @@ def test_additional_requests_dont_filter() -> None:
 
 
 @inlineCallbacks
-def test_parse_callback_none(caplog) -> None:
+def test_parse_callback_none() -> None:
     """If request.callback == None, the DummyResponse annotation in the parse()
     method would be ignored.
 
@@ -447,18 +437,22 @@ def test_parse_callback_none(caplog) -> None:
 
         crawler = make_crawler(TestSpider, {})
 
-        expected_warning = (
-            r"has callback=None which defaults to the parse\(\) method which is "
-            r"annotated with scrapy_poet.DummyResponse. We're assuming this isn't "
-            r"intended and would simply ignore scrapy_poet.DummyResponse."
-        )
-        with pytest.warns(UserWarning, match=expected_warning):
+        with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
 
-    assert not isinstance(collected["response"], DummyResponse)
+        assert (
+            r"has callback=None which defaults to the parse() method which is "
+            r"annotated with scrapy_poet.DummyResponse. We're assuming this isn't "
+            r"intended and would simply ignore scrapy_poet.DummyResponse."
+        ) in str(record.list[0].message)
+        assert (
+            "A request has been encountered with callback=None which "
+            "defaults to the parse() method. On such cases, when the "
+            "parse() method is annotated with DummyResponse, "
+            "no dependencies will be built by scrapy-poet."
+        ) in str(record.list[1].message)
 
-    expected_msg = "has callback=None. No dependencies will be built by scrapy-poet."
-    assert expected_msg in caplog.text
+    assert not isinstance(collected["response"], DummyResponse)
 
 
 @inlineCallbacks
@@ -493,16 +487,20 @@ def test_parse_callback_none_deps(caplog) -> None:
 
         crawler = make_crawler(TestSpider, {})
 
-        expected_warning = (
-            r"has callback=None which defaults to the parse\(\) method which is "
-            r"annotated with scrapy_poet.DummyResponse. We're assuming this isn't "
-            r"intended and would simply ignore scrapy_poet.DummyResponse."
-        )
-        with pytest.warns(UserWarning, match=expected_warning):
+        with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
 
-    expected_msg = "has callback=None. No dependencies will be built by scrapy-poet."
-    assert expected_msg in caplog.text
+        assert (
+            r"has callback=None which defaults to the parse() method which is "
+            r"annotated with scrapy_poet.DummyResponse. We're assuming this isn't "
+            r"intended and would simply ignore scrapy_poet.DummyResponse."
+        ) in str(record.list[0].message)
+        assert (
+            "A request has been encountered with callback=None which "
+            "defaults to the parse() method. On such cases, when the "
+            "parse() method is annotated with DummyResponse, "
+            "no dependencies will be built by scrapy-poet."
+        ) in str(record.list[1].message)
 
     if sys.version_info < (3, 10):
         expected_msg = (

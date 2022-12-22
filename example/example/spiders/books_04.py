@@ -22,10 +22,8 @@ class BookPage(WebPage):
 
 class BooksSpider(scrapy.Spider):
     name = "books_04"
+    start_urls = ["http://books.toscrape.com/"]
 
-    def start_requests(self):
-        yield scrapy.Request("http://books.toscrape.com/", self.parse_home)
-
-    def parse_home(self, response, page: BookListPage):
+    def parse(self, response, page: BookListPage):
         for url in page.book_urls():
             yield response.follow(url, callback_for(BookPage))

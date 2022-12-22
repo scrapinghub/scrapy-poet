@@ -56,10 +56,6 @@ class BooksSpider(scrapy.Spider):
         ]
     }
 
-    def start_requests(self):
-        for url in self.start_urls:
-            yield scrapy.Request(url, self.parse_home)
-
-    def parse_home(self, response, page: BookListPage):
+    def parse(self, response, page: BookListPage):
         for url in page.book_urls():
             yield response.follow(url, callback_for(BookPage))
