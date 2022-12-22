@@ -337,9 +337,9 @@ def is_callback_requiring_scrapy_response(callback: Callable, request: Request):
         if request.callback is None:
             warnings.warn(
                 "Requests with callback=None defaults to the parse() method. If "
-                "the parse() method is annotated with scrapy_poet.DummyResponse, "
-                "we're assuming this isn't intended and would simply ignore "
-                "scrapy_poet.DummyResponse."
+                "the parse() method is annotated with scrapy_poet.DummyResponse "
+                "(or its subclasses), we're assuming this isn't intended and "
+                "would simply ignore this annotation."
             )
             return True
 

@@ -244,8 +244,8 @@ If neither spider callback nor any of the input providers are using
 
         A request has been encountered with callback=None which
         defaults to the parse() method. On such cases, when the
-        parse() method is annotated with DummyResponse,
-        no dependencies will be built by scrapy-poet.
+        parse() method is annotated with DummyResponse (or its, 
+        subclasses) no dependencies will be built by scrapy-poet.
 
     This means that ``page`` isn't injected into the ``parse()`` method, leading
     to this error:

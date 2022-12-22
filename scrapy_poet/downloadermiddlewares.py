@@ -116,8 +116,8 @@ class InjectionMiddleware:
                 warnings.warn(
                     "A request has been encountered with callback=None which "
                     "defaults to the parse() method. On such cases, when the "
-                    "parse() method is annotated with DummyResponse, "
-                    "no dependencies will be built by scrapy-poet."
+                    "parse() method is annotated with DummyResponse (or its, "
+                    "subclasses) no dependencies will be built by scrapy-poet."
                 )
                 return response
 
