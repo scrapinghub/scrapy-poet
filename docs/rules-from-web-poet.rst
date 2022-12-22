@@ -221,41 +221,26 @@ Let's check out an example:
 
 
     @attrs.define
-    class Image:
-        url: str
-
-
-    @handle_urls("example.com")
-    class ProductImagePage(WebPage[Image]):
-        @field
-        def url(self) -> str:
-            return self.css("#product img ::attr(href)").get("")
-
-
-    @attrs.define
     class Product:
         name: str
-        image: Image
 
 
     @handle_urls("example.com")
     @attrs.define
     class ProductPage(WebPage[Product]):
-        # The ``Image`` class is declared as a dependency.
-        image: Image
 
         @field
         def name(self) -> str:
             return self.css("h1.name ::text").get("")
 
-        @field
-        def image(self) -> Image:
-            return self.image
-
 
     class MySpider(scrapy.Spider):
         name = "myspider"
-        start_urls = ["https://example.com/products/some-product"]
+
+        def start_requests(self):
+            yield scrapy.Request(
+                "https://example.com/products/some-product", self.parse
+            )
 
         # We can directly ask for the item here instead of the page object.
         def parse(self, response, item: Product):
@@ -263,23 +248,11 @@ Let's check out an example:
 
 From this example, we can see that:
 
-    * Page objects can directly ask for items as dependencies.
-
-      This is made possible by the ``ApplyRule("example.com", use=ProductImagePage,
-      to_return=Image)`` instance created from the ``@handle_urls`` decorator
-      on ``ProductImagePage``.
-
-      The ``Image`` item instance directly comes from ``ProductImagePage`` (by
-      calling its ``.to_item()`` method behind the scenes) and is provided to
-      ``ProductPage``.
-
-    * Similarly, spider callbacks can directly ask for items as dependencies.
-
-      This is made possible by the ``ApplyRule("example.com", use=ProductPage,
+    * Spider callbacks can directly ask for items as dependencies.
+    * The ``Product`` item instance directly comes from ``ProductPage``.
+    * This is made possible by the ``ApplyRule("example.com", use=ProductPage,
       to_return=Product)`` instance created from the ``@handle_urls`` decorator
       on ``ProductPage``.
-
-      The ``Product`` item instance directly comes from ``ProductPage``.
 
 .. note::
 
@@ -305,7 +278,11 @@ From this example, we can see that:
 
         class MySpider(scrapy.Spider):
             name = "myspider"
-            start_urls = ["https://example.com/products/some-product"]
+
+            def start_requests(self):
+                yield scrapy.Request(
+                    "https://example.com/products/some-product", self.parse
+                )
 
             async def parse(self, response, product_page: ProductPage):
                 return await product_page.to_item()
