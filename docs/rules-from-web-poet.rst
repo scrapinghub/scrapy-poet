@@ -218,6 +218,7 @@ Let's check out an example:
     import attrs
     import scrapy
     from web_poet import WebPage, handle_urls, field
+    from scrapy_poet import DummyResponse
 
 
     @attrs.define
@@ -243,7 +244,7 @@ Let's check out an example:
             )
 
         # We can directly ask for the item here instead of the page object.
-        def parse(self, response, item: Product):
+        def parse(self, response: DummyResponse, item: Product):
             return item
 
 From this example, we can see that:
@@ -284,7 +285,7 @@ From this example, we can see that:
                     "https://example.com/products/some-product", self.parse
                 )
 
-            async def parse(self, response, product_page: ProductPage):
+            async def parse(self, response: DummyResponse, product_page: ProductPage):
                 return await product_page.to_item()
 
 For more information about all the expected behavior for the ``to_return``
