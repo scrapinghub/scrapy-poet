@@ -1,4 +1,3 @@
-import weakref
 from typing import Any, Callable, Sequence, Set
 
 import attr
@@ -115,14 +114,6 @@ class TestInjector:
                 injector.is_provider_requiring_scrapy_response[provider]
                 == provider.require_response
             )
-
-        # Asserting that some providers could still have access to some parts
-        # of the injector since the injector is passed when instantiating the
-        # provider.
-        weak_ref = weakref.ref(injector.providers[0])
-        assert weak_ref()
-        del injector
-        assert weak_ref()
 
     def test_non_callable_provider_error(self):
         """Checks that a exception is raised when a provider is not callable"""
