@@ -81,8 +81,8 @@ class OverridesRegistry(OverridesRegistryBase, RulesRegistry):
         logger.debug(f"List of parsed ApplyRules:\n{self._rules}")
 
     def add_rule(self, rule_id: int, rule: ApplyRule) -> None:
-        # A common case when a PO subclasses another one with the same URL
-        # pattern. See the ``test_item_return_subclass()`` test case in
+        # A common case when a page object subclasses another one with the same
+        # URL pattern. See the ``test_item_return_subclass()`` test case in
         # ``tests/test_web_poet_rules.py``.
         matched = self.item_matcher[rule.to_return]
         pattern_dupes = [

@@ -13,6 +13,7 @@ page objects and spider callbacks. The following is now possible:
     import attrs
     import scrapy
     from web_poet import WebPage, handle_urls, field
+    from scrapy_poet import DummyResponse
 
     @attrs.define
     class Image:
@@ -32,10 +33,10 @@ page objects and spider callbacks. The following is now possible:
     @handle_urls("example.com")
     @attrs.define
     class ProductPage(WebPage[Product]):
-        # ✨ NEW: Notice that the PO can ask for items as dependencies.
+        # ✨ NEW: Notice that the page object can ask for items as dependencies.
         # An instance of ``Image`` is injected behind the scenes by calling the
         # ``.to_item()`` method of ``ProductImagePage``.
-        image: Image
+        image_item: Image
 
         @field
         def name(self) -> str:
@@ -43,14 +44,19 @@ page objects and spider callbacks. The following is now possible:
 
         @field
         def image(self) -> Image:
-            return self.image
+            return self.image_item
 
     class MySpider(scrapy.Spider):
         name = "myspider"
-        start_urls = ["https://example.com/products/some-product"]
 
-        # ✨ NEW: Notice that we're directly using the item here and not the PO.
-        def parse(self, response, item: Product):
+        def start_requests(self):
+            yield scrapy.Request(
+                "https://example.com/products/some-product", self.parse
+            )
+
+        # ✨ NEW: Notice that we're directly using the item here and not the
+        # page object.
+        def parse(self, response: DummyResponse, item: Product):
             return item
 
 In line with this, the following changes were made:
