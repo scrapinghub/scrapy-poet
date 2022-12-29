@@ -169,8 +169,10 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def __init__(self, crawler: Crawler):
         if hasattr(crawler, "request_fingerprinter"):
+
             def fingerprint(x):
                 return crawler.request_fingerprinter.fingerprint(x).hex()
+
             self._fingerprint = fingerprint
         else:
             from scrapy.utils.request import request_fingerprint
