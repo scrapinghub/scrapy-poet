@@ -2,7 +2,7 @@ from tempfile import NamedTemporaryFile
 
 from pytest_twisted import inlineCallbacks
 from scrapy import Request, Spider
-from web_poet import field, WebPage
+from web_poet import WebPage, field
 
 from .mockserver import MockServer
 from .utils import EchoResource, make_crawler
@@ -14,7 +14,6 @@ def test_cache_no_errors(caplog) -> None:
         with MockServer(EchoResource) as server:
 
             class Page(WebPage):
-
                 @field
                 async def url(self):
                     return self.response.url

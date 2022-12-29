@@ -172,6 +172,7 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
             self._fingerprint = crawler.request_fingerprinter.fingerprint
         else:
             from scrapy.utils.request import request_fingerprint
+
             self._fingerprint = request_fingerprint
 
     def __call__(self, to_provide: Set[Callable], response: Response):
