@@ -11,7 +11,7 @@ setup(
     url="https://github.com/scrapinghub/scrapy-poet",
     packages=find_packages(exclude=["tests", "example"]),
     entry_points={
-        "scrapy.commands": ["create_po_test = scrapy_poet.commands:CreatePOTestCommand"]
+        "scrapy.commands": ["savefixture = scrapy_poet.commands:SaveFixtureCommand"]
     },
     install_requires=[
         "andi >= 0.4.1",

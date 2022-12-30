@@ -79,7 +79,7 @@ def additional_settings() -> dict:
     }
 
 
-class CreatePOTestCommand(ScrapyCommand):
+class SaveFixtureCommand(ScrapyCommand):
     def syntax(self):
         return "<Page Object type name> <URL>"
 
