@@ -81,22 +81,22 @@ def additional_settings() -> dict:
 
 class SaveFixtureCommand(ScrapyCommand):
     def syntax(self):
-        return "<Page Object type name> <URL>"
+        return "<page object class> <URL>"
 
     def short_desc(self):
-        return "Generate a web-poet test for the provided Page Object and URL"
+        return "Generate a web-poet test for the provided page object and URL"
 
     def run(self, args, opts):
         if len(args) != 2:
             raise UsageError()
-        po_name = args[0]
+        type_name = args[0]
         url = args[1]
 
-        po_type = load_object(po_name)
-        if not issubclass(po_type, ItemPage):
-            raise UsageError(f"Error: {po_name} is not a descendant of ItemPage")
+        cls = load_object(type_name)
+        if not issubclass(cls, ItemPage):
+            raise UsageError(f"Error: {type_name} is not a descendant of ItemPage")
 
-        spider_cls = spider_for(po_type)
+        spider_cls = spider_for(cls)
         self.settings.setdict(additional_settings())
 
         frozen_time = datetime.datetime.utcnow().isoformat()
@@ -111,5 +111,5 @@ class SaveFixtureCommand(ScrapyCommand):
             "frozen_time": frozen_time,
         }
         basedir = Path(self.settings.get("SCRAPY_POET_TESTS_DIR", "fixtures"))
-        fixture_dir = save_fixture(basedir / po_name, deps, item, meta=meta)
+        fixture_dir = save_fixture(basedir / type_name, deps, item, meta=meta)
         print(f"\nThe test fixture has been written to {fixture_dir}.")

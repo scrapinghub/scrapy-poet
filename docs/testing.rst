@@ -4,15 +4,15 @@
 Tests for Page Objects
 ======================
 
-``web-poet`` provides :ref:`tools for testing Page Objects
+``web-poet`` provides :ref:`tools for testing page objects
 <web-poet:web-poet-testing>`. ``scrapy-poet`` projects can use a Scrapy command
 to easily generate tests::
 
     scrapy savefixture my_project.po.MyItemPage http://example.com/page1.html
 
-This will request the provided page, create an instance of the provided Page
-Object for this page, request its :meth:`~web_poet.pages.ItemPage.to_item`
-method and save both the Page Object dependencies and the resulting item as a
+This will request the provided page, create an instance of the provided page
+object for this page, request its :meth:`~web_poet.pages.ItemPage.to_item`
+method and save both the page object dependencies and the resulting item as a
 test fixture. These fixtures can then be used with the ``pytest`` plugin
 provided by ``web-poet``.
 
