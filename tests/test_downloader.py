@@ -474,8 +474,8 @@ def test_parse_callback_none() -> None:
 
 @inlineCallbacks
 def test_parse_callback_none_no_annotated_deps() -> None:
-    """Same case with ``test_parse_callback_none_dummy_response`` but there are
-    no annotated dependencies.
+    """Same case with ``test_parse_callback_none`` but there are no annotated
+    dependencies.
 
     In this case, a warning message should NOT be issued.
     """
