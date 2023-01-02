@@ -225,40 +225,6 @@ If neither spider callback nor any of the input providers are using
             # not MyPageObject seem like to be making use of its response
             yield page.to_item()
 
-.. warning::
-
-    We could've defined our spider as:
-
-    .. code-block:: python
-
-        class MySpider(scrapy.Spider):
-            name = "my_spider"
-            start_urls = ["http://books.toscrape.com/"]
-
-            def parse(self, response: DummyResponse, page: MyPageObject):
-                # request will be IGNORED because neither spider callback
-                # not MyPageObject seem like to be making use of its response
-                yield page.to_item()
-
-    However, this would result in the following warning message:
-
-        A request has been encountered with callback=None which
-        defaults to the parse() method. On such cases, annotated
-        dependencies in the parse() method won't be built by
-        scrapy-poet. However, if the request has callback=parse,
-        the annotated dependencies will be built.
-
-    This means that ``page`` isn't injected into the ``parse()`` method, leading
-    to this error:
-
-        TypeError: parse() missing 1 required positional argument: 'page'
-
-    In this case, using ``start_urls`` would implicitly call the ``start_requests()``
-    method behind the scenes where the ``scrapy.Request`` has ``callback == None``.
-
-    One way to avoid this is to always declare the callback in ``scrapy.Request``,
-    just like in the original example.
-
 Although, if the spider callback is not using ``Response``, but the
 Page Object uses it, the request is not ignored, for example:
 
