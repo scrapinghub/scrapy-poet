@@ -6,15 +6,15 @@ TBR
 ---
 
 * Some changes in behavior when the callback isn't specified (i.e. ``None``) in
-  a ``Request`` which defaults to the ``parse()`` method.
+  a ``Request`` which defaults to the ``parse()`` method. A ``UserWarning``
+  would be issued if the following are encountered:
 
     * Fixed the issue where downloading the response is skipped when the
       ``parse()`` method is annotated with ``scrapy_poet.DummyResponse``.
       For instance: ``def parse(self, response: DummyResponse)``.
     * The ``InjectionMiddleware`` won't attempt to build any dependencies anymore
-      when ``Request.callback == None`` and the ``parse()`` method has any
-      annotated dependencies.
-    * A ``UserWarning`` would be issued if these things are encountered.
+      when ``Request.callback == None`` and the ``parse()`` method has annotated
+      dependencies that involves any of ``SCRAPY_POET_PROVIDERS``.
 
 * Official support for Python 3.11
 

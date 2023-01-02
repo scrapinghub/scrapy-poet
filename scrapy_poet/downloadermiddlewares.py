@@ -2,6 +2,7 @@
 responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
+import inspect
 import logging
 import warnings
 from typing import Generator, Optional, Type, TypeVar
@@ -13,7 +14,7 @@ from scrapy.utils.misc import create_instance, load_object
 from twisted.internet.defer import Deferred, inlineCallbacks
 
 from .api import DummyResponse
-from .injection import Injector
+from .injection import Injector, get_response_annotation
 from .overrides import OverridesRegistry
 from .page_input_providers import (
     HttpClientProvider,
@@ -92,6 +93,34 @@ class InjectionMiddleware:
         self.crawler.stats.inc_value("scrapy_poet/dummy_response_count")
         return DummyResponse(url=request.url, request=request)
 
+    def _skip_dependency_creation(
+        self, request: Request, response: Response, spider: Spider
+    ) -> bool:
+        """See: https://github.com/scrapinghub/scrapy-poet/issues/48"""
+
+        # No need to skip if the callback doesn't default to the parse() method
+        if request.callback is not None:
+            return False
+
+        # If the Request.cb_kwargs possess all of the cb dependencies, then no
+        # warning message should be issued.
+        signature_iter = iter(inspect.signature(spider.parse).parameters)
+        next(signature_iter)  # skip the first arg: response
+        cb_param_names = set(signature_iter)
+        if cb_param_names and cb_param_names == request.cb_kwargs.keys():
+            return False
+
+        # Skip if providers are needed.
+        if self.injector.discover_callback_providers(request):
+            return True
+
+        # Skip if DummyResponse is involved.
+        response_annotation = get_response_annotation(spider.parse)
+        if issubclass(response_annotation.annotation, DummyResponse):
+            return True
+
+        return False
+
     @inlineCallbacks
     def process_response(
         self, request: Request, response: Response, spider: Spider
@@ -108,7 +137,7 @@ class InjectionMiddleware:
         and an injectable attribute,
         the user-defined ``cb_kwargs`` takes precedence.
         """
-        if request.callback is None and spider.parse.__annotations__:
+        if self._skip_dependency_creation(request, response, spider):
             warnings.warn(
                 "A request has been encountered with callback=None which "
                 "defaults to the parse() method. On such cases, annotated "

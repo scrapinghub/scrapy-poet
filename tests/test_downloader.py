@@ -1,7 +1,7 @@
 import sys
 import warnings
 from functools import partial
-from typing import Callable
+from typing import Callable, List, Optional
 from unittest import mock
 
 import attr
@@ -418,46 +418,58 @@ def test_additional_requests_dont_filter() -> None:
     assert items == [{"a": "a"}]
 
 
-def _assert_warning_messages(record):
-    assert (
+@attr.define
+class BasicPage(WebPage):
+    def to_item(self):
+        return {"key": "value"}
+
+
+class BaseSpider(Spider):
+    name = "test_spider"
+    custom_settings = {
+        "DOWNLOADER_MIDDLEWARES": {
+            "scrapy_poet.InjectionMiddleware": 543,
+        },
+    }
+
+
+# See: https://github.com/scrapinghub/scrapy-poet/issues/48
+def _assert_warning_messages(record, index: Optional[List] = None):
+    index = index or [0, 1]
+
+    expected_warnings = [
+        # From the Injector:
         "Requests with callback=None defaults to the parse() method. If "
         "the parse() method is annotated with scrapy_poet.DummyResponse "
         "(or its subclasses), we're assuming this isn't intended and "
-        "would simply ignore this annotation."
-    ) in str(record.list[0].message)
-    assert (
+        "would simply ignore this annotation.",
+        # From the InjectionMiddleware:
         "A request has been encountered with callback=None which "
         "defaults to the parse() method. On such cases, annotated "
         "dependencies in the parse() method won't be built by "
         "scrapy-poet. However, if the request has callback=parse, "
-        "the annotated dependencies will be built."
-    ) in str(record.list[1].message)
+        "the annotated dependencies will be built.",
+    ]
+
+    for idx, result_warning in zip(index, record.list):
+        assert expected_warnings[idx] in str(result_warning.message)
 
 
 @inlineCallbacks
-def test_parse_callback_none() -> None:
-    """If request.callback == None, then any annotated dependencies in the parse()
-    method would be ignored.
+def test_parse_callback_none_dummy_response() -> None:
+    """If request.callback == None and the parse() method only has a single
+    parameter of ``response: DummyResponse``, then a warning should be issued.
 
-    This means that the response is actually downloaded as opposed to being
-    skipped if it's annotated with ``response: DummyResponse``.
-
-    See: https://github.com/scrapinghub/scrapy-poet/issues/48
+    This also means that even if the response is annotated with ``DummyResponse``,
+    it's still downloaded as opposed to being skipped.
     """
 
     collected = {}
 
     with MockServer(EchoResource) as server:
 
-        class TestSpider(Spider):
-            name = "test_spider"
+        class TestSpider(BaseSpider):
             start_urls = [server.root_url]
-
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-            }
 
             def parse(self, response: DummyResponse):
                 collected["response"] = response
@@ -467,17 +479,43 @@ def test_parse_callback_none() -> None:
         with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
 
-        _assert_warning_messages(record)
+    _assert_warning_messages(record)
+    assert not isinstance(collected["response"], DummyResponse)
 
+
+@inlineCallbacks
+def test_parse_callback_none_response() -> None:
+    """Similar to ``test_parse_callback_none_dummy_response()`` but instead of
+    ``response: DummyResponse``, it's ``response: scrapy.http.Response``.
+
+    No warnings should be issued here.
+    """
+
+    collected = {}
+
+    with MockServer(EchoResource) as server:
+
+        class TestSpider(BaseSpider):
+            start_urls = [server.root_url]
+
+            def parse(self, response: scrapy.http.Response):
+                collected["response"] = response
+
+        crawler = make_crawler(TestSpider, {})
+
+        with warnings.catch_warnings(record=True) as warning_msg:
+            yield crawler.crawl()
+
+    assert not warning_msg
     assert not isinstance(collected["response"], DummyResponse)
 
 
 @inlineCallbacks
 def test_parse_callback_none_no_annotated_deps() -> None:
-    """Same case with ``test_parse_callback_none`` but there are no annotated
-    dependencies.
+    """Similar to ``test_parse_callback_none_dummy_response()`` but there are no
+    annotated dependencies.
 
-    In this case, a warning message should NOT be issued.
+    No warnings should be issued here.
     """
 
     collected = {}
@@ -485,14 +523,7 @@ def test_parse_callback_none_no_annotated_deps() -> None:
     with MockServer(EchoResource) as server:
 
         class TestSpider(Spider):
-            name = "test_spider"
             start_urls = [server.root_url]
-
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-            }
 
             def parse(self, response):
                 collected["response"] = response
@@ -502,39 +533,25 @@ def test_parse_callback_none_no_annotated_deps() -> None:
         with warnings.catch_warnings(record=True) as warning_msg:
             yield crawler.crawl()
 
-        assert not warning_msg
-
+    assert not warning_msg
     assert isinstance(collected["response"], scrapy.http.Response)
 
 
 @inlineCallbacks
 def test_parse_callback_none_with_deps(caplog) -> None:
-    """Same with the ``test_parse_callback_none`` test above but confirms that
-    the other dependencies requested by the parse() method isn't injected.
+    """Same with the ``test_parse_callback_none_dummy_response`` test but it
+    confirms that the other dependencies requested by the parse() method isn't
+    injected.
 
     Moreover, it results in a TypeError in Scrapy due to the missing argument.
-
-    See: https://github.com/scrapinghub/scrapy-poet/issues/48
     """
 
     with MockServer(EchoResource) as server:
 
-        @attr.define
-        class TestPage(WebPage):
-            def to_item(self):
-                return {"key": "value"}
-
-        class TestSpider(Spider):
-            name = "test_spider"
+        class TestSpider(BaseSpider):
             start_urls = [server.root_url]
 
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-            }
-
-            def parse(self, response: DummyResponse, page: TestPage):
+            def parse(self, response: DummyResponse, page: BasicPage):
                 pass
 
         crawler = make_crawler(TestSpider, {})
@@ -542,7 +559,7 @@ def test_parse_callback_none_with_deps(caplog) -> None:
         with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
 
-        _assert_warning_messages(record)
+    _assert_warning_messages(record)
 
     if sys.version_info < (3, 10):
         expected_msg = (
@@ -552,5 +569,80 @@ def test_parse_callback_none_with_deps(caplog) -> None:
         expected_msg = (
             "TypeError: test_parse_callback_none_with_deps.<locals>.TestSpider"
             ".parse() missing 1 required positional argument: 'page'"
+        )
+    assert expected_msg in caplog.text
+
+
+@inlineCallbacks
+def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
+    """Same with the ``test_parse_callback_none_with_deps`` but the dep is passed
+    via the ``cb_kwargs`` Request parameter.
+
+    No warnings should be issued here.
+    """
+
+    collected = {}
+
+    with MockServer(EchoResource) as server:
+
+        class TestSpider(BaseSpider):
+            def start_requests(self):
+                page = BasicPage(web_poet.HttpResponse("https://example.com", b""))
+                yield Request(server.root_url, cb_kwargs={"page": page})
+
+            def parse(self, response: DummyResponse, page: BasicPage):
+                collected["response"] = response
+
+        crawler = make_crawler(TestSpider, {})
+
+        with pytest.warns(UserWarning) as record:
+            yield crawler.crawl()
+
+    _assert_warning_messages(record, index=[0])
+    assert not caplog.text  # no TypeError caused by missing ``page`` arg.
+    assert not isinstance(collected["response"], DummyResponse)
+
+
+@inlineCallbacks
+def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
+    """Same with the ``test_parse_callback_none_with_deps_cb_kwargs`` but not
+    all of the callback dependencies are available in the ``cb_kwargs`` Request
+    parameter.
+    """
+
+    with MockServer(EchoResource) as server:
+
+        @attr.define
+        class AnotherPage(WebPage):
+            pass
+
+        class TestSpider(BaseSpider):
+            def start_requests(self):
+                page = BasicPage(web_poet.HttpResponse("https://example.com", b""))
+                yield Request(server.root_url, cb_kwargs={"page": page})
+
+            def parse(
+                self,
+                response: DummyResponse,
+                page: BasicPage,
+                page2: AnotherPage,
+            ):
+                pass
+
+        crawler = make_crawler(TestSpider, {})
+
+        with pytest.warns(UserWarning) as record:
+            yield crawler.crawl()
+
+    _assert_warning_messages(record)
+
+    if sys.version_info < (3, 10):
+        expected_msg = (
+            "TypeError: parse() missing 1 required positional argument: 'page2'"
+        )
+    else:
+        expected_msg = (
+            "TypeError: test_parse_callback_none_with_deps_cb_kwargs_incomplete."
+            "<locals>.TestSpider.parse() missing 1 required positional argument: 'page2'"
         )
     assert expected_msg in caplog.text
