@@ -12,9 +12,9 @@ TBR
       ``parse()`` method is annotated with ``scrapy_poet.DummyResponse``.
       For instance: ``def parse(self, response: DummyResponse)``.
     * The ``InjectionMiddleware`` won't attempt to build any dependencies anymore
-      when ``Request.callback == None`` and the ``parse()`` method is annotated
-      with ``response: DummyResponse``.
-    * A warning would be issued if these things are encountered.
+      when ``Request.callback == None`` and the ``parse()`` method has any
+      annotated dependencies.
+    * A ``UserWarning`` would be issued if these things are encountered.
 
 * Official support for Python 3.11
 

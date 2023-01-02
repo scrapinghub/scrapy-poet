@@ -13,7 +13,7 @@ from scrapy.utils.misc import create_instance, load_object
 from twisted.internet.defer import Deferred, inlineCallbacks
 
 from .api import DummyResponse
-from .injection import Injector, get_callback, get_response_annotation
+from .injection import Injector
 from .overrides import OverridesRegistry
 from .page_input_providers import (
     HttpClientProvider,
@@ -108,18 +108,15 @@ class InjectionMiddleware:
         and an injectable attribute,
         the user-defined ``cb_kwargs`` takes precedence.
         """
-        if request.callback is None:
-            callback = get_callback(request, spider)  # should return parse()
-            response_annotation = get_response_annotation(callback)
-
-            if issubclass(response_annotation.annotation, DummyResponse):
-                warnings.warn(
-                    "A request has been encountered with callback=None which "
-                    "defaults to the parse() method. On such cases, when the "
-                    "parse() method is annotated with DummyResponse (or its, "
-                    "subclasses) no dependencies will be built by scrapy-poet."
-                )
-                return response
+        if request.callback is None and spider.parse.__annotations__:
+            warnings.warn(
+                "A request has been encountered with callback=None which "
+                "defaults to the parse() method. On such cases, annotated "
+                "dependencies in the parse() method won't be built by "
+                "scrapy-poet. However, if the request has callback=parse, "
+                "the annotated dependencies will be built."
+            )
+            return response
 
         # Find out the dependencies
         final_kwargs = yield from self.injector.build_callback_dependencies(

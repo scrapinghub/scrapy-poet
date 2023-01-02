@@ -1,4 +1,5 @@
 import sys
+import warnings
 from functools import partial
 from typing import Callable
 from unittest import mock
@@ -148,13 +149,15 @@ def test_additional_requests_success() -> None:
 
         class TestSpider(Spider):
             name = "test_spider"
-            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
+
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -187,13 +190,15 @@ def test_additional_requests_bad_response() -> None:
 
         class TestSpider(Spider):
             name = "test_spider"
-            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
+
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -234,13 +239,15 @@ def test_additional_requests_connection_issue() -> None:
 
             class TestSpider(Spider):
                 name = "test_spider"
-                start_urls = [server.root_url]
 
                 custom_settings = {
                     "DOWNLOADER_MIDDLEWARES": {
                         "scrapy_poet.InjectionMiddleware": 543,
                     },
                 }
+
+                def start_requests(self):
+                    yield Request(server.root_url, callback=self.parse)
 
                 async def parse(self, response, page: ItemPage):
                     item = await page.to_item()
@@ -279,7 +286,6 @@ def test_additional_requests_ignored_request() -> None:
 
         class TestSpider(Spider):
             name = "test_spider"
-            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
@@ -287,6 +293,9 @@ def test_additional_requests_ignored_request() -> None:
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
+
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -336,7 +345,6 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
 
         class TestSpider(Spider):
             name = "test_spider"
-            start_urls = [server.root_url]
 
             custom_settings = {
                 "DOWNLOADER_MIDDLEWARES": {
@@ -344,6 +352,9 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
                     "scrapy_poet.InjectionMiddleware": 543,
                 },
             }
+
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -394,8 +405,8 @@ def test_additional_requests_dont_filter() -> None:
             }
 
             def start_requests(self):
-                yield Request(server.root_url, body=b"a")
-                yield Request(server.root_url, body=b"a")
+                yield Request(server.root_url, body=b"a", callback=self.parse)
+                yield Request(server.root_url, body=b"a", callback=self.parse)
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -416,21 +427,22 @@ def _assert_warning_messages(record):
     ) in str(record.list[0].message)
     assert (
         "A request has been encountered with callback=None which "
-        "defaults to the parse() method. On such cases, when the "
-        "parse() method is annotated with DummyResponse (or its, "
-        "subclasses) no dependencies will be built by scrapy-poet."
+        "defaults to the parse() method. On such cases, annotated "
+        "dependencies in the parse() method won't be built by "
+        "scrapy-poet. However, if the request has callback=parse, "
+        "the annotated dependencies will be built."
     ) in str(record.list[1].message)
 
 
 @inlineCallbacks
-def test_parse_callback_none_dummy_response() -> None:
-    """If request.callback == None, the DummyResponse annotation in the parse()
+def test_parse_callback_none() -> None:
+    """If request.callback == None, then any annotated dependencies in the parse()
     method would be ignored.
 
-    This means that the response is actually be downloaded as opposed to being
-    skipped.
+    This means that the response is actually downloaded as opposed to being
+    skipped if it's annotated with ``response: DummyResponse``.
 
-    See: https://github.com/scrapinghub/scrapy-poet/pull/106
+    See: https://github.com/scrapinghub/scrapy-poet/issues/48
     """
 
     collected = {}
@@ -461,15 +473,14 @@ def test_parse_callback_none_dummy_response() -> None:
 
 
 @inlineCallbacks
-def test_parse_callback_none_dummy_response_subclass() -> None:
-    """Same case with ``test_parse_callback_none_dummy_response`` but using a
-    subclass of DummyResponse.
+def test_parse_callback_none_no_annotated_deps() -> None:
+    """Same case with ``test_parse_callback_none_dummy_response`` but there are
+    no annotated dependencies.
+
+    In this case, a warning message should NOT be issued.
     """
 
     collected = {}
-
-    class DummyResponseSubclass(DummyResponse):
-        pass
 
     with MockServer(EchoResource) as server:
 
@@ -483,27 +494,27 @@ def test_parse_callback_none_dummy_response_subclass() -> None:
                 },
             }
 
-            def parse(self, response: DummyResponseSubclass):
+            def parse(self, response):
                 collected["response"] = response
 
         crawler = make_crawler(TestSpider, {})
 
-        with pytest.warns(UserWarning) as record:
+        with warnings.catch_warnings(record=True) as warning_msg:
             yield crawler.crawl()
 
-        _assert_warning_messages(record)
+        assert not warning_msg
 
-    assert not isinstance(collected["response"], DummyResponse)
+    assert isinstance(collected["response"], scrapy.http.Response)
 
 
 @inlineCallbacks
-def test_parse_callback_none_dummy_response_deps(caplog) -> None:
+def test_parse_callback_none_with_deps(caplog) -> None:
     """Same with the ``test_parse_callback_none`` test above but confirms that
     the other dependencies requested by the parse() method isn't injected.
 
     Moreover, it results in a TypeError in Scrapy due to the missing argument.
 
-    See: https://github.com/scrapinghub/scrapy-poet/pull/106
+    See: https://github.com/scrapinghub/scrapy-poet/issues/48
     """
 
     with MockServer(EchoResource) as server:
@@ -539,7 +550,7 @@ def test_parse_callback_none_dummy_response_deps(caplog) -> None:
         )
     else:
         expected_msg = (
-            "TypeError: test_parse_callback_none_dummy_response_deps.<locals>."
-            "TestSpider.parse() missing 1 required positional argument: 'page'"
+            "TypeError: test_parse_callback_none_with_deps.<locals>.TestSpider"
+            ".parse() missing 1 required positional argument: 'page'"
         )
     assert expected_msg in caplog.text
