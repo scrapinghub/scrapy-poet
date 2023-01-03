@@ -5,8 +5,8 @@ Changelog
 TBR
 ---
 
-This release enables scrapy-poet to fully support item types as dependencies in
-page objects and spider callbacks. The following is now possible:
+This release enables scrapy-poet to fully support item classes as dependencies
+in page objects and spider callbacks. The following is now possible:
  
 .. code-block:: python
 
@@ -73,7 +73,7 @@ In line with this, the following changes were made:
         * ``is_provided()`` is now an instance method instead of a class
           method.
 
-    * An item type is now supported by ``scrapy_poet.callback_for`` alongside
+    * An item class is now supported by ``scrapy_poet.callback_for`` alongside
       the usual page objects. This means that it won't raise a ``TypeError``
       anymore when not passing a subclass of ``web_poet.ItemPage``.
     * ``scrapy_poet.overrides.OverridesRegistry`` has been overhauled:

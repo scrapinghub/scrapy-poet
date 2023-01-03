@@ -31,7 +31,7 @@ class DummyResponse(Response):
 
 def callback_for(page_or_item_cls: Type) -> Callable:
     """Create a callback for an :class:`web_poet.pages.ItemPage` subclass or an
-    item type.
+    item class.
 
     The generated callback returns the output of the
     ``ItemPage.to_item()`` method, i.e. extracts a single item
