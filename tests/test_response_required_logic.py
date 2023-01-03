@@ -209,10 +209,12 @@ def test_is_callback_using_response():
     # See: https://github.com/scrapinghub/scrapy-poet/issues/48
     request.callback = None
     expected_warning = (
-        "Requests with callback=None defaults to the parse() method. If "
-        "the parse() method is annotated with scrapy_poet.DummyResponse "
-        "(or its subclasses), we're assuming this isn't intended and "
-        "would simply ignore this annotation."
+        "A request has been encountered with callback=None which "
+        "defaults to the parse() method. If the parse() method is "
+        "annotated with scrapy_poet.DummyResponse (or its subclasses), "
+        "we're assuming this isn't intended and would simply ignore "
+        "this annotation.\n\n"
+        "See the Pitfalls doc for more info."
     )
 
     assert is_callback_requiring_scrapy_response(spider.parse, request) is True

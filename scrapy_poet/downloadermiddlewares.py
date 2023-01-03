@@ -141,7 +141,8 @@ class InjectionMiddleware:
                 "defaults to the parse() method. On such cases, annotated "
                 "dependencies in the parse() method won't be built by "
                 "scrapy-poet. However, if the request has callback=parse, "
-                "the annotated dependencies will be built."
+                "the annotated dependencies will be built.\n\n"
+                "See the Pitfalls doc for more info."
             )
             return response
 

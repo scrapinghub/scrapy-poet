@@ -6,15 +6,25 @@ TBR
 ---
 
 * Some changes in behavior when the callback isn't specified (i.e. ``None``) in
-  a ``Request`` which defaults to the ``parse()`` method. A ``UserWarning``
-  would be issued if the following are encountered:
+  a :class:`scrapy.http.Request` which defaults to the ``parse()`` method. A
+  ``UserWarning`` would be issued if the following are encountered:
 
     * Fixed the issue where downloading the response is skipped when the
-      ``parse()`` method is annotated with ``scrapy_poet.DummyResponse``.
+      ``parse()`` method is annotated with :class:`scrapy_poet.api.DummyResponse`.
       For instance: ``def parse(self, response: DummyResponse)``.
-    * The ``InjectionMiddleware`` won't attempt to build any dependencies anymore
-      when ``Request.callback == None`` and the ``parse()`` method has annotated
-      dependencies that involves any of ``SCRAPY_POET_PROVIDERS``.
+    * The :class:`scrapy_poet.downloadermiddlewares.InjectionMiddleware` won't
+      attempt to build any dependencies anymore when ``request.callback == None``
+      and the ``parse()`` method has annotated dependencies that involves any of
+      ``SCRAPY_POET_PROVIDERS``.
+
+  This affects the following built-in Scrapy components since they use
+  :class:`scrapy.http.Request` without setting any callback value:
+
+    * :class:`scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware`
+    * :class:`scrapy.pipelines.images.ImagesPipeline`
+    * :class:`scrapy.pipelines.files.FilesPipeline`
+
+  See the new :ref:`pitfalls` documentation for more information.
 
 * Official support for Python 3.11
 

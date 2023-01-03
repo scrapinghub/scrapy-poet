@@ -358,6 +358,8 @@ Let's adapt the spider to use this new Page Object:
     One way to avoid this is to always declare the callback in ``scrapy.Request``,
     just like in the original example.
 
+    See the :ref:`pitfalls` section for more information.
+
 
 All the extraction logic that is specific to the site is now responsibility
 of the Page Objects. As a result, the spider is now *site-agnostic* and will

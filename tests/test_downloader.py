@@ -438,17 +438,20 @@ def _assert_warning_messages(record, index: Optional[List] = None):
     index = index or [0, 1]
 
     expected_warnings = [
-        # From the Injector:
-        "Requests with callback=None defaults to the parse() method. If "
-        "the parse() method is annotated with scrapy_poet.DummyResponse "
-        "(or its subclasses), we're assuming this isn't intended and "
-        "would simply ignore this annotation.",
-        # From the InjectionMiddleware:
+        # From injection.py:
+        "A request has been encountered with callback=None which "
+        "defaults to the parse() method. If the parse() method is "
+        "annotated with scrapy_poet.DummyResponse (or its subclasses), "
+        "we're assuming this isn't intended and would simply ignore "
+        "this annotation.\n\n"
+        "See the Pitfalls doc for more info.",
+        # From InjectionMiddleware:
         "A request has been encountered with callback=None which "
         "defaults to the parse() method. On such cases, annotated "
         "dependencies in the parse() method won't be built by "
         "scrapy-poet. However, if the request has callback=parse, "
-        "the annotated dependencies will be built.",
+        "the annotated dependencies will be built.\n\n"
+        "See the Pitfalls doc for more info.",
     ]
 
     for idx, result_warning in zip(index, record.list):

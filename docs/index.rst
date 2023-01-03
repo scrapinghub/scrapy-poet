@@ -37,6 +37,7 @@ To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
    intro/install
    intro/basic-tutorial
    intro/advanced-tutorial
+   intro/pitfalls
 
 .. toctree::
    :caption: Advanced
