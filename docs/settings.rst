@@ -83,9 +83,8 @@ out on sporadic errors.
 SCRAPY_POET_TESTS_DIR
 ---------------------
 
-Default: ``None``
+Default: ``fixtures``
 
-Sets the location where the ``savefixture`` command creates tests. When set to
-``None``, uses the ``fixtures`` directory in the current directory.
+Sets the location where the ``savefixture`` command creates tests.
 
 More info at :ref:`testing`.
