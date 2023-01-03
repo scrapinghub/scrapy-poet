@@ -93,9 +93,7 @@ class InjectionMiddleware:
         self.crawler.stats.inc_value("scrapy_poet/dummy_response_count")
         return DummyResponse(url=request.url, request=request)
 
-    def _skip_dependency_creation(
-        self, request: Request, response: Response, spider: Spider
-    ) -> bool:
+    def _skip_dependency_creation(self, request: Request, spider: Spider) -> bool:
         """See: https://github.com/scrapinghub/scrapy-poet/issues/48"""
 
         # No need to skip if the callback doesn't default to the parse() method
@@ -137,7 +135,7 @@ class InjectionMiddleware:
         and an injectable attribute,
         the user-defined ``cb_kwargs`` takes precedence.
         """
-        if self._skip_dependency_creation(request, response, spider):
+        if self._skip_dependency_creation(request, spider):
             warnings.warn(
                 "A request has been encountered with callback=None which "
                 "defaults to the parse() method. On such cases, annotated "
