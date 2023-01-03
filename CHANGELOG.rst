@@ -66,11 +66,11 @@ In line with this, the following changes were made:
     * Multiple changes to the ``scrapy_poet.PageObjectInputProvider`` base class
       which are backward incompatible:
 
-        * It now accepts instance of ``scrapy_poet.injection.Injector`` in its
+        * It now accepts an instance of ``scrapy_poet.injection.Injector`` in its
           constructor instead of ``scrapy.crawler.Crawler``. Although you can
-          still access the ``scrapy.crawler.Crawler`` via ``Injector.crawler``
+          still access the ``scrapy.crawler.Crawler`` via the ``Injector.crawler``
           attribute.
-        * The ``is_provided()`` is now an instance method instead of a class
+        * ``is_provided()`` is now an instance method instead of a class
           method.
 
     * An item type is now supported by ``scrapy_poet.callback_for`` alongside
@@ -85,14 +85,15 @@ In line with this, the following changes were made:
           accept tuples as rules anymore. Only ``web_poet.ApplyRule``
           instances are allowed.
 
-            * This also results from these type aliases to be removed:
+            * As a result, the following type aliases have been removed:
               ``scrapy_poet.overrides.RuleAsTuple`` and
               ``scrapy_poet.overrides.RuleFromUser``
-            * These changes are backward incompabible.
+            * These changes are backward incompatible.
 
     * New exception: ``scrapy_poet.injector_error.ProviderDependencyDeadlockError``.
       This is raised when it's not possible to create the dependencies due to
-      a deadlock in their sub-dependencies.
+      a deadlock in their sub-dependencies, e.g. due to a circular dependency
+      between page objects.
 
 Other changes:
 
