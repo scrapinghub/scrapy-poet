@@ -304,7 +304,7 @@ def get_callback(request, spider):
     return request.callback
 
 
-def get_response_annotation(callback: Callable):
+def get_response_signature_parameter(callback: Callable) -> inspect.Parameter:
     signature = inspect.signature(callback)
     first_parameter_key = next(iter(signature.parameters))
     first_parameter = signature.parameters[first_parameter_key]
@@ -321,7 +321,7 @@ def is_callback_requiring_scrapy_response(callback: Callable, request: Request):
         # The callback_for function was used to create this callback.
         return False
 
-    first_parameter = get_response_annotation(callback)
+    first_parameter = get_response_signature_parameter(callback)
     if str(first_parameter).startswith("*"):
         # Parse method is probably using *args and **kwargs annotation.
         # Let's assume response is going to be used.
