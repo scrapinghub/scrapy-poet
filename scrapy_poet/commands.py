@@ -54,11 +54,7 @@ class SavingInjectionMiddleware(InjectionMiddleware):
 def spider_for(injectable: Type[ItemPage]) -> Type[scrapy.Spider]:
     class InjectableSpider(scrapy.Spider):
         name = "injectable"
-
         url = None
-        custom_settings = {
-            "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
-        }
 
         def start_requests(self):
             yield scrapy.Request(self.url, self.cb)
@@ -66,17 +62,6 @@ def spider_for(injectable: Type[ItemPage]) -> Type[scrapy.Spider]:
         cb = callback_for(injectable)
 
     return InjectableSpider
-
-
-def additional_settings() -> dict:
-    return {
-        "ITEM_PIPELINES": {
-            SavingPipeline: 100,
-        },
-        "DOWNLOADER_MIDDLEWARES": {
-            SavingInjectionMiddleware: 543,
-        },
-    }
 
 
 class SaveFixtureCommand(ScrapyCommand):
@@ -97,7 +82,8 @@ class SaveFixtureCommand(ScrapyCommand):
             raise UsageError(f"Error: {type_name} is not a descendant of ItemPage")
 
         spider_cls = spider_for(cls)
-        self.settings.setdict(additional_settings())
+        self.settings["ITEM_PIPELINES"][SavingPipeline] = 100
+        self.settings["DOWNLOADER_MIDDLEWARES"][SavingInjectionMiddleware] = 543
 
         frozen_time = datetime.datetime.utcnow().isoformat()
         with freeze_time(frozen_time):
