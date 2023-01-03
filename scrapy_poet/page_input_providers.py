@@ -31,7 +31,6 @@ import attr
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.http import Response
-from scrapy.utils.request import request_fingerprint
 from web_poet import (
     HttpClient,
     HttpResponse,
@@ -187,6 +186,18 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
     provided_classes = {HttpResponse}
     name = "response_data"
 
+    def __init__(self, crawler: Crawler):
+        if hasattr(crawler, "request_fingerprinter"):
+
+            def fingerprint(x):
+                return crawler.request_fingerprinter.fingerprint(x).hex()
+
+            self._fingerprint = fingerprint
+        else:
+            from scrapy.utils.request import request_fingerprint
+
+            self._fingerprint = request_fingerprint
+
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``HttpResponse`` instance using a Scrapy ``Response``"""
         return [
@@ -200,11 +211,12 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
         request_keys = {"url", "method", "body"}
+        _request = request.replace(callback=None, errback=None)
         request_data = {
-            k: str(v) for k, v in request.to_dict().items() if k in request_keys
+            k: str(v) for k, v in _request.to_dict().items() if k in request_keys
         }
         fp_data = {
-            "SCRAPY_FINGERPRINT": request_fingerprint(request),
+            "SCRAPY_FINGERPRINT": self._fingerprint(_request),
             **request_data,
         }
         return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
