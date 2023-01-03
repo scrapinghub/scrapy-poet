@@ -13,7 +13,7 @@ from scrapy.http import Response
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import ItemPage
-from web_poet.testing import save_fixture
+from web_poet.testing import Fixture
 
 from scrapy_poet import callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS, InjectionMiddleware
@@ -111,5 +111,5 @@ class SaveFixtureCommand(ScrapyCommand):
             "frozen_time": frozen_time,
         }
         basedir = Path(self.settings.get("SCRAPY_POET_TESTS_DIR", "fixtures"))
-        fixture_dir = save_fixture(basedir / type_name, deps, item, meta=meta)
-        print(f"\nThe test fixture has been written to {fixture_dir}.")
+        fixture = Fixture.save(basedir / type_name, inputs=deps, item=item, meta=meta)
+        print(f"\nThe test fixture has been written to {fixture.path}.")
