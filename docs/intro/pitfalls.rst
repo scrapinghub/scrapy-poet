@@ -138,7 +138,7 @@ For example, if a spider is using the :class:`scrapy.pipelines.images.ImagesPipe
 **scrapy-poet**'s :class:`scrapy_poet.downloadermiddlewares.InjectionMiddleware`
 could be wasting precious compute resources to fulfill one or more dependencies
 that won't be used at all. Specifically, the ``page`` argument to the ``parse()``
-method is not utilized. If there a million of images to be downloaded, then the
+method is not utilized. If there are a million of images to be downloaded, then
 the ``page`` instance is created a million times as well.
 
 The following :class:`UserWarning` is emitted on such scenario:
@@ -163,12 +163,10 @@ is **not** ``None``:
         def parse(self, response: scrapy.http.Response, page: MyPage):
             ...
 
-The :class:`UserWarning` is only shown when:
-
-* the ``parse()`` method declares any dependency that is fullfilled by any provider
-  declared in ``SCRAPY_POET_PROVIDERS``. This means that the following code doesn't
-  produce the warning nor attempts to skip any dependency from being built because
-  there is none:
+The :class:`UserWarning` is only shown when the ``parse()`` method declares any
+dependency that is fullfilled by any provider declared in ``SCRAPY_POET_PROVIDERS``.
+This means that the following code doesn't produce the warning nor attempts to
+skip any dependency from being built because there is none:
 
     .. code-block:: python
 
@@ -177,18 +175,6 @@ The :class:`UserWarning` is only shown when:
             start_urls = ["https://books.toscrape.com"]
 
             def parse(self, response: scrapy.http.Response):
-                ...
-
-* the :class:`scrapy_poet.api.DummyResponse` is used as response annotation in the
-  ``parse()`` method. For example:
-
-    .. code-block:: python
-
-        class MySpider(scrapy.Spider):
-            name = "my_spider"
-            start_urls = ["https://books.toscrape.com"]
-
-            def parse(self, response: scrapy_poet.DummyResponse):
                 ...
 
 Similarly, the best way to completely avoid the said warning and this **scrapy-poet**

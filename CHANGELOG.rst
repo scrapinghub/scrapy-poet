@@ -5,24 +5,79 @@ Changelog
 TBR
 ---
 
-* Some changes in behavior when the callback isn't specified (i.e. ``None``) in
-  a :class:`scrapy.http.Request` which defaults to the ``parse()`` method. A
-  ``UserWarning`` would be issued if the following are encountered:
+* Scrapy uses the ``parse()`` method when dealing with :class:`scrapy.http.Request`
+  instances having a callback of ``None``. On such cases, Scrapy uses the spider's
+  ``parse()`` method as the callback.
 
-    * Fixed the issue where downloading the response is skipped when the
-      ``parse()`` method is annotated with :class:`scrapy_poet.api.DummyResponse`.
-      For instance: ``def parse(self, response: DummyResponse)``.
-    * The :class:`scrapy_poet.downloadermiddlewares.InjectionMiddleware` won't
-      attempt to build any dependencies anymore when ``request.callback == None``
-      and the ``parse()`` method has annotated dependencies that involves any of
-      ``SCRAPY_POET_PROVIDERS``.
+  There are some built-in Scrapy features and components that do this, as of
+  Scrapy 2.7:
 
-  This affects the following built-in Scrapy components since they use
-  :class:`scrapy.http.Request` without setting any callback value:
+    * Using the ``parse()`` method which relies on ``start_urls``. For example:
 
+        .. code-block:: python
+
+            class MySpider(scrapy.Spider):
+                name = "my_spider"
+                start_urls = ["https://books.toscrape.com"]
+
+                def parse(self, response):
+                    ...
+    
     * :class:`scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware`
     * :class:`scrapy.pipelines.images.ImagesPipeline`
     * :class:`scrapy.pipelines.files.FilesPipeline`
+
+  There are some backward incompatible changes when this occurs:
+
+    * When the ``parse()`` method has its response argument annotated with
+      :class:`scrapy_poet.api.DummyResponse`, for instance:
+      ``def parse(self, response: DummyResponse)``, the response is downloaded
+      instead of being skipped.
+
+      This was a necessary change since
+      :class:`scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware` might
+      not work properly and **not** visit the ``robots.txt`` file from a website.
+      Moreover, it avoids the problem of missing images or files when the following
+      pipelines are used:
+
+        * :class:`scrapy.pipelines.images.ImagesPipeline`
+        * :class:`scrapy.pipelines.files.FilesPipeline`
+
+      To avoid this new behavior, the **recommended** approach is to avoid
+      defining a ``parse()`` method and instead choose any other name. 
+
+    * When the ``parse()`` method has dependencies that are provided by
+      any active providers from ``SCRAPY_POET_PROVIDERS``, the
+      :class:`scrapy_poet.downloadermiddlewares.InjectionMiddleware` won't
+      attempt to build any dependencies anymore.
+
+      This causes the following code to have this error ``TypeError: parse()
+      missing 1 required positional argument: 'page'.``:
+
+        .. code-block:: python
+
+            class MySpider(scrapy.Spider):
+                name = "my_spider"
+                start_urls = ["https://books.toscrape.com"]
+
+                def parse(self, response: scrapy.http.Response, page: MyPage):
+                    ...
+        
+      To avoid this issue, you can:
+
+        * avoid defining the ``parse()`` method and instead use any other name.
+
+            * This is the **recommended** approach since it's easier and avoids
+              any :class:`scrapy.http.Request` with ``callback`` set to ``None``
+              which could come from anywhere (e.g. introducing new 3rd-party
+              middlewares or pipelines).
+
+        * ensure that all your :class:`scrapy.http.Request` has a ``callback``
+          **not** set to ``None``.
+        * avoid dependencies fulfilled by ``SCRAPY_POET_PROVIDERS`` in the
+          ``parse()`` method.
+
+  A ``UserWarning`` would be issued if the above scenarios are encountered.
 
   See the new :ref:`pitfalls` documentation for more information.
 
