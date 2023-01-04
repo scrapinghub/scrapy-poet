@@ -8,11 +8,12 @@ and ``scrapy_poet/registry.py`` modules.
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import attrs
 import scrapy
 from pytest_twisted import inlineCallbacks
+from typing_extensions import Annotated
 from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import (
@@ -27,7 +28,7 @@ from web_poet import (
 )
 from web_poet.pages import ItemT
 
-from scrapy_poet import callback_for
+from scrapy_poet import PickFields, callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
@@ -50,7 +51,6 @@ def rules_settings() -> dict:
 
 def spider_for(injectable: Type):
     class InjectableSpider(scrapy.Spider):
-
         url = None
         custom_settings = {
             "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
@@ -99,14 +99,17 @@ class PageObjectCounterMixin:
 
 
 @inlineCallbacks
-def crawl_item_and_deps(PageObject) -> Tuple[Any, Any]:
+def crawl_item_and_deps(
+    page_object: Optional[ItemPage], spider: Optional[scrapy.Spider] = None
+) -> Tuple[Any, Any]:
     """Helper function to easily return the item and injected dependencies from
     a simulated Scrapy callback which asks for either of these dependencies:
         - page object
         - item class
     """
+    spider = spider or spider_for(page_object)
     item, _, crawler = yield crawl_single_item(
-        spider_for(PageObject), ProductHtml, rules_settings(), port=PORT
+        spider, ProductHtml, rules_settings(), port=PORT
     )
     return item, crawler.spider.collected_response_deps
 
@@ -1096,6 +1099,52 @@ def test_page_object_with_item_dependency_deadlock(caplog) -> None:
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
+@attrs.define
+class BigItem:
+    x: str
+    y: Optional[str] = None
+
+
+@handle_urls(URL)
+@attrs.define
+class BigPage(PageObjectCounterMixin, ItemPage[BigItem]):
+    @field
+    def x(self) -> str:
+        return "x"
+
+    @field
+    def y(self) -> str:
+        return "y"
+
+
+class BigSpider(scrapy.Spider):
+    name = "bigspider"
+    url = None
+    custom_settings = {
+        "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
+    }
+
+    def start_requests(self):
+        yield scrapy.Request(self.url, capture_exceptions(self.parse))
+
+    def parse(self, response, item: Annotated[BigItem, PickFields("x")]):
+        yield item
+
+
+@inlineCallbacks
+def test_page_object_pick_fields() -> None:
+    """Spider callbacks annotated with ``PickFields`` should only return the
+    requested field and completely avoid calling ``.to_item()``.
+    """
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, BigSpider)
+    assert item == BigItem(x="x")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
 def test_created_apply_rules() -> None:
     """Checks if the ``ApplyRules`` were created properly by ``@handle_urls`` in
     ``tests/po_lib/__init__.py``.
@@ -1170,4 +1219,5 @@ def test_created_apply_rules() -> None:
         ApplyRule(URL, use=ProductDuplicateDeepDependencyPage, to_return=MainProductD),
         ApplyRule(URL, use=ChickenDeadlockPage, to_return=ChickenPage),
         ApplyRule(URL, use=EggDeadlockPage, to_return=EggPage),
+        ApplyRule(URL, use=BigPage, to_return=BigItem),
     ]

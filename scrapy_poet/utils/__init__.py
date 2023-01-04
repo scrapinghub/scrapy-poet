@@ -1,8 +1,16 @@
 import os
+from typing import Any, Optional, Tuple
+
+try:
+    from typing import Annotated  # Python 3.9+
+except ImportError:
+    from typing_extensions import _AnnotatedAlias as Annotated
 
 from scrapy.http import Request, Response
 from scrapy.utils.project import inside_project, project_data_dir
 from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders
+
+from scrapy_poet.api import PickFields
 
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
@@ -43,3 +51,41 @@ def scrapy_response_to_http_response(response: Response) -> HttpResponse:
         headers=HttpResponseHeaders.from_bytes_dict(response.headers),
         **kwargs,
     )
+
+
+def get_origin(cls: Any) -> Any:
+    """Offers backward compatibility for Python 3.7 since ``typing.get_origin(tp)``
+    is only available starting on 3.8.
+
+    Moreover, ``typing_extensions.get_origin`` doesn't work well with
+    ``typing_extensions.Annotated``.
+    """
+    return getattr(cls, "__origin__", ())
+
+
+def _normalize_annotated_cls(cls: Any) -> Any:
+    """Returns the type ``T`` in ``typing.Annotated[T, x]``, if applicable.
+
+    See: https://peps.python.org/pep-0593/
+    """
+    if isinstance(cls, Annotated):
+        cls = get_origin(cls)
+    return cls
+
+
+def _pick_fields(annotation: Any) -> Optional[Tuple[str, ...]]:
+    """Returns the ``x, ...`` in ``typing.Annotated[T, PickFields(x, ...)]``
+    as a tuple of strings which represents the field names, if applicable.
+    """
+
+    # TODO: test that nothing happens when user adds other annotations aside
+    # from PickFields. https://peps.python.org/pep-0593/#consuming-annotations
+    # TODO: raise a warning when ``typing.Annotated`` is used but
+    # ``PickFields`` is declared as a metadata.
+
+    if not isinstance(annotation, Annotated):
+        return None
+
+    for metadata in annotation.__metadata__:
+        if isinstance(metadata, PickFields):
+            return metadata.fields

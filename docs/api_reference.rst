@@ -11,6 +11,10 @@ API
    :members:
    :no-special-members:
 
+.. autoclass:: scrapy_poet.PickFields
+   :members:
+   :no-special-members:
+
 Injection Middleware
 ====================
 

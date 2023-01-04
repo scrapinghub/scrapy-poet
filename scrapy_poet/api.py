@@ -1,5 +1,5 @@
 from inspect import iscoroutinefunction
-from typing import Callable, Optional, Type
+from typing import Callable, Iterable, Optional, Type
 
 from scrapy.http import Request, Response
 from web_poet.pages import ItemPage
@@ -130,3 +130,10 @@ def callback_for(page_or_item_cls: Type) -> Callable:
 
     setattr(parse, _CALLBACK_FOR_MARKER, True)
     return parse
+
+
+class PickFields:
+    """TODO: docstring"""
+
+    def __init__(self, *args: Iterable[str]):
+        self.fields = tuple(args)
