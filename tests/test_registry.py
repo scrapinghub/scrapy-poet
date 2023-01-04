@@ -1,7 +1,7 @@
 import pytest
 from scrapy import Spider
 from scrapy.utils.test import get_crawler
-from web_poet import ApplyRule
+from web_poet import ApplyRule, ItemPage
 
 
 def test_OverridesRegistry() -> None:
@@ -18,7 +18,7 @@ def test_OverridesRegistry() -> None:
 def test_deprecation_setting_SCRAPY_POET_OVERRIDES(settings) -> None:
     from scrapy_poet.registry import OverridesAndItemRegistry
 
-    class FakePageObjectA:
+    class FakePageObjectA(ItemPage):
         pass
 
     rule_a = ApplyRule("https://example.com", use=FakePageObjectA)
@@ -37,7 +37,7 @@ def test_deprecation_setting_SCRAPY_POET_OVERRIDES(settings) -> None:
 
     # If both settings are present, the newer SCRAPY_POET_RULES setting is used.
 
-    class FakePageObjectB:
+    class FakePageObjectB(ItemPage):
         pass
 
     rule_b = ApplyRule("https://example.com", use=FakePageObjectB)

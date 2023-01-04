@@ -21,15 +21,15 @@ jobs:
           toxenv: "min"
         - python-version: "3.7"
           toxenv: "asyncio-min"
-
         - python-version: "3.8"
           toxenv: "py"
         - python-version: "3.9"
           toxenv: "py"
-
         - python-version: "3.10"
           toxenv: "py"
-        - python-version: "3.10"
+        - python-version: "3.11"
+          toxenv: "py"
+        - python-version: "3.11"
           toxenv: "asyncio"
 
     steps:
@@ -56,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10']
+        python-version: ['3.11']
         tox-job: ["mypy", "docs", "linters"]
 
     steps:

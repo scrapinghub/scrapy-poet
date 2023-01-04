@@ -29,12 +29,12 @@ from web_poet.pages import ItemT
 
 from scrapy_poet import callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
-from scrapy_poet.utils import (
+from scrapy_poet.utils.mockserver import get_ephemeral_port
+from scrapy_poet.utils.testing import (
     capture_exceptions,
     crawl_single_item,
     create_scrapy_settings,
 )
-from scrapy_poet.utils.mockserver import get_ephemeral_port
 from tests.test_middleware import ProductHtml
 
 DOMAIN = get_domain(socket.gethostbyname(socket.gethostname()))
@@ -103,7 +103,7 @@ def crawl_item_and_deps(PageObject) -> Tuple[Any, Any]:
     """Helper function to easily return the item and injected dependencies from
     a simulated Scrapy callback which asks for either of these dependencies:
         - page object
-        - item type
+        - item class
     """
     item, _, crawler = yield crawl_single_item(
         spider_for(PageObject), ProductHtml, rules_settings(), port=PORT
@@ -496,7 +496,7 @@ def test_item_to_return_in_handle_urls(caplog) -> None:
     assert item is None
     assert_deps(deps, {}, size=0)
 
-    # Requesting the underlying item type from the PO should still work.
+    # Requesting the underlying item class from the PO should still work.
     item, deps = yield crawl_item_and_deps(Product)
     assert item == Product(name="product name")
     assert_deps(deps, {"item": Product})
@@ -541,7 +541,7 @@ def test_item_to_return_in_handle_urls_subclass(caplog) -> None:
     assert item is None
     assert_deps(deps, {}, size=0)
 
-    # Requesting the underlying item type from the parent PO should still work.
+    # Requesting the underlying item class from the parent PO should still work.
     item, deps = yield crawl_item_and_deps(ParentReplacedProduct)
     assert item == ParentReplacedProduct(name="parent replaced product name")
     assert_deps(deps, {"item": ParentReplacedProduct})

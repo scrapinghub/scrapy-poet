@@ -7,6 +7,7 @@ multi_line_output = 3
 
 [[tool.mypy.overrides]]
 module = [
+    "tests.test_cache.*",
     "tests.test_downloader.*",
     "tests.test_web_poet_rules.*",
     "tests.test_scrapy_dependencies.*",

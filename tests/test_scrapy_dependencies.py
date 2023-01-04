@@ -10,7 +10,7 @@ from scrapy_poet.page_input_providers import (
     HttpResponseProvider,
     PageObjectInputProvider,
 )
-from scrapy_poet.utils import HtmlResource, crawl_items, crawl_single_item
+from scrapy_poet.utils.testing import HtmlResource, crawl_items, crawl_single_item
 
 
 class ProductHtml(HtmlResource):

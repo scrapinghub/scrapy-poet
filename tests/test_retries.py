@@ -5,8 +5,8 @@ from scrapy import Spider
 from web_poet.exceptions import Retry
 from web_poet.pages import WebPage
 
-from scrapy_poet.utils import EchoResource, make_crawler
 from scrapy_poet.utils.mockserver import MockServer
+from scrapy_poet.utils.testing import EchoResource, make_crawler
 
 
 class BaseSpider(Spider):

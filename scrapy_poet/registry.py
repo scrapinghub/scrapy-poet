@@ -82,9 +82,7 @@ class OverridesAndItemRegistry(OverridesRegistryBase, RulesRegistry):
         self.overrides_matcher: Dict[Type[ItemPage], URLMatcher] = defaultdict(
             URLMatcher
         )
-        self.item_matcher: Dict[Optional[Type[Any]], URLMatcher] = defaultdict(
-            URLMatcher
-        )
+        self.item_matcher: Dict[Optional[Type], URLMatcher] = defaultdict(URLMatcher)
         for rule_id, rule in enumerate(self._rules):
             self.add_rule(rule_id, rule)
         logger.debug(f"List of parsed ApplyRules:\n{self._rules}")
@@ -93,8 +91,8 @@ class OverridesAndItemRegistry(OverridesRegistryBase, RulesRegistry):
         """Registers an :class:`web_poet.rules.ApplyRule` instance against the
         given rule ID.
         """
-        # A common case when a PO subclasses another one with the same URL
-        # pattern. See the ``test_item_return_subclass()`` test case in
+        # A common case when a page object subclasses another one with the same
+        # URL pattern. See the ``test_item_return_subclass()`` test case in
         # ``tests/test_web_poet_rules.py``.
         matched = self.item_matcher[rule.to_return]
         pattern_dupes = [
@@ -110,9 +108,10 @@ class OverridesAndItemRegistry(OverridesRegistryBase, RulesRegistry):
             ]
             warn(
                 f"Similar URL patterns {pattern_dupes} were declared earlier "
-                f"which uses to_return={rule.to_return}. This earlier rule "
-                f"will be used when matching against URLs. Consider updating "
-                f"the priority of these rules: {rules}."
+                f"that use to_return={rule.to_return}. The first, highest-priority "
+                f"rule added to SCRAPY_POET_REGISTRY will be used when matching "
+                f"against URLs. Consider updating the priority of these rules: "
+                f"{rules}."
             )
 
         if rule.instead_of:

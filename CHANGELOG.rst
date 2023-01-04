@@ -5,14 +5,15 @@ Changelog
 TBR
 ---
 
-This release enables scrapy-poet to fully support item types as dependencies in
-page objects and spider callbacks. The following is now possible:
+This release enables scrapy-poet to fully support item classes as dependencies
+in page objects and spider callbacks. The following is now possible:
  
 .. code-block:: python
 
     import attrs
     import scrapy
     from web_poet import WebPage, handle_urls, field
+    from scrapy_poet import DummyResponse
 
     @attrs.define
     class Image:
@@ -32,10 +33,10 @@ page objects and spider callbacks. The following is now possible:
     @handle_urls("example.com")
     @attrs.define
     class ProductPage(WebPage[Product]):
-        # ✨ NEW: Notice that the PO can ask for items as dependencies.
+        # ✨ NEW: Notice that the page object can ask for items as dependencies.
         # An instance of ``Image`` is injected behind the scenes by calling the
         # ``.to_item()`` method of ``ProductImagePage``.
-        image: Image
+        image_item: Image
 
         @field
         def name(self) -> str:
@@ -43,31 +44,40 @@ page objects and spider callbacks. The following is now possible:
 
         @field
         def image(self) -> Image:
-            return self.image
+            return self.image_item
 
     class MySpider(scrapy.Spider):
         name = "myspider"
-        start_urls = ["https://example.com/products/some-product"]
 
-        # ✨ NEW: Notice that we're directly using the item here and not the PO.
-        def parse(self, response, item: Product):
+        def start_requests(self):
+            yield scrapy.Request(
+                "https://example.com/products/some-product", self.parse
+            )
+
+        # ✨ NEW: Notice that we're directly using the item here and not the
+        # page object.
+        def parse(self, response: DummyResponse, item: Product):
             return item
 
 In line with this, the following changes were made:
 
     * Added a new ``scrapy_poet.page_input_providers.ItemProvider`` which makes
       the usage above possible.
-    * The ``scrapy_poet.PageObjectInputProvider`` base class now accepts an
-      instance of ``scrapy_poet.injection.Injector`` in its constructor instead
-      of ``scrapy.crawler.Crawler``.
+    * Multiple changes to the ``scrapy_poet.PageObjectInputProvider`` base class
+      which are backward incompatible:
 
-        * This is backwards incompatible. Although you can still access the
-          ``scrapy.crawler.Crawler`` via ``Injector.crawler`` attribute.
+        * It now accepts an instance of ``scrapy_poet.injection.Injector`` in its
+          constructor instead of ``scrapy.crawler.Crawler``. Although you can
+          still access the ``scrapy.crawler.Crawler`` via the ``Injector.crawler``
+          attribute.
+        * ``is_provided()`` is now an instance method instead of a class
+          method.
 
     * The ``scrapy_poet.injection.Injector``'s attribute and constructor parameter 
       called ``overrides_registry`` is now simply called ``registry``.
       This is backwards incompatible.
     * An item type is now supported by ``scrapy_poet.callback_for`` alongside
+    * An item class is now supported by ``scrapy_poet.callback_for`` alongside
       the usual page objects. This means that it won't raise a ``TypeError``
       anymore when not passing a subclass of ``web_poet.ItemPage``.
     * ``scrapy_poet.overrides.OverridesRegistry`` has been deprecated and
@@ -80,14 +90,20 @@ In line with this, the following changes were made:
           ``web_poet.ApplyRule`` instances are allowed. The same goes for
           ``SCRAPY_POET_RULES`` (and the deprecated ``SCRAPY_POET_OVERRIDES``).
 
-            * This is backward incompabible.
+            * As a result, the following type aliases have been removed:
+              ``scrapy_poet.overrides.RuleAsTuple`` and
+              ``scrapy_poet.overrides.RuleFromUser``
+            * These changes are backward incompatible.
 
     * New exception: ``scrapy_poet.injector_error.ProviderDependencyDeadlockError``.
+      This is raised when it's not possible to create the dependencies due to
+      a deadlock in their sub-dependencies, e.g. due to a circular dependency
+      between page objects.
 
 Other changes:
 
     * Moved some of the utility functions from the test module into
-      ``scrapy_poet.utils``.
+      ``scrapy_poet.utils.testing``.
     * Documentation improvements.
 
 Deprecations:
@@ -100,6 +116,7 @@ Deprecations:
       ``SCRAPY_POET_REGISTRY``.
     * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
       ``SCRAPY_POET_RULES``.
+    * Official support for Python 3.11
 
 0.6.0 (2022-11-24)
 ------------------
