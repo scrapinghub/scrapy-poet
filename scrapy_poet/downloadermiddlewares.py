@@ -14,7 +14,7 @@ from scrapy.utils.misc import create_instance, load_object
 from twisted.internet.defer import Deferred, inlineCallbacks
 
 from .api import DummyResponse
-from .injection import Injector, get_response_signature_parameter
+from .injection import Injector
 from .overrides import OverridesRegistry
 from .page_input_providers import (
     HttpClientProvider,
@@ -110,11 +110,6 @@ class InjectionMiddleware:
 
         # Skip if providers are needed.
         if self.injector.discover_callback_providers(request):
-            return True
-
-        # Skip if DummyResponse is involved.
-        response_signature = get_response_signature_parameter(spider.parse)
-        if issubclass(response_signature.annotation, DummyResponse):
             return True
 
         return False

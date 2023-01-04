@@ -437,6 +437,8 @@ class BaseSpider(Spider):
 def _assert_warning_messages(record, index: Optional[List] = None):
     index = index or [0, 1]
 
+    assert len(index) == len(record.list), "Differing number of warnings"
+
     expected_warnings = [
         # From injection.py:
         "A request has been encountered with callback=None which "
@@ -482,7 +484,7 @@ def test_parse_callback_none_dummy_response() -> None:
         with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
 
-    _assert_warning_messages(record)
+    _assert_warning_messages(record, index=[0])
     assert not isinstance(collected["response"], DummyResponse)
 
 
