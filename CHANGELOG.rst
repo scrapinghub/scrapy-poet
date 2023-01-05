@@ -81,6 +81,11 @@ TBR
 
   See the new :ref:`pitfalls` documentation for more information.
 
+* :func:`scrapy_poet.injection.is_callback_requiring_scrapy_response` now accepts
+  an optional ``raw_callback`` parameter meant to represent the actual callback
+  attribute value of :class:`scrapy.http.Request` since the original ``callback``
+  parameter could be normalized to the spider's ``parse()`` method when the
+  :class:`scrapy.http.Request` has ``callback`` set to ``None``.
 * Official support for Python 3.11
 
 0.6.0 (2022-11-24)

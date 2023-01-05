@@ -123,7 +123,7 @@ class Injector:
         Check whether the request's response is going to be used.
         """
         callback = get_callback(request, self.spider)
-        if is_callback_requiring_scrapy_response(callback, request):
+        if is_callback_requiring_scrapy_response(callback, request.callback):
             return True
 
         for provider in self.discover_callback_providers(request):
@@ -304,7 +304,12 @@ def get_callback(request, spider):
     return request.callback
 
 
-def is_callback_requiring_scrapy_response(callback: Callable, request: Request):
+_unset = object()
+
+
+def is_callback_requiring_scrapy_response(
+    callback: Callable, raw_callback: Any = _unset
+) -> bool:
     """
     Check whether the request's callback method requires the response.
     Basically, it won't be required if the response argument in the
@@ -328,7 +333,7 @@ def is_callback_requiring_scrapy_response(callback: Callable, request: Request):
 
     if issubclass(first_parameter.annotation, DummyResponse):
         # See: https://github.com/scrapinghub/scrapy-poet/issues/48
-        if request.callback is None:
+        if raw_callback is None:
             warnings.warn(
                 "A request has been encountered with callback=None which "
                 "defaults to the parse() method. If the parse() method is "
