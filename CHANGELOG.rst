@@ -5,9 +5,8 @@ Changelog
 TBR
 ---
 
-* Scrapy uses the ``parse()`` method when dealing with :class:`scrapy.http.Request`
-  instances having a callback of ``None``. On such cases, Scrapy uses the spider's
-  ``parse()`` method as the callback.
+* Scrapy uses the spider's ``parse()`` method when the :class:`scrapy.http.Request`
+  callback is set to ``None``.
 
   There are some built-in Scrapy features and components that do this, as of
   Scrapy 2.7:
