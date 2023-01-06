@@ -9,8 +9,7 @@ from scrapy.crawler import Crawler
 from url_matcher import URLMatcher
 from web_poet import ItemPage, RulesRegistry
 from web_poet.rules import ApplyRule
-
-from scrapy_poet.utils._deprecation import _create_deprecated_class
+from web_poet.utils import _create_deprecated_class
 
 logger = logging.getLogger(__name__)
 
