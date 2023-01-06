@@ -52,7 +52,9 @@ class BookPage(WebPage):
 
 class BooksSpider(scrapy.Spider):
     name = "books_06"
-    start_urls = ["http://books.toscrape.com/"]
+
+    def start_requests(self):
+        yield scrapy.Request("http://books.toscrape.com/", callback=self.parse)
 
     def parse(self, response, page: ListingsPage):
         """Callback for Listings pages"""

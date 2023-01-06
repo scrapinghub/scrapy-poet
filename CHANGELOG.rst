@@ -5,6 +5,86 @@ Changelog
 TBR
 ---
 
+* Scrapy uses the spider's ``parse()`` method when the :class:`scrapy.http.Request`
+  callback is set to ``None``.
+
+  There are some built-in Scrapy features and components that do this, as of
+  Scrapy 2.7:
+
+    * Using the ``parse()`` method which relies on ``start_urls``. For example:
+
+        .. code-block:: python
+
+            class MySpider(scrapy.Spider):
+                name = "my_spider"
+                start_urls = ["https://books.toscrape.com"]
+
+                def parse(self, response):
+                    ...
+    
+    * :class:`scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware`
+    * :class:`scrapy.pipelines.images.ImagesPipeline`
+    * :class:`scrapy.pipelines.files.FilesPipeline`
+
+  There are some backward incompatible changes when this occurs:
+
+    * When the ``parse()`` method has its response argument annotated with
+      :class:`scrapy_poet.api.DummyResponse`, for instance:
+      ``def parse(self, response: DummyResponse)``, the response is downloaded
+      instead of being skipped.
+
+      This was a necessary change since
+      :class:`scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware` might
+      not work properly and **not** visit the ``robots.txt`` file from a website.
+      Moreover, it avoids the problem of missing images or files when the following
+      pipelines are used:
+
+        * :class:`scrapy.pipelines.images.ImagesPipeline`
+        * :class:`scrapy.pipelines.files.FilesPipeline`
+
+      To avoid this new behavior, the **recommended** approach is to avoid
+      defining a ``parse()`` method and instead choose any other name. 
+
+    * When the ``parse()`` method has dependencies that are provided by
+      any active providers from ``SCRAPY_POET_PROVIDERS``, the
+      :class:`scrapy_poet.downloadermiddlewares.InjectionMiddleware` won't
+      attempt to build any dependencies anymore.
+
+      This causes the following code to have this error ``TypeError: parse()
+      missing 1 required positional argument: 'page'.``:
+
+        .. code-block:: python
+
+            class MySpider(scrapy.Spider):
+                name = "my_spider"
+                start_urls = ["https://books.toscrape.com"]
+
+                def parse(self, response: scrapy.http.Response, page: MyPage):
+                    ...
+        
+      To avoid this issue, you can:
+
+        * avoid defining the ``parse()`` method and instead use any other name.
+
+            * This is the **recommended** approach since it's easier and avoids
+              any :class:`scrapy.http.Request` with ``callback`` set to ``None``
+              which could come from anywhere (e.g. introducing new 3rd-party
+              middlewares or pipelines).
+
+        * ensure that all your :class:`scrapy.http.Request` has a ``callback``
+          **not** set to ``None``.
+        * avoid dependencies fulfilled by ``SCRAPY_POET_PROVIDERS`` in the
+          ``parse()`` method.
+
+  A ``UserWarning`` would be issued if the above scenarios are encountered.
+
+  See the new :ref:`pitfalls` documentation for more information.
+
+* :func:`scrapy_poet.injection.is_callback_requiring_scrapy_response` now accepts
+  an optional ``raw_callback`` parameter meant to represent the actual callback
+  attribute value of :class:`scrapy.http.Request` since the original ``callback``
+  parameter could be normalized to the spider's ``parse()`` method when the
+  :class:`scrapy.http.Request` has ``callback`` set to ``None``.
 * Official support for Python 3.11
 
 0.6.0 (2022-11-24)
