@@ -76,7 +76,6 @@ In line with this, the following changes were made:
     * The ``scrapy_poet.injection.Injector``'s attribute and constructor parameter 
       called ``overrides_registry`` is now simply called ``registry``.
       This is backwards incompatible.
-    * An item type is now supported by ``scrapy_poet.callback_for`` alongside
     * An item class is now supported by ``scrapy_poet.callback_for`` alongside
       the usual page objects. This means that it won't raise a ``TypeError``
       anymore when not passing a subclass of ``web_poet.ItemPage``.
