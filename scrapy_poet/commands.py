@@ -4,7 +4,7 @@ from typing import Type
 
 import andi
 import scrapy
-from freezegun import freeze_time
+import time_machine
 from scrapy import Request
 from scrapy.commands import ScrapyCommand
 from scrapy.crawler import Crawler
@@ -85,16 +85,15 @@ class SaveFixtureCommand(ScrapyCommand):
         self.settings["ITEM_PIPELINES"][SavingPipeline] = 100
         self.settings["DOWNLOADER_MIDDLEWARES"][SavingInjectionMiddleware] = 543
 
-        frozen_time = datetime.datetime.utcnow().isoformat()
-        with freeze_time(frozen_time):
-            crawler = Crawler(spider_cls, self.settings)
-            self.crawler_process.crawl(crawler, url=url)
+        frozen_time = datetime.datetime.now(datetime.timezone.utc)
+        with time_machine.travel(frozen_time):
+            self.crawler_process.crawl(spider_cls, url=url)
             self.crawler_process.start()
 
         deps = saved_dependencies
         item = saved_items[0]
         meta = {
-            "frozen_time": frozen_time,
+            "frozen_time": frozen_time.isoformat(),
         }
         basedir = Path(self.settings.get("SCRAPY_POET_TESTS_DIR", "fixtures"))
         fixture = Fixture.save(basedir / type_name, inputs=deps, item=item, meta=meta)
