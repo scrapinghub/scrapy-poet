@@ -290,7 +290,7 @@ class ItemProvider(PageObjectInputProvider):
 
     def __init__(self, injector):
         super().__init__(injector)
-        self.registry = self.injector.overrides_registry
+        self.registry = self.injector.registry
 
         # The key that's used here is the ``scrapy.Request`` instance to ensure
         # that the cached instances under it are properly garbage collected
@@ -301,7 +301,8 @@ class ItemProvider(PageObjectInputProvider):
         """If the item is in any of the ``to_return`` in the rules, then it can
         definitely provide by using the corresponding page object in ``use``.
         """
-        return isclass(cls) and self.registry.search(to_return=cls)
+        # avoid using ``web_poet.RulesRegistry.search()`` since it's O(N)
+        return isclass(cls) and self.registry._item_matchers.get(cls)
 
     def update_cache(self, request: Request, mapping: Dict[Type, Any]) -> None:
         if request not in self._cached_instances:

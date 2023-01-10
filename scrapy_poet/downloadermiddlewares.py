@@ -3,17 +3,18 @@ responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
 import logging
+import warnings
 from typing import Generator, Optional, Type, TypeVar
 
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
-from scrapy.utils.misc import create_instance, load_object
+from scrapy.utils.misc import load_object
 from twisted.internet.defer import Deferred, inlineCallbacks
+from web_poet import RulesRegistry
 
 from .api import DummyResponse
 from .injection import Injector
-from .overrides import OverridesRegistry
 from .page_input_providers import (
     HttpClientProvider,
     HttpResponseProvider,
@@ -22,6 +23,7 @@ from .page_input_providers import (
     RequestUrlProvider,
     ResponseUrlProvider,
 )
+from .utils import create_registry_instance
 
 logger = logging.getLogger(__name__)
 
@@ -49,14 +51,24 @@ class InjectionMiddleware:
         """Initialize the middleware"""
         self.crawler = crawler
         settings = self.crawler.settings
+
+        if settings.get("SCRAPY_POET_OVERRIDES_REGISTRY"):
+            msg = (
+                "The SCRAPY_POET_OVERRIDES_REGISTRY setting is deprecated. "
+                "Use SCRAPY_POET_REGISTRY instead."
+            )
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
         registry_cls = load_object(
-            settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", OverridesRegistry)
+            settings.get(
+                "SCRAPY_POET_REGISTRY",
+                settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", RulesRegistry),
+            )
         )
-        self.overrides_registry = create_instance(registry_cls, settings, crawler)
+        self.registry = create_registry_instance(registry_cls, crawler)
         self.injector = Injector(
             crawler,
             default_providers=DEFAULT_PROVIDERS,
-            overrides_registry=self.overrides_registry,
+            registry=self.registry,
         )
 
     @classmethod

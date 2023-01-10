@@ -12,8 +12,9 @@ from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import maybeDeferred_coro
-from scrapy.utils.misc import create_instance, load_object
+from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
+from web_poet import RulesRegistry
 from web_poet.pages import is_injectable
 
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
@@ -23,10 +24,9 @@ from scrapy_poet.injection_errors import (
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
-from scrapy_poet.overrides import OverridesRegistry, OverridesRegistryBase
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 
-from .utils import get_scrapy_data_path
+from .utils import create_registry_instance, get_scrapy_data_path
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +42,11 @@ class Injector:
         crawler: Crawler,
         *,
         default_providers: Optional[Mapping] = None,
-        overrides_registry: Optional[OverridesRegistryBase] = None,
+        registry: Optional[RulesRegistry] = None,
     ):
         self.crawler = crawler
         self.spider = crawler.spider
-        self.overrides_registry = overrides_registry or OverridesRegistry()
+        self.registry = registry or RulesRegistry()
         self.load_providers(default_providers)
         self.init_cache()
 
@@ -138,7 +138,11 @@ class Injector:
             callback,
             is_injectable=is_injectable,
             externally_provided=self.is_class_provided_by_any_provider,
-            overrides=self.overrides_registry.overrides_for(request).get,
+            # Ignore the type since andi.plan expects overrides to be
+            # Callable[[Callable], Optional[Callable]] but the registry
+            # returns a more accurate typing for this scenario:
+            # Mapping[Type[ItemPage], Type[ItemPage]]
+            overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
         )
 
     @inlineCallbacks
@@ -360,7 +364,7 @@ def is_provider_requiring_scrapy_response(provider):
 def get_injector_for_testing(
     providers: Mapping,
     additional_settings: Optional[Dict] = None,
-    overrides_registry: Optional[OverridesRegistryBase] = None,
+    registry: Optional[RulesRegistry] = None,
 ) -> Injector:
     """
     Return an :class:`Injector` using a fake crawler.
@@ -378,9 +382,9 @@ def get_injector_for_testing(
     spider = MySpider()
     spider.settings = settings
     crawler.spider = spider
-    if not overrides_registry:
-        overrides_registry = create_instance(OverridesRegistry, settings, crawler)
-    return Injector(crawler, overrides_registry=overrides_registry)
+    if not registry:
+        registry = create_registry_instance(RulesRegistry, crawler)
+    return Injector(crawler, registry=registry)
 
 
 def get_response_for_testing(callback: Callable) -> Response:
