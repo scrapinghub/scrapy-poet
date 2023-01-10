@@ -9,8 +9,9 @@ from typing import Generator, Optional, Type, TypeVar
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
-from scrapy.utils.misc import create_instance, load_object
+from scrapy.utils.misc import load_object
 from twisted.internet.defer import Deferred, inlineCallbacks
+from web_poet import RulesRegistry
 
 from .api import DummyResponse
 from .injection import Injector
@@ -22,7 +23,7 @@ from .page_input_providers import (
     RequestUrlProvider,
     ResponseUrlProvider,
 )
-from .registry import OverridesAndItemRegistry
+from .utils import create_registry_instance
 
 logger = logging.getLogger(__name__)
 
@@ -60,12 +61,10 @@ class InjectionMiddleware:
         registry_cls = load_object(
             settings.get(
                 "SCRAPY_POET_REGISTRY",
-                settings.get(
-                    "SCRAPY_POET_OVERRIDES_REGISTRY", OverridesAndItemRegistry
-                ),
+                settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", RulesRegistry),
             )
         )
-        self.registry = create_instance(registry_cls, settings, crawler)
+        self.registry = create_registry_instance(registry_cls, crawler)
         self.injector = Injector(
             crawler,
             default_providers=DEFAULT_PROVIDERS,

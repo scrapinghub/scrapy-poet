@@ -43,10 +43,3 @@ Injection errors
 
 .. automodule:: scrapy_poet.injection_errors
    :members:
-
-Registry
-========
-
-.. automodule:: scrapy_poet.registry
-   :members:
-   :show-inheritance:

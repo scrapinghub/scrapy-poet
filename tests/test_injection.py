@@ -8,7 +8,7 @@ from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
-from web_poet import Injectable, ItemPage
+from web_poet import Injectable, ItemPage, RulesRegistry
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
@@ -29,7 +29,6 @@ from scrapy_poet.injection_errors import (
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
-from scrapy_poet.registry import OverridesAndItemRegistry
 
 
 def get_provider(classes, content=None):
@@ -322,7 +321,7 @@ class TestInjectorOverrides:
                 Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate
             ),
         ]
-        registry = OverridesAndItemRegistry(rules=rules)
+        registry = RulesRegistry(rules=rules)
         injector = get_injector_for_testing(providers, registry=registry)
 
         def callback(

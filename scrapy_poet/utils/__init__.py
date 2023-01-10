@@ -1,5 +1,8 @@
 import os
+from typing import Type
+from warnings import warn
 
+from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from scrapy.utils.project import inside_project, project_data_dir
 from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders
@@ -43,3 +46,17 @@ def scrapy_response_to_http_response(response: Response) -> HttpResponse:
         headers=HttpResponseHeaders.from_bytes_dict(response.headers),
         **kwargs,
     )
+
+
+def create_registry_instance(cls: Type, crawler: Crawler):
+    if "SCRAPY_POET_OVERRIDES" in crawler.settings:
+        msg = (
+            "The SCRAPY_POET_OVERRIDES setting is deprecated. "
+            "Use SCRAPY_POET_RULES instead."
+        )
+        warn(msg, DeprecationWarning, stacklevel=2)
+    rules = crawler.settings.getlist(
+        "SCRAPY_POET_RULES",
+        crawler.settings.getlist("SCRAPY_POET_OVERRIDES", []),
+    )
+    return cls(rules=rules)
