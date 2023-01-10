@@ -447,7 +447,7 @@ class PrioritySubclassProductPage(PriorityParentProductPage):
 
 
 @inlineCallbacks
-def test_item_return_subclass_priority() -> None:
+def test_item_return_parent_priority() -> None:
     """Same case as with ``test_item_return_subclass()`` but now the parent PO
     uses a higher priority of 600 than the default 500.
     """
@@ -464,6 +464,45 @@ def test_item_return_subclass_priority() -> None:
     item, deps = yield crawl_item_and_deps(PrioritySubclassProductPage)
     assert item == PriorityProductFromParent(name="priority subclass product name")
     assert_deps(deps, {"page": PriorityParentProductPage})
+
+
+@attrs.define
+class PriorityProductFromSubclass:
+    name: str
+
+
+@handle_urls(URL)
+class Priority2ParentProductPage(ItemPage[PriorityProductFromSubclass]):
+    @field
+    def name(self) -> str:
+        return "priority parent product name"
+
+
+@handle_urls(URL, priority=600)
+class Priority2SubclassProductPage(Priority2ParentProductPage):
+    @field
+    def name(self) -> str:
+        return "priority subclass product name"
+
+
+@inlineCallbacks
+def test_item_return_subclass_priority() -> None:
+    """Same case as with ``test_item_return_parent_priority()`` but now the
+    PO subclass uses a higher priority of 600 than the default 500.
+    """
+    item, deps = yield crawl_item_and_deps(PriorityProductFromSubclass)
+    assert item == PriorityProductFromSubclass(name="priority subclass product name")
+    assert_deps(deps, {"item": PriorityProductFromSubclass})
+
+    # calling the actual page objects should still work
+
+    item, deps = yield crawl_item_and_deps(Priority2ParentProductPage)
+    assert item == PriorityProductFromSubclass(name="priority parent product name")
+    assert_deps(deps, {"page": Priority2ParentProductPage})
+
+    item, deps = yield crawl_item_and_deps(Priority2SubclassProductPage)
+    assert item == PriorityProductFromSubclass(name="priority subclass product name")
+    assert_deps(deps, {"page": Priority2ParentProductPage})
 
 
 @attrs.define
@@ -1128,9 +1167,19 @@ def test_created_apply_rules() -> None:
             to_return=PriorityProductFromParent,
         ),
         ApplyRule(
-            Patterns([URL]),
+            URL,
             use=PrioritySubclassProductPage,
             to_return=PriorityProductFromParent,
+        ),
+        ApplyRule(
+            URL,
+            use=Priority2ParentProductPage,
+            to_return=PriorityProductFromSubclass,
+        ),
+        ApplyRule(
+            Patterns([URL], priority=600),
+            use=Priority2SubclassProductPage,
+            to_return=PriorityProductFromSubclass,
         ),
         ApplyRule(URL, use=ReplacedProductPage, to_return=ReplacedProduct),
         ApplyRule(URL, use=ParentReplacedProductPage, to_return=ParentReplacedProduct),
