@@ -208,8 +208,8 @@ Item Returns
 
 scrapy-poet also supports a convenient way of asking for items directly. This
 is made possible by the ``to_return`` parameter of :class:`web_poet.rules.ApplyRule`.
-The ``to_return`` specifies which item a page object is capable of returning for
-a given URL.
+The ``to_return`` parameter specifies which item a page object is capable of
+returning for a given URL.
 
 Let's check out an example:
 
