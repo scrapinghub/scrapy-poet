@@ -5,6 +5,8 @@ Changelog
 TBR
 ---
 
+* Fixed the issue where a new page object containing a new response data is not
+  properly created when :class:`web_poet.exceptions.core.Retry` is raised
 * Scrapy uses the spider's ``parse()`` method when the :class:`scrapy.http.Request`
   callback is set to ``None``.
 
