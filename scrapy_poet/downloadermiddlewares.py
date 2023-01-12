@@ -146,19 +146,25 @@ class InjectionMiddleware:
             request,
             response,
         )
+        # If it's the first request which is not retried, copy the original
+        # request.cb_kwargs which contains user-specificied dependencies. This
+        # should persist across all the retries.
+        if not request.meta.get("retry_times"):
+            request.meta["orig_cb_kwargs"] = request.cb_kwargs.copy()
         self._merge_dependencies(final_kwargs, request)
         return response
 
     @staticmethod
-    def _merge_dependencies(final_kwargs: Dict, request: Request):
+    def _merge_dependencies(final_kwargs: Dict, request: Request) -> None:
         """This merges the dependencies created by the providers alongside the
         dependencies provided by the user via ``scrapy.Request.cb_kwargs``.
         """
         for arg, value in final_kwargs.items():
             # Ensures that user provided dependencies via ``Request.cb_kwargs``
             # are used instead of the dependencies created by the providers.
-            if arg in request.cb_kwargs and value is None:
+            if arg in request.meta.get("orig_cb_kwargs", {}):
+                continue
+            if not request.meta.get("retry_times") and arg in request.cb_kwargs:
                 continue
             request.cb_kwargs[arg] = value
             # TODO: check if all arguments are fulfilled somehow?
-        return request

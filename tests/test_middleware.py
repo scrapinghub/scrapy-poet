@@ -269,11 +269,11 @@ def test_multi_args_callbacks(settings):
         ({}, {}, {}),
         ({"x": 1}, {}, {"x": 1}),
         ({}, {"x": 2}, {"x": 2}),
-        ({"x": 1}, {"x": None}, {"x": 1}),
-        ({"x": 1}, {"x": False}, {"x": 1}),
-        ({"x": 1}, {"x": 2}, {"x": 1}),
+        ({"x": 1}, {"x": None}, {"x": None}),
+        ({"x": 1}, {"x": False}, {"x": False}),
+        ({"x": 1}, {"x": 2}, {"x": 2}),
         ({"x": None}, {"x": 2}, {"x": 2}),
-        ({"x": False}, {"x": 2}, {"x": False}),
+        ({"x": False}, {"x": 2}, {"x": 2}),
     ],
 )
 def test_injector_merge_dependencies(settings, final_kwargs, cb_kwargs, expected):
@@ -281,7 +281,7 @@ def test_injector_merge_dependencies(settings, final_kwargs, cb_kwargs, expected
     middleware = InjectionMiddleware(crawler)
     request = Request("https://example.com", cb_kwargs=cb_kwargs)
 
-    request = middleware._merge_dependencies(final_kwargs, request)
+    middleware._merge_dependencies(final_kwargs, request)
     assert request.cb_kwargs == expected
 
 
