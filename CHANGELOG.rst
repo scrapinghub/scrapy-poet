@@ -11,7 +11,7 @@ TBR
   :class:`scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware`,
   :class:`scrapy.pipelines.images.ImagesPipeline` or
   :class:`scrapy.pipelines.files.FilesPipeline`. It is also a reason
-  ``HttpClient`` might not be working in page objects.
+  :class:`web_poet.page_inputs.client.HttpClient` might not be working in page objects.
   Now these cases are detected, and a warning is issued.
 
   As of Scrapy 2.7, it is not possible to fix the issue completely
@@ -24,10 +24,10 @@ TBR
       callback is assumed normally. But sometimes callback=None is used
       when :class:`scrapy.http.Request` is added to the Scrapy's downloader
       directly, in which case no callback is used. Middlewares, including
-      scrapy-poet's, can't distinguish between these two cases, which causes
+      **scrapy-poet**'s, can't distinguish between these two cases, which causes
       all kinds of issues.
 
-  We recommend all ``scrapy-poet`` users to modify their code to
+  We recommend all **scrapy-poet** users to modify their code to
   avoid the issue. Please **don't** define ``parse``
   method with arguments which are supposed to be filled by ``scrapy-poet``,
   and rename the existing ``parse`` methods if they have such arguments.
@@ -38,7 +38,7 @@ TBR
 
   There are backwards-incompatible changes related to this issue.
   They only affect you if you don't follow the advice of not using ``parse``
-  method with scrapy-poet.
+  method with **scrapy-poet**.
 
     * When the ``parse()`` method has its response argument annotated with
       :class:`scrapy_poet.api.DummyResponse`, for instance:
@@ -46,7 +46,7 @@ TBR
       instead of being skipped.
 
     * When the ``parse()`` method has dependencies that are provided by
-      ``scrapt-poet``, the :class:`scrapy_poet.downloadermiddlewares.InjectionMiddleware` won't
+      ``scrapy-poet``, the :class:`scrapy_poet.downloadermiddlewares.InjectionMiddleware` won't
       attempt to build any dependencies anymore.
 
       This causes the following code to have this error ``TypeError: parse()
