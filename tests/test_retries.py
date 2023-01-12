@@ -23,7 +23,7 @@ class BaseSpider(Spider):
     }
 
 
-def _assert_no_duplicate_instances(instances: List[Any]):
+def _assert_all_unique_instances(instances: List[Any]):
     assert len({id(instance) for instance in instances}) == len(instances)
 
 
@@ -58,8 +58,8 @@ def test_retry_once():
     assert crawler.stats.get_value("retry/count") == 1
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 1
     assert crawler.stats.get_value("retry/max_reached") is None
-    _assert_no_duplicate_instances(po_instances)
-    _assert_no_duplicate_instances(po_response_instances)
+    _assert_all_unique_instances(po_instances)
+    _assert_all_unique_instances(po_response_instances)
 
 
 @inlineCallbacks
@@ -94,8 +94,8 @@ def test_retry_max():
     assert crawler.stats.get_value("retry/count") == 2
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 2
     assert crawler.stats.get_value("retry/max_reached") is None
-    _assert_no_duplicate_instances(po_instances)
-    _assert_no_duplicate_instances(po_response_instances)
+    _assert_all_unique_instances(po_instances)
+    _assert_all_unique_instances(po_response_instances)
 
 
 @inlineCallbacks
@@ -126,8 +126,8 @@ def test_retry_exceeded():
     assert crawler.stats.get_value("retry/count") == 2
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 2
     assert crawler.stats.get_value("retry/max_reached") == 1
-    _assert_no_duplicate_instances(po_instances)
-    _assert_no_duplicate_instances(po_response_instances)
+    _assert_all_unique_instances(po_instances)
+    _assert_all_unique_instances(po_response_instances)
 
 
 @inlineCallbacks
@@ -166,12 +166,12 @@ def test_retry_max_configuration():
     assert crawler.stats.get_value("retry/count") == 3
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 3
     assert crawler.stats.get_value("retry/max_reached") is None
-    _assert_no_duplicate_instances(po_instances)
-    _assert_no_duplicate_instances(po_response_instances)
+    _assert_all_unique_instances(po_instances)
+    _assert_all_unique_instances(po_response_instances)
 
 
 @inlineCallbacks
-def test_retry_cb_kwargs_persistence():
+def test_retry_cb_kwargs():
     retries = deque([True, True, False])
     po_instances, po_response_instances = [], []
     items = []
@@ -186,15 +186,14 @@ def test_retry_cb_kwargs_persistence():
                     raise Retry
                 return {"foo": "bar"}
 
-        # This instance passed through the cb_kwargs from the original request
-        # should persist after several retries. This ensures that user provided
-        # dependencies aren't replaced by scrapy-poet.
-        po_persist = SamplePage(response=HttpResponse("https://example.com", b""))
+        po_cb_kwargs = SamplePage(response=HttpResponse("https://example.com", b""))
 
         class TestSpider(BaseSpider):
             def start_requests(self):
                 yield Request(
-                    server.root_url, callback=self.parse, cb_kwargs={"page": po_persist}
+                    server.root_url,
+                    callback=self.parse,
+                    cb_kwargs={"page": po_cb_kwargs},
                 )
 
             def parse(self, response, page: SamplePage):
@@ -208,12 +207,10 @@ def test_retry_cb_kwargs_persistence():
     assert crawler.stats.get_value("retry/count") == 2
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 2
     assert crawler.stats.get_value("retry/max_reached") is None
-    assert len(po_instances) == 3
-    assert len(po_response_instances) == 3
-    assert len({id(instance) for instance in po_instances}) == 1
-    assert len({id(instance) for instance in po_response_instances}) == 1
-    assert po_instances[0] is po_persist
-    assert po_response_instances[0] is po_persist.response
+    _assert_all_unique_instances(po_instances)
+    _assert_all_unique_instances(po_response_instances)
+    assert po_instances[0] is not po_cb_kwargs
+    assert po_response_instances[0] is not po_cb_kwargs.response
 
 
 @inlineCallbacks

@@ -259,7 +259,7 @@ def test_multi_args_callbacks(settings):
     item, _, _ = yield crawl_single_item(MultiArgsCallbackSpider, ProductHtml, settings)
     assert type(item["product"]) == ProductPage
     assert type(item["provided"]) == ProvidedWithDeferred
-    assert item["cb_arg"] == "arg!"
+    assert item["cb_arg"] is None
     assert item["non_cb_arg"] is None
 
 
@@ -269,11 +269,11 @@ def test_multi_args_callbacks(settings):
         ({}, {}, {}),
         ({"x": 1}, {}, {"x": 1}),
         ({}, {"x": 2}, {"x": 2}),
-        ({"x": 1}, {"x": None}, {"x": None}),
-        ({"x": 1}, {"x": False}, {"x": False}),
-        ({"x": 1}, {"x": 2}, {"x": 2}),
-        ({"x": None}, {"x": 2}, {"x": 2}),
-        ({"x": False}, {"x": 2}, {"x": 2}),
+        ({"x": 1}, {"x": None}, {"x": 1}),
+        ({"x": 1}, {"x": False}, {"x": 1}),
+        ({"x": 1}, {"x": 2}, {"x": 1}),
+        ({"x": None}, {"x": 2}, {"x": None}),
+        ({"x": False}, {"x": 2}, {"x": False}),
     ],
 )
 def test_injector_merge_dependencies(settings, final_kwargs, cb_kwargs, expected):
