@@ -1253,21 +1253,21 @@ def test_page_object_with_duplicate_deep_item_dependency() -> None:
 
 
 @attrs.define
-class ChickenPage:
+class ChickenItem:
     name: str
     other: str
 
 
 @attrs.define
-class EggPage:
+class EggItem:
     name: str
     other: str
 
 
 @handle_urls(URL)
 @attrs.define
-class ChickenDeadlockPage(ItemPage[ChickenPage]):
-    other_injected: EggPage
+class ChickenDeadlockPage(ItemPage[ChickenItem]):
+    other_injected: EggItem
 
     @field
     def name(self) -> str:
@@ -1280,8 +1280,8 @@ class ChickenDeadlockPage(ItemPage[ChickenPage]):
 
 @handle_urls(URL)
 @attrs.define
-class EggDeadlockPage(ItemPage[EggPage]):
-    other_injected: ChickenPage
+class EggDeadlockPage(ItemPage[EggItem]):
+    other_injected: ChickenItem
 
     @field
     def name(self) -> str:
@@ -1298,10 +1298,10 @@ def test_page_object_with_item_dependency_deadlock(caplog) -> None:
     should have a corresponding error raised.
     """
 
-    item, deps = yield crawl_item_and_deps(ChickenPage)
+    item, deps = yield crawl_item_and_deps(ChickenItem)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
-    item, deps = yield crawl_item_and_deps(EggPage)
+    item, deps = yield crawl_item_and_deps(EggItem)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
@@ -1390,6 +1390,6 @@ def test_created_apply_rules() -> None:
         ),
         ApplyRule(URL, use=ProductDeepDependencyPage, to_return=MainProductC),
         ApplyRule(URL, use=ProductDuplicateDeepDependencyPage, to_return=MainProductD),
-        ApplyRule(URL, use=ChickenDeadlockPage, to_return=ChickenPage),
-        ApplyRule(URL, use=EggDeadlockPage, to_return=EggPage),
+        ApplyRule(URL, use=ChickenDeadlockPage, to_return=ChickenItem),
+        ApplyRule(URL, use=EggDeadlockPage, to_return=EggItem),
     ]
