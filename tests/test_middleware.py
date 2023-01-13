@@ -236,7 +236,9 @@ class MultiArgsCallbackSpider(scrapy.Spider):
     custom_settings = {"SCRAPY_POET_PROVIDERS": {WithDeferredProvider: 1}}
 
     def start_requests(self):
-        yield Request(self.url, self.parse, cb_kwargs=dict(cb_arg="arg!"))
+        yield Request(
+            self.url, self.parse, cb_kwargs={"cb_arg": "arg!", "cb_arg2": False}
+        )
 
     def parse(
         self,
@@ -244,12 +246,14 @@ class MultiArgsCallbackSpider(scrapy.Spider):
         product: ProductPage,
         provided: ProvidedWithDeferred,
         cb_arg: Optional[str],
+        cb_arg2: Optional[bool],
         non_cb_arg: Optional[str],
     ):
         yield {
             "product": product,
             "provided": provided,
             "cb_arg": cb_arg,
+            "cb_arg2": cb_arg2,
             "non_cb_arg": non_cb_arg,
         }
 
@@ -260,6 +264,7 @@ def test_multi_args_callbacks(settings):
     assert type(item["product"]) == ProductPage
     assert type(item["provided"]) == ProvidedWithDeferred
     assert item["cb_arg"] == "arg!"
+    assert item["cb_arg2"] is False
     assert item["non_cb_arg"] is None
 
 
