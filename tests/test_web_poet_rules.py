@@ -11,6 +11,7 @@ from collections import defaultdict
 from typing import Any, Dict, List, Tuple, Type
 
 import attrs
+import pytest
 import scrapy
 from pytest_twisted import inlineCallbacks
 from url_matcher import Patterns
@@ -517,8 +518,12 @@ class ReplacedProductPage(ItemPage[Product]):
         return "replaced product name"
 
 
+@pytest.mark.xfail(
+    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
+    "ItemProvide has received a different type of item class from the page object."
+)
 @inlineCallbacks
-def test_item_to_return_in_handle_urls(caplog) -> None:
+def test_item_to_return_in_handle_urls() -> None:
     """Even if ``@handle_urls`` could derive the value for the ``to_return``
     parameter when the class inherits from something like ``ItemPage[ItemType]``,
     any value passed through its ``to_return`` parameter should take precedence.
@@ -526,15 +531,17 @@ def test_item_to_return_in_handle_urls(caplog) -> None:
     Note that that this produces some inconsistencies between the rule's item
     class vs the class that is actually returned. Using the ``to_return``
     parameter in ``@handle_urls`` isn't recommended because of this.
-
-    This also causes an ``UndeclaredProvidedTypeError`` since the item provider
-    has received a different type of item class from the page object.
     """
     item, deps = yield crawl_item_and_deps(ReplacedProduct)
-    assert "UndeclaredProvidedTypeError:" in caplog.text
-    assert item is None
-    assert_deps(deps, {}, size=0)
+    assert item == Product(name="replaced product name")
+    assert_deps(deps, {"page": ReplacedProductPage})
 
+
+@inlineCallbacks
+def test_item_to_return_in_handle_urls_other() -> None:
+    """Remaining tests for ``test_item_to_return_in_handle_urls()`` which are
+    not expected to be xfail.
+    """
     # Requesting the underlying item class from the PO should still work.
     item, deps = yield crawl_item_and_deps(Product)
     assert item == Product(name="product name")
@@ -570,16 +577,25 @@ class SubclassReplacedProductPage(ParentReplacedProductPage):
         return "subclass replaced product name"
 
 
+@pytest.mark.xfail(
+    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
+    "ItemProvide has received a different type of item class from the page object."
+)
 @inlineCallbacks
-def test_item_to_return_in_handle_urls_subclass(caplog) -> None:
+def test_item_to_return_in_handle_urls_subclass() -> None:
     """Same case as with the ``test_item_to_return_in_handle_urls()`` case above
     but the ``to_return`` is declared in the subclass.
     """
     item, deps = yield crawl_item_and_deps(SubclassReplacedProduct)
-    assert "UndeclaredProvidedTypeError:" in caplog.text
-    assert item is None
-    assert_deps(deps, {}, size=0)
+    assert item == ParentReplacedProduct(name="subclass replaced product name")
+    assert_deps(deps, {"page": SubclassReplacedProductPage})
 
+
+@inlineCallbacks
+def test_item_to_return_in_handle_urls_subclass_others() -> None:
+    """Remaining tests for ``test_item_to_return_in_handle_urls_subclass()``
+    which are not expected to be xfail.
+    """
     # Requesting the underlying item class from the parent PO should still work.
     item, deps = yield crawl_item_and_deps(ParentReplacedProduct)
     assert item == ParentReplacedProduct(name="parent replaced product name")
@@ -608,15 +624,25 @@ class StandaloneProductPage(ItemPage):
         return "standalone product name"
 
 
+@pytest.mark.xfail(
+    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
+    "ItemProvide has received a different type of item class from the page object."
+)
 @inlineCallbacks
-def test_item_to_return_standalone(caplog) -> None:
+def test_item_to_return_standalone() -> None:
     """Same case as with ``test_item_to_return_in_handle_urls()`` above but the
     page object doesn't inherit from something like ``ItemPage[ItemClass]``
     """
     item, deps = yield crawl_item_and_deps(StandaloneProduct)
-    assert "UndeclaredProvidedTypeError:" in caplog.text
-    assert item is None
-    assert_deps(deps, {}, size=0)
+    assert item == {"name": "standalone product name"}
+    assert_deps(deps, {"page": StandaloneProductPage})
+
+
+@inlineCallbacks
+def test_item_to_return_standalone_others() -> None:
+    """Remaining tests for ``test_item_to_return_standalone()``
+    which are not expected to be xfail.
+    """
 
     # calling the actual page object should still work
     item, deps = yield crawl_item_and_deps(StandaloneProductPage)
