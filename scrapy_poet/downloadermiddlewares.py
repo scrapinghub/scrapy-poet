@@ -150,7 +150,7 @@ class InjectionMiddleware:
         for arg, value in final_kwargs.items():
             # If scrapy-poet can't provided the dependency, allow the user to
             # give it.
-            if value is None and request.cb_kwargs.get(arg) is not None:
+            if value is None and arg in request.cb_kwargs:
                 continue
             request.cb_kwargs[arg] = value
             # TODO: check if all arguments are fulfilled somehow?
