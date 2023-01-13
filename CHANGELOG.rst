@@ -27,24 +27,24 @@ TBR
 
   .. note::
 
-      The root of the issue is that when request.callback is ``None``, ``parse``
-      callback is assumed normally. But sometimes callback=None is used
-      when :class:`scrapy.http.Request` is added to the Scrapy's downloader
-      directly, in which case no callback is used. Middlewares, including
-      **scrapy-poet**'s, can't distinguish between these two cases, which causes
-      all kinds of issues.
+      The root of the issue is that when request.callback is ``None``,
+      ``parse()`` callback is assumed normally. But sometimes callback=None
+      is used when :class:`scrapy.http.Request` is added to the Scrapy's
+      downloader directly, in which case no callback is used. Middlewares,
+      including **scrapy-poet**'s, can't distinguish between these two cases,
+      which causes all kinds of issues.
 
   We recommend all **scrapy-poet** users to modify their code to
   avoid the issue. Please **don't** define ``parse()``
   method with arguments which are supposed to be filled by **scrapy-poet**,
-  and rename the existing ``parse`` methods if they have such arguments.
+  and rename the existing ``parse()`` methods if they have such arguments.
   Any other name is fine. It avoids all possible issues, including
   incompatibility with 3rd party middlewares or pipelines.
 
   See the new :ref:`pitfalls` documentation for more information.
 
   There are backwards-incompatible changes related to this issue.
-  They only affect you if you don't follow the advice of not using ``parse``
+  They only affect you if you don't follow the advice of not using ``parse()``
   method with **scrapy-poet**.
 
     * When the ``parse()`` method has its response argument annotated with
