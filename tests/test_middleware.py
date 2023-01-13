@@ -259,7 +259,7 @@ def test_multi_args_callbacks(settings):
     item, _, _ = yield crawl_single_item(MultiArgsCallbackSpider, ProductHtml, settings)
     assert type(item["product"]) == ProductPage
     assert type(item["provided"]) == ProvidedWithDeferred
-    assert item["cb_arg"] is None
+    assert item["cb_arg"] == "arg!"
     assert item["non_cb_arg"] is None
 
 
