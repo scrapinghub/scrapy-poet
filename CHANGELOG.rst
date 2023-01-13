@@ -5,6 +5,13 @@ Changelog
 TBR
 ---
 
+* Fixed the issue where a new page object containing a new response data is not
+  properly created when :class:`web_poet.exceptions.core.Retry` is raised.
+
+* In order for the above fix to be possible, overriding the callback dependencies
+  created by **scrapy-poet** via :attr:`scrapy.http.Request.cb_kwargs` is now
+  unsupported. This is a backward incompatible change.
+
 * Scrapy uses the spider's ``parse()`` method when the :class:`scrapy.http.Request`
   callback is set to ``None``.
 
