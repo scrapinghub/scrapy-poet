@@ -5,7 +5,7 @@ are executed.
 import inspect
 import logging
 import warnings
-from typing import Dict, Generator, Optional, Type, TypeVar
+from typing import Generator, Optional, Type, TypeVar
 
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
@@ -146,14 +146,8 @@ class InjectionMiddleware:
             request,
             response,
         )
-        self._merge_dependencies(final_kwargs, request)
-        return response
-
-    @staticmethod
-    def _merge_dependencies(final_kwargs: Dict, request: Request) -> None:
-        """This merges the dependencies created by the providers alongside the
-        dependencies provided by the user via ``scrapy.Request.cb_kwargs``.
-        """
+        # Fill the callback arguments with the created instances
         for arg, value in final_kwargs.items():
             request.cb_kwargs[arg] = value
             # TODO: check if all arguments are fulfilled somehow?
+        return response

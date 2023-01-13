@@ -263,28 +263,6 @@ def test_multi_args_callbacks(settings):
     assert item["non_cb_arg"] is None
 
 
-@pytest.mark.parametrize(
-    "final_kwargs,cb_kwargs,expected",
-    [
-        ({}, {}, {}),
-        ({"x": 1}, {}, {"x": 1}),
-        ({}, {"x": 2}, {"x": 2}),
-        ({"x": 1}, {"x": None}, {"x": 1}),
-        ({"x": 1}, {"x": False}, {"x": 1}),
-        ({"x": 1}, {"x": 2}, {"x": 1}),
-        ({"x": None}, {"x": 2}, {"x": None}),
-        ({"x": False}, {"x": 2}, {"x": False}),
-    ],
-)
-def test_injector_merge_dependencies(settings, final_kwargs, cb_kwargs, expected):
-    crawler = get_crawler(Spider, settings)
-    middleware = InjectionMiddleware(crawler)
-    request = Request("https://example.com", cb_kwargs=cb_kwargs)
-
-    middleware._merge_dependencies(final_kwargs, request)
-    assert request.cb_kwargs == expected
-
-
 @attr.s(auto_attribs=True)
 class UnressolvableProductPage(ProductPage):
     this_is_unresolvable: str

@@ -30,15 +30,14 @@ def _assert_all_unique_instances(instances: List[Any]):
 @inlineCallbacks
 def test_retry_once():
     retries = deque([True, False])
-    po_instances, po_response_instances = [], []
-    items = []
+    items, page_instances, page_response_instances = [], [], []
 
     with MockServer(EchoResource) as server:
 
         class SamplePage(WebPage):
             def to_item(self):
-                po_instances.append(self)
-                po_response_instances.append(self.response)
+                page_instances.append(self)
+                page_response_instances.append(self.response)
                 if retries.popleft():
                     raise Retry
                 return {"foo": "bar"}
@@ -58,23 +57,22 @@ def test_retry_once():
     assert crawler.stats.get_value("retry/count") == 1
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 1
     assert crawler.stats.get_value("retry/max_reached") is None
-    _assert_all_unique_instances(po_instances)
-    _assert_all_unique_instances(po_response_instances)
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
 
 
 @inlineCallbacks
 def test_retry_max():
     # The default value of the RETRY_TIMES Scrapy setting is 2.
     retries = deque([True, True, False])
-    po_instances, po_response_instances = [], []
-    items = []
+    items, page_instances, page_response_instances = [], [], []
 
     with MockServer(EchoResource) as server:
 
         class SamplePage(WebPage):
             def to_item(self):
-                po_instances.append(self)
-                po_response_instances.append(self.response)
+                page_instances.append(self)
+                page_response_instances.append(self.response)
                 if retries.popleft():
                     raise Retry
                 return {"foo": "bar"}
@@ -94,21 +92,20 @@ def test_retry_max():
     assert crawler.stats.get_value("retry/count") == 2
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 2
     assert crawler.stats.get_value("retry/max_reached") is None
-    _assert_all_unique_instances(po_instances)
-    _assert_all_unique_instances(po_response_instances)
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
 
 
 @inlineCallbacks
 def test_retry_exceeded():
-    items = []
-    po_instances, po_response_instances = [], []
+    items, page_instances, page_response_instances = [], [], []
 
     with MockServer(EchoResource) as server:
 
         class SamplePage(WebPage):
             def to_item(self):
-                po_instances.append(self)
-                po_response_instances.append(self.response)
+                page_instances.append(self)
+                page_response_instances.append(self.response)
                 raise Retry
 
         class TestSpider(BaseSpider):
@@ -126,22 +123,21 @@ def test_retry_exceeded():
     assert crawler.stats.get_value("retry/count") == 2
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 2
     assert crawler.stats.get_value("retry/max_reached") == 1
-    _assert_all_unique_instances(po_instances)
-    _assert_all_unique_instances(po_response_instances)
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
 
 
 @inlineCallbacks
 def test_retry_max_configuration():
     retries = deque([True, True, True, False])
-    po_instances, po_response_instances = [], []
-    items = []
+    items, page_instances, page_response_instances = [], [], []
 
     with MockServer(EchoResource) as server:
 
         class SamplePage(WebPage):
             def to_item(self):
-                po_instances.append(self)
-                po_response_instances.append(self.response)
+                page_instances.append(self)
+                page_response_instances.append(self.response)
                 if retries.popleft():
                     raise Retry
                 return {"foo": "bar"}
@@ -166,34 +162,35 @@ def test_retry_max_configuration():
     assert crawler.stats.get_value("retry/count") == 3
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 3
     assert crawler.stats.get_value("retry/max_reached") is None
-    _assert_all_unique_instances(po_instances)
-    _assert_all_unique_instances(po_response_instances)
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
 
 
 @inlineCallbacks
 def test_retry_cb_kwargs():
     retries = deque([True, True, False])
-    po_instances, po_response_instances = [], []
-    items = []
+    items, page_instances, page_response_instances = [], [], []
 
     with MockServer(EchoResource) as server:
 
         class SamplePage(WebPage):
             def to_item(self):
-                po_instances.append(self)
-                po_response_instances.append(self.response)
+                page_instances.append(self)
+                page_response_instances.append(self.response)
                 if retries.popleft():
                     raise Retry
                 return {"foo": "bar"}
 
-        po_cb_kwargs = SamplePage(response=HttpResponse("https://example.com", b""))
+        page_from_cb_kwargs = SamplePage(
+            response=HttpResponse("https://example.com", b"")
+        )
 
         class TestSpider(BaseSpider):
             def start_requests(self):
                 yield Request(
                     server.root_url,
                     callback=self.parse,
-                    cb_kwargs={"page": po_cb_kwargs},
+                    cb_kwargs={"page": page_from_cb_kwargs},
                 )
 
             def parse(self, response, page: SamplePage):
@@ -207,10 +204,10 @@ def test_retry_cb_kwargs():
     assert crawler.stats.get_value("retry/count") == 2
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 2
     assert crawler.stats.get_value("retry/max_reached") is None
-    _assert_all_unique_instances(po_instances)
-    _assert_all_unique_instances(po_response_instances)
-    assert po_instances[0] is not po_cb_kwargs
-    assert po_response_instances[0] is not po_cb_kwargs.response
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
+    assert page_instances[0] is not page_from_cb_kwargs
+    assert page_response_instances[0] is not page_from_cb_kwargs.response
 
 
 @inlineCallbacks
