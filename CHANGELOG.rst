@@ -22,12 +22,12 @@ TBR
   in page objects. Now these cases are detected, and a warning is issued.
 
   As of Scrapy 2.7, it is not possible to fix the issue completely
-  in scrapy-poet. Fixing it would require Scrapy changes; some 3rd party
+  in **scrapy-poet**. Fixing it would require Scrapy changes; some 3rd party
   libraries may also need to be updated.
 
   .. note::
 
-      The root of the issue is that when request.callback is None, ``parse``
+      The root of the issue is that when request.callback is ``None``, ``parse``
       callback is assumed normally. But sometimes callback=None is used
       when :class:`scrapy.http.Request` is added to the Scrapy's downloader
       directly, in which case no callback is used. Middlewares, including
@@ -35,7 +35,7 @@ TBR
       all kinds of issues.
 
   We recommend all **scrapy-poet** users to modify their code to
-  avoid the issue. Please **don't** define ``parse``
+  avoid the issue. Please **don't** define ``parse()``
   method with arguments which are supposed to be filled by **scrapy-poet**,
   and rename the existing ``parse`` methods if they have such arguments.
   Any other name is fine. It avoids all possible issues, including
