@@ -1267,7 +1267,7 @@ class EggItem:
 @handle_urls(URL)
 @attrs.define
 class ChickenDeadlockPage(ItemPage[ChickenItem]):
-    other_injected: EggItem
+    other_injected_item: EggItem
 
     @field
     def name(self) -> str:
@@ -1275,13 +1275,13 @@ class ChickenDeadlockPage(ItemPage[ChickenItem]):
 
     @field
     def other(self) -> str:
-        return self.other_injected.name
+        return self.other_injected_item.name
 
 
 @handle_urls(URL)
 @attrs.define
 class EggDeadlockPage(ItemPage[EggItem]):
-    other_injected: ChickenItem
+    other_injected_item: ChickenItem
 
     @field
     def name(self) -> str:
@@ -1289,19 +1289,101 @@ class EggDeadlockPage(ItemPage[EggItem]):
 
     @field
     def other(self) -> str:
-        return self.other_injected.name
+        return self.other_injected_item.name
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock(caplog) -> None:
+def test_page_object_with_item_dependency_deadlock_a(caplog) -> None:
     """Items with page objects which depend on each other resulting in a deadlock
     should have a corresponding error raised.
     """
-
     item, deps = yield crawl_item_and_deps(ChickenItem)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
+
+@inlineCallbacks
+def test_page_object_with_item_dependency_deadlock_b(caplog) -> None:
     item, deps = yield crawl_item_and_deps(EggItem)
+    assert "ProviderDependencyDeadlockError" in caplog.text
+
+
+@inlineCallbacks
+def test_page_object_with_item_dependency_deadlock_c(caplog) -> None:
+    item, deps = yield crawl_item_and_deps(ChickenDeadlockPage)
+    assert "ProviderDependencyDeadlockError" in caplog.text
+
+
+@inlineCallbacks
+def test_page_object_with_item_dependency_deadlock_d(caplog) -> None:
+    item, deps = yield crawl_item_and_deps(EggDeadlockPage)
+    assert "ProviderDependencyDeadlockError" in caplog.text
+
+
+@attrs.define
+class Chicken2Item:
+    name: str
+    other: str
+
+
+@attrs.define
+class Egg2Item:
+    name: str
+    other: str
+
+
+@handle_urls(URL)
+@attrs.define
+class Chicken2DeadlockPage(ItemPage[Chicken2Item]):
+    other_injected_item: Egg2Item
+
+    @field
+    def name(self) -> str:
+        return "chicken 2"
+
+    @field
+    def other(self) -> str:
+        return self.other_injected_item.name
+
+
+@handle_urls(URL)
+@attrs.define
+class Egg2DeadlockPage(ItemPage[Egg2Item]):
+    other_injected_page: Chicken2DeadlockPage
+
+    @field
+    def name(self) -> str:
+        return "egg 2"
+
+    @field
+    async def other(self) -> str:
+        item = await self.other_injected_page.to_item()
+        return item.name
+
+
+@inlineCallbacks
+def test_page_object_with_item_dependency_deadlock_2_a(caplog) -> None:
+    """Same with ``test_page_object_with_item_dependency_deadlock()`` but one
+    of the page objects requires a page object instead of an item.
+    """
+    item, deps = yield crawl_item_and_deps(Chicken2Item)
+    assert "ProviderDependencyDeadlockError" in caplog.text
+
+
+@inlineCallbacks
+def test_page_object_with_item_dependency_deadlock_2_b(caplog) -> None:
+    item, deps = yield crawl_item_and_deps(Egg2Item)
+    assert "ProviderDependencyDeadlockError" in caplog.text
+
+
+@inlineCallbacks
+def test_page_object_with_item_dependency_deadlock_2_c(caplog) -> None:
+    item, deps = yield crawl_item_and_deps(Chicken2DeadlockPage)
+    assert "ProviderDependencyDeadlockError" in caplog.text
+
+
+@inlineCallbacks
+def test_page_object_with_item_dependency_deadlock_2_d(caplog) -> None:
+    item, deps = yield crawl_item_and_deps(Egg2DeadlockPage)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
@@ -1392,4 +1474,6 @@ def test_created_apply_rules() -> None:
         ApplyRule(URL, use=ProductDuplicateDeepDependencyPage, to_return=MainProductD),
         ApplyRule(URL, use=ChickenDeadlockPage, to_return=ChickenItem),
         ApplyRule(URL, use=EggDeadlockPage, to_return=EggItem),
+        ApplyRule(URL, use=Chicken2DeadlockPage, to_return=Chicken2Item),
+        ApplyRule(URL, use=Egg2DeadlockPage, to_return=Egg2Item),
     ]
