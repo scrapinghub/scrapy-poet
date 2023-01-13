@@ -429,6 +429,58 @@ def test_item_return_subclass() -> None:
 
 
 @attrs.define
+class AItem:
+    name: str
+
+
+@handle_urls(URL)
+class IndependentA1Page(ItemPage[AItem]):
+    @field
+    def name(self) -> str:
+        return "independent A1"
+
+
+@handle_urls(URL)
+class IndependentA2Page(ItemPage[AItem]):
+    @field
+    def name(self) -> str:
+        return "independent A2"
+
+
+@inlineCallbacks
+def test_item_return_individually_defined() -> None:
+    """Same case with ``test_item_return_subclass()`` but the 'to_return' item
+    has not been derived due to subclassing but rather, two page objects were
+    defined independently that returns the same item.
+
+    The latter rule that was defined should be used when the priorities are the
+    same.
+    """
+    rules = [
+        ApplyRule(URL, use=IndependentA1Page, to_return=AItem),
+        ApplyRule(URL, use=IndependentA2Page, to_return=AItem),
+    ]
+    msg = f"Consider updating the priority of these rules: {rules}"
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        item, deps = yield crawl_item_and_deps(AItem)
+        assert any([True for w in caught_warnings if msg in str(w.message)])
+
+    assert item == AItem(name="independent A2")
+    assert_deps(deps, {"item": IndependentA2Page})
+
+    # calling the actual page objects should still work
+
+    item, deps = yield crawl_item_and_deps(IndependentA1Page)
+    assert item == AItem(name="independent A1")
+    assert_deps(deps, {"page": IndependentA1Page})
+
+    item, deps = yield crawl_item_and_deps(IndependentA2Page)
+    assert item == AItem(name="independent A2")
+    assert_deps(deps, {"page": IndependentA2Page})
+
+
+@attrs.define
 class PriorityProductFromParent:
     name: str
 
@@ -452,7 +504,20 @@ def test_item_return_parent_priority() -> None:
     """Same case as with ``test_item_return_subclass()`` but now the parent PO
     uses a higher priority of 600 than the default 500.
     """
-    item, deps = yield crawl_item_and_deps(PriorityProductFromParent)
+    rules = [
+        ApplyRule(
+            URL, use=PriorityParentProductPage, to_return=PriorityProductFromParent
+        ),
+        ApplyRule(
+            URL, use=PrioritySubclassProductPage, to_return=PriorityProductFromParent
+        ),
+    ]
+    msg = f"Consider updating the priority of these rules: {rules}"
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        item, deps = yield crawl_item_and_deps(PriorityProductFromParent)
+        assert not any([True for w in caught_warnings if msg in str(w.message)])
+
     assert item == PriorityProductFromParent(name="priority parent product name")
     assert_deps(deps, {"item": PriorityProductFromParent})
 
@@ -465,6 +530,58 @@ def test_item_return_parent_priority() -> None:
     item, deps = yield crawl_item_and_deps(PrioritySubclassProductPage)
     assert item == PriorityProductFromParent(name="priority subclass product name")
     assert_deps(deps, {"page": PriorityParentProductPage})
+
+
+@attrs.define
+class BItem:
+    name: str
+
+
+@handle_urls(URL, priority=600)
+class IndependentB1Page(ItemPage[BItem]):
+    @field
+    def name(self) -> str:
+        return "independent B1"
+
+
+@handle_urls(URL)
+class IndependentB2Page(ItemPage[BItem]):
+    @field
+    def name(self) -> str:
+        return "independent B2"
+
+
+@inlineCallbacks
+def test_item_return_individually_defined_first_rule_higher_priority() -> None:
+    """Same case with ``test_item_return_parent_priority()`` but the 'to_return'
+    item has not been derived due to subclassing but rather, two page objects
+    were defined independently that returns the same item.
+
+    The rule with the higher priority should be used regardless of the order it
+    was defined.
+    """
+    rules = [
+        ApplyRule(URL, use=IndependentB1Page, to_return=BItem),
+        ApplyRule(URL, use=IndependentB2Page, to_return=BItem),
+    ]
+    msg = f"Consider updating the priority of these rules: {rules}"
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        item, deps = yield crawl_item_and_deps(BItem)
+        assert not any([True for w in caught_warnings if msg in str(w.message)])
+
+    assert item == BItem(name="independent B1")
+    assert_deps(deps, {"item": IndependentB1Page})
+
+    # calling the actual page objects should still work
+
+    item, deps = yield crawl_item_and_deps(IndependentB1Page)
+    assert item == BItem(name="independent B1")
+    assert_deps(deps, {"page": IndependentB1Page})
+
+    item, deps = yield crawl_item_and_deps(IndependentB2Page)
+    assert item == BItem(name="independent B2")
+    assert_deps(deps, {"page": IndependentB2Page})
 
 
 @attrs.define
@@ -491,7 +608,20 @@ def test_item_return_subclass_priority() -> None:
     """Same case as with ``test_item_return_parent_priority()`` but now the
     PO subclass uses a higher priority of 600 than the default 500.
     """
-    item, deps = yield crawl_item_and_deps(PriorityProductFromSubclass)
+    rules = [
+        ApplyRule(
+            URL, use=Priority2ParentProductPage, to_return=PriorityProductFromSubclass
+        ),
+        ApplyRule(
+            URL, use=Priority2SubclassProductPage, to_return=PriorityProductFromSubclass
+        ),
+    ]
+    msg = f"Consider updating the priority of these rules: {rules}"
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        item, deps = yield crawl_item_and_deps(PriorityProductFromSubclass)
+        assert not any([True for w in caught_warnings if msg in str(w.message)])
+
     assert item == PriorityProductFromSubclass(name="priority subclass product name")
     assert_deps(deps, {"item": PriorityProductFromSubclass})
 
@@ -504,6 +634,56 @@ def test_item_return_subclass_priority() -> None:
     item, deps = yield crawl_item_and_deps(Priority2SubclassProductPage)
     assert item == PriorityProductFromSubclass(name="priority subclass product name")
     assert_deps(deps, {"page": Priority2ParentProductPage})
+
+
+@attrs.define
+class CItem:
+    name: str
+
+
+@handle_urls(URL)
+class IndependentC1Page(ItemPage[CItem]):
+    @field
+    def name(self) -> str:
+        return "independent C1"
+
+
+@handle_urls(URL, priority=600)
+class IndependentC2Page(ItemPage[CItem]):
+    @field
+    def name(self) -> str:
+        return "independent C2"
+
+
+@inlineCallbacks
+def test_item_return_individually_defined_second_rule_higher_priority() -> None:
+    """Same case with ``test_item_return_subclass_priority()`` but the 'to_return'
+    item has not been derived due to subclassing but rather, two page objects
+    were defined independently that returns the same item.
+
+    The rule with the higher priority should be used regardless of the order it
+    was defined.
+    """
+    rules = [
+        ApplyRule(URL, use=IndependentC1Page, to_return=CItem),
+        ApplyRule(URL, use=IndependentC2Page, to_return=CItem),
+    ]
+    msg = f"Consider updating the priority of these rules: {rules}"
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        item, deps = yield crawl_item_and_deps(CItem)
+        assert not any([True for w in caught_warnings if msg in str(w.message)])
+
+    assert item == CItem(name="independent C2")
+    assert_deps(deps, {"item": IndependentC2Page})
+
+    item, deps = yield crawl_item_and_deps(IndependentC1Page)
+    assert item == CItem(name="independent C1")
+    assert_deps(deps, {"page": IndependentC1Page})
+
+    item, deps = yield crawl_item_and_deps(IndependentC2Page)
+    assert item == CItem(name="independent C2")
+    assert_deps(deps, {"page": IndependentC2Page})
 
 
 @attrs.define
@@ -648,42 +828,6 @@ def test_item_to_return_standalone_others() -> None:
     item, deps = yield crawl_item_and_deps(StandaloneProductPage)
     assert item == {"name": "standalone product name"}
     assert_deps(deps, {"page": StandaloneProductPage})
-
-
-@attrs.define
-class Morty:
-    name: str
-
-
-@handle_urls(URL)
-class RickSanchezPage(ItemPage[Morty]):
-    @field
-    def name(self) -> str:
-        return "from basic rick"
-
-
-@handle_urls(URL, instead_of=RickSanchezPage)
-class RickSanchezC137Page(ItemPage[Morty]):
-    @field
-    def name(self) -> str:
-        return "wubba lubba dub dub"
-
-
-@inlineCallbacks
-def test_item_return_with_overrides() -> None:
-    item, deps = yield crawl_item_and_deps(Morty)
-    assert item == Morty(name="wubba lubba dub dub")
-    assert_deps(deps, {"item": RickSanchezC137Page})
-
-    # page from 'instead_of'
-    item, deps = yield crawl_item_and_deps(RickSanchezPage)
-    assert item == Morty(name="wubba lubba dub dub")
-    assert_deps(deps, {"page": RickSanchezC137Page})
-
-    # calling the actual page object should still work
-    item, deps = yield crawl_item_and_deps(RickSanchezC137Page)
-    assert item == Morty(name="wubba lubba dub dub")
-    assert_deps(deps, {"page": RickSanchezC137Page})
 
 
 @attrs.define
@@ -1187,6 +1331,8 @@ def test_created_apply_rules() -> None:
         ApplyRule(URL, use=ProductPage, to_return=Product),
         ApplyRule(URL, use=ParentProductPage, to_return=ProductFromParent),
         ApplyRule(URL, use=SubclassProductPage, to_return=ProductFromParent),
+        ApplyRule(URL, use=IndependentA1Page, to_return=AItem),
+        ApplyRule(URL, use=IndependentA2Page, to_return=AItem),
         ApplyRule(
             Patterns([URL], priority=600),
             use=PriorityParentProductPage,
@@ -1198,6 +1344,10 @@ def test_created_apply_rules() -> None:
             to_return=PriorityProductFromParent,
         ),
         ApplyRule(
+            Patterns([URL], priority=600), use=IndependentB1Page, to_return=BItem
+        ),
+        ApplyRule(URL, use=IndependentB2Page, to_return=BItem),
+        ApplyRule(
             URL,
             use=Priority2ParentProductPage,
             to_return=PriorityProductFromSubclass,
@@ -1207,19 +1357,16 @@ def test_created_apply_rules() -> None:
             use=Priority2SubclassProductPage,
             to_return=PriorityProductFromSubclass,
         ),
+        ApplyRule(URL, use=IndependentC1Page, to_return=CItem),
+        ApplyRule(
+            Patterns([URL], priority=600), use=IndependentC2Page, to_return=CItem
+        ),
         ApplyRule(URL, use=ReplacedProductPage, to_return=ReplacedProduct),
         ApplyRule(URL, use=ParentReplacedProductPage, to_return=ParentReplacedProduct),
         ApplyRule(
             URL, use=SubclassReplacedProductPage, to_return=SubclassReplacedProduct
         ),
         ApplyRule(URL, use=StandaloneProductPage, to_return=StandaloneProduct),
-        ApplyRule(URL, use=RickSanchezPage, to_return=Morty),
-        ApplyRule(
-            URL,
-            use=RickSanchezC137Page,
-            to_return=Morty,
-            instead_of=RickSanchezPage,
-        ),
         ApplyRule(
             URL,
             # We're ignoring the typing here since it expects the argument for
