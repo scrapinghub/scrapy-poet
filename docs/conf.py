@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.abspath("../"))
 # -- Project information -----------------------------------------------------
 
 project = "scrapy-poet"
-copyright = "2022, Zyte"
+copyright = "2023, Zyte"
 author = "Zyte"
 
 # The short X.Y version
