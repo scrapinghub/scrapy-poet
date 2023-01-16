@@ -11,9 +11,22 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import pkgutil
 import sys
 
 sys.path.insert(0, os.path.abspath("../"))
+
+
+def get_version_and_release():
+    try:
+        import scrapy_poet  # noqa: F401
+    except ImportError:
+        return "", ""
+    version_bytes = pkgutil.get_data("scrapy_poet", "VERSION") or b""
+    release = version_bytes.decode("ascii").strip()
+    version_tuple = tuple(int(v) if v.isdigit() else v for v in release.split("."))
+    version = ".".join(str(part) for part in version_tuple[:2])
+    return version, release
 
 
 # -- Project information -----------------------------------------------------
@@ -22,12 +35,7 @@ project = "scrapy-poet"
 copyright = "2023, Zyte"
 author = "Zyte"
 
-# The short X.Y version
-version = ""
-# The full version, including alpha/beta/rc tags
-with open(os.path.join(os.path.dirname(__file__), "../scrapy_poet/VERSION"), "rb") as f:
-    version = f.read().decode("ascii").strip()
-release = "0.6.0"
+version, release = get_version_and_release()
 
 
 # -- General configuration ---------------------------------------------------
