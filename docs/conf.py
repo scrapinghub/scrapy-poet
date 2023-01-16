@@ -13,8 +13,17 @@
 import os
 import pkgutil
 import sys
+from datetime import datetime
 
 sys.path.insert(0, os.path.abspath("../"))
+
+
+def get_copyright(attribution, *, first_year):
+    current_year = datetime.now().year
+    years = (
+        current_year if first_year == current_year else f"{first_year}-{current_year}"
+    )
+    return f"{years}, {attribution}"
 
 
 def get_version_and_release():
@@ -32,7 +41,7 @@ def get_version_and_release():
 # -- Project information -----------------------------------------------------
 
 project = "scrapy-poet"
-copyright = "2023, Zyte"
+copyright = get_copyright("Zyte Group Ltd", first_year=2019)
 author = "Zyte"
 
 version, release = get_version_and_release()
