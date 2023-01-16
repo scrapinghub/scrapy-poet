@@ -2,7 +2,7 @@ from os.path import dirname, join
 
 from setuptools import find_packages, setup
 
-with open(join(dirname(__file__), "/VERSION"), "rb") as f:
+with open(join(dirname(__file__), "scrapy_poet/VERSION"), "rb") as f:
     version = f.read().decode("ascii").strip()
 
 setup(
