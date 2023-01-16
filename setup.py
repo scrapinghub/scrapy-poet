@@ -1,8 +1,13 @@
+from os.path import dirname, join
+
 from setuptools import find_packages, setup
+
+with open(join(dirname(__file__), "/VERSION"), "rb") as f:
+    version = f.read().decode("ascii").strip()
 
 setup(
     name="scrapy-poet",
-    version="0.6.0",
+    version=version,
     description="Page Object pattern for Scrapy",
     long_description=open("README.rst").read(),
     long_description_content_type="text/x-rst",

@@ -25,6 +25,8 @@ author = "Zyte"
 # The short X.Y version
 version = ""
 # The full version, including alpha/beta/rc tags
+with open(os.path.join(os.path.dirname(__file__), "../scrapy_poet/VERSION"), "rb") as f:
+    version = f.read().decode("ascii").strip()
 release = "0.6.0"
 
 
