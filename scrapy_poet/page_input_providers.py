@@ -108,8 +108,8 @@ class PageObjectInputProvider:
             return cls.provided_classes(type_)
         else:
             raise MalformedProvidedClassesError(
-                f"Unexpected type '{type_}' for 'provided_classes' attribute of"
-                f"'{cls}.'. Expected either 'set' or 'callable'"
+                f"Unexpected type {type_!r} for 'provided_classes' attribute of"
+                f"{cls!r}. Expected either 'set' or 'callable'"
             )
 
     def __init__(self, crawler: Crawler):

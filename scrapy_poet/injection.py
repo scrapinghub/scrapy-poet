@@ -88,7 +88,7 @@ class Injector:
             )
             self.cache = SqlitedictCache(cache_filename, compressed=compressed)
             logger.info(
-                f"Cache enabled. File: '{cache_filename}'. Compressed: {compressed}. Caching errors: {self.caching_errors}"
+                f"Cache enabled. File: {cache_filename!r}. Compressed: {compressed}. Caching errors: {self.caching_errors}"
             )
 
     def available_dependencies_for_providers(

@@ -18,7 +18,7 @@ def create_scrapy_downloader(download_func):
         if not isinstance(request, HttpRequest):
             raise TypeError(
                 f"The request should be 'web_poet.HttpRequest' but received "
-                f"one of type: '{type(request)}'."
+                f"one of type: {type(request)!r}."
             )
 
         scrapy_request = http_request_to_scrapy_request(request)
