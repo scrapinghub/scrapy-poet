@@ -2,8 +2,8 @@
 Changelog
 =========
 
-TBR
----
+0.7.0 (2023-01-17)
+------------------
 
 * Fixed the issue where a new page object containing a new response data is not
   properly created when :class:`web_poet.exceptions.core.Retry` is raised.
@@ -11,6 +11,11 @@ TBR
 * In order for the above fix to be possible, overriding the callback dependencies
   created by **scrapy-poet** via :attr:`scrapy.http.Request.cb_kwargs` is now
   unsupported. This is a **backward incompatible** change.
+
+* Fixed the broken
+  :meth:`scrapy_poet.page_input_providers.HttpResponseProvider.fingerprint`
+  which errors out when running a Scrapy job using the ``SCRAPY_POET_CACHE``
+  enabled.
 
 * Improved behavior when ``spider.parse()`` method arguments are supposed
   to be provided by **scrapy-poet**. Previously, it was causing
@@ -75,6 +80,8 @@ TBR
   :class:`scrapy.http.Request` has ``callback`` set to ``None``.
 
 * Official support for Python 3.11
+
+* Various updates and improvements on docs and examples.
 
 0.6.0 (2022-11-24)
 ------------------
