@@ -8,7 +8,7 @@ Tests for Page Objects
 <web-poet:web-poet-testing>`. ``scrapy-poet`` projects can use a Scrapy command
 to easily generate tests::
 
-    scrapy savefixture my_project.po.MyItemPage http://example.com/page1.html
+    scrapy savefixture my_project.pages.MyItemPage 'https://quotes.toscrape.com/page/1/'
 
 This will request the provided page, create an instance of the provided page
 object for this page, request its :meth:`~web_poet.pages.ItemPage.to_item`
