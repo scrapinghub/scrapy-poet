@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.7.0 (YYYY-MM-DD)
+0.7.0 (2023-01-17)
 ------------------
 
 * Fixed the issue where a new page object containing a new response data is not
