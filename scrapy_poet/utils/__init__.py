@@ -1,5 +1,5 @@
 import os
-from typing import Any, Optional, Tuple, Type
+from typing import Any, Collection, Optional, Type
 from warnings import warn
 
 try:
@@ -10,9 +10,10 @@ except ImportError:
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from scrapy.utils.project import inside_project, project_data_dir
-from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders
+from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders, ItemPage
+from web_poet.fields import get_fields_dict
 
-from scrapy_poet.api import PickFields
+from scrapy_poet.api import NotPickFields, PickFields
 
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
@@ -75,22 +76,35 @@ def _normalize_annotated_cls(cls: Any) -> Any:
     return cls
 
 
-def _pick_fields(annotation: Any) -> Optional[Tuple[str, ...]]:
-    """Returns the ``x, ...`` in ``typing.Annotated[T, PickFields(x, ...)]``
-    as a tuple of strings which represents the field names, if applicable.
-    """
+def _derive_fields(annotation: Any, page_obj: ItemPage) -> Optional[Collection[str]]:
+    """Returns a Collection of strings representing the fields names to extract
+    from the page object based on the annotations specified on its item:
 
-    # TODO: test that nothing happens when user adds other annotations aside
-    # from PickFields. https://peps.python.org/pep-0593/#consuming-annotations
-    # TODO: raise a warning when ``typing.Annotated`` is used but
-    # ``PickFields`` is declared as a metadata.
+        - ``typing.Annotated[T, PickFields(x, ...)]``
+        - ``typing.Annotated[T, NotPickFields(x, ...)]``
+    """
 
     if not isinstance(annotation, Annotated):
         return None
 
+    def _use_fields(_fields, values):
+        if _fields:
+            raise ValueError("PickFields and NotPickFields should not be used together")
+        return values
+
+    fields = []
+
     for metadata in annotation.__metadata__:
         if isinstance(metadata, PickFields):
-            return metadata.fields
+            fields = _use_fields(fields, metadata.fields)
+
+        if isinstance(metadata, NotPickFields):
+            if metadata.fields:
+                fields = _use_fields(
+                    fields, get_fields_dict(page_obj).keys() - set(metadata.fields)
+                )
+
+    return fields
 
 
 def create_registry_instance(cls: Type, crawler: Crawler):

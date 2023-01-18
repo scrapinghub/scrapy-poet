@@ -1,4 +1,4 @@
-from .api import DummyResponse, PickFields, callback_for
+from .api import DummyResponse, NotPickFields, PickFields, callback_for
 from .downloadermiddlewares import InjectionMiddleware
 from .page_input_providers import (
     CacheDataProviderMixin,

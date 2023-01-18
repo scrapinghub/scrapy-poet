@@ -49,7 +49,7 @@ from scrapy_poet.injection_errors import (
     MalformedProvidedClassesError,
     ProviderDependencyDeadlockError,
 )
-from scrapy_poet.utils import _normalize_annotated_cls, _pick_fields
+from scrapy_poet.utils import _derive_fields, _normalize_annotated_cls
 
 
 class PageObjectInputProvider:
@@ -323,8 +323,8 @@ class ItemProvider(PageObjectInputProvider):
         response: Response,
     ) -> List[Any]:
         results = []
-        for raw_cls in to_provide:
-            cls = _normalize_annotated_cls(raw_cls)
+        for raw_item_cls in to_provide:
+            cls = _normalize_annotated_cls(raw_item_cls)
 
             item = self.get_from_cache(request, cls)
             if item:
@@ -356,7 +356,7 @@ class ItemProvider(PageObjectInputProvider):
                 )
 
             page_object = po_instances[page_object_cls]
-            item = await self._produce_item(page_object, raw_cls)
+            item = await self._produce_item(raw_item_cls, page_object)
 
             self.update_cache(request, po_instances)
             self.update_cache(request, {type(item): item})
@@ -364,8 +364,8 @@ class ItemProvider(PageObjectInputProvider):
             results.append(item)
         return results
 
-    async def _produce_item(self, page_object: ItemPage, cls_or_annotated: Any) -> Any:
-        field_names = _pick_fields(cls_or_annotated)
+    async def _produce_item(self, cls_or_annotated: Any, page_object: ItemPage) -> Any:
+        field_names = _derive_fields(cls_or_annotated, page_object)
         if field_names:
             item_dict = item_from_fields_sync(
                 page_object, item_cls=dict, skip_nonitem_fields=False
