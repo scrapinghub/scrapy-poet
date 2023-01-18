@@ -324,7 +324,7 @@ class ItemProvider(PageObjectInputProvider):
                 results.append(item)
                 continue
 
-            page_object_cls = self.registry.page_object_for_item(request.url, cls)
+            page_object_cls = self.registry.page_cls_for_item(request.url, cls)
             if not page_object_cls:
                 continue
 
