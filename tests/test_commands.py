@@ -20,12 +20,12 @@ def test_savefixture(tmp_path) -> None:
     type_name = "foo.po.BTSBookPage"
     (cwd / project_name / "po.py").write_text(
         """
-import attr
+import attrs
 from web_poet import ResponseUrl
 from web_poet.pages import WebPage
 
 
-@attr.define
+@attrs.define
 class BTSBookPage(WebPage):
 
     response_url: ResponseUrl
