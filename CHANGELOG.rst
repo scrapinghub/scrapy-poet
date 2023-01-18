@@ -2,6 +2,127 @@
 Changelog
 =========
 
+* Added support for item classes which are used as dependencies in page objects
+  and spider callbacks. The following is now possible:
+ 
+  .. code-block:: python
+
+      import attrs
+      import scrapy
+      from web_poet import WebPage, handle_urls, field
+      from scrapy_poet import DummyResponse
+
+      @attrs.define
+      class Image:
+          url: str
+
+      @handle_urls("example.com")
+      class ProductImagePage(WebPage[Image]):
+          @field
+          def url(self) -> str:
+              return self.css("#product img ::attr(href)").get("")
+
+      @attrs.define
+      class Product:
+          name: str
+          image: Image
+
+      @handle_urls("example.com")
+      @attrs.define
+      class ProductPage(WebPage[Product]):
+          # ✨ NEW: Notice that the page object can ask for items as dependencies.
+          # An instance of ``Image`` is injected behind the scenes by calling the
+          # ``.to_item()`` method of ``ProductImagePage``.
+          image_item: Image
+
+          @field
+          def name(self) -> str:
+              return self.css("h1.name ::text").get("")
+
+          @field
+          def image(self) -> Image:
+              return self.image_item
+
+      class MySpider(scrapy.Spider):
+          name = "myspider"
+
+          def start_requests(self):
+              yield scrapy.Request(
+                  "https://example.com/products/some-product", self.parse
+              )
+
+          # ✨ NEW: Notice that we're directly using the item here and not the
+          # page object.
+          def parse(self, response: DummyResponse, item: Product):
+              return item
+
+
+  In line with this, the following changes were made:
+
+    * Added a new :class:`scrapy_poet.page_input_providers.ItemProvider` which
+      makes the usage above possible.
+
+    * Multiple changes to the
+      :class:`scrapy_poet.page_input_providers.PageObjectInputProvider` base
+      class which are backward incompatible:
+
+        * It now accepts an instance of :class:`scrapy_poet.injection.Injector`
+          in its constructor instead of :class:`scrapy.crawler.Crawler`. Although
+          you can still access the :class:`scrapy.crawler.Crawler` via the
+          ``Injector.crawler`` attribute.
+
+        * :meth:`scrapy_poet.page_input_providers.PageObjectInputProvider.is_provided`
+          is now an instance method instead of a class method.
+
+    * The :class:`scrapy_poet.injection.Injector`'s attribute and constructor
+      parameter  called ``overrides_registry`` is now simply called ``registry``.
+      This is backwards incompatible.
+
+    * An item class is now supported by :func:`scrapy_poet.callback_for`
+      alongside the usual page objects. This means that it won't raise a
+      :class:`TypeError` anymore when not passing a subclass of
+      :class:`web_poet.pages.ItemPage`.
+
+    * New exception: :class:`scrapy_poet.injection_errors.ProviderDependencyDeadlockError`.
+      This is raised when it's not possible to create the dependencies due to
+      a deadlock in their sub-dependencies, e.g. due to a circular dependency
+      between page objects.
+
+    * The ``scrapy_poet.overrides`` module which contained ``OverridesRegistryBase``
+      and ``OverridesRegistry`` has now been removed. Instead, scrapy-poet directly
+      uses :class:`web_poet.rules.RulesRegistry`.
+
+      Everything should pretty much the same except for
+      :meth:`web_poet.rules.RulesRegistry.overrides_for` now accepts :class:`str`,
+      :class:`web_poet.page_inputs.http.RequestUrl`, or
+      :class:`web_poet.page_inputs.http.ResponseUrl` instead of
+      :class:`scrapy.http.Request`.
+
+    * This also means that the registry doesn't accept tuples as rules anymore.
+      Only :class:`web_poet.rules.ApplyRule` instances are allowed. The same goes
+      for ``SCRAPY_POET_RULES`` (and the deprecated ``SCRAPY_POET_OVERRIDES``).
+      As a result, the following type aliases have been removed:
+
+        * ``scrapy_poet.overrides.RuleAsTuple``
+        * ``scrapy_poet.overrides.RuleFromUser``
+
+      These changes are backward incompatible.
+
+* Moved some of the utility functions from the test module into
+  ``scrapy_poet.utils.testing``.
+
+* Now requires ``web-poet >= 0.7.0``.
+
+* Documentation improvements.
+
+* Deprecations:
+
+    * The ``SCRAPY_POET_OVERRIDES_REGISTRY`` setting has been replaced by
+      ``SCRAPY_POET_REGISTRY``.
+    * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
+      ``SCRAPY_POET_RULES``.
+
+
 0.7.0 (2023-01-17)
 ------------------
 
@@ -79,123 +200,7 @@ Changelog
   parameter could be normalized to the spider's ``parse()`` method when the
   :class:`scrapy.http.Request` has ``callback`` set to ``None``.
 
-This release enables scrapy-poet to fully support item classes as dependencies
-in page objects and spider callbacks. The following is now possible:
- 
-.. code-block:: python
-
-    import attrs
-    import scrapy
-    from web_poet import WebPage, handle_urls, field
-    from scrapy_poet import DummyResponse
-
-    @attrs.define
-    class Image:
-        url: str
-
-    @handle_urls("example.com")
-    class ProductImagePage(WebPage[Image]):
-        @field
-        def url(self) -> str:
-            return self.css("#product img ::attr(href)").get("")
-
-    @attrs.define
-    class Product:
-        name: str
-        image: Image
-
-    @handle_urls("example.com")
-    @attrs.define
-    class ProductPage(WebPage[Product]):
-        # ✨ NEW: Notice that the page object can ask for items as dependencies.
-        # An instance of ``Image`` is injected behind the scenes by calling the
-        # ``.to_item()`` method of ``ProductImagePage``.
-        image_item: Image
-
-        @field
-        def name(self) -> str:
-            return self.css("h1.name ::text").get("")
-
-        @field
-        def image(self) -> Image:
-            return self.image_item
-
-    class MySpider(scrapy.Spider):
-        name = "myspider"
-
-        def start_requests(self):
-            yield scrapy.Request(
-                "https://example.com/products/some-product", self.parse
-            )
-
-        # ✨ NEW: Notice that we're directly using the item here and not the
-        # page object.
-        def parse(self, response: DummyResponse, item: Product):
-            return item
-
-In line with this, the following changes were made:
-
-    * Added a new :class:`scrapy_poet.page_input_providers.ItemProvider` which
-      makes the usage above possible.
-    * Multiple changes to the
-      :class:`scrapy_poet.page_input_providers.PageObjectInputProvider` base
-      class which are backward incompatible:
-
-        * It now accepts an instance of :class:`scrapy_poet.injection.Injector`
-          in its constructor instead of :class:`scrapy.crawler.Crawler`. Although
-          you can still access the :class:`scrapy.crawler.Crawler` via the
-          ``Injector.crawler`` attribute.
-        * :meth:`scrapy_poet.page_input_providers.PageObjectInputProvider.is_provided`
-          is now an instance method instead of a class method.
-
-    * The :class:`scrapy_poet.injection.Injector`'s attribute and constructor
-      parameter  called ``overrides_registry`` is now simply called ``registry``.
-      This is backwards incompatible.
-    * An item class is now supported by :func:`scrapy_poet.callback_for`
-      alongside the usual page objects. This means that it won't raise a
-      :class:`TypeError` anymore when not passing a subclass of
-      :class:`web_poet.pages.ItemPage`.
-    * New exception: :class:`scrapy_poet.injection_errors.ProviderDependencyDeadlockError`.
-      This is raised when it's not possible to create the dependencies due to
-      a deadlock in their sub-dependencies, e.g. due to a circular dependency
-      between page objects.
-
-Other changes:
-
-    * Now requires ``web-poet >= 0.7.0``.
-    * In line with web-poet's new features, the ``scrapy_poet.overrides`` module
-      which contained ``OverridesRegistryBase`` and ``OverridesRegistry`` has now
-      been removed. Instead, scrapy-poet directly uses
-      :class:`web_poet.rules.RulesRegistry`.
-
-      Everything should pretty much the same except for
-      :meth:`web_poet.rules.RulesRegistry.overrides_for` now accepts :class:`str`,
-      :class:`web_poet.page_inputs.http.RequestUrl`, or
-      :class:`web_poet.page_inputs.http.ResponseUrl` instead of
-      :class:`scrapy.http.Request`.
-
-    * This also means that the registry doesn't accept tuples as rules anymore.
-      Only :class:`web_poet.rules.ApplyRule` instances are allowed. The same goes
-      for ``SCRAPY_POET_RULES`` (and the deprecated ``SCRAPY_POET_OVERRIDES``).
-      As a result, the following type aliases have been removed:
-
-        * ``scrapy_poet.overrides.RuleAsTuple``
-        * ``scrapy_poet.overrides.RuleFromUser``
-
-      These changes are backward incompatible.
-
-    * Moved some of the utility functions from the test module into
-      ``scrapy_poet.utils.testing``.
-    * Documentation improvements.
-    * Official support for Python 3.11
-
-Deprecations:
-
-    * The ``SCRAPY_POET_OVERRIDES_REGISTRY`` setting has been replaced by
-      ``SCRAPY_POET_REGISTRY``.
-    * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
-      ``SCRAPY_POET_RULES``.
-
+* Official support for Python 3.11
 
 * Various updates and improvements on docs and examples.
 
