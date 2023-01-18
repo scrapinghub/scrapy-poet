@@ -5,7 +5,7 @@ Rules from web-poet
 ===================
 
 scrapy-poet fully supports the functionalities of :class:`web_poet.rules.ApplyRule`.
-It has its own registry called :class:`scrapy_poet.registry.OverridesAndItemRegistry`
+It uses the registry from web_poet called :class:`web_poet.rules.RulesRegistry`
 which provides functionalties for:
 
     * Returning the page object override if it exists for a given URL.
@@ -208,8 +208,8 @@ Item Returns
 
 scrapy-poet also supports a convenient way of asking for items directly. This
 is made possible by the ``to_return`` parameter of :class:`web_poet.rules.ApplyRule`.
-The ``to_return`` specifies which item a page object is capable of returning for
-a given URL.
+The ``to_return`` parameter specifies which item a page object is capable of
+returning for a given URL.
 
 Let's check out an example:
 
@@ -296,9 +296,10 @@ regarding :ref:`rules-item-class-example`.
 Registry
 ========
 
-As mentioned above, scrapy-poet has its own registry called
-:class:`scrapy_poet.registry.OverridesAndItemRegistry`.
+As mentioned above, scrapy-poet uses the registry from web-poet called
+:class:`web_poet.rules.RulesRegistry`.
+
 This registry implementation can be changed if needed. A different registry can
 be configured by passing its class path to the ``SCRAPY_POET_REGISTRY`` setting.
-Such registries must be a subclass of :class:`scrapy_poet.registry.OverridesRegistryBase`
-and must implement the :meth:`scrapy_poet.registry.OverridesRegistryBase.overrides_for` method.
+Such registries must be a subclass of :class:`web_poet.rules.RulesRegistry`
+to ensure the expected methods and its types are properly accounted for.

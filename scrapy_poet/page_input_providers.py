@@ -130,8 +130,8 @@ class PageObjectInputProvider:
             return self.provided_classes(type_)
         else:
             raise MalformedProvidedClassesError(
-                f"Unexpected type '{type_}' for 'provided_classes' attribute of "
-                f"'{self}.'. Expected either 'set' or 'callable'"
+                f"Unexpected type {type_!r} for 'provided_classes' attribute of"
+                f"{self!r}. Expected either 'set' or 'callable'"
             )
 
     # FIXME: Can't import the Injector as class annotation due to circular dep.
@@ -331,7 +331,7 @@ class ItemProvider(PageObjectInputProvider):
                 results.append(item)
                 continue
 
-            page_object_cls = self.registry.page_object_for_item(request.url, cls)
+            page_object_cls = self.registry.page_cls_for_item(request.url, cls)
             if not page_object_cls:
                 continue
 

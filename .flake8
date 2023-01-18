@@ -34,3 +34,6 @@ per-file-ignores =
     # F403: Ignore * imports in these files
     scrapy_poet/__init__.py:F401,F403
     scrapy_poet/page_inputs/__init__.py:F401,F403
+
+    # false positive in one case; other cases are fixed
+    scrapy_poet/injection.py:B028

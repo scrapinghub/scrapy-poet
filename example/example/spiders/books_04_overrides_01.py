@@ -47,7 +47,6 @@ class BPBookPage(WebPage):
 
 class BooksSpider(scrapy.Spider):
     name = "books_04_overrides_01"
-    start_urls = ["http://books.toscrape.com/", "https://bookpage.com/reviews"]
     # Configuring different page objects pages from the bookpage.com domain
     custom_settings = {
         "SCRAPY_POET_RULES": [
@@ -55,6 +54,10 @@ class BooksSpider(scrapy.Spider):
             ApplyRule("bookpage.com", use=BPBookPage, instead_of=BookPage),
         ]
     }
+
+    def start_requests(self):
+        for url in ["http://books.toscrape.com/", "https://bookpage.com/reviews"]:
+            yield scrapy.Request(url, callback=self.parse)
 
     def parse(self, response, page: BookListPage):
         for url in page.book_urls():

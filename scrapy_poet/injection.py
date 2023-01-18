@@ -2,6 +2,7 @@ import inspect
 import logging
 import os
 import pprint
+import warnings
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 
 import andi
@@ -12,8 +13,9 @@ from scrapy.settings import Settings
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import maybeDeferred_coro
-from scrapy.utils.misc import create_instance, load_object
+from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
+from web_poet import RulesRegistry
 from web_poet.pages import is_injectable
 
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
@@ -24,10 +26,9 @@ from scrapy_poet.injection_errors import (
     UndeclaredProvidedTypeError,
 )
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from scrapy_poet.registry import OverridesAndItemRegistry, OverridesRegistryBase
 from scrapy_poet.utils import _normalize_annotated_cls
 
-from .utils import get_scrapy_data_path
+from .utils import create_registry_instance, get_scrapy_data_path
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +44,11 @@ class Injector:
         crawler: Crawler,
         *,
         default_providers: Optional[Mapping] = None,
-        registry: Optional[OverridesRegistryBase] = None,
+        registry: Optional[RulesRegistry] = None,
     ):
         self.crawler = crawler
         self.spider = crawler.spider
-        self.registry = registry or OverridesAndItemRegistry()
+        self.registry = registry or RulesRegistry()
         self.load_providers(default_providers)
         self.init_cache()
 
@@ -88,7 +89,7 @@ class Injector:
             )
             self.cache = SqlitedictCache(cache_filename, compressed=compressed)
             logger.info(
-                f"Cache enabled. File: '{cache_filename}'. Compressed: {compressed}. Caching errors: {self.caching_errors}"
+                f"Cache enabled. File: {cache_filename!r}. Compressed: {compressed}. Caching errors: {self.caching_errors}"
             )
 
     def available_dependencies_for_providers(
@@ -123,7 +124,7 @@ class Injector:
         Check whether the request's response is going to be used.
         """
         callback = get_callback(request, self.spider)
-        if is_callback_requiring_scrapy_response(callback):
+        if is_callback_requiring_scrapy_response(callback, request.callback):
             return True
 
         for provider in self.discover_callback_providers(request):
@@ -139,7 +140,11 @@ class Injector:
             callback,
             is_injectable=is_injectable,
             externally_provided=self.is_class_provided_by_any_provider,
-            overrides=self.registry.overrides_for(request).get,
+            # Ignore the type since andi.plan expects overrides to be
+            # Callable[[Callable], Optional[Callable]] but the registry
+            # returns a more accurate typing for this scenario:
+            # Mapping[Type[ItemPage], Type[ItemPage]]
+            overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
         )
 
     @inlineCallbacks
@@ -316,7 +321,12 @@ def get_callback(request, spider):
     return request.callback
 
 
-def is_callback_requiring_scrapy_response(callback: Callable):
+_unset = object()
+
+
+def is_callback_requiring_scrapy_response(
+    callback: Callable, raw_callback: Any = _unset
+) -> bool:
     """
     Check whether the request's callback method requires the response.
     Basically, it won't be required if the response argument in the
@@ -339,6 +349,18 @@ def is_callback_requiring_scrapy_response(callback: Callable):
         return True
 
     if issubclass(first_parameter.annotation, DummyResponse):
+        # See: https://github.com/scrapinghub/scrapy-poet/issues/48
+        if raw_callback is None:
+            warnings.warn(
+                "A request has been encountered with callback=None which "
+                "defaults to the parse() method. If the parse() method is "
+                "annotated with scrapy_poet.DummyResponse (or its subclasses), "
+                "we're assuming this isn't intended and would simply ignore "
+                "this annotation.\n\n"
+                "See the Pitfalls doc for more info."
+            )
+            return True
+
         # Type annotation is DummyResponse, so we're probably NOT using it.
         return False
 
@@ -373,7 +395,7 @@ def is_provider_requiring_scrapy_response(provider):
 def get_injector_for_testing(
     providers: Mapping,
     additional_settings: Optional[Dict] = None,
-    registry: Optional[OverridesRegistryBase] = None,
+    registry: Optional[RulesRegistry] = None,
 ) -> Injector:
     """
     Return an :class:`Injector` using a fake crawler.
@@ -392,7 +414,7 @@ def get_injector_for_testing(
     spider.settings = settings
     crawler.spider = spider
     if not registry:
-        registry = create_instance(OverridesAndItemRegistry, settings, crawler)
+        registry = create_registry_instance(RulesRegistry, crawler)
     return Injector(crawler, registry=registry)
 
 

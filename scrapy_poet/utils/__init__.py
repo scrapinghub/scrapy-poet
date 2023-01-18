@@ -1,11 +1,13 @@
 import os
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, Type
+from warnings import warn
 
 try:
     from typing import Annotated  # Python 3.9+
 except ImportError:
     from typing_extensions import _AnnotatedAlias as Annotated
 
+from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from scrapy.utils.project import inside_project, project_data_dir
 from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders
@@ -89,3 +91,17 @@ def _pick_fields(annotation: Any) -> Optional[Tuple[str, ...]]:
     for metadata in annotation.__metadata__:
         if isinstance(metadata, PickFields):
             return metadata.fields
+
+
+def create_registry_instance(cls: Type, crawler: Crawler):
+    if "SCRAPY_POET_OVERRIDES" in crawler.settings:
+        msg = (
+            "The SCRAPY_POET_OVERRIDES setting is deprecated. "
+            "Use SCRAPY_POET_RULES instead."
+        )
+        warn(msg, DeprecationWarning, stacklevel=2)
+    rules = crawler.settings.getlist(
+        "SCRAPY_POET_RULES",
+        crawler.settings.getlist("SCRAPY_POET_OVERRIDES", []),
+    )
+    return cls(rules=rules)

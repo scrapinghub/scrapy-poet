@@ -1,8 +1,13 @@
+from os.path import dirname, join
+
 from setuptools import find_packages, setup
+
+with open(join(dirname(__file__), "scrapy_poet/VERSION"), "rb") as f:
+    version = f.read().decode("ascii").strip()
 
 setup(
     name="scrapy-poet",
-    version="0.6.0",
+    version=version,
     description="Page Object pattern for Scrapy",
     long_description=open("README.rst").read(),
     long_description_content_type="text/x-rst",
@@ -10,6 +15,7 @@ setup(
     author_email="kmike84@gmail.com",
     url="https://github.com/scrapinghub/scrapy-poet",
     packages=find_packages(exclude=["tests", "example"]),
+    package_data={"scrapy_poet": ["VERSION"]},
     install_requires=[
         "andi >= 0.4.1",
         "attrs >= 21.3.0",
@@ -18,7 +24,7 @@ setup(
         "sqlitedict >= 1.5.0",
         "twisted >= 18.9.0",
         "url-matcher >= 0.2.0",
-        "web-poet >= 0.6.0",
+        "web-poet >= 0.7.0",
         "typing_extensions >= 4.4.0; python_version<'3.9'",
     ],
     classifiers=[

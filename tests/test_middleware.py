@@ -12,12 +12,19 @@ from scrapy.utils.log import configure_logging
 from scrapy.utils.test import get_crawler
 from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
-from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
+from web_poet import (
+    ApplyRule,
+    HttpResponse,
+    ItemPage,
+    RequestUrl,
+    ResponseUrl,
+    RulesRegistry,
+    WebPage,
+)
 
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
 from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from scrapy_poet.registry import OverridesAndItemRegistry
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
     HtmlResource,
@@ -126,7 +133,7 @@ def test_overrides(settings):
 
 
 def test_deprecation_setting_SCRAPY_POET_OVERRIDES_REGISTRY(settings) -> None:
-    settings["SCRAPY_POET_OVERRIDES_REGISTRY"] = OverridesAndItemRegistry
+    settings["SCRAPY_POET_OVERRIDES_REGISTRY"] = RulesRegistry
     crawler = get_crawler(Spider, settings)
 
     msg = (
@@ -135,7 +142,7 @@ def test_deprecation_setting_SCRAPY_POET_OVERRIDES_REGISTRY(settings) -> None:
     )
     with pytest.warns(DeprecationWarning, match=msg):
         middleware = InjectionMiddleware(crawler)
-        assert isinstance(middleware.registry, OverridesAndItemRegistry)
+        assert isinstance(middleware.registry, RulesRegistry)
 
     # If both settings are present, the newer SCRAPY_POET_REGISTRY setting is used.
 
@@ -270,7 +277,9 @@ class MultiArgsCallbackSpider(scrapy.Spider):
     custom_settings = {"SCRAPY_POET_PROVIDERS": {WithDeferredProvider: 1}}
 
     def start_requests(self):
-        yield Request(self.url, self.parse, cb_kwargs=dict(cb_arg="arg!"))
+        yield Request(
+            self.url, self.parse, cb_kwargs={"cb_arg": "arg!", "cb_arg2": False}
+        )
 
     def parse(
         self,
@@ -278,12 +287,14 @@ class MultiArgsCallbackSpider(scrapy.Spider):
         product: ProductPage,
         provided: ProvidedWithDeferred,
         cb_arg: Optional[str],
+        cb_arg2: Optional[bool],
         non_cb_arg: Optional[str],
     ):
         yield {
             "product": product,
             "provided": provided,
             "cb_arg": cb_arg,
+            "cb_arg2": cb_arg2,
             "non_cb_arg": non_cb_arg,
         }
 
@@ -294,6 +305,7 @@ def test_multi_args_callbacks(settings):
     assert type(item["product"]) == ProductPage
     assert type(item["provided"]) == ProvidedWithDeferred
     assert item["cb_arg"] == "arg!"
+    assert item["cb_arg2"] is False
     assert item["non_cb_arg"] is None
 
 
