@@ -35,7 +35,9 @@ class BookPage(ProductPage):
 
 class BooksSpider(scrapy.Spider):
     name = "books_05_1"
-    start_urls = ["http://books.toscrape.com/"]
+
+    def start_requests(self):
+        yield scrapy.Request("http://books.toscrape.com/", callback=self.parse)
 
     def parse(self, response, page: BookListPage):
         for url in page.product_urls():

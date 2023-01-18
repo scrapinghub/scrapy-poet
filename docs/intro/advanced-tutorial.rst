@@ -81,10 +81,12 @@ It can be directly used inside the spider as:
             }
         }
 
-        start_urls = [
-            "https://example.com/category/product/item?id=123",
-            "https://example.com/category/product/item?id=989",
-        ]
+        def start_requests(self):
+            for url in [
+                "https://example.com/category/product/item?id=123",
+                "https://example.com/category/product/item?id=989",
+            ]:
+                yield scrapy.Request(url, callback=self.parse)
 
         async def parse(self, response, page: ProductPage):
             return await page.to_item()

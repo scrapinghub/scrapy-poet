@@ -126,8 +126,8 @@ class PageObjectInputProvider:
             return self.provided_classes(type_)
         else:
             raise MalformedProvidedClassesError(
-                f"Unexpected type '{type_}' for 'provided_classes' attribute of "
-                f"'{self}.'. Expected either 'set' or 'callable'"
+                f"Unexpected type {type_!r} for 'provided_classes' attribute of"
+                f"{self!r}. Expected either 'set' or 'callable'"
             )
 
     # FIXME: Can't import the Injector as class annotation due to circular dep.

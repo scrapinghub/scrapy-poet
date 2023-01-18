@@ -2,8 +2,82 @@
 Changelog
 =========
 
-TBR
----
+0.7.0 (2023-01-17)
+------------------
+
+* Fixed the issue where a new page object containing a new response data is not
+  properly created when :class:`web_poet.exceptions.core.Retry` is raised.
+
+* In order for the above fix to be possible, overriding the callback dependencies
+  created by **scrapy-poet** via :attr:`scrapy.http.Request.cb_kwargs` is now
+  unsupported. This is a **backward incompatible** change.
+
+* Fixed the broken
+  :meth:`scrapy_poet.page_input_providers.HttpResponseProvider.fingerprint`
+  which errors out when running a Scrapy job using the ``SCRAPY_POET_CACHE``
+  enabled.
+
+* Improved behavior when ``spider.parse()`` method arguments are supposed
+  to be provided by **scrapy-poet**. Previously, it was causing
+  unnecessary work in unexpected places like
+  :class:`scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware`,
+  :class:`scrapy.pipelines.images.ImagesPipeline` or
+  :class:`scrapy.pipelines.files.FilesPipeline`. It is also a reason
+  :class:`web_poet.page_inputs.client.HttpClient` might not be working
+  in page objects. Now these cases are detected, and a warning is issued.
+
+  As of Scrapy 2.7, it is not possible to fix the issue completely
+  in **scrapy-poet**. Fixing it would require Scrapy changes; some 3rd party
+  libraries may also need to be updated.
+
+  .. note::
+
+      The root of the issue is that when request.callback is ``None``,
+      ``parse()`` callback is assumed normally. But sometimes callback=None
+      is used when :class:`scrapy.http.Request` is added to the Scrapy's
+      downloader directly, in which case no callback is used. Middlewares,
+      including **scrapy-poet**'s, can't distinguish between these two cases,
+      which causes all kinds of issues.
+
+  We recommend all **scrapy-poet** users to modify their code to
+  avoid the issue. Please **don't** define ``parse()``
+  method with arguments which are supposed to be filled by **scrapy-poet**,
+  and rename the existing ``parse()`` methods if they have such arguments.
+  Any other name is fine. It avoids all possible issues, including
+  incompatibility with 3rd party middlewares or pipelines.
+
+  See the new :ref:`pitfalls` documentation for more information.
+
+  There are backwards-incompatible changes related to this issue.
+  They only affect you if you don't follow the advice of not using ``parse()``
+  method with **scrapy-poet**.
+
+    * When the ``parse()`` method has its response argument annotated with
+      :class:`scrapy_poet.api.DummyResponse`, for instance:
+      ``def parse(self, response: DummyResponse)``, the response is downloaded
+      instead of being skipped.
+
+    * When the ``parse()`` method has dependencies that are provided by
+      **scrapy-poet**, the :class:`scrapy_poet.downloadermiddlewares.InjectionMiddleware` won't
+      attempt to build any dependencies anymore.
+
+      This causes the following code to have this error ``TypeError: parse()
+      missing 1 required positional argument: 'page'.``:
+
+        .. code-block:: python
+
+            class MySpider(scrapy.Spider):
+                name = "my_spider"
+                start_urls = ["https://books.toscrape.com"]
+
+                def parse(self, response: scrapy.http.Response, page: MyPage):
+                    ...
+
+* :func:`scrapy_poet.injection.is_callback_requiring_scrapy_response` now accepts
+  an optional ``raw_callback`` parameter meant to represent the actual callback
+  attribute value of :class:`scrapy.http.Request` since the original ``callback``
+  parameter could be normalized to the spider's ``parse()`` method when the
+  :class:`scrapy.http.Request` has ``callback`` set to ``None``.
 
 This release enables scrapy-poet to fully support item classes as dependencies
 in page objects and spider callbacks. The following is now possible:
@@ -122,6 +196,8 @@ Deprecations:
     * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
       ``SCRAPY_POET_RULES``.
 
+
+* Various updates and improvements on docs and examples.
 
 0.6.0 (2022-11-24)
 ------------------
