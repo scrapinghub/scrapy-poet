@@ -11,21 +11,40 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import pkgutil
 import sys
+from datetime import datetime
 
 sys.path.insert(0, os.path.abspath("../"))
+
+
+def get_copyright(attribution, *, first_year):
+    current_year = datetime.now().year
+    years = (
+        current_year if first_year == current_year else f"{first_year}-{current_year}"
+    )
+    return f"{years}, {attribution}"
+
+
+def get_version_and_release():
+    try:
+        import scrapy_poet  # noqa: F401
+    except ImportError:
+        return "", ""
+    version_bytes = pkgutil.get_data("scrapy_poet", "VERSION") or b""
+    release = version_bytes.decode("ascii").strip()
+    version_tuple = tuple(int(v) if v.isdigit() else v for v in release.split("."))
+    version = ".".join(str(part) for part in version_tuple[:2])
+    return version, release
 
 
 # -- Project information -----------------------------------------------------
 
 project = "scrapy-poet"
-copyright = "2022, Zyte"
+copyright = get_copyright("Zyte Group Ltd", first_year=2019)
 author = "Zyte"
 
-# The short X.Y version
-version = ""
-# The full version, including alpha/beta/rc tags
-release = "0.6.0"
+version, release = get_version_and_release()
 
 
 # -- General configuration ---------------------------------------------------

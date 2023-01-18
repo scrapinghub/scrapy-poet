@@ -2,7 +2,9 @@
 responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
+import inspect
 import logging
+import warnings
 from typing import Generator, Optional, Type, TypeVar
 
 from scrapy import Spider, signals
@@ -91,6 +93,27 @@ class InjectionMiddleware:
         self.crawler.stats.inc_value("scrapy_poet/dummy_response_count")
         return DummyResponse(url=request.url, request=request)
 
+    def _skip_dependency_creation(self, request: Request, spider: Spider) -> bool:
+        """See: https://github.com/scrapinghub/scrapy-poet/issues/48"""
+
+        # No need to skip if the callback doesn't default to the parse() method
+        if request.callback is not None:
+            return False
+
+        # If the Request.cb_kwargs possess all of the cb dependencies, then no
+        # warning message should be issued.
+        signature_iter = iter(inspect.signature(spider.parse).parameters)
+        next(signature_iter)  # skip the first arg: response
+        cb_param_names = set(signature_iter)
+        if cb_param_names and cb_param_names == request.cb_kwargs.keys():
+            return False
+
+        # Skip if providers are needed.
+        if self.injector.discover_callback_providers(request):
+            return True
+
+        return False
+
     @inlineCallbacks
     def process_response(
         self, request: Request, response: Response, spider: Spider
@@ -107,6 +130,17 @@ class InjectionMiddleware:
         and an injectable attribute,
         the user-defined ``cb_kwargs`` takes precedence.
         """
+        if self._skip_dependency_creation(request, spider):
+            warnings.warn(
+                "A request has been encountered with callback=None which "
+                "defaults to the parse() method. On such cases, annotated "
+                "dependencies in the parse() method won't be built by "
+                "scrapy-poet. However, if the request has callback=parse, "
+                "the annotated dependencies will be built.\n\n"
+                "See the Pitfalls doc for more info."
+            )
+            return response
+
         # Find out the dependencies
         final_kwargs = yield from self.injector.build_callback_dependencies(
             request,
@@ -114,9 +148,11 @@ class InjectionMiddleware:
         )
         # Fill the callback arguments with the created instances
         for arg, value in final_kwargs.items():
-            # Precedence of user callback arguments
-            if arg not in request.cb_kwargs:
-                request.cb_kwargs[arg] = value
+            # If scrapy-poet can't provided the dependency, allow the user to
+            # give it.
+            if value is None and arg in request.cb_kwargs:
+                continue
+            request.cb_kwargs[arg] = value
             # TODO: check if all arguments are fulfilled somehow?
 
         return response

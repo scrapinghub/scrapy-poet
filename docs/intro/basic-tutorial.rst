@@ -317,11 +317,49 @@ Let's adapt the spider to use this new Page Object:
 
     class BooksSpider(scrapy.Spider):
         name = "books_spider"
-        start_urls = ["http://books.toscrape.com/"]
         parse_book = callback_for(BookPage)  # extract items from book pages
+
+        def start_requests(self):
+            yield scrapy.Request("http://books.toscrape.com/", self.parse)
 
         def parse(self, response, page: BookListPage):
             yield from response.follow_all(page.book_urls(), self.parse_book)
+
+.. warning::
+
+    We could've defined our spider as:
+
+    .. code-block:: python
+
+        class BooksSpider(scrapy.Spider):
+            name = "books_spider"
+            start_urls = ["http://books.toscrape.com/"]
+            parse_book = callback_for(BookPage)  # extract items from book pages
+
+            def parse(self, response, page: BookListPage):
+                yield from response.follow_all(page.book_urls(), self.parse_book)
+
+    However, this would result in the following warning message:
+
+        A request has been encountered with callback=None which
+        defaults to the parse() method. On such cases, annotated
+        dependencies in the parse() method won't be built by
+        scrapy-poet. However, if the request has callback=parse,
+        the annotated dependencies will be built.
+
+    This means that ``page`` isn't injected into the ``parse()`` method, leading
+    to this error:
+
+        TypeError: parse() missing 1 required positional argument: 'page'
+
+    This stems from the fact that using ``start_urls`` would use the predefined
+    ``start_requests()`` method wherein ``scrapy.Request`` has ``callback=None``.
+
+    One way to avoid this is to always declare the callback in ``scrapy.Request``,
+    just like in the original example.
+
+    See the :ref:`pitfalls` section for more information.
+
 
 All the extraction logic that is specific to the site is now responsibility
 of the Page Objects. As a result, the spider is now *site-agnostic* and will

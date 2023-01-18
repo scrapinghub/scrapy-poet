@@ -1,10 +1,11 @@
 from typing import Any, Dict
 
 import attr
+import pytest
 import scrapy
 from pytest_twisted import inlineCallbacks
 from scrapy.crawler import Crawler
-from scrapy.http import HtmlResponse, TextResponse
+from scrapy.http import HtmlResponse, Request, TextResponse
 from scrapy.settings import Settings
 from web_poet import ItemPage, WebPage
 
@@ -185,21 +186,91 @@ def test_is_provider_using_response():
 
 def test_is_callback_using_response():
     spider = MySpider()
-    assert is_callback_requiring_scrapy_response(spider.parse) is True
-    assert is_callback_requiring_scrapy_response(spider.parse2) is True
-    assert is_callback_requiring_scrapy_response(spider.parse3) is False
-    assert is_callback_requiring_scrapy_response(spider.parse4) is False
-    assert is_callback_requiring_scrapy_response(spider.parse5) is True
-    assert is_callback_requiring_scrapy_response(spider.parse6) is False
-    assert is_callback_requiring_scrapy_response(spider.parse7) is True
-    assert is_callback_requiring_scrapy_response(spider.parse8) is False
-    assert is_callback_requiring_scrapy_response(spider.parse9) is True
-    assert is_callback_requiring_scrapy_response(spider.parse10) is False
-    assert is_callback_requiring_scrapy_response(spider.parse11) is True
-    assert is_callback_requiring_scrapy_response(spider.parse12) is True
+    request = Request("https://example.com", callback=lambda _: _)
+    assert is_callback_requiring_scrapy_response(spider.parse, request.callback) is True
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse2, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse3, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse4, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse5, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse6, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse7, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse8, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse9, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse10, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse11, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse12, request.callback) is True
+    )
     # Callbacks created with the callback_for function won't make use of
     # the response, but their providers might use them.
-    assert is_callback_requiring_scrapy_response(spider.callback_for_parse) is False
+    assert (
+        is_callback_requiring_scrapy_response(spider.callback_for_parse, request)
+        is False
+    )
+
+    # See: https://github.com/scrapinghub/scrapy-poet/issues/48
+    request.callback = None
+    expected_warning = (
+        "A request has been encountered with callback=None which "
+        "defaults to the parse() method. If the parse() method is "
+        "annotated with scrapy_poet.DummyResponse (or its subclasses), "
+        "we're assuming this isn't intended and would simply ignore "
+        "this annotation.\n\n"
+        "See the Pitfalls doc for more info."
+    )
+
+    assert is_callback_requiring_scrapy_response(spider.parse, request.callback) is True
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse2, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse5, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse7, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse9, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse11, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse12, request.callback) is True
+    )
+
+    for method in (
+        spider.parse3,
+        spider.parse4,
+        spider.parse6,
+        spider.parse8,
+        spider.parse10,
+    ):
+        with pytest.warns(UserWarning) as record:
+            assert (
+                is_callback_requiring_scrapy_response(method, request.callback) is True
+            )
+            assert expected_warning in str(record.list[0].message)
 
 
 @inlineCallbacks

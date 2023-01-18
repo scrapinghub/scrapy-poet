@@ -1,8 +1,13 @@
+from os.path import dirname, join
+
 from setuptools import find_packages, setup
+
+with open(join(dirname(__file__), "scrapy_poet/VERSION"), "rb") as f:
+    version = f.read().decode("ascii").strip()
 
 setup(
     name="scrapy-poet",
-    version="0.6.0",
+    version=version,
     description="Page Object pattern for Scrapy",
     long_description=open("README.rst").read(),
     long_description_content_type="text/x-rst",
@@ -13,6 +18,7 @@ setup(
     entry_points={
         "scrapy.commands": ["savefixture = scrapy_poet.commands:SaveFixtureCommand"]
     },
+    package_data={"scrapy_poet": ["VERSION"]},
     install_requires=[
         "andi >= 0.4.1",
         "attrs >= 21.3.0",
@@ -36,5 +42,6 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
 )
