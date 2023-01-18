@@ -78,3 +78,13 @@ developing Page Objects.
 
 It's `recommended` to set this off into ``False`` by default since you might miss
 out on sporadic errors.
+
+
+SCRAPY_POET_TESTS_DIR
+---------------------
+
+Default: ``fixtures``
+
+Sets the location where the ``savefixture`` command creates tests.
+
+More info at :ref:`testing`.

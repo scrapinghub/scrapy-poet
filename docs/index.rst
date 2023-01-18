@@ -45,6 +45,7 @@ To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
 
    overrides
    providers
+   testing
 
 .. toctree::
    :caption: All the rest

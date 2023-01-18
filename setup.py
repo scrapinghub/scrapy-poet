@@ -15,6 +15,9 @@ setup(
     author_email="kmike84@gmail.com",
     url="https://github.com/scrapinghub/scrapy-poet",
     packages=find_packages(exclude=["tests", "example"]),
+    entry_points={
+        "scrapy.commands": ["savefixture = scrapy_poet.commands:SaveFixtureCommand"]
+    },
     package_data={"scrapy_poet": ["VERSION"]},
     install_requires=[
         "andi >= 0.4.1",
@@ -22,9 +25,10 @@ setup(
         "parsel >= 1.5.0",
         "scrapy >= 2.6.0",
         "sqlitedict >= 1.5.0",
+        "time_machine",
         "twisted >= 18.9.0",
         "url-matcher >= 0.2.0",
-        "web-poet >= 0.6.0",
+        "web-poet >= 0.7.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
