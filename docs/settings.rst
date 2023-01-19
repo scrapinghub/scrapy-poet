@@ -29,28 +29,10 @@ SCRAPY_POET_RULES
 Default: ``None``
 
 Accepts an ``Iterable[ApplyRule]`` to which sets the rules to use. The default
-is currently  :class:`web_poet.rules.RulesRegistry`. This can be overriden by
-the setting below: ``SCRAPY_POET_REGISTRY``.
+is currently  :class:`web_poet.rules.RulesRegistry`.
 
 There are sections dedicated for this at :ref:`intro-tutorial` and
 :ref:`rules-from-web-poet`.
-
-
-SCRAPY_POET_OVERRIDES_REGISTRY
-------------------------------
-
-Deprecated. Use ``SCRAPY_POET_REGISTRY`` instead.
-
-SCRAPY_POET_REGISTRY
---------------------
-
-Defaut: ``None``
-
-Sets an alternative Registry to replace the default
-:class:`web_poet.rules.RulesRegistry`. To use this, set a ``str`` which denotes
-the absolute object path of the new registry or a registry class.
-
-More info at :ref:`rules-from-web-poet`.
 
 
 SCRAPY_POET_CACHE

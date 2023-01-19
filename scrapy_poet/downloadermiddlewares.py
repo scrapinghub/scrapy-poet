@@ -10,7 +10,6 @@ from typing import Generator, Optional, Type, TypeVar
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
-from scrapy.utils.misc import load_object
 from twisted.internet.defer import Deferred, inlineCallbacks
 from web_poet import RulesRegistry
 
@@ -51,21 +50,7 @@ class InjectionMiddleware:
     def __init__(self, crawler: Crawler) -> None:
         """Initialize the middleware"""
         self.crawler = crawler
-        settings = self.crawler.settings
-
-        if settings.get("SCRAPY_POET_OVERRIDES_REGISTRY"):
-            msg = (
-                "The SCRAPY_POET_OVERRIDES_REGISTRY setting is deprecated. "
-                "Use SCRAPY_POET_REGISTRY instead."
-            )
-            warnings.warn(msg, DeprecationWarning, stacklevel=2)
-        registry_cls = load_object(
-            settings.get(
-                "SCRAPY_POET_REGISTRY",
-                settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", RulesRegistry),
-            )
-        )
-        self.registry = create_registry_instance(registry_cls, crawler)
+        self.registry = create_registry_instance(RulesRegistry, crawler)
         self.injector = Injector(
             crawler,
             default_providers=DEFAULT_PROVIDERS,

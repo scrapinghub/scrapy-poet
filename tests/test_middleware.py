@@ -12,15 +12,7 @@ from scrapy.utils.log import configure_logging
 from scrapy.utils.test import get_crawler
 from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
-from web_poet import (
-    ApplyRule,
-    HttpResponse,
-    ItemPage,
-    RequestUrl,
-    ResponseUrl,
-    RulesRegistry,
-    WebPage,
-)
+from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
 
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
 from scrapy_poet.cache import SqlitedictCache
@@ -142,32 +134,6 @@ def test_deprecation_setting_SCRAPY_POET_OVERRIDES(settings) -> None:
     )
     with pytest.warns(DeprecationWarning, match=msg):
         InjectionMiddleware(crawler)
-
-
-def test_deprecation_setting_SCRAPY_POET_OVERRIDES_REGISTRY(settings) -> None:
-    settings["SCRAPY_POET_OVERRIDES_REGISTRY"] = RulesRegistry
-    crawler = get_crawler(Spider, settings)
-
-    msg = (
-        "The SCRAPY_POET_OVERRIDES_REGISTRY setting is deprecated. "
-        "Use SCRAPY_POET_REGISTRY instead."
-    )
-    with pytest.warns(DeprecationWarning, match=msg):
-        middleware = InjectionMiddleware(crawler)
-        assert isinstance(middleware.registry, RulesRegistry)
-
-    # If both settings are present, the newer SCRAPY_POET_REGISTRY setting is used.
-
-    class FakeRegistry:
-        def __init__(self, *args, **kwargs):
-            pass
-
-    settings["SCRAPY_POET_REGISTRY"] = FakeRegistry
-    crawler = get_crawler(Spider, settings)
-
-    with pytest.warns(DeprecationWarning, match=msg):
-        middleware = InjectionMiddleware(crawler)
-        assert isinstance(middleware.registry, FakeRegistry)
 
 
 @attr.s(auto_attribs=True)

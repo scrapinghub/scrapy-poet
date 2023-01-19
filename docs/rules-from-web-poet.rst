@@ -291,15 +291,3 @@ From this example, we can see that:
 For more information about all the expected behavior for the ``to_return``
 parameter in :class:`web_poet.rules.ApplyRule`, check out web-poet's tutorial
 regarding :ref:`rules-item-class-example`.
-
-
-Registry
-========
-
-As mentioned above, scrapy-poet uses the registry from web-poet called
-:class:`web_poet.rules.RulesRegistry`.
-
-This registry implementation can be changed if needed. A different registry can
-be configured by passing its class path to the ``SCRAPY_POET_REGISTRY`` setting.
-Such registries must be a subclass of :class:`web_poet.rules.RulesRegistry`
-to ensure the expected methods and its types are properly accounted for.
