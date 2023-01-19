@@ -387,6 +387,37 @@ def test_basic_item_but_no_page_object() -> None:
 
 
 @attrs.define
+class ItemWithPageObjectButForDifferentUrl:
+    name: str
+
+
+@handle_urls(URL + "/some-wrong-path")
+class DifferentUrlPage(ItemPage[ItemWithPageObjectButForDifferentUrl]):
+    @field
+    def name(self) -> str:
+        return "wrong url"
+
+
+@inlineCallbacks
+def test_basic_item_with_page_object_but_different_url() -> None:
+    """If an item has been requested and a page object can produce it, but the
+    URL pattern is different, the item won't be produced at all.
+
+    For these cases, a warning should be issued since the user might have written
+    some incorrect URL Pattern for the ``ApplyRule``.
+    """
+    msg = (
+        "Can't find appropriate page object for <class 'tests.test_web_poet_rules."
+        "ItemWithPageObjectButForDifferentUrl'> item for url: "
+    )
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        item, deps = yield crawl_item_and_deps(ItemWithPageObjectButForDifferentUrl)
+        assert any([True for w in caught_warnings if msg in str(w.message)])
+    assert item is None
+    assert not deps
+
+
+@attrs.define
 class ProductFromParent:
     name: str
 
@@ -1427,6 +1458,11 @@ def test_created_apply_rules() -> None:
         ApplyRule(URL, use=MultipleRulePage, instead_of=FirstPage),
         # Item-based rules
         ApplyRule(URL, use=ProductPage, to_return=Product),
+        ApplyRule(
+            URL + "/some-wrong-path",
+            use=DifferentUrlPage,
+            to_return=ItemWithPageObjectButForDifferentUrl,
+        ),
         ApplyRule(URL, use=ParentProductPage, to_return=ProductFromParent),
         ApplyRule(URL, use=SubclassProductPage, to_return=ProductFromParent),
         ApplyRule(URL, use=IndependentA1Page, to_return=AItem),

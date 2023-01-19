@@ -24,6 +24,7 @@ from typing import (
     Type,
     Union,
 )
+from warnings import warn
 from weakref import WeakKeyDictionary
 
 import andi
@@ -326,6 +327,10 @@ class ItemProvider(PageObjectInputProvider):
 
             page_object_cls = self.registry.page_cls_for_item(request.url, cls)
             if not page_object_cls:
+                warn(
+                    f"Can't find appropriate page object for {cls} item for "
+                    f"url: '{request.url}'. Check the ApplyRules you're using."
+                )
                 continue
 
             # https://github.com/scrapinghub/andi/issues/23#issuecomment-1331682180
