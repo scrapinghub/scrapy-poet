@@ -1470,6 +1470,33 @@ def test_pick_fields_empty() -> None:
     assert BigPage.to_item_call_count == 1
 
 
+class BigSpiderPickFieldsNotAvailable(scrapy.Spider):
+    name = "big_spider_pick_fields_not_available"
+    url = None
+    custom_settings = {
+        "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
+    }
+
+    def start_requests(self):
+        yield scrapy.Request(self.url, capture_exceptions(self.parse_item))
+
+    def parse_item(self, response, item: Annotated[BigItem, PickFields("x", "na")]):
+        yield item
+
+
+@inlineCallbacks
+def test_pick_fields_not_availble() -> None:
+    """When a field has been specified in ``PickFields()`` but the page object
+    does not support it to populate the item, it's simply ignored.
+    """
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, BigSpiderPickFieldsNotAvailable)
+    assert item == BigItem(x="x")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
 class BigSpiderNotPickFields(scrapy.Spider):
     name = "big_spider_not_pick_fields"
     url = None
@@ -1526,6 +1553,34 @@ def test_not_pick_fields_empty() -> None:
     assert_deps(deps, {"item": BigItem})
     PageObjectCounterMixin.assert_instance_count(1, BigPage)
     assert BigPage.to_item_call_count == 1
+
+
+class BigSpiderNotPickFieldsNotAvailable(scrapy.Spider):
+    name = "big_spider_not_pick_fields_not_available"
+    url = None
+    custom_settings = {
+        "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
+    }
+
+    def start_requests(self):
+        yield scrapy.Request(self.url, capture_exceptions(self.parse_item))
+
+    def parse_item(self, response, item: Annotated[BigItem, NotPickFields("z", "na")]):
+        yield item
+
+
+@inlineCallbacks
+def test_not_pick_fields_not_available() -> None:
+    """When a field has been specified in ``NotPickFields()`` but the page object
+    does not support it to populate the item, it's simply ignored.
+    """
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, BigSpiderNotPickFieldsNotAvailable)
+    assert item == BigItem(x="x", y="y")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
 
 
 class BigSpiderConflictPickFields(scrapy.Spider):
