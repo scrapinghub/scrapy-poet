@@ -132,6 +132,18 @@ def test_overrides(settings):
     }
 
 
+def test_deprecation_setting_SCRAPY_POET_OVERRIDES(settings) -> None:
+    settings["SCRAPY_POET_OVERRIDES"] = []
+    crawler = get_crawler(Spider, settings)
+
+    msg = (
+        "The SCRAPY_POET_OVERRIDES setting is deprecated. "
+        "Use SCRAPY_POET_RULES instead."
+    )
+    with pytest.warns(DeprecationWarning, match=msg):
+        InjectionMiddleware(crawler)
+
+
 def test_deprecation_setting_SCRAPY_POET_OVERRIDES_REGISTRY(settings) -> None:
     settings["SCRAPY_POET_OVERRIDES_REGISTRY"] = RulesRegistry
     crawler = get_crawler(Spider, settings)
