@@ -371,6 +371,22 @@ def test_basic_item_return() -> None:
 
 
 @attrs.define
+class ItemButNoPageObject:
+    name: str
+
+
+@inlineCallbacks
+def test_basic_item_but_no_page_object() -> None:
+    """When an item is requested as a dependency but there's no page object that's
+    assigned to it in any of the given ``ApplyRule``, it would result to an error
+    in the spider callback since
+    """
+    expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
+    with pytest.raises(TypeError, match=expected_msg):
+        yield crawl_item_and_deps(ItemButNoPageObject)
+
+
+@attrs.define
 class ProductFromParent:
     name: str
 
