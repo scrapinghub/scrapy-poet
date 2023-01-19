@@ -45,6 +45,7 @@ To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
 
    rules-from-web-poet
    providers
+   testing
 
 .. toctree::
    :caption: All the rest
