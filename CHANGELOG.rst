@@ -57,14 +57,45 @@ Changelog
               return item
 
 
-  In line with this, the following changes were made:
+  In line with this, the following new features were made:
 
     * Added a new :class:`scrapy_poet.page_input_providers.ItemProvider` which
       makes the usage above possible.
 
-    * Multiple changes to the
-      :class:`scrapy_poet.page_input_providers.PageObjectInputProvider` base
-      class which are backward incompatible:
+    * An item class is now supported by :func:`scrapy_poet.callback_for`
+      alongside the usual page objects. This means that it won't raise a
+      :class:`TypeError` anymore when not passing a subclass of
+      :class:`web_poet.pages.ItemPage`.
+
+    * New exception: :class:`scrapy_poet.injection_errors.ProviderDependencyDeadlockError`.
+      This is raised when it's not possible to create the dependencies due to
+      a deadlock in their sub-dependencies, e.g. due to a circular dependency
+      between page objects.
+
+* Moved some of the utility functions from the test module into
+  ``scrapy_poet.utils.testing``.
+
+* Now requires ``web-poet >= 0.7.0``.
+
+* Documentation improvements.
+
+* Deprecations:
+
+    * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
+      ``SCRAPY_POET_RULES``.
+
+* Backward incompatible changes:
+
+    * Overriding the default registry used via ``SCRAPY_POET_OVERRIDES_REGISTRY``
+      is not possible anymore.
+
+    * The following type aliases have been removed:
+
+        * ``scrapy_poet.overrides.RuleAsTuple``
+        * ``scrapy_poet.overrides.RuleFromUser``
+
+    * The :class:`scrapy_poet.page_input_providers.PageObjectInputProvider` base
+      class has these changes:
 
         * It now accepts an instance of :class:`scrapy_poet.injection.Injector`
           in its constructor instead of :class:`scrapy.crawler.Crawler`. Although
@@ -76,17 +107,6 @@ Changelog
 
     * The :class:`scrapy_poet.injection.Injector`'s attribute and constructor
       parameter  called ``overrides_registry`` is now simply called ``registry``.
-      This is backwards incompatible.
-
-    * An item class is now supported by :func:`scrapy_poet.callback_for`
-      alongside the usual page objects. This means that it won't raise a
-      :class:`TypeError` anymore when not passing a subclass of
-      :class:`web_poet.pages.ItemPage`.
-
-    * New exception: :class:`scrapy_poet.injection_errors.ProviderDependencyDeadlockError`.
-      This is raised when it's not possible to create the dependencies due to
-      a deadlock in their sub-dependencies, e.g. due to a circular dependency
-      between page objects.
 
     * The ``scrapy_poet.overrides`` module which contained ``OverridesRegistryBase``
       and ``OverridesRegistry`` has now been removed. Instead, scrapy-poet directly
@@ -101,26 +121,6 @@ Changelog
     * This also means that the registry doesn't accept tuples as rules anymore.
       Only :class:`web_poet.rules.ApplyRule` instances are allowed. The same goes
       for ``SCRAPY_POET_RULES`` (and the deprecated ``SCRAPY_POET_OVERRIDES``).
-      As a result, the following type aliases have been removed:
-
-        * ``scrapy_poet.overrides.RuleAsTuple``
-        * ``scrapy_poet.overrides.RuleFromUser``
-
-      These changes are backward incompatible.
-
-* Moved some of the utility functions from the test module into
-  ``scrapy_poet.utils.testing``.
-
-* Now requires ``web-poet >= 0.7.0``.
-
-* Documentation improvements.
-
-* Deprecations:
-
-    * The ``SCRAPY_POET_OVERRIDES_REGISTRY`` setting has been replaced by
-      ``SCRAPY_POET_REGISTRY``.
-    * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
-      ``SCRAPY_POET_RULES``.
 
 
 0.7.0 (2023-01-17)
