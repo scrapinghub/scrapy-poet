@@ -1440,6 +1440,37 @@ def test_pick_fields() -> None:
     assert BigPage.to_item_call_count == 0
 
 
+class BigSpiderPickFieldsWithOtherMetadata(scrapy.Spider):
+    name = "big_spider_pick_fields_with_other_metadata"
+    url = None
+    custom_settings = {
+        "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
+    }
+
+    def start_requests(self):
+        yield scrapy.Request(self.url, capture_exceptions(self.parse_item))
+
+    def parse_item(
+        self, response, item: Annotated[BigItem, PickFields("x", "y"), None, "random"]
+    ):
+        yield item
+
+
+@inlineCallbacks
+def test_pick_fields_with_other_metadata() -> None:
+    """Any other annotations inside ``Annotated`` will be ignored by the
+    ``ItemProvider``.
+
+    Reference: https://peps.python.org/pep-0593/#consuming-annotations
+    """
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, BigSpiderPickFieldsWithOtherMetadata)
+    assert item == BigItem(x="x", y="y")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
 class BigSpiderPickFieldsEmpty(scrapy.Spider):
     name = "big_spider_pick_fields_empty"
     url = None
@@ -1485,7 +1516,7 @@ class BigSpiderPickFieldsNotAvailable(scrapy.Spider):
 
 
 @inlineCallbacks
-def test_pick_fields_not_availble() -> None:
+def test_pick_fields_not_available() -> None:
     """When a field has been specified in ``PickFields()`` but the page object
     does not support it to populate the item, it's simply ignored.
     """
@@ -1519,6 +1550,42 @@ def test_not_pick_fields() -> None:
 
     PageObjectCounterMixin.clear()
     item, deps = yield crawl_item_and_deps(None, BigSpiderNotPickFields)
+    assert item == BigItem(z="z")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
+class BigSpiderNotPickFieldsWithOtherMetadata(scrapy.Spider):
+    name = "big_spider_not_pick_fields_with_other_metadata"
+    url = None
+    custom_settings = {
+        "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
+    }
+
+    def start_requests(self):
+        yield scrapy.Request(self.url, capture_exceptions(self.parse_item))
+
+    def parse_item(
+        self,
+        response,
+        item: Annotated[BigItem, NotPickFields("x", "y"), None, "random"],
+    ):
+        yield item
+
+
+@inlineCallbacks
+def test_not_pick_fields_with_other_metadata() -> None:
+    """Any other annotations inside ``Annotated`` will be ignored by the
+    ``ItemProvider``.
+
+    Reference: https://peps.python.org/pep-0593/#consuming-annotations
+    """
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(
+        None, BigSpiderNotPickFieldsWithOtherMetadata
+    )
     assert item == BigItem(z="z")
     assert_deps(deps, {"item": BigItem})
     PageObjectCounterMixin.assert_instance_count(1, BigPage)
@@ -1614,11 +1681,6 @@ def test_conflict_pick_fields(caplog) -> None:
     assert_deps(deps, {})
     PageObjectCounterMixin.assert_instance_count(1, BigPage)
     assert BigPage.to_item_call_count == 0
-
-
-# TODO: test that nothing happens when user adds other annotations aside
-# from PickFields. https://peps.python.org/pep-0593/#consuming-annotations
-# TODO: Conflict with other metadata involved
 
 
 def test_created_apply_rules() -> None:
