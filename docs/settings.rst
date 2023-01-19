@@ -28,13 +28,13 @@ SCRAPY_POET_RULES
 
 Default: ``None``
 
-Mapping of overrides for each domain. The format of the such ``dict`` mapping
-depends on the currently set registry. The default is currently 
-:class:`web_poet.rules.RulesRegistry`. This can be overriden by the setting below:
-``SCRAPY_POET_REGISTRY``.
+Accepts an ``Iterable[ApplyRule]`` to which sets the rules to use. The default
+is currently  :class:`web_poet.rules.RulesRegistry`. This can be overriden by
+the setting below: ``SCRAPY_POET_REGISTRY``.
 
 There are sections dedicated for this at :ref:`intro-tutorial` and
 :ref:`rules-from-web-poet`.
+
 
 SCRAPY_POET_OVERRIDES_REGISTRY
 ------------------------------
@@ -48,7 +48,7 @@ Defaut: ``None``
 
 Sets an alternative Registry to replace the default
 :class:`web_poet.rules.RulesRegistry`. To use this, set a ``str`` which denotes
-the absolute object path of the new registry.
+the absolute object path of the new registry or a registry class.
 
 More info at :ref:`rules-from-web-poet`.
 
