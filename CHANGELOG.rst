@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.8.0 (YYYY-MM-DD)
+0.8.0 (2023-01-24)
 ------------------
 
 * Now requires ``web-poet >= 0.7.0`` and ``time_machine``.
