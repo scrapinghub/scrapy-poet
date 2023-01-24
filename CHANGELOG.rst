@@ -2,6 +2,15 @@
 Changelog
 =========
 
+0.8.0 (YYYY-MM-DD)
+------------------
+
+* Now requires ``web-poet >= 0.7.0`` and ``time_machine``.
+
+* Added a ``savefixture`` command that creates a test for a page object.
+  See :ref:`testing` for more information.
+
+
 0.7.0 (2023-01-17)
 ------------------
 
