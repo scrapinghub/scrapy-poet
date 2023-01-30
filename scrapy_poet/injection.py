@@ -26,6 +26,7 @@ from scrapy_poet.injection_errors import (
     UndeclaredProvidedTypeError,
 )
 from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.utils import _normalize_annotated_cls
 
 from .utils import create_registry_instance, get_scrapy_data_path
 
@@ -154,9 +155,17 @@ class Injector:
         )
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
-        for cls, kwargs_spec in plan.dependencies:
+        for raw_cls, kwargs_spec in plan.dependencies:
+            # Need to handle both typing.Annotated[cls, PickFields(...)] and cls.
+            cls = _normalize_annotated_cls(raw_cls)
+
             if cls not in instances.keys():
                 instances[cls] = cls(**kwargs_spec.kwargs(instances))
+
+            # andi could still be expecting this signature, if there is,
+            # typing.Annotated[cls, PickFields(...)]
+            if raw_cls not in instances.keys():
+                instances[raw_cls] = instances[cls]
 
         return instances
 
@@ -225,7 +234,11 @@ class Injector:
                     raise
 
             objs_by_type: Dict[Callable, Any] = {type(obj): obj for obj in objs}
-            extra_classes = objs_by_type.keys() - provided_classes
+            extra_classes = objs_by_type.keys() - (
+                # ensure that cls from typing.Annotated[cls, PickFields(...)]
+                # is used when comparing.
+                {_normalize_annotated_cls(p) for p in provided_classes}
+            )
             if extra_classes:
                 raise UndeclaredProvidedTypeError(
                     f"{provider} has returned instances of types {extra_classes} "

@@ -1,5 +1,5 @@
 from inspect import iscoroutinefunction
-from typing import Callable, Optional, Type
+from typing import Callable, Iterable, Optional, Type
 
 from scrapy.http import Request, Response
 from web_poet.pages import ItemPage
@@ -130,3 +130,36 @@ def callback_for(page_or_item_cls: Type) -> Callable:
 
     setattr(parse, _CALLBACK_FOR_MARKER, True)
     return parse
+
+
+class _FieldController:
+    def __init__(self, *args: Iterable[str]):
+        self.fields = tuple(args)
+
+
+class PickFields(_FieldController):
+    """To be used alongside :class:`typing.Annotated` to indicate an **inclusion**
+    list of fields which would be populated in an item.
+
+    It accepts an arbitrary number of strings.
+
+    .. code-block:: python
+
+        Annotated[BigItem, PickFields("x", "y")]
+    """
+
+    pass
+
+
+class NotPickFields(_FieldController):
+    """To be used alongside :class:`typing.Annotated` to indicate an **exclusion**
+    list of fields which would be populated in an item.
+
+    It accepts an arbitrary number of strings.
+
+    .. code-block:: python
+
+        Annotated[BigItem, NotPickFields("x", "y")]
+    """
+
+    pass

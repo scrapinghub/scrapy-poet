@@ -36,17 +36,21 @@ from web_poet import (
     HttpClient,
     HttpResponse,
     HttpResponseHeaders,
+    ItemPage,
     PageParams,
     RequestUrl,
     ResponseUrl,
 )
+from web_poet.fields import item_from_fields_sync
 from web_poet.pages import is_injectable
+from web_poet.utils import ensure_awaitable
 
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.injection_errors import (
     MalformedProvidedClassesError,
     ProviderDependencyDeadlockError,
 )
+from scrapy_poet.utils import _derive_fields, _normalize_annotated_cls
 
 
 class PageObjectInputProvider:
@@ -302,6 +306,7 @@ class ItemProvider(PageObjectInputProvider):
         """If the item is in any of the ``to_return`` in the rules, then it can
         be provided by using the corresponding page object in ``use``.
         """
+        cls = _normalize_annotated_cls(cls)
         return isclass(cls) and self.registry.search(to_return=cls)
 
     def update_cache(self, request: Request, mapping: Dict[Type, Any]) -> None:
@@ -319,7 +324,9 @@ class ItemProvider(PageObjectInputProvider):
         response: Response,
     ) -> List[Any]:
         results = []
-        for cls in to_provide:
+        for raw_item_cls in to_provide:
+            cls = _normalize_annotated_cls(raw_item_cls)
+
             item = self.get_from_cache(request, cls)
             if item:
                 results.append(item)
@@ -354,10 +361,28 @@ class ItemProvider(PageObjectInputProvider):
                 )
 
             page_object = po_instances[page_object_cls]
-            item = await page_object.to_item()
+            item = await self._produce_item(raw_item_cls, page_object)
 
             self.update_cache(request, po_instances)
             self.update_cache(request, {type(item): item})
 
             results.append(item)
         return results
+
+    async def _produce_item(self, cls_or_annotated: Any, page_object: ItemPage) -> Any:
+        field_names = _derive_fields(cls_or_annotated, page_object)
+        if field_names:
+            item_dict = item_from_fields_sync(
+                page_object, item_cls=dict, skip_nonitem_fields=False
+            )
+            item_cls = _normalize_annotated_cls(cls_or_annotated)
+            item = item_cls(
+                **{
+                    name: await ensure_awaitable(item_dict[name])
+                    for name in item_dict
+                    if name in field_names
+                }
+            )
+            return item
+
+        return await page_object.to_item()

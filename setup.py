@@ -29,6 +29,7 @@ setup(
         "twisted >= 18.9.0",
         "url-matcher >= 0.2.0",
         "web-poet >= 0.7.0",
+        "typing_extensions >= 4.4.0; python_version<'3.9'",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

@@ -8,12 +8,13 @@ and ``scrapy_poet/registry.py`` modules.
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, List, Optional, Tuple, Type
 
 import attrs
 import pytest
 import scrapy
 from pytest_twisted import inlineCallbacks
+from typing_extensions import Annotated
 from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import (
@@ -28,7 +29,7 @@ from web_poet import (
 )
 from web_poet.pages import ItemT
 
-from scrapy_poet import callback_for
+from scrapy_poet import NotPickFields, PickFields, callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
@@ -51,7 +52,6 @@ def rules_settings() -> dict:
 
 def spider_for(injectable: Type):
     class InjectableSpider(scrapy.Spider):
-
         url = None
         custom_settings = {
             "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
@@ -100,19 +100,22 @@ class PageObjectCounterMixin:
 
 
 @inlineCallbacks
-def crawl_item_and_deps(PageObject) -> Tuple[Any, Any]:
+def crawl_item_and_deps(
+    page_object: Optional[ItemPage], spider: Optional[scrapy.Spider] = None
+) -> Tuple[Any, Any]:
     """Helper function to easily return the item and injected dependencies from
     a simulated Scrapy callback which asks for either of these dependencies:
         - page object
         - item class
     """
+    spider = spider or spider_for(page_object)
     item, _, crawler = yield crawl_single_item(
-        spider_for(PageObject), ProductHtml, rules_settings(), port=PORT
+        spider, ProductHtml, rules_settings(), port=PORT
     )
     return item, crawler.spider.collected_response_deps
 
 
-def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int = 1):
+def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any]):
     """Helper for easily checking the instances of the ``deps`` returned by
     ``crawl_item_and_deps()``.
 
@@ -120,8 +123,7 @@ def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int 
     that is passed to the spider callback. Currently, either "page" or "item"
     are supported as keys since ``scrapy_poet.callback`` is used.
     """
-    assert len(deps) == size
-    if size == 0:
+    if not len(deps):
         return
 
     # Only checks the first element for now since it's used alongside crawling
@@ -1434,6 +1436,227 @@ def test_page_object_with_item_dependency_deadlock_2_d(caplog) -> None:
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
+@attrs.define
+class BigItem:
+    x: Optional[str] = None
+    y: Optional[str] = None
+    z: Optional[str] = None
+
+
+@handle_urls(URL)
+@attrs.define
+class BigPage(PageObjectCounterMixin, ItemPage[BigItem]):
+    @field
+    def x(self) -> str:
+        return "x"
+
+    @field
+    def y(self) -> str:
+        return "y"
+
+    @field
+    def z(self) -> str:
+        return "z"
+
+
+class BaseSpiderForTest(scrapy.Spider):
+    name = "testing_spider"
+    url = None
+    custom_settings = {"SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS}
+
+    def start_requests(self):
+        yield scrapy.Request(self.url, capture_exceptions(self.parse_item))
+
+
+@inlineCallbacks
+def test_pick_fields() -> None:
+    """Spider callbacks annotated with ``PickFields`` should only return the
+    requested field and completely avoid calling ``.to_item()``.
+    """
+
+    class Spider(BaseSpiderForTest):
+        def parse_item(self, response, item: Annotated[BigItem, PickFields("x", "y")]):
+            yield item
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, Spider)
+    assert item == BigItem(x="x", y="y")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
+@inlineCallbacks
+def test_pick_fields_with_other_metadata() -> None:
+    """Any other annotations inside ``Annotated`` will be ignored by the
+    ``ItemProvider``.
+
+    Reference: https://peps.python.org/pep-0593/#consuming-annotations
+    """
+
+    class Spider(BaseSpiderForTest):
+        def parse_item(
+            self,
+            response,
+            item: Annotated[BigItem, PickFields("x", "y"), None, "random"],
+        ):
+            yield item
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, Spider)
+    assert item == BigItem(x="x", y="y")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
+@inlineCallbacks
+def test_pick_fields_empty() -> None:
+    """Same with ``test_pick_fields()`` but there's no field declarations inside
+    ``PickFields()``.
+
+    In these cases, it's ignored.
+    """
+
+    class Spider(BaseSpiderForTest):
+        def parse_item(self, response, item: Annotated[BigItem, PickFields()]):
+            yield item
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, Spider)
+    assert item == BigItem(x="x", y="y", z="z")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 1
+
+
+@inlineCallbacks
+def test_pick_fields_not_available() -> None:
+    """When a field has been specified in ``PickFields()`` but the page object
+    does not support it to populate the item, it's simply ignored.
+    """
+
+    class Spider(BaseSpiderForTest):
+        def parse_item(self, response, item: Annotated[BigItem, PickFields("x", "na")]):
+            yield item
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, Spider)
+    assert item == BigItem(x="x")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
+@inlineCallbacks
+def test_not_pick_fields() -> None:
+    """Spider callbacks annotated with ``NotPickFields`` should NOT return the
+    indicated field and completely avoid calling ``.to_item()``.
+    """
+
+    class Spider(BaseSpiderForTest):
+        def parse_item(
+            self, response, item: Annotated[BigItem, NotPickFields("x", "y")]
+        ):
+            yield item
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, Spider)
+    assert item == BigItem(z="z")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
+@inlineCallbacks
+def test_not_pick_fields_with_other_metadata() -> None:
+    """Any other annotations inside ``Annotated`` will be ignored by the
+    ``ItemProvider``.
+
+    Reference: https://peps.python.org/pep-0593/#consuming-annotations
+    """
+
+    class Spider(BaseSpiderForTest):
+        def parse_item(
+            self,
+            response,
+            item: Annotated[BigItem, NotPickFields("x", "y"), None, "random"],
+        ):
+            yield item
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, Spider)
+    assert item == BigItem(z="z")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
+@inlineCallbacks
+def test_not_pick_fields_empty() -> None:
+    """Same with ``test_not_pick_fields()`` but there's no field declarations
+    inside ``NotPickFields()``.
+
+    In these cases, it's ignored.
+    """
+
+    class Spider(BaseSpiderForTest):
+        def parse_item(self, response, item: Annotated[BigItem, NotPickFields()]):
+            yield item
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, Spider)
+    assert item == BigItem(x="x", y="y", z="z")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 1
+
+
+@inlineCallbacks
+def test_not_pick_fields_not_available() -> None:
+    """When a field has been specified in ``NotPickFields()`` but the page object
+    does not support it to populate the item, it's simply ignored.
+    """
+
+    class Spider(BaseSpiderForTest):
+        def parse_item(
+            self, response, item: Annotated[BigItem, NotPickFields("z", "na")]
+        ):
+            yield item
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, Spider)
+    assert item == BigItem(x="x", y="y")
+    assert_deps(deps, {"item": BigItem})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
+@inlineCallbacks
+def test_conflict_pick_fields(caplog) -> None:
+    """Using both ``PickFields()`` and ``NotPickFields()`` in the same annotation
+    should raise a ValueError.
+    """
+
+    class Spider(BaseSpiderForTest):
+        def parse_item(
+            self,
+            response,
+            item: Annotated[BigItem, PickFields("x"), NotPickFields("y")],
+        ):
+            yield item
+
+    PageObjectCounterMixin.clear()
+    item, deps = yield crawl_item_and_deps(None, Spider)
+    assert (
+        "ValueError: PickFields and NotPickFields should not " "be used together"
+    ) in caplog.text
+    assert item is None
+    assert_deps(deps, {})
+    PageObjectCounterMixin.assert_instance_count(1, BigPage)
+    assert BigPage.to_item_call_count == 0
+
+
 def test_created_apply_rules() -> None:
     """Checks if the ``ApplyRules`` were created properly by ``@handle_urls`` in
     ``tests/po_lib/__init__.py``.
@@ -1528,4 +1751,5 @@ def test_created_apply_rules() -> None:
         ApplyRule(URL, use=EggDeadlockPage, to_return=EggItem),
         ApplyRule(URL, use=Chicken2DeadlockPage, to_return=Chicken2Item),
         ApplyRule(URL, use=Egg2DeadlockPage, to_return=Egg2Item),
+        ApplyRule(URL, use=BigPage, to_return=BigItem),
     ]
