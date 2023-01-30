@@ -1,4 +1,3 @@
-import weakref
 from typing import Any, Callable, Sequence, Set
 
 import attr
@@ -9,7 +8,7 @@ from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
-from web_poet import Injectable, ItemPage
+from web_poet import Injectable, ItemPage, RulesRegistry
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
@@ -30,7 +29,6 @@ from scrapy_poet.injection_errors import (
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
-from scrapy_poet.overrides import OverridesRegistry
 
 
 def get_provider(classes, content=None):
@@ -115,12 +113,6 @@ class TestInjector:
                 injector.is_provider_requiring_scrapy_response[provider]
                 == provider.require_response
             )
-
-        # Asserting that we are not leaking providers references
-        weak_ref = weakref.ref(injector.providers[0])
-        assert weak_ref()
-        del injector
-        assert weak_ref() is None
 
     def test_non_callable_provider_error(self):
         """Checks that a exception is raised when a provider is not callable"""
@@ -323,14 +315,14 @@ class TestInjectorOverrides:
         domain = "example.com" if override_should_happen else "other-example.com"
         # The request domain is example.com, so overrides shouldn't be applied
         # when we configure them for domain other-example.com
-        overrides = [
-            (domain, PriceInDollarsPO, PricePO),
+        rules = [
+            ApplyRule(Patterns([domain]), use=PriceInDollarsPO, instead_of=PricePO),
             ApplyRule(
                 Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate
             ),
         ]
-        registry = OverridesRegistry(overrides)
-        injector = get_injector_for_testing(providers, overrides_registry=registry)
+        registry = RulesRegistry(rules=rules)
+        injector = get_injector_for_testing(providers, registry=registry)
 
         def callback(
             response: DummyResponse, price_po: PricePO, rate_po: EurDollarRate

@@ -47,7 +47,7 @@ class SavingInjectionMiddleware(InjectionMiddleware):
         self.injector = SavingInjector(
             crawler,
             default_providers=DEFAULT_PROVIDERS,
-            overrides_registry=self.overrides_registry,
+            registry=self.registry,
         )
 
 

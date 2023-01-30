@@ -29,8 +29,9 @@ class DummyResponse(Response):
         super().__init__(url=url, request=request)
 
 
-def callback_for(page_cls: Type[ItemPage]) -> Callable:
-    """Create a callback for an :class:`web_poet.pages.ItemPage` subclass.
+def callback_for(page_or_item_cls: Type) -> Callable:
+    """Create a callback for an :class:`web_poet.pages.ItemPage` subclass or an
+    item class.
 
     The generated callback returns the output of the
     ``ItemPage.to_item()`` method, i.e. extracts a single item
@@ -104,24 +105,28 @@ def callback_for(page_cls: Type[ItemPage]) -> Callable:
     disk queues, because in this case Scrapy is able to serialize
     your request object.
     """
-    if not issubclass(page_cls, ItemPage):
-        raise TypeError(f"{page_cls.__name__} should be a subclass of ItemPage.")
-
     # When the callback is used as an instance method of the spider, it expects
     # to receive 'self' as its first argument. When used as a simple inline
     # function, it expects to receive a response as its first argument.
     #
     # To avoid a TypeError, we need to receive a list of unnamed arguments and
     # a dict of named arguments after our injectable.
-    def parse(*args, page: page_cls, **kwargs):  # type: ignore
-        yield page.to_item()  # type: ignore
+    if issubclass(page_or_item_cls, ItemPage):
 
-    async def async_parse(*args, page: page_cls, **kwargs):  # type: ignore
-        yield await page.to_item()  # type: ignore
+        def parse(*args, page: page_or_item_cls, **kwargs):  # type: ignore
+            yield page.to_item()  # type: ignore
 
-    if iscoroutinefunction(page_cls.to_item):
-        setattr(async_parse, _CALLBACK_FOR_MARKER, True)
-        return async_parse
+        async def async_parse(*args, page: page_or_item_cls, **kwargs):  # type: ignore
+            yield await page.to_item()  # type: ignore
+
+        if iscoroutinefunction(page_or_item_cls.to_item):
+            setattr(async_parse, _CALLBACK_FOR_MARKER, True)
+            return async_parse
+
+    else:
+
+        def parse(*args, item: page_or_item_cls, **kwargs):  # type:ignore
+            yield item
 
     setattr(parse, _CALLBACK_FOR_MARKER, True)
     return parse

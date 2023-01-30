@@ -67,7 +67,7 @@ class BooksSpider(scrapy.Spider):
     name = "books_04_overrides_03"
     start_urls = ["http://books.toscrape.com/", "https://bookpage.com/reviews"]
     # Configuring different page objects pages for different domains
-    custom_settings = {"SCRAPY_POET_OVERRIDES": default_registry.get_rules()}
+    custom_settings = {"SCRAPY_POET_RULES": default_registry.get_rules()}
 
     def start_requests(self):
         for url in ["http://books.toscrape.com/", "https://bookpage.com/reviews"]:

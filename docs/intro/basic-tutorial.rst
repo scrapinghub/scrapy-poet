@@ -414,17 +414,17 @@ The spider won't work anymore after the change. The reason is that it
 is using the new base Page Objects and they are empty.
 Let's fix it by instructing ``scrapy-poet`` to use the Books To Scrape (BTS)
 Page Objects for URLs belonging to the domain ``toscrape.com``. This must
-be done by configuring ``SCRAPY_POET_OVERRIDES`` into ``settings.py``:
+be done by configuring ``SCRAPY_POET_RULES`` into ``settings.py``:
 
 .. code-block:: python
 
-    "SCRAPY_POET_OVERRIDES": [
+    "SCRAPY_POET_RULES": [
         ("toscrape.com", BTSBookListPage, BookListPage),
         ("toscrape.com", BTSBookPage, BookPage)
     ]
 
 The spider is back to life!
-``SCRAPY_POET_OVERRIDES`` contain rules that overrides the Page Objects
+``SCRAPY_POET_RULES`` contain rules that overrides the Page Objects
 used for a particular domain. In this particular case, Page Objects
 ``BTSBookListPage`` and ``BTSBookPage`` will be used instead of
 ``BookListPage`` and ``BookPage`` for any request whose domain is
@@ -465,16 +465,18 @@ to implement new ones:
 
 The last step is configuring the overrides so that these new Page Objects
 are used for the domain
-``bookpage.com``. This is how ``SCRAPY_POET_OVERRIDES`` should look like into
+``bookpage.com``. This is how ``SCRAPY_POET_RULES`` should look like into
 ``settings.py``:
 
 .. code-block:: python
 
-    "SCRAPY_POET_OVERRIDES": [
-        ("toscrape.com", BTSBookListPage, BookListPage),
-        ("toscrape.com", BTSBookPage, BookPage),
-        ("bookpage.com", BPBookListPage, BookListPage),
-        ("bookpage.com", BPBookPage, BookPage)
+    from web_poet import ApplyRule
+
+    "SCRAPY_POET_RULES": [
+        ApplyRule("toscrape.com", use=BTSBookListPage, instead_of=BookListPage),
+        ApplyRule("toscrape.com", use=BTSBookPage, instead_of=BookPage),
+        ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),
+        ApplyRule("bookpage.com", use=BPBookPage, instead_of=BookPage)
     ]
 
 The spider is now ready to extract books from both sites 😀.
@@ -489,27 +491,6 @@ In the examples above we have been configuring the overrides
 for a particular domain, but more complex URL patterns are also possible.
 For example, the pattern ``books.toscrape.com/cataloge/category/``
 is accepted and it would restrict the override only to category pages.
-
-It is even possible to configure more complex patterns by using the
-:py:class:`web_poet.rules.ApplyRule` class instead of a triplet in
-the configuration. Another way of declaring the earlier config
-for ``SCRAPY_POET_OVERRIDES`` would be the following:
-
-.. code-block:: python
-
-    from url_matcher import Patterns
-    from web_poet import ApplyRule
-
-
-    SCRAPY_POET_OVERRIDES = [
-        ApplyRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookListPage, instead_of=BookListPage),
-        ApplyRule(for_patterns=Patterns(["toscrape.com"]), use=BTSBookPage, instead_of=BookPage),
-        ApplyRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookListPage, instead_of=BookListPage),
-        ApplyRule(for_patterns=Patterns(["bookpage.com"]), use=BPBookPage, instead_of=BookPage),
-    ]
-
-As you can see, this could get verbose. The earlier tuple config simply offers
-a shortcut to be more concise.
 
 .. note::
 
@@ -530,11 +511,11 @@ and store the :py:class:`web_poet.rules.ApplyRule` for you. All of the
     # rules from other packages. Otherwise, it can be omitted.
     # More info about this caveat on web-poet docs.
     consume_modules("external_package_A", "another_ext_package.lib")
-    SCRAPY_POET_OVERRIDES = default_registry.get_rules()
+    SCRAPY_POET_RULES = default_registry.get_rules()
 
 For more info on this, you can refer to these docs:
 
-    * ``scrapy-poet``'s :ref:`overrides` Tutorial section.
+    * ``scrapy-poet``'s :ref:`rules-from-web-poet` Tutorial section.
     * External `web-poet`_ docs.
 
         * Specifically, the :external:ref:`rules-intro` Tutorial section.
@@ -545,7 +526,8 @@ Next steps
 Now that you know how ``scrapy-poet`` is supposed to work, what about trying to
 apply it to an existing or new Scrapy project?
 
-Also, please check the :ref:`overrides` and :ref:`providers` sections as well as
-refer to spiders in the "example" folder: https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
+Also, please check the :ref:`rules-from-web-poet` and :ref:`providers` sections
+as well as refer to spiders in the "example" folder:
+https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
 
 .. _Scrapy Tutorial: https://docs.scrapy.org/en/latest/intro/tutorial.html

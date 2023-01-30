@@ -1,16 +1,19 @@
+from inspect import isasyncgenfunction
 from typing import Dict
 from unittest import mock
 
-from pytest_twisted import inlineCallbacks
+from scrapy import signals
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider
+from scrapy.settings import Settings
 from scrapy.utils.python import to_bytes
 from twisted.internet import reactor
+from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
-from tests.mockserver import MockServer
+from scrapy_poet.utils.mockserver import MockServer
 
 
 class HtmlResource(Resource):
@@ -91,16 +94,19 @@ def crawl_single_item(
     spider_cls, resource_cls, settings, spider_kwargs=None, port=None
 ):
     """Run a spider where a single item is expected. Use in combination with
-    ``capture_capture_exceptions`` and ``CollectorPipeline``
+    ``capture_exceptions`` and ``CollectorPipeline``
     """
     items, url, crawler = yield crawl_items(
         spider_cls, resource_cls, settings, spider_kwargs=spider_kwargs, port=port
     )
-    assert len(items) == 1
-    resp = items[0]
-    if "exception" in resp:
-        raise resp["exception"]
-    return resp, url, crawler
+    try:
+        item = items[0]
+    except IndexError:
+        return None, url, crawler
+
+    if isinstance(item, dict) and "exception" in item:
+        raise item["exception"]
+    return item, url, crawler
 
 
 def make_crawler(spider_cls, settings):
@@ -124,14 +130,50 @@ class CollectorPipeline:
         return item
 
 
+class InjectedDependenciesCollectorMiddleware:
+    @classmethod
+    def from_crawler(cls, crawler):
+        obj = cls()
+        crawler.signals.connect(obj.spider_opened, signal=signals.spider_opened)
+        return obj
+
+    def spider_opened(self, spider):
+        spider.collected_response_deps = []
+
+    def process_response(self, request, response, spider):
+        spider.collected_response_deps.append(request.cb_kwargs)
+        return response
+
+
+def create_scrapy_settings(request):
+    """Default scrapy-poet settings"""
+    s = dict(
+        # collect scraped items to crawler.spider.collected_items
+        ITEM_PIPELINES={
+            CollectorPipeline: 100,
+        },
+        DOWNLOADER_MIDDLEWARES={
+            # collect injected dependencies to crawler.spider.collected_response_deps
+            InjectedDependenciesCollectorMiddleware: 542,
+            "scrapy_poet.InjectionMiddleware": 543,
+        },
+    )
+    return Settings(s)
+
+
 def capture_exceptions(callback):
     """Wrapper for Scrapy callbacks that captures exceptions within
     the provided callback and yields it under `exception` property. Also
     spider is closed on the first exception."""
 
-    def parse(*args, **kwargs):
+    async def parse(*args, **kwargs):
         try:
-            yield from callback(*args, **kwargs)
+            if isasyncgenfunction(callback):
+                async for x in callback(*args, **kwargs):
+                    yield x
+            else:
+                for x in callback(*args, **kwargs):
+                    yield x
         except Exception as e:
             yield {"exception": e}
             raise CloseSpider("Exception in callback detected")

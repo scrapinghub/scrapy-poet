@@ -10,19 +10,20 @@ from typing import Generator, Optional, Type, TypeVar
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
-from scrapy.utils.misc import create_instance, load_object
 from twisted.internet.defer import Deferred, inlineCallbacks
+from web_poet import RulesRegistry
 
 from .api import DummyResponse
 from .injection import Injector
-from .overrides import OverridesRegistry
 from .page_input_providers import (
     HttpClientProvider,
     HttpResponseProvider,
+    ItemProvider,
     PageParamsProvider,
     RequestUrlProvider,
     ResponseUrlProvider,
 )
+from .utils import create_registry_instance
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,7 @@ DEFAULT_PROVIDERS = {
     PageParamsProvider: 700,
     RequestUrlProvider: 800,
     ResponseUrlProvider: 900,
+    ItemProvider: 1000,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")
@@ -48,15 +50,11 @@ class InjectionMiddleware:
     def __init__(self, crawler: Crawler) -> None:
         """Initialize the middleware"""
         self.crawler = crawler
-        settings = self.crawler.settings
-        registry_cls = load_object(
-            settings.get("SCRAPY_POET_OVERRIDES_REGISTRY", OverridesRegistry)
-        )
-        self.overrides_registry = create_instance(registry_cls, settings, crawler)
+        self.registry = create_registry_instance(RulesRegistry, crawler)
         self.injector = Injector(
             crawler,
             default_providers=DEFAULT_PROVIDERS,
-            overrides_registry=self.overrides_registry,
+            registry=self.registry,
         )
 
     @classmethod

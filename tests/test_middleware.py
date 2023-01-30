@@ -12,15 +12,18 @@ from scrapy.utils.log import configure_logging
 from scrapy.utils.test import get_crawler
 from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
-from web_poet import default_registry
-from web_poet.page_inputs import HttpResponse, RequestUrl, ResponseUrl
-from web_poet.pages import ItemPage, WebPage
+from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
 
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
 from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from tests.mockserver import get_ephemeral_port
-from tests.utils import HtmlResource, capture_exceptions, crawl_items, crawl_single_item
+from scrapy_poet.utils.mockserver import get_ephemeral_port
+from scrapy_poet.utils.testing import (
+    HtmlResource,
+    capture_exceptions,
+    crawl_items,
+    crawl_single_item,
+)
 
 
 class ProductHtml(HtmlResource):
@@ -102,8 +105,12 @@ def test_overrides(settings):
     host = socket.gethostbyname(socket.gethostname())
     domain = get_domain(host)
     port = get_ephemeral_port()
-    settings["SCRAPY_POET_OVERRIDES"] = [
-        (f"{domain}:{port}", OverridenBreadcrumbsExtraction, BreadcrumbsExtraction)
+    settings["SCRAPY_POET_RULES"] = [
+        ApplyRule(
+            f"{domain}:{port}",
+            use=OverridenBreadcrumbsExtraction,
+            instead_of=BreadcrumbsExtraction,
+        )
     ]
     item, url, _ = yield crawl_single_item(
         spider_for(ProductPage), ProductHtml, settings, port=port
@@ -115,6 +122,18 @@ def test_overrides(settings):
         "description": "The best chocolate ever",
         "category": "overriden_breadcrumb",
     }
+
+
+def test_deprecation_setting_SCRAPY_POET_OVERRIDES(settings) -> None:
+    settings["SCRAPY_POET_OVERRIDES"] = []
+    crawler = get_crawler(Spider, settings)
+
+    msg = (
+        "The SCRAPY_POET_OVERRIDES setting is deprecated. "
+        "Use SCRAPY_POET_RULES instead."
+    )
+    with pytest.warns(DeprecationWarning, match=msg):
+        InjectionMiddleware(crawler)
 
 
 @attr.s(auto_attribs=True)
@@ -222,12 +241,12 @@ def test_providers(settings, type_):
 
 
 @inlineCallbacks
-def test_providers_returning_wrong_classes(settings):
+def test_providers_returning_wrong_classes(settings, caplog):
     """Injection Middleware should raise a runtime error whenever a provider
     returns instances of classes that they're not supposed to provide.
     """
-    with pytest.raises(AssertionError):
-        yield crawl_single_item(spider_for(ExtraClassData), ProductHtml, settings)
+    yield crawl_single_item(spider_for(ExtraClassData), ProductHtml, settings)
+    assert "UndeclaredProvidedTypeError:" in caplog.text
 
 
 class MultiArgsCallbackSpider(scrapy.Spider):
@@ -468,29 +487,3 @@ def test_cache_closed_on_spider_close(mock_sqlitedictcache, settings):
         mock.call("/tmp/cache", compressed=True),
         mock.call().close(),
     ]
-
-
-@inlineCallbacks
-def test_web_poet_integration(settings):
-    """This tests scrapy-poet's integration with web-poet most especially when
-    populating override settings via:
-
-        from web_poet import default_registry
-
-        SCRAPY_POET_OVERRIDES = default_registry.get_rules()
-    """
-
-    # Only import them in this test scope since they need to be synced with
-    # the URL of the Page Object annotated with @handle_urls.
-    from tests.po_lib import PORT, POOverriden
-
-    # Override rules are defined in `tests/po_lib/__init__.py`.
-    rules = default_registry.get_rules()
-
-    # Converting it to a set removes potential duplicate ApplyRules
-    settings["SCRAPY_POET_OVERRIDES"] = set(rules)
-
-    item, url, _ = yield crawl_single_item(
-        spider_for(POOverriden), ProductHtml, settings, port=PORT
-    )
-    assert item == {"msg": "PO replacement"}

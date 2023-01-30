@@ -127,16 +127,3 @@ def test_inline_callback_async():
 
     msg = f"Function {cb} is not an instance method in: {spider}"
     assert str(exc.value) == msg
-
-
-def test_invalid_subclass():
-    """Classes should inherit from ItemPage."""
-
-    class MyClass(object):
-        pass
-
-    with pytest.raises(TypeError) as exc:
-        callback_for(MyClass)
-
-    msg = "MyClass should be a subclass of ItemPage."
-    assert str(exc.value) == msg

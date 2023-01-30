@@ -29,7 +29,7 @@ class MockServer:
                 sys.executable,
                 "-u",
                 "-m",
-                "tests.mockserver",
+                "scrapy_poet.utils.mockserver",
                 self.resource,
                 "--port",
                 str(self.port),

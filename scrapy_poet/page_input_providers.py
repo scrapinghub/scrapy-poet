@@ -10,8 +10,24 @@ Splash or Auto Extract API.
 """
 import abc
 import json
-from typing import Any, Callable, ClassVar, Sequence, Set, Union
+from dataclasses import make_dataclass
+from inspect import isclass
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Type,
+    Union,
+)
+from warnings import warn
+from weakref import WeakKeyDictionary
 
+import andi
 import attr
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -24,9 +40,13 @@ from web_poet import (
     RequestUrl,
     ResponseUrl,
 )
+from web_poet.pages import is_injectable
 
 from scrapy_poet.downloader import create_scrapy_downloader
-from scrapy_poet.injection_errors import MalformedProvidedClassesError
+from scrapy_poet.injection_errors import (
+    MalformedProvidedClassesError,
+    ProviderDependencyDeadlockError,
+)
 
 
 class PageObjectInputProvider:
@@ -38,7 +58,7 @@ class PageObjectInputProvider:
     be declared in the class attribute ``provided_classes``.
 
     POIPs are initialized when the spider starts by invoking the ``__init__`` method,
-    which receives the crawler instance as argument.
+    which receives the ``scrapy_poet.injection.Injector`` instance as argument.
 
     The ``__call__`` method must be overridden, and it is inside this method
     where the actual instances must be build. The default ``__call__`` signature
@@ -93,28 +113,28 @@ class PageObjectInputProvider:
     is provided by this provider.
     """
 
-    provided_classes: ClassVar[Union[Set[Callable], Callable[[Callable], bool]]]
+    provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
-    @classmethod
-    def is_provided(cls, type_: Callable):
+    def is_provided(self, type_: Callable) -> bool:
         """
         Return ``True`` if the given type is provided by this provider based
         on the value of the attribute ``provided_classes``
         """
-        if isinstance(cls.provided_classes, Set):
-            return type_ in cls.provided_classes
-        elif callable(cls.provided_classes):
-            return cls.provided_classes(type_)
+        if isinstance(self.provided_classes, Set):
+            return type_ in self.provided_classes
+        elif callable(self.provided_classes):
+            return self.provided_classes(type_)
         else:
             raise MalformedProvidedClassesError(
                 f"Unexpected type {type_!r} for 'provided_classes' attribute of"
-                f"{cls!r}. Expected either 'set' or 'callable'"
+                f"{self!r}. Expected either 'set' or 'callable'"
             )
 
-    def __init__(self, crawler: Crawler):
+    # FIXME: Can't import the Injector as class annotation due to circular dep.
+    def __init__(self, injector):
         """Initializes the provider. Invoked only at spider start up."""
-        pass
+        self.injector = injector
 
     # Remember that is expected for all children to implement the ``__call__``
     # method. The simplest signature for it is:
@@ -263,3 +283,81 @@ class ResponseUrlProvider(PageObjectInputProvider):
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a ``ResponseUrl`` instance using a Scrapy ``Response``."""
         return [ResponseUrl(url=response.url)]
+
+
+class ItemProvider(PageObjectInputProvider):
+
+    name = "item"
+
+    def __init__(self, injector):
+        super().__init__(injector)
+        self.registry = self.injector.registry
+
+        # The key that's used here is the ``scrapy.Request`` instance to ensure
+        # that the cached instances under it are properly garbage collected
+        # after processing such request.
+        self._cached_instances = WeakKeyDictionary()
+
+    def provided_classes(self, cls):
+        """If the item is in any of the ``to_return`` in the rules, then it can
+        be provided by using the corresponding page object in ``use``.
+        """
+        return isclass(cls) and self.registry.search(to_return=cls)
+
+    def update_cache(self, request: Request, mapping: Dict[Type, Any]) -> None:
+        if request not in self._cached_instances:
+            self._cached_instances[request] = {}
+        self._cached_instances[request].update(mapping)
+
+    def get_from_cache(self, request: Request, cls: Callable) -> Optional[Any]:
+        return self._cached_instances.get(request, {}).get(cls)
+
+    async def __call__(
+        self,
+        to_provide: Set[Callable],
+        request: Request,
+        response: Response,
+    ) -> List[Any]:
+        results = []
+        for cls in to_provide:
+            item = self.get_from_cache(request, cls)
+            if item:
+                results.append(item)
+                continue
+
+            page_object_cls = self.registry.page_cls_for_item(request.url, cls)
+            if not page_object_cls:
+                warn(
+                    f"Can't find appropriate page object for {cls} item for "
+                    f"url: '{request.url}'. Check the ApplyRules you're using."
+                )
+                continue
+
+            # https://github.com/scrapinghub/andi/issues/23#issuecomment-1331682180
+            fake_call_signature = make_dataclass(
+                "FakeCallSignature", [("page_object", page_object_cls)]
+            )
+            plan = andi.plan(
+                fake_call_signature,
+                is_injectable=is_injectable,
+                externally_provided=self.injector.is_class_provided_by_any_provider,
+            )
+
+            try:
+                po_instances = await self.injector.build_instances(
+                    request, response, plan
+                )
+            except RecursionError:
+                raise ProviderDependencyDeadlockError(
+                    f"Deadlock detected! A loop has been detected to trying to "
+                    f"resolve this plan: {plan}"
+                )
+
+            page_object = po_instances[page_object_cls]
+            item = await page_object.to_item()
+
+            self.update_cache(request, po_instances)
+            self.update_cache(request, {type(item): item})
+
+            results.append(item)
+        return results

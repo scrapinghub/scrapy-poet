@@ -7,7 +7,6 @@ No configured default logic: if used for an unregistered domain, no logic
 at all is applied.
 """
 import scrapy
-from url_matcher import Patterns
 from web_poet import WebPage
 from web_poet.rules import ApplyRule
 
@@ -61,20 +60,11 @@ class BooksSpider(scrapy.Spider):
     name = "books_04_overrides_02"
     # Configuring different page objects pages for different domains
     custom_settings = {
-        "SCRAPY_POET_OVERRIDES": [
-            ("toscrape.com", BTSBookListPage, BookListPage),
-            ("toscrape.com", BTSBookPage, BookPage),
-            # We could also use the long-form version if we want to.
-            ApplyRule(
-                for_patterns=Patterns(["bookpage.com"]),
-                use=BPBookListPage,
-                instead_of=BookListPage,
-            ),
-            ApplyRule(
-                for_patterns=Patterns(["bookpage.com"]),
-                use=BPBookPage,
-                instead_of=BookPage,
-            ),
+        "SCRAPY_POET_RULES": [
+            ApplyRule("toscrape.com", use=BTSBookListPage, instead_of=BookListPage),
+            ApplyRule("toscrape.com", use=BTSBookPage, instead_of=BookPage),
+            ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),
+            ApplyRule("bookpage.com", use=BPBookPage, instead_of=BookPage),
         ]
     }
 

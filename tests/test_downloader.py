@@ -19,11 +19,11 @@ from web_poet.pages import WebPage
 from scrapy_poet import DummyResponse
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.utils import http_request_to_scrapy_request
-from tests.utils import (
+from scrapy_poet.utils.mockserver import MockServer
+from scrapy_poet.utils.testing import (
     AsyncMock,
     DelayedResource,
     EchoResource,
-    MockServer,
     StatusResource,
     make_crawler,
 )

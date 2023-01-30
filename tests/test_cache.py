@@ -4,8 +4,8 @@ from pytest_twisted import inlineCallbacks
 from scrapy import Request, Spider
 from web_poet import WebPage, field
 
-from .mockserver import MockServer
-from .utils import EchoResource, make_crawler
+from scrapy_poet.utils.mockserver import MockServer
+from scrapy_poet.utils.testing import EchoResource, make_crawler
 
 
 @inlineCallbacks

@@ -6,7 +6,7 @@ the crawling logic (the spider is exactly the same).
 The default configured PO logic contains the logic for books.toscrape.com
 """
 import scrapy
-from web_poet import WebPage
+from web_poet import ApplyRule, WebPage
 
 from scrapy_poet import callback_for
 
@@ -49,9 +49,9 @@ class BooksSpider(scrapy.Spider):
     name = "books_04_overrides_01"
     # Configuring different page objects pages from the bookpage.com domain
     custom_settings = {
-        "SCRAPY_POET_OVERRIDES": [
-            ("bookpage.com", BPBookListPage, BookListPage),
-            ("bookpage.com", BPBookPage, BookPage),
+        "SCRAPY_POET_RULES": [
+            ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),
+            ApplyRule("bookpage.com", use=BPBookPage, instead_of=BookPage),
         ]
     }
 
