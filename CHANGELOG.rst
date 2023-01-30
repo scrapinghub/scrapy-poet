@@ -2,6 +2,9 @@
 Changelog
 =========
 
+TBR
+---
+
 * Added support for item classes which are used as dependencies in page objects
   and spider callbacks. The following is now possible:
  
@@ -75,8 +78,6 @@ Changelog
 * Moved some of the utility functions from the test module into
   ``scrapy_poet.utils.testing``.
 
-* Now requires ``web-poet >= 0.7.0``.
-
 * Documentation improvements.
 
 * Deprecations:
@@ -121,6 +122,15 @@ Changelog
     * This also means that the registry doesn't accept tuples as rules anymore.
       Only :class:`web_poet.rules.ApplyRule` instances are allowed. The same goes
       for ``SCRAPY_POET_RULES`` (and the deprecated ``SCRAPY_POET_OVERRIDES``).
+
+
+0.8.0 (2023-01-24)
+------------------
+
+* Now requires ``web-poet >= 0.7.0`` and ``time_machine``.
+
+* Added a ``savefixture`` command that creates a test for a page object.
+  See :ref:`testing` for more information.
 
 
 0.7.0 (2023-01-17)
