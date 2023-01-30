@@ -28,8 +28,7 @@ SCRAPY_POET_RULES
 
 Default: ``None``
 
-Accepts an ``Iterable[ApplyRule]`` to which sets the rules to use. The default
-is currently  :class:`web_poet.rules.RulesRegistry`.
+Accepts an ``Iterable[ApplyRule]`` which sets the rules to use.
 
 There are sections dedicated for this at :ref:`intro-tutorial` and
 :ref:`rules-from-web-poet`.

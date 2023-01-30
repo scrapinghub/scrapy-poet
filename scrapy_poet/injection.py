@@ -141,8 +141,7 @@ class Injector:
             externally_provided=self.is_class_provided_by_any_provider,
             # Ignore the type since andi.plan expects overrides to be
             # Callable[[Callable], Optional[Callable]] but the registry
-            # returns a more accurate typing for this scenario:
-            # Mapping[Type[ItemPage], Type[ItemPage]]
+            # returns the typing for ``dict.get()`` method.
             overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
         )
 

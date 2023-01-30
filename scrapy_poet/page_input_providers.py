@@ -300,7 +300,7 @@ class ItemProvider(PageObjectInputProvider):
 
     def provided_classes(self, cls):
         """If the item is in any of the ``to_return`` in the rules, then it can
-        definitely provide by using the corresponding page object in ``use``.
+        be provided by using the corresponding page object in ``use``.
         """
         return isclass(cls) and self.registry.search(to_return=cls)
 
