@@ -33,6 +33,9 @@ of your Scrapy project:
         "scrapy_poet.RetryMiddleware": 275,
     }
 
+    from web_poet import default_registry
+    SCRAPY_POET_RULES = default_registry.get_rules()
+
 Things that are good to know
 ============================
 
