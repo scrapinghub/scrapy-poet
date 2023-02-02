@@ -1,3 +1,5 @@
+import datetime
+import json
 import subprocess
 import sys
 import tempfile
@@ -45,3 +47,6 @@ class BTSBookPage(WebPage):
     assert fixture.is_valid()
     assert (fixture.input_path / "HttpResponse-body.html").exists()
     assert fixture.meta_path.exists()
+    frozen_time_str = json.loads(fixture.meta_path.read_bytes())["frozen_time"]
+    frozen_time = datetime.datetime.fromisoformat(frozen_time_str)
+    assert frozen_time.microsecond == 0
