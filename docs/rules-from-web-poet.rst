@@ -184,16 +184,14 @@ For example:
     # More info about this caveat on web-poet docs.
     consume_modules("external_package_A", "another_ext_package.lib")
 
-    # To get all of the Override Rules that were declared via annotations.
-    SCRAPY_POET_RULES = default_registry.get_rules()
-
- 
 .. note::
 
-    By default, ``SCRAPY_POET_RULES`` has values already set to
-    :meth:`web_poet.default_registry.get_rules`. However, if you need to add 
-    rules from other external packages, make sure to use
-    :func:`web_poet.rules.consume_modules` as shown above.
+    By default, ``SCRAPY_POET_RULES`` already has some rules set from the
+    return value of :meth:`web_poet.default_registry.get_rules()
+    <web_poet.rules.RulesRegistry.get_rules>`. However, if you need to add rules
+    from other external packages, make sure to use
+    :func:`web_poet.consume_modules <web_poet.rules.consume_modules>` as shown
+    above inside your ``settings.py``.
 
 The :py:meth:`web_poet.rules.RulesRegistry.get_rules` method of the
 ``default_registry`` above returns ``List[ApplyRule]`` that were declared
