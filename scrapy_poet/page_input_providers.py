@@ -2,11 +2,11 @@
 that the Page Objects uses to get external data (e.g. the HTML). That's why we
 have created a colletion of Page Object Input Providers.
 
-The current module implements a Page Input Providers for
+The current module implements a Page Input Provider for
 :class:`web_poet.HttpResponse <web_poet.page_inputs.http.HttpResponse>`, which
 is in charge of providing the response HTML from Scrapy. You could also implement
 different providers in order to acquire data from multiple external sources,
-for example, Splash or Auto Extract API.
+for example, from scrapy-playwright or from an API for automatic extraction.
 """
 import abc
 import json
