@@ -5,7 +5,7 @@ from warnings import warn
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from scrapy.utils.project import inside_project, project_data_dir
-from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders
+from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders, default_registry
 
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
@@ -57,6 +57,6 @@ def create_registry_instance(cls: Type, crawler: Crawler):
         warn(msg, DeprecationWarning, stacklevel=2)
     rules = crawler.settings.getlist(
         "SCRAPY_POET_RULES",
-        crawler.settings.getlist("SCRAPY_POET_OVERRIDES", []),
+        crawler.settings.getlist("SCRAPY_POET_OVERRIDES", default_registry.get_rules()),
     )
     return cls(rules=rules)

@@ -513,6 +513,13 @@ and store the :py:class:`web_poet.rules.ApplyRule` for you. All of the
     consume_modules("external_package_A", "another_ext_package.lib")
     SCRAPY_POET_RULES = default_registry.get_rules()
 
+.. note::
+
+    By default, ``SCRAPY_POET_RULES`` has values already set to
+    :meth:`web_poet.default_registry.get_rules`. However, if you need to add 
+    rules from other external packages, make sure to use
+    :func:`web_poet.rules.consume_modules` as shown above.
+
 For more info on this, you can refer to these docs:
 
     * ``scrapy-poet``'s :ref:`rules-from-web-poet` Tutorial section.

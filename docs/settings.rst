@@ -26,9 +26,30 @@ Deprecated. Use ``SCRAPY_POET_RULES`` instead.
 SCRAPY_POET_RULES
 -----------------
 
-Default: ``None``
+Default: :meth:`web_poet.default_registry.get_rules()`
 
-Accepts an ``Iterable[ApplyRule]`` which sets the rules to use.
+.. warning::
+
+    Although ``SCRAPY_POET_RULES`` already has values from the ``default_registry``,
+    make sure you call :func:`web_poet.rules.consume_modules` if you're using
+    other rules from other external packages.
+
+    Example:
+
+    .. code-block:: python
+
+        from web_poet import default_registry, consume_modules
+
+        # The consume_modules() must be called first if you need to properly import
+        # rules from other packages. Otherwise, it can be omitted.
+        # More info about this caveat on web-poet docs.
+        consume_modules("external_package_A", "another_ext_package.lib")
+
+        # To get all of the Override Rules that were declared via annotations.
+        SCRAPY_POET_RULES = default_registry.get_rules()
+
+
+Accepts a ``List[ApplyRule]`` which sets the rules to use.
 
 There are sections dedicated for this at :ref:`intro-tutorial` and
 :ref:`rules-from-web-poet`.

@@ -83,7 +83,8 @@ TBR
 * Deprecations:
 
     * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
-      ``SCRAPY_POET_RULES``.
+      ``SCRAPY_POET_RULES`` which now, by default,
+      uses :meth:`web_poet.default_registry.get_rules`.
 
 * Backward incompatible changes:
 

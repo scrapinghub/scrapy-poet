@@ -187,6 +187,14 @@ For example:
     # To get all of the Override Rules that were declared via annotations.
     SCRAPY_POET_RULES = default_registry.get_rules()
 
+ 
+.. note::
+
+    By default, ``SCRAPY_POET_RULES`` has values already set to
+    :meth:`web_poet.default_registry.get_rules`. However, if you need to add 
+    rules from other external packages, make sure to use
+    :func:`web_poet.rules.consume_modules` as shown above.
+
 The :py:meth:`web_poet.rules.RulesRegistry.get_rules` method of the
 ``default_registry`` above returns ``List[ApplyRule]`` that were declared
 using `web-poet`_'s :py:func:`web_poet.handle_urls` annotation. This is much
