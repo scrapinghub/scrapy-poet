@@ -20,9 +20,10 @@ Creating providers
 ==================
 
 Providers are responsible for building dependencies needed by Injectable
-objects. A good example would be the ``HttpResponseProvider``,
-which builds and provides a ``web_poet.HttpResponse`` instance for Injectables
-that need it, like the ``web_poet.WebPage``.
+objects. A good example would be the
+:class:`scrapy_poet.page_input_providers.HttpResponseProvider`, which builds and
+provides a :class:`web_poet.page_inputs.http.HttpResponse` instance for Injectables
+that need it, like the :class:`web_poet.pages.WebPage`.
 
 .. code-block:: python
 
@@ -144,8 +145,8 @@ configuration dictionaries for more information.
 .. note::
 
     The providers in :const:`scrapy_poet.DEFAULT_PROVIDERS`,
-    which includes a provider for :class:`~HttpResponse`, are always
-    included by default. You can disable any of them by listing it
+    which includes a provider for :class:`web_poet.page_inputs.http.HttpResponse`,
+    are always included by default. You can disable any of them by listing it
     in the configuration with the priority `None`.
 
 Ignoring requests
@@ -276,11 +277,12 @@ Page Object uses it, the request is not ignored, for example:
 
 .. note::
 
-    The code above is just for example purposes. If you need to use ``Response``
-    instances in your Page Objects, use built-in ``WebPage`` - it has
-    ``response`` attribute with ``HttpResponse``; no additional configuration
-    is needed, as there is ``HttpResponseProvider`` enabled in ``scrapy-poet``
-    by default.
+    The code above is just for example purposes. If you need to use
+    :class:`scrapy.http.Response` instances in your Page Objects, use built-in
+    :class:`web_poet.pages.WebPage` — it has ``response`` attribute with
+    :class:`web_poet.page_inputs.http.HttpResponse`; no additional configuration
+    is needed, as there is :class:`scrapy_poet.page_input_providers.HttpResponseProvider`
+    enabled in ``scrapy-poet`` by default.
 
 Requests concurrency
 --------------------

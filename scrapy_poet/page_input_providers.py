@@ -1,11 +1,11 @@
 """The Injection Middleware needs a standard way to build the Page Inputs dependencies
 that the Page Objects uses to get external data (e.g. the HTML). That's why we
-have created a repository of ``PageObjectInputProviders``.
+have created a colletion of Page Object Input Providers.
 
-The current module implements a ``PageObjectInputProviders`` for
-:class:`web_poet.page_inputs.HttpResponse`, which is in charge of providing the response
-HTML from Scrapy. You could also implement different providers in order to
-acquire data from multiple external sources, for example,
+The current module implements a Page Input Providers for
+:class:`web_poet.page_inputs.HttpResponse`, which is in charge of providing the
+response HTML from Scrapy. You could also implement different providers in order
+to acquire data from multiple external sources, for example,
 Splash or Auto Extract API.
 """
 import abc
@@ -182,7 +182,9 @@ class CacheDataProviderMixin(abc.ABC):
 
 
 class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
-    """This class provides ``web_poet.page_inputs.HttpResponse`` instances."""
+    """This class provides :class:`web_poet.page_inputs.http.HttpResponse`
+    instances.
+    """
 
     provided_classes = {HttpResponse}
     name = "response_data"
@@ -200,7 +202,9 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
             self._fingerprint = request_fingerprint
 
     def __call__(self, to_provide: Set[Callable], response: Response):
-        """Builds a ``HttpResponse`` instance using a Scrapy ``Response``"""
+        """Builds a :class:`web_poet.page_inputs.http.HttpResponse` instance
+        using a :class:`scrapy.http.Response` instance.
+        """
         return [
             HttpResponse(
                 url=response.url,
@@ -239,39 +243,47 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
 
 
 class HttpClientProvider(PageObjectInputProvider):
-    """This class provides ``web_poet.requests.HttpClient`` instances."""
+    """This class provides :class:`web_poet.page_inputs.client.HttpClient`
+    instances.
+    """
 
     provided_classes = {HttpClient}
 
     def __call__(self, to_provide: Set[Callable], crawler: Crawler):
-        """Creates an ``web_poet.requests.HttpClient`` instance using Scrapy's
-        downloader.
+        """Creates an :class:`web_poet.page_inputs.client.HttpClient` instance
+        using Scrapy's downloader.
         """
         downloader = create_scrapy_downloader(crawler.engine.download)
         return [HttpClient(request_downloader=downloader)]
 
 
 class PageParamsProvider(PageObjectInputProvider):
-    """This class provides ``web_poet.page_inputs.PageParams`` instances."""
+    """This class provides :class:`web_poet.page_inputs.page_params.PageParams`
+    instances.
+    """
 
     provided_classes = {PageParams}
 
     def __call__(self, to_provide: Set[Callable], request: Request):
-        """Creates a ``web_poet.requests.PageParams`` instance based on the
-        data found from the ``meta["page_params"]`` field of a
-        ``scrapy.http.Response`` instance.
+        """Creates a :class:`web_poet.page_inputs.page_params.PageParams`
+        instance based on the data found from the ``meta["page_params"]`` field
+        of a :class:`scrapy.http.Response` instance.
         """
         return [PageParams(request.meta.get("page_params", {}))]
 
 
 class RequestUrlProvider(PageObjectInputProvider):
-    """This class provides ``web_poet.page_inputs.RequestUrl`` instances."""
+    """This class provides :class:`web_poet.page_inputs.http.RequestUrl`
+    instances.
+    """
 
     provided_classes = {RequestUrl}
     name = "request_url"
 
     def __call__(self, to_provide: Set[Callable], request: Request):
-        """Builds a ``RequestUrl`` instance using a Scrapy ``Request``."""
+        """Builds a :class:`web_poet.page_inputs.http.RequestUrl` instance using
+        :class:`scrapy.http.Request` instance.
+        """
         return [RequestUrl(url=request.url)]
 
 
@@ -281,7 +293,9 @@ class ResponseUrlProvider(PageObjectInputProvider):
     name = "response_url"
 
     def __call__(self, to_provide: Set[Callable], response: Response):
-        """Builds a ``ResponseUrl`` instance using a Scrapy ``Response``."""
+        """Builds a :class:`web_poet.page_inputs.http.RequestUrl` instance using
+        a :class:`scrapy.http.Response` instance.
+        """
         return [ResponseUrl(url=response.url)]
 
 

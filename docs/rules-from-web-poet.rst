@@ -42,7 +42,7 @@ page.
 Page Objects refinement
 -----------------------
 
-Any ``Injectable`` or page input can be overridden. But the overriding
+Any :class:`web_poet.pages.Injectable` or page input can be overridden. But the overriding
 mechanism stops for the children of any already overridden type. This opens
 the door to refining existing Page Objects without getting trapped in a cyclic
 dependency. For example, you might have an existing Page Object for book extraction:

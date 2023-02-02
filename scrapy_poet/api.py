@@ -8,9 +8,11 @@ _CALLBACK_FOR_MARKER = "__scrapy_poet_callback"
 
 
 class DummyResponse(Response):
-    """This class is returned by the ``InjectionMiddleware`` when it detects
-    that the download could be skipped. It inherits from Scrapy ``Response``
-    and signals and stores the URL and references the original ``Request``.
+    """This class is returned by the
+    :class:`scrapy_poet.downloadermiddlewares.InjectionMiddleware` when it detects
+    that the download could be skipped. It inherits from Scrapy
+    :class:`scrapy.http.Response` and signals and stores the URL and references
+    the original :class:`scrapy.http.Request`.
 
     If you want to skip downloads, you can type annotate your parse method
     with this class.
@@ -20,9 +22,10 @@ class DummyResponse(Response):
         def parse(self, response: DummyResponse):
             pass
 
-    If there's no Page Input that depends on a Scrapy ``Response``, the
-    ``InjectionMiddleware`` is going to skip download and provide a
-    ``DummyResponse`` to your parser instead.
+    If there's no Page Input that depends on a :class:`scrapy.http.Response`, the
+    :class:`scrapy_poet.downloadermiddlewares.InjectionMiddleware` is going to
+    skip download and provide a :class:`scrapy_poet.DummyResponse` to your parser
+    instead.
     """
 
     def __init__(self, url: str, request=Optional[Request]):
@@ -34,7 +37,7 @@ def callback_for(page_or_item_cls: Type) -> Callable:
     item class.
 
     The generated callback returns the output of the
-    ``ItemPage.to_item()`` method, i.e. extracts a single item
+    :meth:`web_poet.pages.ItemPage.to_item` method, i.e. extracts a single item
     from a web page, using a Page Object.
 
     This helper allows to reduce the boilerplate when working
@@ -68,7 +71,8 @@ def callback_for(page_or_item_cls: Type) -> Callable:
             parse_book = callback_for(BookPage)
 
     It also supports producing an async generator callable if the Page Objects's
-    ``to_item()`` method is a coroutine which uses the ``async/await`` syntax.
+    :meth:`web_poet.pages.ItemPage.to_item` method is a coroutine which uses the
+    ``async/await`` syntax.
 
     So if we have the following:
 

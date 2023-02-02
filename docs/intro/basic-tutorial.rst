@@ -418,9 +418,9 @@ be done by configuring ``SCRAPY_POET_RULES`` into ``settings.py``:
 
 .. code-block:: python
 
-    "SCRAPY_POET_RULES": [
-        ("toscrape.com", BTSBookListPage, BookListPage),
-        ("toscrape.com", BTSBookPage, BookPage)
+    SCRAPY_POET_RULES = [
+        ApplyRule("toscrape.com", BTSBookListPage, BookListPage),
+        ApplyRule("toscrape.com", BTSBookPage, BookPage)
     ]
 
 The spider is back to life!
@@ -472,7 +472,7 @@ are used for the domain
 
     from web_poet import ApplyRule
 
-    "SCRAPY_POET_RULES": [
+    SCRAPY_POET_RULES = [
         ApplyRule("toscrape.com", use=BTSBookListPage, instead_of=BookListPage),
         ApplyRule("toscrape.com", use=BTSBookPage, instead_of=BookPage),
         ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),

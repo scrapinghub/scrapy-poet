@@ -120,7 +120,8 @@ class Injector:
 
     def is_scrapy_response_required(self, request: Request):
         """
-        Check whether the request's response is going to be used.
+        Check whether the :class:`scrapy.http.Request`'s :class:`scrapy.http.Response`
+        is going to be used.
         """
         callback = get_callback(request, self.spider)
         if is_callback_requiring_scrapy_response(callback, request.callback):
@@ -270,7 +271,7 @@ def is_class_provided_by_any_provider_fn(
     True if the given type is provided by any of the registered providers.
 
     The attribute ``provided_classes`` from each provided is used.
-    This attribute can be a ``set`` or a ``Callable``. All sets are
+    This attribute can be a :class:`set` or a ``Callable``. All sets are
     joined together for efficiency.
     """
     sets_of_types: Set[Callable] = set()  # caching all sets found
@@ -301,7 +302,7 @@ def is_class_provided_by_any_provider_fn(
 
 
 def get_callback(request, spider):
-    """Get ``request.callback`` of a :class:`scrapy.Request`"""
+    """Get :attr:`scrapy.http.Request.callback` of a :class:`scrapy.http.Request`."""
     if request.callback is None:
         return getattr(spider, "parse")  # noqa: B009
     return request.callback
@@ -365,7 +366,9 @@ SCRAPY_PROVIDED_CLASSES = {
 
 
 def is_provider_requiring_scrapy_response(provider):
-    """Check whether injectable provider makes use of a valid Response."""
+    """Check whether injectable provider makes use of a valid
+    :class:`scrapy.http.Response`.
+    """
     plan = andi.plan(
         provider.__call__,
         is_injectable=is_injectable,
@@ -406,8 +409,8 @@ def get_injector_for_testing(
 
 def get_response_for_testing(callback: Callable) -> Response:
     """
-    Return a response with fake content with the configured callback.
-    It is useful for testing providers.
+    Return a :class:`scrapy.http.Response` with fake content with the configured
+    callback. It is useful for testing providers.
     """
     url = "http://example.com"
     html = """
