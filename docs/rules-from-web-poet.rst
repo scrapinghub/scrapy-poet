@@ -4,15 +4,16 @@
 Rules from web-poet
 ===================
 
-scrapy-poet fully supports the functionalities of :class:`web_poet.rules.ApplyRule`.
-It uses the registry from web_poet called :class:`web_poet.rules.RulesRegistry`
-which provides functionalties for:
+scrapy-poet fully supports the functionalities of :class:`web_poet.ApplyRule
+<web_poet.rules.ApplyRule>`. It uses the registry from web_poet called
+:class:`web_poet.RulesRegistry <web_poet.rules.RulesRegistry>` which provides
+functionalties for:
 
     * Returning the page object override if it exists for a given URL.
     * Returning the page object capable of producing an item for a given URL.
 
-A list of :class:`web_poet.rules.ApplyRule` can be configured by passing it
-to the ``SCRAPY_POET_RULES`` setting.
+A list of :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` can be configured
+by passing it to the ``SCRAPY_POET_RULES`` setting.
 
 In this section, we go over its ``instead_of`` parameter for overrides and
 ``to_return`` for item returns. However, please make sure you also read web-poet's
@@ -36,13 +37,13 @@ page.
       longer example
     - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_03.py>`_:
       rules using :py:func:`web_poet.handle_urls` decorator and retrieving them
-      via :py:meth:`web_poet.rules.RulesRegistry.get_rules`
+      via :py:meth:`web_poet.RulesRegistry.get_rules <web_poet.rules.RulesRegistry.get_rules>`
 
 
 Page Objects refinement
 -----------------------
 
-Any ``Injectable`` or page input can be overridden. But the overriding
+Any :class:`web_poet.pages.Injectable` or page input can be overridden. But the overriding
 mechanism stops for the children of any already overridden type. This opens
 the door to refining existing Page Objects without getting trapped in a cyclic
 dependency. For example, you might have an existing Page Object for book extraction:
@@ -171,7 +172,8 @@ for the domain ``toscrape.com``.
 
 In order to configure the ``scrapy-poet`` overrides automatically
 using these annotations, you can directly interact with `web-poet`_'s
-``default_registry`` (an instance of :py:class:`web_poet.rules.RulesRegistry`).
+``default_registry`` (an instance of :py:class:`web_poet.RulesRegistry
+<web_poet.rules.RulesRegistry>`).
 
 For example:
 
@@ -187,10 +189,11 @@ For example:
     # To get all of the Override Rules that were declared via annotations.
     SCRAPY_POET_RULES = default_registry.get_rules()
 
-The :py:meth:`web_poet.rules.RulesRegistry.get_rules` method of the
-``default_registry`` above returns ``List[ApplyRule]`` that were declared
-using `web-poet`_'s :py:func:`web_poet.handle_urls` annotation. This is much
-more convenient that manually defining all of the :py:class:`web_poet.ApplyRule`.
+The :py:meth:`web_poet.RulesRegistry.get_rules <web_poet.rules.RulesRegistry.get_rules>`
+method of the ``default_registry`` above returns ``List[ApplyRule]`` that were
+declared using `web-poet`_'s :py:func:`web_poet.handle_urls` annotation. This is
+much more convenient that manually defining all of the :class:`web_poet.ApplyRule
+<web_poet.rules.ApplyRule>`.
 
 Take note that since ``SCRAPY_POET_RULES`` is structured as
 ``List[ApplyRule]``, you can easily modify it later on if needed.
@@ -207,9 +210,9 @@ Item Returns
 ============
 
 scrapy-poet also supports a convenient way of asking for items directly. This
-is made possible by the ``to_return`` parameter of :class:`web_poet.rules.ApplyRule`.
-The ``to_return`` parameter specifies which item a page object is capable of
-returning for a given URL.
+is made possible by the ``to_return`` parameter of :class:`web_poet.ApplyRule
+<web_poet.rules.ApplyRule>`. The ``to_return`` parameter specifies which item a
+page object is capable of returning for a given URL.
 
 Let's check out an example:
 
@@ -289,5 +292,5 @@ From this example, we can see that:
                 return await product_page.to_item()
 
 For more information about all the expected behavior for the ``to_return``
-parameter in :class:`web_poet.rules.ApplyRule`, check out web-poet's tutorial
-regarding :ref:`rules-item-class-example`.
+parameter in :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>`, check out
+web-poet's tutorial regarding :ref:`rules-item-class-example`.
