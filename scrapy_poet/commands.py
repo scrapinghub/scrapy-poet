@@ -85,7 +85,9 @@ class SaveFixtureCommand(ScrapyCommand):
         self.settings["ITEM_PIPELINES"][SavingPipeline] = 100
         self.settings["DOWNLOADER_MIDDLEWARES"][SavingInjectionMiddleware] = 543
 
-        frozen_time = datetime.datetime.now(datetime.timezone.utc)
+        frozen_time = datetime.datetime.now(datetime.timezone.utc).replace(
+            microsecond=0
+        )
         with time_machine.travel(frozen_time):
             self.crawler_process.crawl(spider_cls, url=url)
             self.crawler_process.start()
@@ -93,7 +95,7 @@ class SaveFixtureCommand(ScrapyCommand):
         deps = saved_dependencies
         item = saved_items[0]
         meta = {
-            "frozen_time": frozen_time.isoformat(),
+            "frozen_time": frozen_time.isoformat(timespec="seconds"),
         }
         basedir = Path(self.settings.get("SCRAPY_POET_TESTS_DIR", "fixtures"))
         fixture = Fixture.save(basedir / type_name, inputs=deps, item=item, meta=meta)
