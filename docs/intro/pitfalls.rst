@@ -15,9 +15,9 @@ Pitfalls
     The TLDR; recommendation is to simply avoid defining a ``parse()`` method
     and instead choose another name.
 
-Scrapy supports declaring :class:`scrapy.http.Request` instances without setting
-any callbacks (i.e. ``None``). For these instances, Scrapy uses the ``parse()``
-method as its callback.
+Scrapy supports declaring :class:`scrapy.Request <scrapy.http.Request>` instances
+without setting any callbacks (i.e. ``None``). For these instances, Scrapy uses
+the ``parse()`` method as its callback.
 
 Let's take a look at the following code:
 
@@ -34,8 +34,8 @@ Let's take a look at the following code:
             ...
 
 Under the hood, the inherited ``start_requests()`` method from
-:class:`scrapy.spiders.Spider` doesn't declare any callback value to
-:class:`scrapy.http.Request`:
+:class:`scrapy.Spider <scrapy.spiders.Spider>` doesn't declare any callback
+value to :class:`scrapy.Request <scrapy.http.Request>`:
 
 .. code-block:: python
 
@@ -43,14 +43,14 @@ Under the hood, the inherited ``start_requests()`` method from
         yield Request(url, dont_filter=True)
 
 Apart from this, there are also some built-in Scrapy features which omit the
-:class:`scrapy.http.Request` callback value:
+:class:`scrapy.Request <scrapy.http.Request>` callback value:
 
 * :class:`scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware`
 * :class:`scrapy.pipelines.images.ImagesPipeline`
 * :class:`scrapy.pipelines.files.FilesPipeline`
 
-However, omitting the :class:`scrapy.http.Request` callback value presents *some
-problems* for **scrapy-poet**. 
+However, omitting the :class:`scrapy.Request <scrapy.http.Request>` callback
+value presents *some problems* for **scrapy-poet**. 
 
 Skipped Downloads
 -----------------
@@ -58,7 +58,7 @@ Skipped Downloads
 .. note::
 
     This subsection is specific to cases wherein a
-    :class:`scrapy_poet.api.DummyResponse` annotates the response in a ``parse()``
+    :class:`~.DummyResponse` annotates the response in a ``parse()``
     method.
 
 Let's take a look at an example:
@@ -77,7 +77,7 @@ Let's take a look at an example:
             ...
 
 In order for the built-in Scrapy features listed above to work properly,
-**scrapy-poet** chooses to ignore the :class:`scrapy_poet.api.DummyResponse`
+**scrapy-poet** chooses to ignore the :class:`~.DummyResponse`
 annotation completely. This means that the response is downloaded instead of
 being skipped.
 

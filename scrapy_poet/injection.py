@@ -120,8 +120,8 @@ class Injector:
 
     def is_scrapy_response_required(self, request: Request):
         """
-        Check whether the :class:`scrapy.http.Request`'s :class:`scrapy.http.Response`
-        is going to be used.
+        Check whether Scrapy's :class:`~scrapy.http.Request`'s
+        :class:`~scrapy.http.Response` is going to be used.
         """
         callback = get_callback(request, self.spider)
         if is_callback_requiring_scrapy_response(callback, request.callback):
@@ -302,7 +302,9 @@ def is_class_provided_by_any_provider_fn(
 
 
 def get_callback(request, spider):
-    """Get :attr:`scrapy.http.Request.callback` of a :class:`scrapy.http.Request`."""
+    """Get the :attr:`scrapy.Request.callback <scrapy.http.Request.callback>` of
+    a :class:`scrapy.Request <scrapy.http.Request>`.
+    """
     if request.callback is None:
         return getattr(spider, "parse")  # noqa: B009
     return request.callback
@@ -317,7 +319,7 @@ def is_callback_requiring_scrapy_response(
     """
     Check whether the request's callback method requires the response.
     Basically, it won't be required if the response argument in the
-    callback is annotated with ``DummyResponse``
+    callback is annotated with :class:`~.DummyResponse`.
     """
     if getattr(callback, _CALLBACK_FOR_MARKER, False) is True:
         # The callback_for function was used to create this callback.

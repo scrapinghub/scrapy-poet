@@ -20,10 +20,11 @@ Creating providers
 ==================
 
 Providers are responsible for building dependencies needed by Injectable
-objects. A good example would be the
-:class:`scrapy_poet.page_input_providers.HttpResponseProvider`, which builds and
-provides a :class:`web_poet.page_inputs.http.HttpResponse` instance for Injectables
-that need it, like the :class:`web_poet.pages.WebPage`.
+objects. A good example would be the :class:`scrapy_poet.HttpResponseProvider
+<scrapy_poet.page_input_providers.HttpResponseProvider>`, which builds and
+provides a :class:`web_poet.HttpResponse <web_poet.page_inputs.http.HttpResponse>`
+instance for Injectables that need it, like the :class:`web_poet.WebPage
+<web_poet.pages.WebPage>`.
 
 .. code-block:: python
 
@@ -55,7 +56,7 @@ You can implement your own providers in order to extend or override current
 :class:`~.PageObjectInputProvider`.
 
 Please, check the docs provided in the following API reference for more details:
-:class:`scrapy_poet.page_input_providers.PageObjectInputProvider`.
+:class:`~.PageObjectInputProvider`.
 
 
 Cache Suppport in Providers
@@ -145,9 +146,10 @@ configuration dictionaries for more information.
 .. note::
 
     The providers in :const:`scrapy_poet.DEFAULT_PROVIDERS`,
-    which includes a provider for :class:`web_poet.page_inputs.http.HttpResponse`,
-    are always included by default. You can disable any of them by listing it
-    in the configuration with the priority `None`.
+    which includes a provider for :class:`web_poet.HttpResponse
+    <web_poet.page_inputs.http.HttpResponse>`, are always included by default.
+    You can disable any of them by listing it in the configuration with the
+    priority `None`.
 
 Ignoring requests
 =================
@@ -279,9 +281,9 @@ Page Object uses it, the request is not ignored, for example:
 
     The code above is just for example purposes. If you need to use
     :class:`scrapy.http.Response` instances in your Page Objects, use built-in
-    :class:`web_poet.pages.WebPage` — it has ``response`` attribute with
-    :class:`web_poet.page_inputs.http.HttpResponse`; no additional configuration
-    is needed, as there is :class:`scrapy_poet.page_input_providers.HttpResponseProvider`
+    :class:`web_poet.WebPage <web_poet.pages.WebPage>` — it has ``response``
+    attribute with :class:`web_poet.HttpResponse <web_poet.page_inputs.http.HttpResponse>`;
+    no additional configuration is needed, as there is :class:`~.HttpResponseProvider`
     enabled in ``scrapy-poet`` by default.
 
 Requests concurrency

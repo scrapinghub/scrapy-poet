@@ -76,9 +76,9 @@ class InjectionMiddleware:
         is going to be used by the callback or a Page Input.
 
         If the :class:`scrapy.http.Response` can be ignored, a
-        :class:`scrapy_poet.api.DummyResponse` instance is
-        returned on its place. This :class:`scrapy_poet.api.DummyResponse` is
-        linked to the original :class:`scrapy.http.Request` instance.
+        :class:`~.DummyResponse` instance is returned on its place. This
+        :class:`~.DummyResponse` is linked to the original :class:`scrapy.Request
+        <scrapy.http.Request>` instance.
 
         With this behavior, we're able to optimize spider executions avoiding
         unnecessary downloads. That could be the case when the callback is
@@ -117,12 +117,13 @@ class InjectionMiddleware:
     def process_response(
         self, request: Request, response: Response, spider: Spider
     ) -> Generator[Deferred[object], object, Response]:
-        """This method fills :attr:`scrapy.http.Request.cb_kwargs` with instances
-        for the required Page Objects found in the callback signature.
+        """This method fills :attr:`scrapy.Request.cb_kwargs
+        <scrapy.http.Request.cb_kwargs>` with instances for the required Page
+        Objects found in the callback signature.
 
-        In other words, this method instantiates all :class:`web_poet.pages.Injectable`
-        subclasses declared as request callback arguments and any other parameter
-        with a :class:`scrapy_poet.page_input_providers.PageObjectInputProvider`
+        In other words, this method instantiates all :class:`web_poet.Injectable
+        <web_poet.pages.Injectable>` subclasses declared as request callback
+        arguments and any other parameter with a :class:`~.PageObjectInputProvider`
         configured for its type.
         """
         if self._skip_dependency_creation(request, spider):

@@ -7,13 +7,13 @@ Advanced Tutorial
 This section intends to go over the supported features in **web-poet** by
 **scrapy-poet**:
 
-    * :class:`web_poet.page_inputs.client.HttpClient`
-    * :class:`web_poet.page_inputs.page_params.PageParams`
+    * :class:`web_poet.HttpClient <web_poet.page_inputs.client.HttpClient>`
+    * :class:`web_poet.PageParams <web_poet.page_inputs.page_params.PageParams>`
 
 These are mainly achieved by **scrapy-poet** implementing **providers** for them:
 
-    * :class:`scrapy_poet.page_input_providers.HttpClientProvider`
-    * :class:`scrapy_poet.page_input_providers.PageParamsProvider`
+    * :class:`scrapy_poet.HttpClientProvider <scrapy_poet.page_input_providers.HttpClientProvider>`
+    * :class:`scrapy_poet.PageParamsProvider <scrapy_poet.page_input_providers.PageParamsProvider>`
 
 .. _intro-additional-requests:
 
@@ -22,14 +22,15 @@ Additional Requests
 
 Using Page Objects using additional requests doesn't need anything special from
 the spider. It would work as-is because of the readily available 
-:class:`scrapy_poet.page_input_providers.HttpClientProvider` that is enabled
-out of the box.
+:class:`scrapy_poet.HttpClientProvider <scrapy_poet.page_input_providers.HttpClientProvider>`
+that is enabled out of the box.
 
 This supplies the Page Object with the necessary
-:class:`web_poet.page_inputs.client.HttpClient` instance.
+:class:`web_poet.HttpClient <web_poet.page_inputs.client.HttpClient>` instance.
 
 The HTTP client implementation that **scrapy-poet** provides to
-:class:`web_poet.page_inputs.client.HttpClient` handles requests as follows:
+:class:`web_poet.HttpClient <web_poet.page_inputs.client.HttpClient>` handles
+requests as follows:
 
 -   Requests go through downloader middlewares, but they do not go through
     spider middlewares or through the scheduler.
@@ -100,8 +101,8 @@ method as well.
 Page params
 ===========
 
-Using :class:`web_poet.page_inputs.page_params.PageParams` allows the Scrapy
-spider to pass any arbitrary information into the Page Object.
+Using :class:`web_poet.PageParams <web_poet.page_inputs.page_params.PageParams>`
+allows the Scrapy spider to pass any arbitrary information into the Page Object.
 
 Suppose we update the earlier Page Object to control the additional request.
 This basically acts as a switch to update the behavior of the Page Object:
@@ -135,9 +136,10 @@ This basically acts as a switch to update the behavior of the Page Object:
 
 Passing the ``enable_extracting_all_images`` page parameter from the spider
 into the Page Object can be achieved by using
-:attr:`scrapy.http.Request.meta` attribute. Specifically, any ``dict`` value
-inside the ``page_params`` parameter inside :attr:`scrapy.http.Request.meta`
-will be passed into :class:`web_poet.page_inputs.page_params.PageParams`.
+:attr:`scrapy.Request.meta <scrapy.http.Request.meta>` attribute. Specifically,
+any ``dict`` value inside the ``page_params`` parameter inside
+:attr:`scrapy.Request.meta <scrapy.http.Request.meta>` will be passed into
+:class:`web_poet.PageParams <web_poet.page_inputs.page_params.PageParams>`.
 
 Let's see it in action:
 

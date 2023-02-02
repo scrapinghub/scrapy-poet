@@ -353,10 +353,11 @@ Let's adapt the spider to use this new Page Object:
         TypeError: parse() missing 1 required positional argument: 'page'
 
     This stems from the fact that using ``start_urls`` would use the predefined
-    ``start_requests()`` method wherein ``scrapy.Request`` has ``callback=None``.
+    :meth:`start_requests() <scrapy.Spider.start_requests>` method wherein
+    :class:`scrapy.Request <scrapy.http.Request>` has ``callback=None``.
 
-    One way to avoid this is to always declare the callback in ``scrapy.Request``,
-    just like in the original example.
+    One way to avoid this is to always declare the callback in :class:`scrapy.Request
+    <scrapy.http.Request>`, just like in the original example.
 
     See the :ref:`pitfalls` section for more information.
 
@@ -500,8 +501,9 @@ is accepted and it would restrict the override only to category pages.
 Manually defining overrides like this would be inconvenient, most
 especially for larger projects. Fortunately, `web-poet`_ has a cool feature to
 annotate Page Objects like :py:func:`web_poet.handle_urls` that would define
-and store the :py:class:`web_poet.rules.ApplyRule` for you. All of the
-:py:class:`web_poet.rules.ApplyRule` rules could then be simply read as:
+and store the :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` for you.
+All of the :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` rules could
+then be simply read as:
 
 .. code:: python
 
