@@ -170,12 +170,18 @@ The :py:func:`web_poet.handle_urls` decorator in this case is indicating that
 the class ``BSTBookPage`` should be used instead of ``BookPage``
 for the domain ``toscrape.com``.
 
-In order to configure the ``scrapy-poet`` overrides automatically
-using these annotations, you can directly interact with `web-poet`_'s
-``default_registry`` (an instance of :py:class:`web_poet.RulesRegistry
-<web_poet.rules.RulesRegistry>`).
+Using the rules in scrapy-poet
+------------------------------
 
-For example:
+``scrapy-poet`` automatically uses the rules defined by the ``@handle_urls``
+annotation by having the default value of the ``SCRAPY_POET_RULES`` setting set to
+:meth:`web_poet.default_registry.get_rules() <web_poet.rules.RulesRegistry.get_rules>`.
+The :py:meth:`get_rules() <web_poet.rules.RulesRegistry.get_rules>` method of the
+``default_registry`` returns a ``List[ApplyRule]``.
+
+However, if you need to add rules from other external packages, make sure to use
+:func:`web_poet.consume_modules <web_poet.rules.consume_modules>` inside your
+``settings.py`` file as shown below.
 
 .. code-block:: python
 
@@ -186,23 +192,8 @@ For example:
     # More info about this caveat on web-poet docs.
     consume_modules("external_package_A", "another_ext_package.lib")
 
-.. note::
-
-    By default, ``SCRAPY_POET_RULES`` already has some rules set from the
-    return value of :meth:`web_poet.default_registry.get_rules()
-    <web_poet.rules.RulesRegistry.get_rules>`. However, if you need to add rules
-    from other external packages, make sure to use
-    :func:`web_poet.consume_modules <web_poet.rules.consume_modules>` as shown
-    above inside your ``settings.py``.
-
-The :py:meth:`web_poet.RulesRegistry.get_rules <web_poet.rules.RulesRegistry.get_rules>`
-method of the ``default_registry`` above returns ``List[ApplyRule]`` that were
-declared using `web-poet`_'s :py:func:`web_poet.handle_urls` annotation. This is
-much more convenient that manually defining all of the :class:`web_poet.ApplyRule
-<web_poet.rules.ApplyRule>`.
-
-Take note that since ``SCRAPY_POET_RULES`` is structured as
-``List[ApplyRule]``, you can easily modify it later on if needed.
+Take note that you can modify the values of the ``SCRAPY_POET_RULES`` setting
+since it's simply structured as ``List[ApplyRule]``.
 
 .. note::
 

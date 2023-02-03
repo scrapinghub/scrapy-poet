@@ -498,12 +498,15 @@ is accepted and it would restrict the override only to category pages.
     Also see the `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_
     documentation for more information about the patterns syntax.
 
-Manually defining overrides like this would be inconvenient, most
-especially for larger projects. Fortunately, `web-poet`_ has a cool feature to
-annotate Page Objects like :py:func:`web_poet.handle_urls` that would define
-and store the :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` for you.
-All of the :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` rules could
-then be simply read as:
+Manually defining overrides like this would be inconvenient, most especially for
+larger projects. Fortunately, ``scrapy-poet`` already retrieves the rules defined
+from `web-poet`_'s ``default_registry``. This is done by setting the default
+value of the ``SCRAPY_POET_RULES`` setting as
+:meth:`web_poet.default_registry.get_rules() <web_poet.rules.RulesRegistry.get_rules>`.
+
+However, if you need to add rules from other external packages, make sure to use
+:func:`web_poet.consume_modules <web_poet.rules.consume_modules>` inside your
+``settings.py`` file as shown below.
 
 .. code:: python
 
@@ -513,15 +516,6 @@ then be simply read as:
     # rules from other packages. Otherwise, it can be omitted.
     # More info about this caveat on web-poet docs.
     consume_modules("external_package_A", "another_ext_package.lib")
-
-.. note::
-
-    By default, ``SCRAPY_POET_RULES`` already has some rules set from the
-    return value of :meth:`web_poet.default_registry.get_rules()
-    <web_poet.rules.RulesRegistry.get_rules>`. However, if you need to add rules
-    from other external packages, make sure to use
-    :func:`web_poet.consume_modules <web_poet.rules.consume_modules>` as shown
-    above inside your ``settings.py``.
 
 For more info on this, you can refer to these docs:
 

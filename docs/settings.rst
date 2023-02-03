@@ -29,14 +29,15 @@ SCRAPY_POET_RULES
 Default: :meth:`web_poet.default_registry.get_rules()
 <web_poet.rules.RulesRegistry.get_rules>`
 
+Accepts a ``List[ApplyRule]`` which sets the rules to use.
+
 .. warning::
 
     Although ``SCRAPY_POET_RULES`` already has values set from the return value of
     :meth:`web_poet.default_registry.get_rules() <web_poet.rules.RulesRegistry.get_rules>`,
     make sure you call :func:`web_poet.consume_modules <web_poet.rules.consume_modules>`
-    inside your ``settings.py`` if you're using other rules from other external packages.
-
-Accepts a ``List[ApplyRule]`` which sets the rules to use.
+    inside your ``settings.py`` file if you're using other rules from other external
+    packages which contain page objects annotated with ``@handle_urls``.
 
 There are sections dedicated for this at :ref:`intro-tutorial` and
 :ref:`rules-from-web-poet`.
