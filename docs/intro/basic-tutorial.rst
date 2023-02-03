@@ -353,10 +353,11 @@ Let's adapt the spider to use this new Page Object:
         TypeError: parse() missing 1 required positional argument: 'page'
 
     This stems from the fact that using ``start_urls`` would use the predefined
-    ``start_requests()`` method wherein ``scrapy.Request`` has ``callback=None``.
+    :meth:`start_requests() <scrapy.Spider.start_requests>` method wherein
+    :class:`scrapy.Request <scrapy.http.Request>` has ``callback=None``.
 
-    One way to avoid this is to always declare the callback in ``scrapy.Request``,
-    just like in the original example.
+    One way to avoid this is to always declare the callback in :class:`scrapy.Request
+    <scrapy.http.Request>`, just like in the original example.
 
     See the :ref:`pitfalls` section for more information.
 
@@ -418,9 +419,9 @@ be done by configuring ``SCRAPY_POET_RULES`` into ``settings.py``:
 
 .. code-block:: python
 
-    "SCRAPY_POET_RULES": [
-        ("toscrape.com", BTSBookListPage, BookListPage),
-        ("toscrape.com", BTSBookPage, BookPage)
+    SCRAPY_POET_RULES = [
+        ApplyRule("toscrape.com", BTSBookListPage, BookListPage),
+        ApplyRule("toscrape.com", BTSBookPage, BookPage)
     ]
 
 The spider is back to life!
@@ -472,7 +473,7 @@ are used for the domain
 
     from web_poet import ApplyRule
 
-    "SCRAPY_POET_RULES": [
+    SCRAPY_POET_RULES = [
         ApplyRule("toscrape.com", use=BTSBookListPage, instead_of=BookListPage),
         ApplyRule("toscrape.com", use=BTSBookPage, instead_of=BookPage),
         ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),
@@ -500,8 +501,9 @@ is accepted and it would restrict the override only to category pages.
 Manually defining overrides like this would be inconvenient, most
 especially for larger projects. Fortunately, `web-poet`_ has a cool feature to
 annotate Page Objects like :py:func:`web_poet.handle_urls` that would define
-and store the :py:class:`web_poet.rules.ApplyRule` for you. All of the
-:py:class:`web_poet.rules.ApplyRule` rules could then be simply read as:
+and store the :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` for you.
+All of the :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` rules could
+then be simply read as:
 
 .. code:: python
 
