@@ -179,6 +179,8 @@ def test_scrapy_response_to_http_response(scrapy_response, http_response):
 
 @mock.patch("scrapy_poet.utils.consume_modules")
 def test_create_registry_instance_SCRAPY_POET_MODULES(mock_consume_modules, settings):
+    settings.set("SCRAPY_POET_RULES", [])
+
     mock_cls = mock.Mock()
     fake_crawler = get_crawler(Spider, settings)
     create_registry_instance(mock_cls, fake_crawler)
