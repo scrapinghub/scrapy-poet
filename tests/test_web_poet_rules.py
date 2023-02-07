@@ -130,21 +130,6 @@ def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int 
     assert all([True for k, v in expected.items() if isinstance(deps[0][k], v)])
 
 
-def assert_warning_tokens(caught_warnings, expected_warning_tokens):
-    results = []
-    for warning in caught_warnings:
-        results.append(
-            all(
-                [
-                    True
-                    for expected in expected_warning_tokens
-                    if expected in str(warning.message)
-                ]
-            )
-        )
-    assert all(results)
-
-
 @handle_urls(URL)
 class UrlMatchPage(ItemPage):
     async def to_item(self) -> dict:
@@ -466,15 +451,15 @@ def test_item_return_subclass() -> None:
     """
 
     # There should be a warning to the user about clashing rules.
-    expected_warning_tokens = [
-        "Consider setting the priority explicitly for these rules:",
-        repr(ApplyRule(URL, use=ParentProductPage, to_return=ProductFromParent)),
-        repr(ApplyRule(URL, use=SubclassProductPage, to_return=ProductFromParent)),
+    rules = [
+        ApplyRule(URL, use=ParentProductPage, to_return=ProductFromParent),
+        ApplyRule(URL, use=SubclassProductPage, to_return=ProductFromParent),
     ]
+    msg = f"Consider updating the priority of these rules: {rules}"
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         item, deps = yield crawl_item_and_deps(ProductFromParent)
-        assert_warning_tokens(caught_warnings, expected_warning_tokens)
+        assert any([True for w in caught_warnings if msg in str(w.message)])
 
     assert item == ProductFromParent(name="subclass product name")
     assert_deps(deps, {"item": ProductFromParent})
@@ -518,15 +503,15 @@ def test_item_return_individually_defined() -> None:
     The latter rule that was defined should be used when the priorities are the
     same.
     """
-    expected_warning_tokens = [
-        "Consider setting the priority explicitly for these rules:",
-        repr(ApplyRule(URL, use=IndependentA1Page, to_return=AItem)),
-        repr(ApplyRule(URL, use=IndependentA2Page, to_return=AItem)),
+    rules = [
+        ApplyRule(URL, use=IndependentA1Page, to_return=AItem),
+        ApplyRule(URL, use=IndependentA2Page, to_return=AItem),
     ]
+    msg = f"Consider updating the priority of these rules: {rules}"
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         item, deps = yield crawl_item_and_deps(AItem)
-        assert_warning_tokens(caught_warnings, expected_warning_tokens)
+        assert any([True for w in caught_warnings if msg in str(w.message)])
 
     assert item == AItem(name="independent A2")
     assert_deps(deps, {"item": IndependentA2Page})
