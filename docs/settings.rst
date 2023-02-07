@@ -45,9 +45,20 @@ SCRAPY_POET_MODULES
 
 Default: ``[]``
 
-A list of modules (i.e. ``List[str]``) which scrapy-poet will look for page objects
-annotated with the :func:`web_poet.handle_urls` decorator. Each module is passed
-into :func:`web_poet.consume_modules <web_poet.rules.consume_modules>`.
+A list of packages/modules (i.e. ``List[str]``) which scrapy-poet will look for
+page objects annotated with the :func:`web_poet.handle_urls` decorator. Each
+package/module is passed into
+:func:`web_poet.consume_modules <web_poet.rules.consume_modules>` where each
+module from a package is recursively loaded.
+
+This ensures that when using the default value of ``SCRAPY_POET_RULES`` set to
+:meth:`web_poet.default_registry.get_rules() <web_poet.rules.RulesRegistry.get_rules>`,
+it should contain all the intended rules.
+
+Note that it's also possible for ``SCRAPY_POET_RULES`` to have rules not specified
+in ``SCRAPY_POET_MODULES`` (e.g. when the annotated page objects are inside your
+Scrapy project). However, it's recommended to still use ``SCRAPY_POET_MODULES``
+to ensure all the intended rules are properly loaded.
 
 SCRAPY_POET_CACHE
 -----------------
