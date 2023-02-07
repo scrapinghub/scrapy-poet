@@ -35,13 +35,19 @@ Accepts a ``List[ApplyRule]`` which sets the rules to use.
 
     Although ``SCRAPY_POET_RULES`` already has values set from the return value of
     :meth:`web_poet.default_registry.get_rules() <web_poet.rules.RulesRegistry.get_rules>`,
-    make sure you call :func:`web_poet.consume_modules <web_poet.rules.consume_modules>`
-    inside your ``settings.py`` file if you're using other rules from other external
-    packages which contain page objects annotated with ``@handle_urls``.
+    make sure to also set the ``SCRAPY_POET_MODULES`` setting below.
 
 There are sections dedicated for this at :ref:`intro-tutorial` and
 :ref:`rules-from-web-poet`.
 
+SCRAPY_POET_MODULES
+-------------------
+
+Default: ``[]``
+
+A list of modules (i.e. ``List[str]``) which scrapy-poet will look for page objects
+annotated with the :func:`web_poet.handle_urls` decorator. Each module is passed
+into :func:`web_poet.consume_modules <web_poet.rules.consume_modules>`.
 
 SCRAPY_POET_CACHE
 -----------------

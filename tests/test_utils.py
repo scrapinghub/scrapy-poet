@@ -2,10 +2,13 @@ from pathlib import PosixPath
 from unittest import mock
 
 import pytest
+from scrapy import Spider
 from scrapy.http import Request, Response, TextResponse
+from scrapy.utils.test import get_crawler
 from web_poet import HttpRequest, HttpResponse
 
 from scrapy_poet.utils import (
+    create_registry_instance,
     get_scrapy_data_path,
     http_request_to_scrapy_request,
     scrapy_response_to_http_response,
@@ -172,3 +175,19 @@ def test_scrapy_response_to_http_response(scrapy_response, http_response):
     assert result.status == http_response.status
     assert result.headers == http_response.headers
     assert result._encoding == http_response._encoding
+
+
+@mock.patch("scrapy_poet.utils.consume_modules")
+def test_create_registry_instance_SCRAPY_POET_MODULES(mock_consume_modules, settings):
+    mock_cls = mock.Mock()
+    fake_crawler = get_crawler(Spider, settings)
+    create_registry_instance(mock_cls, fake_crawler)
+    mock_consume_modules.assert_not_called()
+    mock_cls.assert_called_once_with(rules=[])
+
+    mock_cls = mock.Mock()
+    settings.set("SCRAPY_POET_MODULES", ["a.b.c", "x.y"])
+    fake_crawler = get_crawler(Spider, settings)
+    create_registry_instance(mock_cls, fake_crawler)
+    assert mock_consume_modules.call_args_list == [mock.call("a.b.c"), mock.call("x.y")]
+    mock_cls.assert_called_once_with(rules=[])

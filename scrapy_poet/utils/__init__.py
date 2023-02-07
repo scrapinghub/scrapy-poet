@@ -5,7 +5,13 @@ from warnings import warn
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from scrapy.utils.project import inside_project, project_data_dir
-from web_poet import HttpRequest, HttpResponse, HttpResponseHeaders, default_registry
+from web_poet import (
+    HttpRequest,
+    HttpResponse,
+    HttpResponseHeaders,
+    consume_modules,
+    default_registry,
+)
 
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
@@ -49,6 +55,8 @@ def scrapy_response_to_http_response(response: Response) -> HttpResponse:
 
 
 def create_registry_instance(cls: Type, crawler: Crawler):
+    for module in crawler.settings.getlist("SCRAPY_POET_MODULES", []):
+        consume_modules(module)
     if "SCRAPY_POET_OVERRIDES" in crawler.settings:
         msg = (
             "The SCRAPY_POET_OVERRIDES setting is deprecated. "
