@@ -7,6 +7,12 @@ Pitfalls
 ``scrapy.Request`` without callback
 ===================================
 
+.. tip::
+
+    Note that the pitfalls discussed in this section isn't applicable to
+    Scrapy >= 2.8 when :class:`scrapy.Request <scrapy.http.Request>`'s
+    callback value uses the new :func:`scrapy.http.request.NO_CALLBACK`.
+
 .. note::
 
     This section *only applies* to specific cases where spiders define a
@@ -15,9 +21,9 @@ Pitfalls
     The TLDR; recommendation is to simply avoid defining a ``parse()`` method
     and instead choose another name.
 
-Scrapy supports declaring :class:`scrapy.Request <scrapy.http.Request>` instances
-without setting any callbacks (i.e. ``None``). For these instances, Scrapy uses
-the ``parse()`` method as its callback.
+Scrapy < 2.8 supports declaring :class:`scrapy.Request <scrapy.http.Request>` 
+instances without setting any callbacks (i.e. ``None``). For these instances,
+Scrapy uses the ``parse()`` method as its callback.
 
 Let's take a look at the following code:
 
@@ -42,8 +48,8 @@ value to :class:`scrapy.Request <scrapy.http.Request>`:
     for url in self.start_urls:
         yield Request(url, dont_filter=True)
 
-Apart from this, there are also some built-in Scrapy features which omit the
-:class:`scrapy.Request <scrapy.http.Request>` callback value:
+Apart from this, there are also some built-in Scrapy < 2.8 features which omit
+the :class:`scrapy.Request <scrapy.http.Request>` callback value:
 
 * :class:`scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware`
 * :class:`scrapy.pipelines.images.ImagesPipeline`
@@ -76,7 +82,7 @@ Let's take a look at an example:
         def parse(self, response: DummyResponse):
             ...
 
-In order for the built-in Scrapy features listed above to work properly,
+In order for the built-in Scrapy < 2.8 features listed above to work properly,
 **scrapy-poet** chooses to ignore the :class:`~.DummyResponse`
 annotation completely. This means that the response is downloaded instead of
 being skipped.

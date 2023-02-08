@@ -80,6 +80,12 @@ TBR
 * Moved some of the utility functions from the test module into
   ``scrapy_poet.utils.testing``.
 
+* Supports the new :func:`scrapy.http.request.NO_CALLBACK` introduced in
+  **Scrapy 2.8**. This means that the :ref:`pitfalls` (introduced in
+  ``scrapy-poet==0.7.0``) when using the ``parse()`` method won't apply if
+  :class:`scrapy.Request <scrapy.http.Request>`'s callback is set to
+  :func:`scrapy.http.request.NO_CALLBACK`.
+
 * Documentation improvements.
 
 * Deprecations:

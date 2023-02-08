@@ -660,3 +660,28 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
             "<locals>.TestSpider.parse() missing 1 required positional argument: 'page2'"
         )
     assert expected_msg in caplog.text
+
+
+@inlineCallbacks
+def test_parse_callback_NO_CALLBACK() -> None:
+    """See: https://github.com/scrapinghub/scrapy-poet/issues/118"""
+
+    try:
+        from scrapy.http.request import NO_CALLBACK
+    except ImportError:
+        pytest.skip("NO_CALLBACK not available in Scrapy < 2.8")
+
+    with MockServer(EchoResource) as server:
+
+        class TestSpider(BaseSpider):
+            start_urls = [server.root_url]
+
+            def start_requests(self):
+                yield Request(server.root_url, callback=NO_CALLBACK)
+
+        crawler = make_crawler(TestSpider, {})
+
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            yield crawler.crawl()
+
+        assert not caught_warnings
