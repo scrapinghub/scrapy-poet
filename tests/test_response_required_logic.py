@@ -281,7 +281,7 @@ def test_is_callback_using_response_for_scrapy28_below() -> None:
     ):
         with pytest.warns(UserWarning) as record:
             assert (
-                is_callback_requiring_scrapy_response(method, request.callback) is True
+                is_callback_requiring_scrapy_response(method, request.callback) is True  # type: ignore[arg-type]
             )
             assert expected_warning in str(record.list[0].message)
 
