@@ -84,6 +84,7 @@ class SaveFixtureCommand(ScrapyCommand):
         spider_cls = spider_for(cls)
         self.settings["ITEM_PIPELINES"][SavingPipeline] = 100
         self.settings["DOWNLOADER_MIDDLEWARES"][SavingInjectionMiddleware] = 543
+        self.settings["_SCRAPY_POET_SAVEFIXTURE"] = True
 
         frozen_time = datetime.datetime.now(datetime.timezone.utc).replace(
             microsecond=0
