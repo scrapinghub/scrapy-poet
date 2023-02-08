@@ -178,7 +178,7 @@ with the :func:`web_poet.handle_urls` decorator by having the default value of t
 ``SCRAPY_POET_RULES`` setting set to
 :meth:`web_poet.default_registry.get_rules() <web_poet.rules.RulesRegistry.get_rules>`,
 which returns a ``List[ApplyRule]``. Moreover, you also need to set the
-``SCRAPY_POET_MODULES`` setting so that these rules could be properly imported.
+``SCRAPY_POET_DISCOVER`` setting so that these rules could be properly imported.
 
 .. note::
 

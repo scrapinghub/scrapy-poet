@@ -35,13 +35,13 @@ Accepts a ``List[ApplyRule]`` which sets the rules to use.
 
     Although ``SCRAPY_POET_RULES`` already has values set from the return value of
     :meth:`web_poet.default_registry.get_rules() <web_poet.rules.RulesRegistry.get_rules>`,
-    make sure to also set the ``SCRAPY_POET_MODULES`` setting below.
+    make sure to also set the ``SCRAPY_POET_DISCOVER`` setting below.
 
 There are sections dedicated for this at :ref:`intro-tutorial` and
 :ref:`rules-from-web-poet`.
 
-SCRAPY_POET_MODULES
--------------------
+SCRAPY_POET_DISCOVER
+--------------------
 
 Default: ``[]``
 
@@ -56,8 +56,8 @@ This ensures that when using the default value of ``SCRAPY_POET_RULES`` set to
 it should contain all the intended rules.
 
 Note that it's also possible for ``SCRAPY_POET_RULES`` to have rules not specified
-in ``SCRAPY_POET_MODULES`` (e.g. when the annotated page objects are inside your
-Scrapy project). However, it's recommended to still use ``SCRAPY_POET_MODULES``
+in ``SCRAPY_POET_DISCOVER`` (e.g. when the annotated page objects are inside your
+Scrapy project). However, it's recommended to still use ``SCRAPY_POET_DISCOVER``
 to ensure all the intended rules are properly loaded.
 
 SCRAPY_POET_CACHE

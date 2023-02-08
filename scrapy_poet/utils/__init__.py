@@ -55,7 +55,7 @@ def scrapy_response_to_http_response(response: Response) -> HttpResponse:
 
 
 def create_registry_instance(cls: Type, crawler: Crawler):
-    for module in crawler.settings.getlist("SCRAPY_POET_MODULES", []):
+    for module in crawler.settings.getlist("SCRAPY_POET_DISCOVER", []):
         consume_modules(module)
     if "SCRAPY_POET_OVERRIDES" in crawler.settings:
         msg = (

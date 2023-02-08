@@ -506,7 +506,7 @@ value of the ``SCRAPY_POET_RULES`` setting as
 
 However, this only works if page objects are annotated using the
 :func:`web_poet.handle_urls` decorator. You also need to set the
-``SCRAPY_POET_MODULES`` setting so that these rules could be properly imported.
+``SCRAPY_POET_DISCOVER`` setting so that these rules could be properly imported.
 
 For more info on this, you can refer to these docs:
 

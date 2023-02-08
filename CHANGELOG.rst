@@ -75,7 +75,7 @@ TBR
       a deadlock in their sub-dependencies, e.g. due to a circular dependency
       between page objects.
 
-* New setting named ``SCRAPY_POET_MODULES``.
+* New setting named ``SCRAPY_POET_DISCOVER``.
 
 * Moved some of the utility functions from the test module into
   ``scrapy_poet.utils.testing``.
