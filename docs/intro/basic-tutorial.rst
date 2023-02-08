@@ -498,22 +498,15 @@ is accepted and it would restrict the override only to category pages.
     Also see the `url-matcher <https://url-matcher.readthedocs.io/en/stable/>`_
     documentation for more information about the patterns syntax.
 
-Manually defining overrides like this would be inconvenient, most
-especially for larger projects. Fortunately, `web-poet`_ has a cool feature to
-annotate Page Objects like :py:func:`web_poet.handle_urls` that would define
-and store the :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` for you.
-All of the :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` rules could
-then be simply read as:
+Manually defining overrides like this would be inconvenient, most especially for
+larger projects. Fortunately, scrapy-poet already retrieves the rules defined
+from `web-poet`_'s ``default_registry``. This is done by setting the default
+value of the ``SCRAPY_POET_RULES`` setting as
+:meth:`web_poet.default_registry.get_rules() <web_poet.rules.RulesRegistry.get_rules>`.
 
-.. code:: python
-
-    from web_poet import default_registry, consume_modules
-
-    # The consume_modules() must be called first if you need to properly import
-    # rules from other packages. Otherwise, it can be omitted.
-    # More info about this caveat on web-poet docs.
-    consume_modules("external_package_A", "another_ext_package.lib")
-    SCRAPY_POET_RULES = default_registry.get_rules()
+However, this only works if page objects are annotated using the
+:func:`web_poet.handle_urls` decorator. You also need to set the
+``SCRAPY_POET_DISCOVER`` setting so that these rules could be properly imported.
 
 For more info on this, you can refer to these docs:
 

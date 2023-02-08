@@ -170,33 +170,15 @@ The :py:func:`web_poet.handle_urls` decorator in this case is indicating that
 the class ``BSTBookPage`` should be used instead of ``BookPage``
 for the domain ``toscrape.com``.
 
-In order to configure the ``scrapy-poet`` overrides automatically
-using these annotations, you can directly interact with `web-poet`_'s
-``default_registry`` (an instance of :py:class:`web_poet.RulesRegistry
-<web_poet.rules.RulesRegistry>`).
+Using the rules in scrapy-poet
+------------------------------
 
-For example:
-
-.. code-block:: python
-
-    from web_poet import default_registry, consume_modules
-
-    # The consume_modules() must be called first if you need to properly import
-    # rules from other packages. Otherwise, it can be omitted.
-    # More info about this caveat on web-poet docs.
-    consume_modules("external_package_A", "another_ext_package.lib")
-
-    # To get all of the Override Rules that were declared via annotations.
-    SCRAPY_POET_RULES = default_registry.get_rules()
-
-The :py:meth:`web_poet.RulesRegistry.get_rules <web_poet.rules.RulesRegistry.get_rules>`
-method of the ``default_registry`` above returns ``List[ApplyRule]`` that were
-declared using `web-poet`_'s :py:func:`web_poet.handle_urls` annotation. This is
-much more convenient that manually defining all of the :class:`web_poet.ApplyRule
-<web_poet.rules.ApplyRule>`.
-
-Take note that since ``SCRAPY_POET_RULES`` is structured as
-``List[ApplyRule]``, you can easily modify it later on if needed.
+scrapy-poet automatically uses the rules defined by page objects annotated
+with the :func:`web_poet.handle_urls` decorator by having the default value of the
+``SCRAPY_POET_RULES`` setting set to
+:meth:`web_poet.default_registry.get_rules() <web_poet.rules.RulesRegistry.get_rules>`,
+which returns a ``List[ApplyRule]``. Moreover, you also need to set the
+``SCRAPY_POET_DISCOVER`` setting so that these rules could be properly imported.
 
 .. note::
 

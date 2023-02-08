@@ -75,6 +75,8 @@ TBR
       a deadlock in their sub-dependencies, e.g. due to a circular dependency
       between page objects.
 
+* New setting named ``SCRAPY_POET_DISCOVER``.
+
 * Moved some of the utility functions from the test module into
   ``scrapy_poet.utils.testing``.
 
@@ -83,7 +85,8 @@ TBR
 * Deprecations:
 
     * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
-      ``SCRAPY_POET_RULES``.
+      ``SCRAPY_POET_RULES`` which now, by default,
+      uses :meth:`web_poet.default_registry.get_rules`.
 
 * Backward incompatible changes:
 

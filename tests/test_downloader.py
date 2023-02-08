@@ -434,10 +434,10 @@ class BaseSpider(Spider):
 
 
 # See: https://github.com/scrapinghub/scrapy-poet/issues/48
-def _assert_warning_messages(record, index: Optional[List] = None):
+def _assert_warning_messages(
+    record, index: Optional[List] = None, not_existing: bool = False
+):
     index = index or [0, 1]
-
-    assert len(index) == len(record.list), "Differing number of warnings"
 
     expected_warnings = [
         # From injection.py:
@@ -456,8 +456,17 @@ def _assert_warning_messages(record, index: Optional[List] = None):
         "See the Pitfalls doc for more info.",
     ]
 
-    for idx, result_warning in zip(index, record.list):
-        assert expected_warnings[idx] in str(result_warning.message)
+    expected_warning_found = [False] * len(index)
+
+    for result_warning in record.list:
+        for idx in index:
+            if expected_warnings[idx] in str(result_warning.message):
+                expected_warning_found[idx] = True
+
+    if not not_existing:
+        assert all(expected_warning_found)
+    else:
+        assert not any(expected_warning_found)
 
 
 @inlineCallbacks
@@ -508,10 +517,10 @@ def test_parse_callback_none_response() -> None:
 
         crawler = make_crawler(TestSpider, {})
 
-        with warnings.catch_warnings(record=True) as warning_msg:
+        with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
 
-    assert not warning_msg
+    _assert_warning_messages(record, not_existing=True)
     assert not isinstance(collected["response"], DummyResponse)
 
 
