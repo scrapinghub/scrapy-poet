@@ -9,7 +9,7 @@ Pitfalls
 
 .. tip::
 
-    Note that the pitfalls discussed in this section isn't applicable to
+    Note that the pitfalls discussed in this section aren't applicable to
     Scrapy >= 2.8 when :class:`scrapy.Request <scrapy.http.Request>`'s
     callback value uses the new :func:`scrapy.http.request.NO_CALLBACK`.
 
@@ -21,9 +21,9 @@ Pitfalls
     The TLDR; recommendation is to simply avoid defining a ``parse()`` method
     and instead choose another name.
 
-Scrapy < 2.8 supports declaring :class:`scrapy.Request <scrapy.http.Request>` 
-instances without setting any callbacks (i.e. ``None``). For these instances,
-Scrapy uses the ``parse()`` method as its callback.
+Scrapy supports declaring :class:`scrapy.Request <scrapy.http.Request>` instances
+without setting any callbacks (i.e. ``None``). For these instances, Scrapy uses
+the ``parse()`` method as its callback.
 
 Let's take a look at the following code:
 
