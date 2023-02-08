@@ -26,6 +26,7 @@ from scrapy_poet.injection_errors import (
     UndeclaredProvidedTypeError,
 )
 from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.utils import is_min_scrapy_version
 
 from .utils import create_registry_instance, get_scrapy_data_path
 
@@ -339,7 +340,8 @@ def is_callback_requiring_scrapy_response(
 
     if issubclass(first_parameter.annotation, DummyResponse):
         # See: https://github.com/scrapinghub/scrapy-poet/issues/48
-        if raw_callback is None:
+        # See: https://github.com/scrapinghub/scrapy-poet/issues/118
+        if raw_callback is None and not is_min_scrapy_version("2.8.0"):
             warnings.warn(
                 "A request has been encountered with callback=None which "
                 "defaults to the parse() method. If the parse() method is "

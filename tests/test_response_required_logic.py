@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, Dict
 
 import attr
@@ -20,6 +21,7 @@ from scrapy_poet.page_input_providers import (
     HttpResponseProvider,
     PageObjectInputProvider,
 )
+from scrapy_poet.utils import is_min_scrapy_version
 
 # See: https://github.com/scrapinghub/scrapy-poet/issues/118
 _FAKE_CALLBACK_FOR_SCRAPY_BELOW_2x8 = lambda: None  # noqa: E731
@@ -191,66 +193,53 @@ def test_is_provider_using_response():
     assert is_provider_requiring_scrapy_response(StringProductProvider) is False
 
 
-def test_is_callback_using_response():
+@pytest.mark.skipif(
+    is_min_scrapy_version("2.8.0"),
+    reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
+)
+def test_is_callback_using_response_for_scrapy28_below() -> None:
     spider = MySpider()
-    request_with_callback = Request("https://example.com", callback=lambda _: _)
-    request_no_callback = Request("https://example.com", callback=NO_CALLBACK)
-
-    for request in [request_with_callback, request_no_callback]:
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse, request.callback)
-            is True
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse2, request.callback)
-            is True
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse3, request.callback)
-            is False
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse4, request.callback)
-            is False
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse5, request.callback)
-            is True
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse6, request.callback)
-            is False
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse7, request.callback)
-            is True
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse8, request.callback)
-            is False
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse9, request.callback)
-            is True
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse10, request.callback)
-            is False
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse11, request.callback)
-            is True
-        )
-        assert (
-            is_callback_requiring_scrapy_response(spider.parse12, request.callback)
-            is True
-        )
-        # Callbacks created with the callback_for function won't make use of
-        # the response, but their providers might use them.
-        assert (
-            is_callback_requiring_scrapy_response(spider.callback_for_parse, request)
-            is False
-        )
+    request = Request("https://example.com", callback=lambda _: _)
+    assert is_callback_requiring_scrapy_response(spider.parse, request.callback) is True
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse2, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse3, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse4, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse5, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse6, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse7, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse8, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse9, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse10, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse11, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse12, request.callback) is True
+    )
+    # Callbacks created with the callback_for function won't make use of
+    # the response, but their providers might use them.
+    assert (
+        is_callback_requiring_scrapy_response(spider.callback_for_parse, request)
+        is False
+    )
 
     # See: https://github.com/scrapinghub/scrapy-poet/issues/48
     request.callback = None
@@ -295,6 +284,76 @@ def test_is_callback_using_response():
                 is_callback_requiring_scrapy_response(method, request.callback) is True
             )
             assert expected_warning in str(record.list[0].message)
+
+
+@pytest.mark.skipif(
+    not is_min_scrapy_version("2.8.0"),
+    reason="NO_CALLBACK not available in Scrapy < 2.8",
+)
+def test_is_callback_using_response_for_scrapy28_and_above() -> None:
+    spider = MySpider()
+    request_with_callback = Request("https://example.com", callback=lambda _: _)
+    request_no_callback = Request("https://example.com", callback=NO_CALLBACK)
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        for request in [request_with_callback, request_no_callback]:
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse, request.callback)
+                is True
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse2, request.callback)
+                is True
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse3, request.callback)
+                is False
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse4, request.callback)
+                is False
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse5, request.callback)
+                is True
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse6, request.callback)
+                is False
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse7, request.callback)
+                is True
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse8, request.callback)
+                is False
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse9, request.callback)
+                is True
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse10, request.callback)
+                is False
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse11, request.callback)
+                is True
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse12, request.callback)
+                is True
+            )
+            # Callbacks created with the callback_for function won't make use of
+            # the response, but their providers might use them.
+            assert (
+                is_callback_requiring_scrapy_response(
+                    spider.callback_for_parse, request
+                )
+                is False
+            )
+    assert not caught_warnings
 
 
 @inlineCallbacks

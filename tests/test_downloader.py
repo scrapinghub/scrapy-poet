@@ -18,7 +18,7 @@ from web_poet.pages import WebPage
 
 from scrapy_poet import DummyResponse
 from scrapy_poet.downloader import create_scrapy_downloader
-from scrapy_poet.utils import http_request_to_scrapy_request
+from scrapy_poet.utils import http_request_to_scrapy_request, is_min_scrapy_version
 from scrapy_poet.utils.mockserver import MockServer
 from scrapy_poet.utils.testing import (
     AsyncMock,
@@ -469,6 +469,10 @@ def _assert_warning_messages(
         assert not any(expected_warning_found)
 
 
+@pytest.mark.skipif(
+    is_min_scrapy_version("2.8.0"),
+    reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
+)
 @inlineCallbacks
 def test_parse_callback_none_dummy_response() -> None:
     """If request.callback == None and the parse() method only has a single
@@ -497,6 +501,10 @@ def test_parse_callback_none_dummy_response() -> None:
     assert not isinstance(collected["response"], DummyResponse)
 
 
+@pytest.mark.skipif(
+    is_min_scrapy_version("2.8.0"),
+    reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
+)
 @inlineCallbacks
 def test_parse_callback_none_response() -> None:
     """Similar to ``test_parse_callback_none_dummy_response()`` but instead of
@@ -524,6 +532,10 @@ def test_parse_callback_none_response() -> None:
     assert not isinstance(collected["response"], DummyResponse)
 
 
+@pytest.mark.skipif(
+    is_min_scrapy_version("2.8.0"),
+    reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
+)
 @inlineCallbacks
 def test_parse_callback_none_no_annotated_deps() -> None:
     """Similar to ``test_parse_callback_none_dummy_response()`` but there are no
@@ -551,6 +563,10 @@ def test_parse_callback_none_no_annotated_deps() -> None:
     assert isinstance(collected["response"], scrapy.http.Response)
 
 
+@pytest.mark.skipif(
+    is_min_scrapy_version("2.8.0"),
+    reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
+)
 @inlineCallbacks
 def test_parse_callback_none_with_deps(caplog) -> None:
     """Same with the ``test_parse_callback_none_dummy_response`` test but it
@@ -587,6 +603,10 @@ def test_parse_callback_none_with_deps(caplog) -> None:
     assert expected_msg in caplog.text
 
 
+@pytest.mark.skipif(
+    is_min_scrapy_version("2.8.0"),
+    reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
+)
 @inlineCallbacks
 def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
     """Same with the ``test_parse_callback_none_with_deps`` but the dep is passed
@@ -617,6 +637,10 @@ def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
     assert not isinstance(collected["response"], DummyResponse)
 
 
+@pytest.mark.skipif(
+    is_min_scrapy_version("2.8.0"),
+    reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
+)
 @inlineCallbacks
 def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
     """Same with the ``test_parse_callback_none_with_deps_cb_kwargs`` but not
@@ -662,26 +686,61 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
     assert expected_msg in caplog.text
 
 
+@pytest.mark.skipif(
+    not is_min_scrapy_version("2.8.0"),
+    reason="NO_CALLBACK not available in Scrapy < 2.8",
+)
 @inlineCallbacks
-def test_parse_callback_NO_CALLBACK() -> None:
+def test_parse_callback_NO_CALLBACK(caplog) -> None:
     """See: https://github.com/scrapinghub/scrapy-poet/issues/118"""
 
-    try:
-        from scrapy.http.request import NO_CALLBACK
-    except ImportError:
-        pytest.skip("NO_CALLBACK not available in Scrapy < 2.8")
+    collected = {}
 
     with MockServer(EchoResource) as server:
 
         class TestSpider(BaseSpider):
             start_urls = [server.root_url]
 
-            def start_requests(self):
-                yield Request(server.root_url, callback=NO_CALLBACK)
+            def parse(self, response: DummyResponse):
+                collected["response"] = response
 
         crawler = make_crawler(TestSpider, {})
 
         with warnings.catch_warnings(record=True) as caught_warnings:
             yield crawler.crawl()
 
-        assert not caught_warnings
+    assert not caught_warnings
+    assert not caplog.text
+    assert isinstance(collected["response"], DummyResponse)
+
+
+@pytest.mark.skipif(
+    not is_min_scrapy_version("2.8.0"),
+    reason="NO_CALLBACK not available in Scrapy < 2.8",
+)
+@inlineCallbacks
+def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
+    """See: https://github.com/scrapinghub/scrapy-poet/issues/118
+
+    Similar to ``test_parse_callback_NO_CALLBACK()`` but with a page object
+    dependency in ``parse()`` callback.
+    """
+
+    collected = {}
+
+    with MockServer(EchoResource) as server:
+
+        class TestSpider(BaseSpider):
+            start_urls = [server.root_url]
+
+            def parse(self, response: DummyResponse, page: BasicPage):
+                collected["response"] = response
+
+        crawler = make_crawler(TestSpider, {})
+
+        with warnings.catch_warnings(record=True) as caught_warnings:
+            yield crawler.crawl()
+
+    assert not caught_warnings
+    assert not caplog.text
+    assert not isinstance(collected["response"], DummyResponse)

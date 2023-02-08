@@ -23,7 +23,7 @@ from .page_input_providers import (
     RequestUrlProvider,
     ResponseUrlProvider,
 )
-from .utils import create_registry_instance
+from .utils import create_registry_instance, is_min_scrapy_version
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,13 @@ class InjectionMiddleware:
         return DummyResponse(url=request.url, request=request)
 
     def _skip_dependency_creation(self, request: Request, spider: Spider) -> bool:
-        """See: https://github.com/scrapinghub/scrapy-poet/issues/48"""
+        """See:
+
+        * https://github.com/scrapinghub/scrapy-poet/issues/48  — scrapy <  2.8
+        * https://github.com/scrapinghub/scrapy-poet/issues/118 — scrapy >= 2.8
+        """
+        if is_min_scrapy_version("2.8.0"):
+            return False
 
         # No need to skip if the callback doesn't default to the parse() method
         if request.callback is not None:
