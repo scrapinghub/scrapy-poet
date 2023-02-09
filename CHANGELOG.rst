@@ -80,6 +80,11 @@ TBR
 * Moved some of the utility functions from the test module into
   ``scrapy_poet.utils.testing``.
 
+* Now requires Twisted >= 21.7.0 instead of >= 18.9.0. This prevents a ``TypeError``
+  from happening since scrapy-poet uses the ``twisted.internet.defer.Deferred[object]`` 
+  type annotation in its code. On older Twisted versions, ``Deferred`` is not
+  subscriptable.
+
 * Documentation improvements.
 
 * Deprecations:
