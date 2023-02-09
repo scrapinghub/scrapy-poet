@@ -88,6 +88,8 @@ TBR
 
 * Documentation improvements.
 
+* Various test and CI Fixes.
+
 * Deprecations:
 
     * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
