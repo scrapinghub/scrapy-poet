@@ -122,7 +122,7 @@ class InjectionMiddleware:
     @inlineCallbacks
     def process_response(
         self, request: Request, response: Response, spider: Spider
-    ) -> Generator[Deferred[object], object, Response]:
+    ) -> Generator[Deferred, object, Response]:
         """This method fills :attr:`scrapy.Request.cb_kwargs
         <scrapy.http.Request.cb_kwargs>` with instances for the required Page
         Objects found in the callback signature.

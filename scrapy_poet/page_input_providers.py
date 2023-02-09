@@ -337,7 +337,7 @@ class ItemProvider(PageObjectInputProvider):
         to_provide: Set[Callable],
         request: Request,
         response: Response,
-    ) -> Generator[Deferred[object], object, List[Any]]:
+    ) -> Generator[Deferred, object, List[Any]]:
         results = []
         for cls in to_provide:
             item = self.get_from_cache(request, cls)

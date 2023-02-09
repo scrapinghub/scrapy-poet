@@ -86,6 +86,10 @@ TBR
   :class:`scrapy.Request <scrapy.http.Request>`'s callback is set to
   :func:`scrapy.http.request.NO_CALLBACK`.
 
+* Fix ``TypeError`` when using Twisted <= 21.7.0 since scrapy-poet was using
+  ``twisted.internet.defer.Deferred[object]`` type annotation before which was
+  not subscriptable.
+
 * Documentation improvements.
 
 * Various test and CI Fixes.
