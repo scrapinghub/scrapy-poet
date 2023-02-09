@@ -706,10 +706,10 @@ def test_parse_callback_NO_CALLBACK(caplog) -> None:
 
         crawler = make_crawler(TestSpider, {})
 
-        with warnings.catch_warnings(record=True) as caught_warnings:
+        with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
 
-    assert not caught_warnings
+    _assert_warning_messages(record, not_existing=True)
     assert not caplog.text
     assert isinstance(collected["response"], DummyResponse)
 
@@ -738,9 +738,9 @@ def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
 
         crawler = make_crawler(TestSpider, {})
 
-        with warnings.catch_warnings(record=True) as caught_warnings:
+        with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
 
-    assert not caught_warnings
+    _assert_warning_messages(record, not_existing=True)
     assert not caplog.text
     assert not isinstance(collected["response"], DummyResponse)
