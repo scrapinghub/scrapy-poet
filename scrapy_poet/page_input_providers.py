@@ -17,6 +17,7 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
+    Generator,
     List,
     Optional,
     Sequence,
@@ -32,6 +33,7 @@ import attr
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.http import Response
+from twisted.internet.defer import Deferred, ensureDeferred, inlineCallbacks
 from web_poet import (
     HttpClient,
     HttpResponse,
@@ -329,12 +331,13 @@ class ItemProvider(PageObjectInputProvider):
     def get_from_cache(self, request: Request, cls: Callable) -> Optional[Any]:
         return self._cached_instances.get(request, {}).get(cls)
 
-    async def __call__(
+    @inlineCallbacks
+    def __call__(
         self,
         to_provide: Set[Callable],
         request: Request,
         response: Response,
-    ) -> List[Any]:
+    ) -> Generator[Deferred[object], object, List[Any]]:
         results = []
         for cls in to_provide:
             item = self.get_from_cache(request, cls)
@@ -361,7 +364,7 @@ class ItemProvider(PageObjectInputProvider):
             )
 
             try:
-                po_instances = await self.injector.build_instances(
+                po_instances = yield from self.injector.build_instances(
                     request, response, plan
                 )
             except RecursionError:
@@ -371,7 +374,7 @@ class ItemProvider(PageObjectInputProvider):
                 )
 
             page_object = po_instances[page_object_cls]
-            item = await page_object.to_item()
+            item = yield from ensureDeferred(page_object.to_item())
 
             self.update_cache(request, po_instances)
             self.update_cache(request, {type(item): item})
