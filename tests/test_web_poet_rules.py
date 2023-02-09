@@ -30,6 +30,7 @@ from web_poet.pages import ItemT
 
 from scrapy_poet import callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
+from scrapy_poet.utils import is_min_scrapy_version
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
     capture_exceptions,
@@ -396,9 +397,16 @@ def test_basic_item_but_no_page_object() -> None:
     assigned to it in any of the given ``ApplyRule``, it would result to an error
     in the spider callback since
     """
-    expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
-    with pytest.raises(TypeError, match=expected_msg):
-        yield crawl_item_and_deps(ItemButNoPageObject)
+
+    # Starting Scrapy 2.7, there's better support for async callbacks. This
+    # means that errors aren't suppresed.
+    if is_min_scrapy_version("2.7.0"):
+        expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
+        with pytest.raises(TypeError, match=expected_msg):
+            yield crawl_item_and_deps(ItemButNoPageObject)
+    else:
+        item = yield crawl_item_and_deps(ItemButNoPageObject)
+        assert item == (None, [{}])
 
 
 @attrs.define
