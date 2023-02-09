@@ -24,11 +24,10 @@ from scrapy_poet.page_input_providers import (
 from scrapy_poet.utils import is_min_scrapy_version
 
 # See: https://github.com/scrapinghub/scrapy-poet/issues/118
-_FAKE_CALLBACK_FOR_SCRAPY_BELOW_2x8 = lambda: None  # noqa: E731
 try:
     from scrapy.http.request import NO_CALLBACK  # available on Scrapy >= 2.8
 except ImportError:
-    NO_CALLBACK = _FAKE_CALLBACK_FOR_SCRAPY_BELOW_2x8
+    NO_CALLBACK = lambda: None  # noqa: E731
 
 
 @attr.s(auto_attribs=True)
