@@ -5,6 +5,8 @@ Most of the logic here tests the behavior of the ``scrapy_poet/injection.py``
 and ``scrapy_poet/registry.py`` modules.
 """
 
+import asyncio
+import os
 import socket
 import warnings
 from collections import defaultdict
@@ -407,6 +409,38 @@ def test_basic_item_but_no_page_object() -> None:
     else:
         item = yield crawl_item_and_deps(ItemButNoPageObject)
         assert item == (None, [{}])
+
+
+@attrs.define
+class DelayedProduct:
+    name: str
+
+
+@handle_urls(URL)
+class DelayedProductPage(ItemPage[DelayedProduct]):
+    @field
+    async def name(self) -> str:
+        await asyncio.sleep(0.01)
+        return "delayed product name"
+
+
+@pytest.mark.skipif(
+    os.environ.get("REACTOR") != "asyncio",
+    reason="Using asyncio will only work if the AsyncioSelectorReactor is used.",
+)
+@inlineCallbacks
+def test_item_using_asyncio() -> None:
+    """This ensures that ``ItemProvider`` works properly for page objects using
+    the ``asyncio`` functionalities.
+    """
+    item, deps = yield crawl_item_and_deps(DelayedProduct)
+    assert item == DelayedProduct(name="delayed product name")
+    assert_deps(deps, {"item": DelayedProduct})
+
+    # calling the actual page object should also work
+    item, deps = yield crawl_item_and_deps(DelayedProductPage)
+    assert item == DelayedProduct(name="delayed product name")
+    assert_deps(deps, {"page": DelayedProductPage})
 
 
 @attrs.define
@@ -1481,6 +1515,7 @@ def test_created_apply_rules() -> None:
         ApplyRule(URL, use=MultipleRulePage, instead_of=FirstPage),
         # Item-based rules
         ApplyRule(URL, use=ProductPage, to_return=Product),
+        ApplyRule(URL, use=DelayedProductPage, to_return=DelayedProduct),
         ApplyRule(
             URL + "/some-wrong-path",
             use=DifferentUrlPage,

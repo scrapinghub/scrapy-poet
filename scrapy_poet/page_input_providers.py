@@ -9,6 +9,7 @@ different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from an API for automatic extraction.
 """
 import abc
+import asyncio
 import json
 from dataclasses import make_dataclass
 from inspect import isclass
@@ -17,7 +18,6 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
-    Generator,
     List,
     Optional,
     Sequence,
@@ -33,7 +33,7 @@ import attr
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.http import Response
-from twisted.internet.defer import Deferred, ensureDeferred, inlineCallbacks
+from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import (
     HttpClient,
     HttpResponse,
@@ -308,6 +308,11 @@ class ItemProvider(PageObjectInputProvider):
 
     name = "item"
 
+    template_deadlock_msg = (
+        "Deadlock detected! A loop has been detected to "
+        "trying to resolve this plan: {plan}"
+    )
+
     def __init__(self, injector):
         super().__init__(injector)
         self.registry = self.injector.registry
@@ -316,6 +321,14 @@ class ItemProvider(PageObjectInputProvider):
         # that the cached instances under it are properly garbage collected
         # after processing such request.
         self._cached_instances = WeakKeyDictionary()
+
+        # This is only used when the reactor is ``AsyncioSelectorReactor`` since
+        # the ``asyncio.Future`` that it uses doesn't trigger a RecursionError
+        # unlike Twisted's Deferred. So we use this as a soft-proxy to recursion
+        # depth to check how many calls to ``self.injector.build_instances`` are
+        # made.
+        # Similar to ``_cached_instances`` above, the key is ``scrapy.Request``.
+        self._build_instances_call_counter = WeakKeyDictionary()
 
     def provided_classes(self, cls):
         """If the item is in any of the ``to_return`` in the rules, then it can
@@ -331,13 +344,26 @@ class ItemProvider(PageObjectInputProvider):
     def get_from_cache(self, request: Request, cls: Callable) -> Optional[Any]:
         return self._cached_instances.get(request, {}).get(cls)
 
-    @inlineCallbacks
-    def __call__(
+    def check_if_deadlock(self, request: Request) -> bool:
+        """Should only be used when ``AsyncioSelectorReactor`` is the reactor."""
+        if request not in self._build_instances_call_counter:
+            self._build_instances_call_counter[request] = 0
+        self._build_instances_call_counter[request] += 1
+
+        # If there are more than 100 calls to ``injector.build_instances()``
+        # for a given request, it might be a deadlock. This limit is large
+        # enough since the dependency tree for item dependencies needing page
+        # objects and/or items wouldn't reach this far.
+        if self._build_instances_call_counter[request] > 100:
+            return True
+        return False
+
+    async def __call__(
         self,
         to_provide: Set[Callable],
         request: Request,
         response: Response,
-    ) -> Generator[Deferred, object, List[Any]]:
+    ) -> List[Any]:
         results = []
         for cls in to_provide:
             item = self.get_from_cache(request, cls)
@@ -364,17 +390,28 @@ class ItemProvider(PageObjectInputProvider):
             )
 
             try:
-                po_instances = yield from self.injector.build_instances(
-                    request, response, plan
+                deferred_or_future = maybe_deferred_to_future(
+                    self.injector.build_instances(request, response, plan)
                 )
+                # RecursionError NOT raised when ``AsyncioSelectorReactor`` is used.
+                # Could be related: https://github.com/python/cpython/issues/93837
+
+                # Need to check before awaiting on the ``asyncio.Future``
+                # before it gets stuck on a potential deadlock.
+                if asyncio.isfuture(deferred_or_future):
+                    if self.check_if_deadlock(request):
+                        raise ProviderDependencyDeadlockError(
+                            self.template_deadlock_msg.format(plan=plan)
+                        )
+
+                po_instances = await deferred_or_future
             except RecursionError:
                 raise ProviderDependencyDeadlockError(
-                    f"Deadlock detected! A loop has been detected to trying to "
-                    f"resolve this plan: {plan}"
+                    self.template_deadlock_msg.format(plan=plan)
                 )
 
             page_object = po_instances[page_object_cls]
-            item = yield from ensureDeferred(page_object.to_item())
+            item = await page_object.to_item()
 
             self.update_cache(request, po_instances)
             self.update_cache(request, {type(item): item})
