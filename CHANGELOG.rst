@@ -90,9 +90,15 @@ TBR
   ``twisted.internet.defer.Deferred[object]`` type annotation before which was
   not subscriptable.
 
-* Documentation improvements.
+* Fix the ``twisted.internet.error.ReactorAlreadyInstalledError`` error raised
+  when using Twisted < 21.2.0.
 
-* Various test and CI Fixes.
+* Fix CI configuration that doesn't follow it's intended commands in these
+  tox environments: ``min``, ``asyncio-min``, and ``asyncio``. This ensures
+  that page objects using ``asyncio`` should work properly, alongside the minimum
+  specified Twisted version.
+
+* Documentation improvements.
 
 * Deprecations:
 
