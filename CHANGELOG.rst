@@ -93,10 +93,10 @@ TBR
 * Fix the ``twisted.internet.error.ReactorAlreadyInstalledError`` error raised
   when using Twisted < 21.2.0.
 
-* Fix CI configuration that doesn't follow it's intended commands in these
-  tox environments: ``min``, ``asyncio-min``, and ``asyncio``. This ensures
-  that page objects using ``asyncio`` should work properly, alongside the minimum
-  specified Twisted version.
+* Fix test configuration that doesn't follow the intended commands and dependencies
+  in these tox environments: ``min``, ``asyncio-min``, and ``asyncio``. This
+  ensures that page objects using ``asyncio`` should work properly, alongside
+  the minimum specified Twisted version.
 
 * Documentation improvements.
 
