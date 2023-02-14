@@ -49,10 +49,7 @@ class BTSBookPage(WebPage):
     assert fixture.is_valid()
     assert (fixture.input_path / "HttpResponse-body.html").exists()
     assert fixture.meta_path.exists()
-    assert (
-        fixture.input_path
-        / "HttpClient-4a4c68d01cec0684e4eb2d155534005ac2db9a33-body.html"
-    ).exists()
+    assert (fixture.input_path / "HttpClient-0-HttpResponse.body.html").exists()
     frozen_time_str = json.loads(fixture.meta_path.read_bytes())["frozen_time"]
     frozen_time = datetime.datetime.fromisoformat(frozen_time_str)
     assert frozen_time.microsecond == 0
