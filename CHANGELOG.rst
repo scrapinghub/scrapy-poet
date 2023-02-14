@@ -91,7 +91,7 @@ TBR
   not subscriptable.
 
 * Fix the ``twisted.internet.error.ReactorAlreadyInstalledError`` error raised
-  when using Twisted < 21.2.0.
+  when using the ``scrapy savefixture`` command and Twisted < 21.2.0 is installed.
 
 * Fix test configuration that doesn't follow the intended commands and dependencies
   in these tox environments: ``min``, ``asyncio-min``, and ``asyncio``. This
