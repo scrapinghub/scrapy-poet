@@ -139,7 +139,8 @@ class InjectionMiddleware:
                 "dependencies in the parse() method won't be built by "
                 "scrapy-poet. However, if the request has callback=parse, "
                 "the annotated dependencies will be built.\n\n"
-                "See the Pitfalls doc for more info."
+                "See the Pitfalls doc for more info.",
+                stacklevel=2,
             )
             return response
 
