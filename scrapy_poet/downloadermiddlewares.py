@@ -122,7 +122,7 @@ class InjectionMiddleware:
     @inlineCallbacks
     def process_response(
         self, request: Request, response: Response, spider: Spider
-    ) -> Generator[Deferred[object], object, Response]:
+    ) -> Generator[Deferred, object, Response]:
         """This method fills :attr:`scrapy.Request.cb_kwargs
         <scrapy.http.Request.cb_kwargs>` with instances for the required Page
         Objects found in the callback signature.
@@ -139,7 +139,8 @@ class InjectionMiddleware:
                 "dependencies in the parse() method won't be built by "
                 "scrapy-poet. However, if the request has callback=parse, "
                 "the annotated dependencies will be built.\n\n"
-                "See the Pitfalls doc for more info."
+                "See the Pitfalls doc for more info.",
+                stacklevel=2,
             )
             return response
 

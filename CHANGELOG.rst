@@ -86,6 +86,18 @@ TBR
   :class:`scrapy.Request <scrapy.http.Request>`'s callback is set to
   :func:`scrapy.http.request.NO_CALLBACK`.
 
+* Fix ``TypeError`` when using Twisted <= 21.7.0 since scrapy-poet was using
+  ``twisted.internet.defer.Deferred[object]`` type annotation before which was
+  not subscriptable.
+
+* Fix the ``twisted.internet.error.ReactorAlreadyInstalledError`` error raised
+  when using the ``scrapy savefixture`` command and Twisted < 21.2.0 is installed.
+
+* Fix test configuration that doesn't follow the intended commands and dependencies
+  in these tox environments: ``min``, ``asyncio-min``, and ``asyncio``. This
+  ensures that page objects using ``asyncio`` should work properly, alongside
+  the minimum specified Twisted version.
+
 * Documentation improvements.
 
 * Deprecations:
