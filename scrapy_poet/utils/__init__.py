@@ -1,7 +1,10 @@
 import os
+from functools import lru_cache
 from typing import Type
 from warnings import warn
 
+from packaging.version import Version
+from scrapy import __version__ as SCRAPY_VERSION
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from scrapy.utils.project import inside_project, project_data_dir
@@ -68,3 +71,8 @@ def create_registry_instance(cls: Type, crawler: Crawler):
         crawler.settings.getlist("SCRAPY_POET_OVERRIDES", default_registry.get_rules()),
     )
     return cls(rules=rules)
+
+
+@lru_cache()
+def is_min_scrapy_version(version: str) -> bool:
+    return Version(SCRAPY_VERSION) >= Version(version)

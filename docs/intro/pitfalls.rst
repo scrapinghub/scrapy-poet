@@ -7,6 +7,17 @@ Pitfalls
 ``scrapy.Request`` without callback
 ===================================
 
+.. tip::
+
+    Note that the pitfalls discussed in this section aren't applicable to
+    Scrapy >= 2.8 for most cases.
+
+    However, if you have code somewhere which directly adds 
+    :class:`scrapy.Request <scrapy.http.Request>` instances to the downloader,
+    you need to ensure that they don't use ``None`` as the callback value.
+    Instead, you can use the new :func:`scrapy.http.request.NO_CALLBACK`
+    value introduced in Scrapy 2.8.
+
 .. note::
 
     This section *only applies* to specific cases where spiders define a
@@ -42,8 +53,8 @@ value to :class:`scrapy.Request <scrapy.http.Request>`:
     for url in self.start_urls:
         yield Request(url, dont_filter=True)
 
-Apart from this, there are also some built-in Scrapy features which omit the
-:class:`scrapy.Request <scrapy.http.Request>` callback value:
+Apart from this, there are also some built-in Scrapy < 2.8 features which omit
+the :class:`scrapy.Request <scrapy.http.Request>` callback value:
 
 * :class:`scrapy.downloadermiddlewares.robotstxt.RobotsTxtMiddleware`
 * :class:`scrapy.pipelines.images.ImagesPipeline`
@@ -76,7 +87,7 @@ Let's take a look at an example:
         def parse(self, response: DummyResponse):
             ...
 
-In order for the built-in Scrapy features listed above to work properly,
+In order for the built-in Scrapy < 2.8 features listed above to work properly,
 **scrapy-poet** chooses to ignore the :class:`~.DummyResponse`
 annotation completely. This means that the response is downloaded instead of
 being skipped.

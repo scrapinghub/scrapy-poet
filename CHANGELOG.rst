@@ -80,6 +80,26 @@ TBR
 * Moved some of the utility functions from the test module into
   ``scrapy_poet.utils.testing``.
 
+* Supports the new :func:`scrapy.http.request.NO_CALLBACK` introduced in
+  **Scrapy 2.8**. This means that the :ref:`pitfalls` (introduced in
+  ``scrapy-poet==0.7.0``) doesn't apply when you're using Scrapy >= 2.8, unless
+  you're using third-party middlewares which directly uses the downloader to add
+  :class:`scrapy.Request <scrapy.http.Request>` instances with callback set to
+  ``None``. Otherwise, you need to set the callback value to
+  :func:`scrapy.http.request.NO_CALLBACK`.
+
+* Fix ``TypeError`` when using Twisted <= 21.7.0 since scrapy-poet was using
+  ``twisted.internet.defer.Deferred[object]`` type annotation before which was
+  not subscriptable.
+
+* Fix the ``twisted.internet.error.ReactorAlreadyInstalledError`` error raised
+  when using the ``scrapy savefixture`` command and Twisted < 21.2.0 is installed.
+
+* Fix test configuration that doesn't follow the intended commands and dependencies
+  in these tox environments: ``min``, ``asyncio-min``, and ``asyncio``. This
+  ensures that page objects using ``asyncio`` should work properly, alongside
+  the minimum specified Twisted version.
+
 * Documentation improvements.
 
 * Deprecations:

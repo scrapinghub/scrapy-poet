@@ -23,7 +23,7 @@ from .page_input_providers import (
     RequestUrlProvider,
     ResponseUrlProvider,
 )
-from .utils import create_registry_instance
+from .utils import create_registry_instance, is_min_scrapy_version
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,13 @@ class InjectionMiddleware:
         return DummyResponse(url=request.url, request=request)
 
     def _skip_dependency_creation(self, request: Request, spider: Spider) -> bool:
-        """See: https://github.com/scrapinghub/scrapy-poet/issues/48"""
+        """See:
+
+        * https://github.com/scrapinghub/scrapy-poet/issues/48  — scrapy <  2.8
+        * https://github.com/scrapinghub/scrapy-poet/issues/118 — scrapy >= 2.8
+        """
+        if is_min_scrapy_version("2.8.0"):
+            return False
 
         # No need to skip if the callback doesn't default to the parse() method
         if request.callback is not None:
@@ -116,7 +122,7 @@ class InjectionMiddleware:
     @inlineCallbacks
     def process_response(
         self, request: Request, response: Response, spider: Spider
-    ) -> Generator[Deferred[object], object, Response]:
+    ) -> Generator[Deferred, object, Response]:
         """This method fills :attr:`scrapy.Request.cb_kwargs
         <scrapy.http.Request.cb_kwargs>` with instances for the required Page
         Objects found in the callback signature.
@@ -133,7 +139,8 @@ class InjectionMiddleware:
                 "dependencies in the parse() method won't be built by "
                 "scrapy-poet. However, if the request has callback=parse, "
                 "the annotated dependencies will be built.\n\n"
-                "See the Pitfalls doc for more info."
+                "See the Pitfalls doc for more info.",
+                stacklevel=2,
             )
             return response
 

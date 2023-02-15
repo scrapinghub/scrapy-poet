@@ -4,9 +4,8 @@
 name: tox
 
 on:
-  push:
-    branches: [ master ]
   pull_request:
+  push:
     branches: [ master ]
 
 jobs:
@@ -20,15 +19,15 @@ jobs:
         - python-version: "3.7"
           toxenv: "min"
         - python-version: "3.7"
+          toxenv: "pinned-scrapy-2x7"
+        - python-version: "3.7"
+          toxenv: "pinned-scrapy-2x8"
+        - python-version: "3.7"
           toxenv: "asyncio-min"
         - python-version: "3.8"
-          toxenv: "py"
         - python-version: "3.9"
-          toxenv: "py"
         - python-version: "3.10"
-          toxenv: "py"
         - python-version: "3.11"
-          toxenv: "py"
         - python-version: "3.11"
           toxenv: "asyncio"
 
@@ -43,10 +42,8 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install tox
     - name: tox
-      env:
-        TOXENV: ${{ matrix.toxenv }}
       run: |
-        tox -e py
+        tox -e ${{ matrix.toxenv || 'py' }}
     - name: coverage
       if: ${{ success() }}
       run: bash <(curl -s https://codecov.io/bash)

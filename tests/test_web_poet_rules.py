@@ -5,6 +5,8 @@ Most of the logic here tests the behavior of the ``scrapy_poet/injection.py``
 and ``scrapy_poet/registry.py`` modules.
 """
 
+import asyncio
+import os
 import socket
 import warnings
 from collections import defaultdict
@@ -30,6 +32,7 @@ from web_poet.pages import ItemT
 
 from scrapy_poet import callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
+from scrapy_poet.utils import is_min_scrapy_version
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
     capture_exceptions,
@@ -396,9 +399,48 @@ def test_basic_item_but_no_page_object() -> None:
     assigned to it in any of the given ``ApplyRule``, it would result to an error
     in the spider callback since
     """
-    expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
-    with pytest.raises(TypeError, match=expected_msg):
-        yield crawl_item_and_deps(ItemButNoPageObject)
+
+    # Starting Scrapy 2.7, there's better support for async callbacks. This
+    # means that errors aren't suppresed.
+    if is_min_scrapy_version("2.7.0"):
+        expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
+        with pytest.raises(TypeError, match=expected_msg):
+            yield crawl_item_and_deps(ItemButNoPageObject)
+    else:
+        item = yield crawl_item_and_deps(ItemButNoPageObject)
+        assert item == (None, [{}])
+
+
+@attrs.define
+class DelayedProduct:
+    name: str
+
+
+@handle_urls(URL)
+class DelayedProductPage(ItemPage[DelayedProduct]):
+    @field
+    async def name(self) -> str:
+        await asyncio.sleep(0.01)
+        return "delayed product name"
+
+
+@pytest.mark.skipif(
+    os.environ.get("REACTOR") != "asyncio",
+    reason="Using asyncio will only work if the AsyncioSelectorReactor is used.",
+)
+@inlineCallbacks
+def test_item_using_asyncio() -> None:
+    """This ensures that ``ItemProvider`` works properly for page objects using
+    the ``asyncio`` functionalities.
+    """
+    item, deps = yield crawl_item_and_deps(DelayedProduct)
+    assert item == DelayedProduct(name="delayed product name")
+    assert_deps(deps, {"item": DelayedProduct})
+
+    # calling the actual page object should also work
+    item, deps = yield crawl_item_and_deps(DelayedProductPage)
+    assert item == DelayedProduct(name="delayed product name")
+    assert_deps(deps, {"page": DelayedProductPage})
 
 
 @attrs.define
@@ -1473,6 +1515,7 @@ def test_created_apply_rules() -> None:
         ApplyRule(URL, use=MultipleRulePage, instead_of=FirstPage),
         # Item-based rules
         ApplyRule(URL, use=ProductPage, to_return=Product),
+        ApplyRule(URL, use=DelayedProductPage, to_return=DelayedProduct),
         ApplyRule(
             URL + "/some-wrong-path",
             use=DifferentUrlPage,
