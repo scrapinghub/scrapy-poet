@@ -82,8 +82,10 @@ TBR
 
 * Supports the new :func:`scrapy.http.request.NO_CALLBACK` introduced in
   **Scrapy 2.8**. This means that the :ref:`pitfalls` (introduced in
-  ``scrapy-poet==0.7.0``) when using the ``parse()`` method won't apply if
-  :class:`scrapy.Request <scrapy.http.Request>`'s callback is set to
+  ``scrapy-poet==0.7.0``) doesn't apply when you're using Scrapy >= 2.8, unless
+  you're using third-party middlewares which directly uses the downloader to add
+  :class:`scrapy.Request <scrapy.http.Request>` instances with callback set to
+  ``None``. Otherwise, you need to set the callback value to
   :func:`scrapy.http.request.NO_CALLBACK`.
 
 * Fix ``TypeError`` when using Twisted <= 21.7.0 since scrapy-poet was using

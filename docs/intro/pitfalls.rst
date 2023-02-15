@@ -10,8 +10,13 @@ Pitfalls
 .. tip::
 
     Note that the pitfalls discussed in this section aren't applicable to
-    Scrapy >= 2.8 when :class:`scrapy.Request <scrapy.http.Request>`'s
-    callback value uses the new :func:`scrapy.http.request.NO_CALLBACK`.
+    Scrapy >= 2.8 for most cases.
+
+    However, if you have code somewhere which directly adds 
+    :class:`scrapy.Request <scrapy.http.Request>` instances to the downloader,
+    you need to ensure that they don't use ``None`` as the callback value.
+    Instead, you can use the new :func:`scrapy.http.request.NO_CALLBACK`
+    value introduced in Scrapy 2.8.
 
 .. note::
 
