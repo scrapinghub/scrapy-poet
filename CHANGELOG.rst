@@ -82,8 +82,7 @@ Changelog
   have properly loaded all intended rules annotated with the ``@handle_urls``
   decorator. 
 
-* New utility functions in ``scrapy_poet.utils.testing`` which contains the
-  existing utility functions from the test module.
+* New utility functions in ``scrapy_poet.utils.testing``.
 
 * The ``frozen_time`` value inside the :ref:`test fixtures <testing>` won't
   contain microseconds anymore.
