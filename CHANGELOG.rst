@@ -2,8 +2,8 @@
 Changelog
 =========
 
-TBR
----
+0.9.0 (YYYY-MM-DD)
+------------------
 
 * Added support for item classes which are used as dependencies in page objects
   and spider callbacks. The following is now possible:
@@ -33,9 +33,9 @@ TBR
       @handle_urls("example.com")
       @attrs.define
       class ProductPage(WebPage[Product]):
-          # ✨ NEW: Notice that the page object can ask for items as dependencies.
-          # An instance of ``Image`` is injected behind the scenes by calling the
-          # ``.to_item()`` method of ``ProductImagePage``.
+          # ✨ NEW: The page object can ask for items as dependencies. An instance
+          # of ``Image`` is injected behind the scenes by calling the ``.to_item()``
+          # method of ``ProductImagePage``.
           image_item: Image
 
           @field
@@ -51,19 +51,18 @@ TBR
 
           def start_requests(self):
               yield scrapy.Request(
-                  "https://example.com/products/some-product", self.parse
+                  "https://example.com/products/some-product", self.parse_product
               )
 
-          # ✨ NEW: Notice that we're directly using the item here and not the
-          # page object.
-          def parse(self, response: DummyResponse, item: Product):
+          # ✨ NEW: We can directly use the item here instead of the page object.
+          def parse_product(self, response: DummyResponse, item: Product) -> Product:
               return item
 
 
   In line with this, the following new features were made:
 
-    * Added a new :class:`scrapy_poet.page_input_providers.ItemProvider` which
-      makes the usage above possible.
+    * New :class:`scrapy_poet.page_input_providers.ItemProvider` which makes the
+      usage above possible.
 
     * An item class is now supported by :func:`scrapy_poet.callback_for`
       alongside the usual page objects. This means that it won't raise a
@@ -75,10 +74,19 @@ TBR
       a deadlock in their sub-dependencies, e.g. due to a circular dependency
       between page objects.
 
-* New setting named ``SCRAPY_POET_DISCOVER``.
+* New setting named ``SCRAPY_POET_RULES`` having a default value of
+  :meth:`web_poet.default_registry.get_rules <web_poet.rules.RulesRegistry.get_rules>`.
+  This deprecates ``SCRAPY_POET_OVERRIDES``.
 
-* Moved some of the utility functions from the test module into
-  ``scrapy_poet.utils.testing``.
+* New setting named ``SCRAPY_POET_DISCOVER`` to ensure that ``SCRAPY_POET_RULES``
+  have properly loaded all intended rules annotated with the ``@handle_urls``
+  decorator. 
+
+* New utility functions in ``scrapy_poet.utils.testing`` which contains the
+  existing utility functions from the test module.
+
+* The ``frozen_time`` value inside the :ref:`test fixtures <testing>` won't
+  contain microseconds anymore.
 
 * Supports the new :func:`scrapy.http.request.NO_CALLBACK` introduced in
   **Scrapy 2.8**. This means that the :ref:`pitfalls` (introduced in
@@ -88,9 +96,9 @@ TBR
   ``None``. Otherwise, you need to set the callback value to
   :func:`scrapy.http.request.NO_CALLBACK`.
 
-* Fix ``TypeError`` when using Twisted <= 21.7.0 since scrapy-poet was using
-  ``twisted.internet.defer.Deferred[object]`` type annotation before which was
-  not subscriptable.
+* Fix the :class:`TypeError` that's raised when using Twisted <= 21.7.0 since
+  scrapy-poet was using ``twisted.internet.defer.Deferred[object]`` type
+  annotation before which was not subscriptable in the early Twisted versions.
 
 * Fix the ``twisted.internet.error.ReactorAlreadyInstalledError`` error raised
   when using the ``scrapy savefixture`` command and Twisted < 21.2.0 is installed.
@@ -100,26 +108,12 @@ TBR
   ensures that page objects using ``asyncio`` should work properly, alongside
   the minimum specified Twisted version.
 
-* Documentation improvements.
-
-* Deprecations:
-
-    * The ``SCRAPY_POET_OVERRIDES`` setting has been replaced by
-      ``SCRAPY_POET_RULES`` which now, by default,
-      uses :meth:`web_poet.default_registry.get_rules`.
+* Various improvements to tests and documentation.
 
 * Backward incompatible changes:
 
-    * Overriding the default registry used via ``SCRAPY_POET_OVERRIDES_REGISTRY``
-      is not possible anymore.
-
-    * The following type aliases have been removed:
-
-        * ``scrapy_poet.overrides.RuleAsTuple``
-        * ``scrapy_poet.overrides.RuleFromUser``
-
-    * The :class:`scrapy_poet.page_input_providers.PageObjectInputProvider` base
-      class has these changes:
+    * For the :class:`scrapy_poet.page_input_providers.PageObjectInputProvider`
+      base class:
 
         * It now accepts an instance of :class:`scrapy_poet.injection.Injector`
           in its constructor instead of :class:`scrapy.crawler.Crawler`. Although
@@ -131,6 +125,9 @@ TBR
 
     * The :class:`scrapy_poet.injection.Injector`'s attribute and constructor
       parameter  called ``overrides_registry`` is now simply called ``registry``.
+
+    * Removed the ``SCRAPY_POET_OVERRIDES_REGISTRY`` setting which overrides the
+      default registry.
 
     * The ``scrapy_poet.overrides`` module which contained ``OverridesRegistryBase``
       and ``OverridesRegistry`` has now been removed. Instead, scrapy-poet directly
@@ -145,6 +142,11 @@ TBR
     * This also means that the registry doesn't accept tuples as rules anymore.
       Only :class:`web_poet.rules.ApplyRule` instances are allowed. The same goes
       for ``SCRAPY_POET_RULES`` (and the deprecated ``SCRAPY_POET_OVERRIDES``).
+
+    * The following type aliases have been removed:
+
+        * ``scrapy_poet.overrides.RuleAsTuple``
+        * ``scrapy_poet.overrides.RuleFromUser``
 
 
 0.8.0 (2023-01-24)
