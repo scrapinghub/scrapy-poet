@@ -83,6 +83,10 @@ class SaveFixtureCommand(ScrapyCommand):
 
         spider_cls = spider_for(cls)
         self.settings["ITEM_PIPELINES"][SavingPipeline] = 100
+        self.settings["DOWNLOADER_MIDDLEWARES"][
+            "scrapy_poet.downloadermiddlewares.InjectionMiddleware"
+        ] = None
+        self.settings["DOWNLOADER_MIDDLEWARES"][InjectionMiddleware] = None
         self.settings["DOWNLOADER_MIDDLEWARES"][SavingInjectionMiddleware] = 543
         self.settings["_SCRAPY_POET_SAVEFIXTURE"] = True
 
