@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.9.0 (YYYY-MM-DD)
+0.9.0 (2023-02-17)
 ------------------
 
 * Added support for item classes which are used as dependencies in page objects
