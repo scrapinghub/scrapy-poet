@@ -258,7 +258,10 @@ class HttpClientProvider(PageObjectInputProvider):
         downloader.
         """
         downloader = create_scrapy_downloader(crawler.engine.download)
-        return [HttpClient(request_downloader=downloader)]
+        save_responses = crawler.settings.getbool("_SCRAPY_POET_SAVEFIXTURE")
+        return [
+            HttpClient(request_downloader=downloader, save_responses=save_responses)
+        ]
 
 
 class PageParamsProvider(PageObjectInputProvider):

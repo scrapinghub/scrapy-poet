@@ -23,7 +23,7 @@ def test_savefixture(tmp_path) -> None:
     (cwd / project_name / "po.py").write_text(
         """
 import attrs
-from web_poet import ResponseUrl
+from web_poet import HttpClient, ResponseUrl
 from web_poet.pages import WebPage
 
 
@@ -31,8 +31,10 @@ from web_poet.pages import WebPage
 class BTSBookPage(WebPage):
 
     response_url: ResponseUrl
+    client: HttpClient
 
-    def to_item(self):
+    async def to_item(self):
+        await self.client.request("http://toscrape.com")
         return {
             'url': self.url,
             'name': self.css("title::text").get(),
@@ -47,6 +49,7 @@ class BTSBookPage(WebPage):
     assert fixture.is_valid()
     assert (fixture.input_path / "HttpResponse-body.html").exists()
     assert fixture.meta_path.exists()
+    assert (fixture.input_path / "HttpClient-0-HttpResponse.body.html").exists()
     frozen_time_str = json.loads(fixture.meta_path.read_bytes())["frozen_time"]
     frozen_time = datetime.datetime.fromisoformat(frozen_time_str)
     assert frozen_time.microsecond == 0
