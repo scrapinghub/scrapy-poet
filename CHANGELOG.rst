@@ -2,6 +2,16 @@
 Changelog
 =========
 
+0.10.0 (YYYY-MM-DD)
+-------------------
+
+* Now requires ``web-poet >= 0.8.0``.
+
+* The ``savefixture`` command now also saves requests made via the
+  :class:`web_poet.page_inputs.client.HttpClient` dependency and their
+  responses.
+
+
 0.9.0 (2023-02-17)
 ------------------
 
