@@ -53,7 +53,7 @@ class SavingInjectionMiddleware(InjectionMiddleware):
 
 
 def spider_for(
-    injectable: Type[ItemPage], frozen_time: datetime
+    injectable: Type[ItemPage], frozen_time: datetime.datetime
 ) -> Type[scrapy.Spider]:
     class InjectableSpider(scrapy.Spider):
         name = "injectable"
@@ -64,15 +64,15 @@ def spider_for(
 
         if iscoroutinefunction(injectable.to_item):
 
-            async def cb(self, response: DummyResponse, page: injectable):
+            async def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
                 with time_machine.travel(frozen_time):
-                    yield await page.to_item()
+                    yield await page.to_item()  # type: ignore[attr-defined]
 
         else:
 
-            def cb(self, response: DummyResponse, page: injectable):
+            def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
                 with time_machine.travel(frozen_time):
-                    yield page.to_item()
+                    yield page.to_item()  # type: ignore[attr-defined]
 
     return InjectableSpider
 
