@@ -1,4 +1,5 @@
 import datetime
+from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import Type
 
@@ -15,7 +16,7 @@ from twisted.internet.defer import inlineCallbacks
 from web_poet import ItemPage
 from web_poet.testing import Fixture
 
-from scrapy_poet import callback_for
+from scrapy_poet import DummyResponse
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS, InjectionMiddleware
 from scrapy_poet.injection import Injector
 
@@ -51,7 +52,9 @@ class SavingInjectionMiddleware(InjectionMiddleware):
         )
 
 
-def spider_for(injectable: Type[ItemPage]) -> Type[scrapy.Spider]:
+def spider_for(
+    injectable: Type[ItemPage], frozen_time: datetime
+) -> Type[scrapy.Spider]:
     class InjectableSpider(scrapy.Spider):
         name = "injectable"
         url = None
@@ -59,7 +62,17 @@ def spider_for(injectable: Type[ItemPage]) -> Type[scrapy.Spider]:
         def start_requests(self):
             yield scrapy.Request(self.url, self.cb)
 
-        cb = callback_for(injectable)
+        if iscoroutinefunction(injectable.to_item):
+
+            async def cb(self, response: DummyResponse, page: injectable):
+                with time_machine.travel(frozen_time):
+                    yield await page.to_item()
+
+        else:
+
+            def cb(self, response: DummyResponse, page: injectable):
+                with time_machine.travel(frozen_time):
+                    yield page.to_item()
 
     return InjectableSpider
 
@@ -81,7 +94,6 @@ class SaveFixtureCommand(ScrapyCommand):
         if not issubclass(cls, ItemPage):
             raise UsageError(f"Error: {type_name} is not a descendant of ItemPage")
 
-        spider_cls = spider_for(cls)
         self.settings["ITEM_PIPELINES"][SavingPipeline] = 100
         self.settings["DOWNLOADER_MIDDLEWARES"][
             "scrapy_poet.downloadermiddlewares.InjectionMiddleware"
@@ -93,9 +105,9 @@ class SaveFixtureCommand(ScrapyCommand):
         frozen_time = datetime.datetime.now(datetime.timezone.utc).replace(
             microsecond=0
         )
-        with time_machine.travel(frozen_time):
-            self.crawler_process.crawl(spider_cls, url=url)
-            self.crawler_process.start()
+        spider_cls = spider_for(cls, frozen_time)
+        self.crawler_process.crawl(spider_cls, url=url)
+        self.crawler_process.start()
 
         deps = saved_dependencies
         item = saved_items[0]
