@@ -1,5 +1,4 @@
 import datetime
-from inspect import iscoroutinefunction
 from pathlib import Path
 from typing import Type
 
@@ -15,6 +14,7 @@ from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import ItemPage
 from web_poet.testing import Fixture
+from web_poet.utils import ensure_awaitable
 
 from scrapy_poet import DummyResponse
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS, InjectionMiddleware
@@ -62,17 +62,9 @@ def spider_for(
         def start_requests(self):
             yield scrapy.Request(self.url, self.cb)
 
-        if iscoroutinefunction(injectable.to_item):
-
-            async def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
-                with time_machine.travel(frozen_time):
-                    yield await page.to_item()  # type: ignore[attr-defined]
-
-        else:
-
-            def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
-                with time_machine.travel(frozen_time):
-                    yield page.to_item()  # type: ignore[attr-defined]
+        async def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
+            with time_machine.travel(frozen_time):
+                yield await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]
 
     return InjectableSpider
 
