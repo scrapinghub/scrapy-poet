@@ -22,6 +22,7 @@ from scrapy_poet.injection import Injector
 
 saved_dependencies = []
 saved_items = []
+frozen_time = None
 
 
 class SavingInjector(Injector):
@@ -52,9 +53,7 @@ class SavingInjectionMiddleware(InjectionMiddleware):
         )
 
 
-def spider_for(
-    injectable: Type[ItemPage], frozen_time: datetime.datetime
-) -> Type[scrapy.Spider]:
+def spider_for(injectable: Type[ItemPage]) -> Type[scrapy.Spider]:
     class InjectableSpider(scrapy.Spider):
         name = "injectable"
         url = None
@@ -63,6 +62,10 @@ def spider_for(
             yield scrapy.Request(self.url, self.cb)
 
         async def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
+            global frozen_time
+            frozen_time = datetime.datetime.now(datetime.timezone.utc).replace(
+                microsecond=0
+            )
             with time_machine.travel(frozen_time):
                 yield await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]
 
@@ -94,10 +97,7 @@ class SaveFixtureCommand(ScrapyCommand):
         self.settings["DOWNLOADER_MIDDLEWARES"][SavingInjectionMiddleware] = 543
         self.settings["_SCRAPY_POET_SAVEFIXTURE"] = True
 
-        frozen_time = datetime.datetime.now(datetime.timezone.utc).replace(
-            microsecond=0
-        )
-        spider_cls = spider_for(cls, frozen_time)
+        spider_cls = spider_for(cls)
         self.crawler_process.crawl(spider_cls, url=url)
         self.crawler_process.start()
 
