@@ -14,13 +14,15 @@ from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import ItemPage
 from web_poet.testing import Fixture
+from web_poet.utils import ensure_awaitable
 
-from scrapy_poet import callback_for
+from scrapy_poet import DummyResponse
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS, InjectionMiddleware
 from scrapy_poet.injection import Injector
 
 saved_dependencies = []
 saved_items = []
+frozen_time = None
 
 
 class SavingInjector(Injector):
@@ -59,7 +61,13 @@ def spider_for(injectable: Type[ItemPage]) -> Type[scrapy.Spider]:
         def start_requests(self):
             yield scrapy.Request(self.url, self.cb)
 
-        cb = callback_for(injectable)
+        async def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
+            global frozen_time
+            frozen_time = datetime.datetime.now(datetime.timezone.utc).replace(
+                microsecond=0
+            )
+            with time_machine.travel(frozen_time):
+                yield await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]
 
     return InjectableSpider
 
@@ -81,7 +89,6 @@ class SaveFixtureCommand(ScrapyCommand):
         if not issubclass(cls, ItemPage):
             raise UsageError(f"Error: {type_name} is not a descendant of ItemPage")
 
-        spider_cls = spider_for(cls)
         self.settings["ITEM_PIPELINES"][SavingPipeline] = 100
         self.settings["DOWNLOADER_MIDDLEWARES"][
             "scrapy_poet.downloadermiddlewares.InjectionMiddleware"
@@ -90,12 +97,9 @@ class SaveFixtureCommand(ScrapyCommand):
         self.settings["DOWNLOADER_MIDDLEWARES"][SavingInjectionMiddleware] = 543
         self.settings["_SCRAPY_POET_SAVEFIXTURE"] = True
 
-        frozen_time = datetime.datetime.now(datetime.timezone.utc).replace(
-            microsecond=0
-        )
-        with time_machine.travel(frozen_time):
-            self.crawler_process.crawl(spider_cls, url=url)
-            self.crawler_process.start()
+        spider_cls = spider_for(cls)
+        self.crawler_process.crawl(spider_cls, url=url)
+        self.crawler_process.start()
 
         deps = saved_dependencies
         item = saved_items[0]
