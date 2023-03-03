@@ -65,7 +65,7 @@ def spider_for(
     if base_spider is None:
         base_spider = scrapy.Spider
 
-    class InjectableSpider(base_spider):
+    class InjectableSpider(base_spider):  # type: ignore[valid-type, misc]
         name = "injectable"
 
         def __init__(self, name=None, **kwargs):
