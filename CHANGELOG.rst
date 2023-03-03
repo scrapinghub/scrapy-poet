@@ -2,6 +2,11 @@
 Changelog
 =========
 
+0.10.1 (2023-03-03)
+-------------------
+
+* More robust time freezing in ``scrapy savefixture`` command.
+
 0.10.0 (2023-02-24)
 -------------------
 
