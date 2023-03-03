@@ -1,6 +1,7 @@
 import datetime
+import logging
 from pathlib import Path
-from typing import Type
+from typing import Optional, Type
 
 import andi
 import scrapy
@@ -19,6 +20,9 @@ from web_poet.utils import ensure_awaitable
 from scrapy_poet import DummyResponse
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS, InjectionMiddleware
 from scrapy_poet.injection import Injector
+
+logger = logging.getLogger(__name__)
+
 
 saved_dependencies = []
 saved_items = []
@@ -53,13 +57,20 @@ class SavingInjectionMiddleware(InjectionMiddleware):
         )
 
 
-def spider_for(injectable: Type[ItemPage]) -> Type[scrapy.Spider]:
-    class InjectableSpider(scrapy.Spider):
-        name = "injectable"
-        url = None
+def spider_for(
+    injectable: Type[ItemPage],
+    url: str,
+    base_spider: Optional[Type[scrapy.Spider]] = None,
+) -> Type[scrapy.Spider]:
+    if base_spider is None:
+        base_spider = scrapy.Spider
 
-        def start_requests(self):
-            yield scrapy.Request(self.url, self.cb)
+    class InjectableSpider(base_spider):
+        name = "injectable"
+
+        def __init__(self, name=None, **kwargs):
+            super().__init__(name, **kwargs)
+            self.start_requests = lambda: [scrapy.Request(url, self.cb)]
 
         async def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
             global frozen_time
@@ -74,13 +85,13 @@ def spider_for(injectable: Type[ItemPage]) -> Type[scrapy.Spider]:
 
 class SaveFixtureCommand(ScrapyCommand):
     def syntax(self):
-        return "<page object class> <URL>"
+        return "<page object class> <URL> [<spider name>]"
 
     def short_desc(self):
         return "Generate a web-poet test for the provided page object and URL"
 
     def run(self, args, opts):
-        if len(args) != 2:
+        if len(args) < 2:
             raise UsageError()
         type_name = args[0]
         url = args[1]
@@ -97,10 +108,22 @@ class SaveFixtureCommand(ScrapyCommand):
         self.settings["DOWNLOADER_MIDDLEWARES"][SavingInjectionMiddleware] = 543
         self.settings["_SCRAPY_POET_SAVEFIXTURE"] = True
 
-        spider_cls = spider_for(cls)
-        self.crawler_process.crawl(spider_cls, url=url)
+        base_spider_cls = None
+        if len(args) > 2:
+            spider_name = args[2]
+            spider_loader = self.crawler_process.spider_loader
+            try:
+                base_spider_cls = spider_loader.load(spider_name)
+            except KeyError:
+                logger.error(f"Unable to find spider: {spider_name}")
+                return
+        spider_cls = spider_for(cls, url, base_spider_cls)
+        self.crawler_process.crawl(spider_cls)
         self.crawler_process.start()
 
+        if len(saved_items) == 0:
+            logger.error("No items were scraped, check the spider output.")
+            return
         deps = saved_dependencies
         item = saved_items[0]
         meta = {
@@ -108,4 +131,4 @@ class SaveFixtureCommand(ScrapyCommand):
         }
         basedir = Path(self.settings.get("SCRAPY_POET_TESTS_DIR", "fixtures"))
         fixture = Fixture.save(basedir / type_name, inputs=deps, item=item, meta=meta)
-        print(f"\nThe test fixture has been written to {fixture.path}.")
+        logger.info(f"\nThe test fixture has been written to {fixture.path}.")
