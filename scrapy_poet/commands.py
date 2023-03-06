@@ -37,7 +37,8 @@ class SavingInjector(Injector):
         instances = yield super().build_instances_from_providers(
             request, response, plan
         )
-        saved_dependencies.extend(instances.values())
+        if request.meta.get("savefixture", False):
+            saved_dependencies.extend(instances.values())
         return instances
 
 
@@ -70,7 +71,8 @@ def spider_for(
 
         def __init__(self, name=None, **kwargs):
             super().__init__(name, **kwargs)
-            self.start_requests = lambda: [scrapy.Request(url, self.cb)]
+            meta = {"savefixture": True}
+            self.start_requests = lambda: [scrapy.Request(url, self.cb, meta=meta)]
 
         async def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
             global frozen_time
