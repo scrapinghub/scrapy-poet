@@ -42,12 +42,6 @@ class SavingInjector(Injector):
         return instances
 
 
-class SavingPipeline:
-    def process_item(self, item, spider):
-        saved_items.append(item)
-        return item
-
-
 class SavingInjectionMiddleware(InjectionMiddleware):
     def __init__(self, crawler: Crawler) -> None:
         super().__init__(crawler)
@@ -80,7 +74,9 @@ def spider_for(
                 microsecond=0
             )
             with time_machine.travel(frozen_time):
-                yield await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]
+                item = await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]
+            saved_items.append(item)
+            yield item
 
     return InjectableSpider
 
@@ -102,7 +98,6 @@ class SaveFixtureCommand(ScrapyCommand):
         if not issubclass(cls, ItemPage):
             raise UsageError(f"Error: {type_name} is not a descendant of ItemPage")
 
-        self.settings["ITEM_PIPELINES"][SavingPipeline] = 100
         self.settings["DOWNLOADER_MIDDLEWARES"][
             "scrapy_poet.downloadermiddlewares.InjectionMiddleware"
         ] = None
