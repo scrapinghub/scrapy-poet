@@ -1,7 +1,7 @@
 from inspect import iscoroutinefunction
-from typing import Callable, Optional, Type
+from typing import Callable, Type
 
-from scrapy.http import Request, Response
+from scrapy.http import Response
 from web_poet.pages import ItemPage
 
 _CALLBACK_FOR_MARKER = "__scrapy_poet_callback"
@@ -27,8 +27,7 @@ class DummyResponse(Response):
     :class:`~.DummyResponse` to your parser instead.
     """
 
-    def __init__(self, url: str, request=Optional[Request]):
-        super().__init__(url=url, request=request)
+    pass
 
 
 def callback_for(page_or_item_cls: Type) -> Callable:
