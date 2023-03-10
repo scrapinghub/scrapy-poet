@@ -53,3 +53,46 @@ class BTSBookPage(WebPage):
     frozen_time_str = json.loads(fixture.meta_path.read_bytes())["frozen_time"]
     frozen_time = datetime.datetime.fromisoformat(frozen_time_str)
     assert frozen_time.microsecond == 0
+
+
+def test_savefixture_spider(tmp_path) -> None:
+    project_name = "foo"
+    cwd = Path(tmp_path)
+    call_scrapy_command(str(cwd), "startproject", project_name)
+    cwd /= project_name
+
+    (cwd / project_name / "spiders" / "spider.py").write_text(
+        """
+from scrapy import Spider
+
+
+class MySpider(Spider):
+    name = "myspider"
+    custom_settings = {
+        "USER_AGENT": "scrapy/savefixture",
+    }
+"""
+    )
+
+    (cwd / project_name / "po.py").write_text(
+        """
+import json
+from web_poet.pages import WebPage
+
+
+class HeadersPage(WebPage):
+    async def to_item(self):
+        return {
+            "ua": json.loads(self.html)["headers"].get("User-Agent"),
+        }
+"""
+    )
+    url = "http://httpbin.org/headers"
+    type_name = "foo.po.HeadersPage"
+    call_scrapy_command(str(cwd), "savefixture", type_name, url, "myspider")
+    fixtures_dir = cwd / "fixtures"
+    fixture_dir = fixtures_dir / type_name / "test-1"
+    fixture = Fixture(fixture_dir)
+    assert fixture.is_valid()
+    item = json.loads(fixture.output_path.read_bytes())
+    assert item == {"ua": "scrapy/savefixture"}
