@@ -2,10 +2,18 @@
 Changelog
 =========
 
+0.10.2 (to be released)
+-----------------------
+
+* The ``scrapy savefixture`` command can now generate a fixture :ref:`using an
+  existing spider <fixture-spiders>`.
+
+
 0.10.1 (2023-03-03)
 -------------------
 
 * More robust time freezing in ``scrapy savefixture`` command.
+
 
 0.10.0 (2023-02-24)
 -------------------
@@ -22,7 +30,7 @@ Changelog
 
 * Added support for item classes which are used as dependencies in page objects
   and spider callbacks. The following is now possible:
- 
+
   .. code-block:: python
 
       import attrs
@@ -95,7 +103,7 @@ Changelog
 
 * New setting named ``SCRAPY_POET_DISCOVER`` to ensure that ``SCRAPY_POET_RULES``
   have properly loaded all intended rules annotated with the ``@handle_urls``
-  decorator. 
+  decorator.
 
 * New utility functions in ``scrapy_poet.utils.testing``.
 
