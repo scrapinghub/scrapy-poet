@@ -2,8 +2,8 @@
 Changelog
 =========
 
-0.10.2 (to be released)
------------------------
+0.11.0 (2023-03-17)
+-------------------
 
 * The ``scrapy savefixture`` command can now generate a fixture :ref:`using an
   existing spider <fixture-spiders>`.
