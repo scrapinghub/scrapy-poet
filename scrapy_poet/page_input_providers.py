@@ -241,7 +241,7 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
         return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
 
 
-class HttpClientProvider(PageObjectInputProvider):
+class HttpClientProvider(PageObjectInputProvider, CacheDataProviderMixin):
     """This class provides :class:`web_poet.HttpClient
     <web_poet.page_inputs.client.HttpClient>` instances.
     """
@@ -260,7 +260,7 @@ class HttpClientProvider(PageObjectInputProvider):
         ]
 
 
-class PageParamsProvider(PageObjectInputProvider):
+class PageParamsProvider(PageObjectInputProvider, CacheDataProviderMixin):
     """This class provides :class:`web_poet.PageParams
     <web_poet.page_inputs.page_params.PageParams>` instances.
     """
