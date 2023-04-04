@@ -18,9 +18,9 @@ from typing import (
     Callable,
     ClassVar,
     Dict,
-    Iterable,
     List,
     Optional,
+    Sequence,
     Set,
     Type,
     Union,
@@ -29,6 +29,7 @@ from warnings import warn
 from weakref import WeakKeyDictionary
 
 import andi
+import attr
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.http import Response
@@ -42,10 +43,6 @@ from web_poet import (
     ResponseUrl,
 )
 from web_poet.pages import is_injectable
-from web_poet.serialization.api import SerializedData, SerializedLeafData
-from web_poet.serialization.api import deserialize_leaf as leaf_deserialization_api
-from web_poet.serialization.api import load_class
-from web_poet.serialization.api import serialize as serialization_api
 
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.injection_errors import (
@@ -166,28 +163,20 @@ class CacheDataProviderMixin(abc.ABC):
         """
         pass
 
-    def serialize(self, result: Iterable[Any]) -> List[SerializedLeafData]:
+    @abc.abstractmethod
+    def serialize(self, result: Sequence[Any]) -> Any:
         """
         Serializes the results of this provider. The data returned will be pickled.
         """
-        serialized_po = serialization_api(result)
-        # list of serialized leafs
-        serlialized_deps = list(serialized_po.values())
+        pass
 
-        return serlialized_deps
-
-    def deserialize(self, data: SerializedData) -> Dict:
+    @abc.abstractmethod
+    def deserialize(self, data: Any) -> Sequence[Any]:
         """
         Deserialize some results of the provider that were previously serialized using the method
         :meth:`serialize`.
         """
-        deps: Dict[Callable, Any] = {}
-
-        for dep_type_name, dep_data in data.items():
-            dep_type = load_class(dep_type_name)
-            deps[dep_type] = leaf_deserialization_api(dep_type, dep_data)
-
-        return deps
+        pass
 
     @property
     def has_cache_support(self):
@@ -239,6 +228,21 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
             **request_data,
         }
         return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
+
+    def serialize(self, result: Sequence[Any]) -> Any:
+        return [attr.asdict(response_data) for response_data in result]
+
+    def deserialize(self, data: Any) -> Sequence[Any]:
+        return [
+            HttpResponse(
+                response_data["url"],
+                response_data["body"],
+                status=response_data["status"],
+                headers=response_data["headers"],
+                encoding=response_data["_encoding"],
+            )
+            for response_data in data
+        ]
 
 
 class HttpClientProvider(PageObjectInputProvider):
