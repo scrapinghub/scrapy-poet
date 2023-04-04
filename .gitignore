@@ -21,3 +21,9 @@ _static/
 _templates/
 htmlcov/
 coverage.xml
+
+# virtual env
+venv/
+env/
+.venv/
+.env/
