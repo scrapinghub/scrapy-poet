@@ -145,7 +145,7 @@ class TestSpider(Spider):
     }
 
     def parse(self, response, page: SamplePage):
-        items.append(page.to_item())
+        pass
 """
     )
     with MockServer(EchoResource) as server:
