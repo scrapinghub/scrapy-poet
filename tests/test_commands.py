@@ -5,6 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
 from web_poet.testing import Fixture
 
 from scrapy_poet.utils.mockserver import MockServer
@@ -158,4 +159,53 @@ class TestSpider(Spider):
     fixture = Fixture(fixture_dir)
     assert fixture.is_valid()
     assert (fixture.input_path / "HttpResponse-body.html").exists()
+    assert json.loads(fixture.output_path.read_bytes()) == {"foo": "bar"}
+
+
+@pytest.mark.xfail(reason="The generated test doesn't handle UseFallback.")
+def test_savefixture_exceptions_usefallback(tmp_path) -> None:
+    project_name = "foo"
+    cwd = Path(tmp_path)
+    call_scrapy_command(str(cwd), "startproject", project_name)
+    cwd /= project_name
+    type_name = "foo.po.SamplePage"
+    (cwd / project_name / "po.py").write_text(
+        """
+from web_poet.exceptions import UseFallback
+from web_poet.pages import WebPage
+
+
+class SamplePage(WebPage):
+    def to_item(self):
+        raise UseFallback
+"""
+    )
+    (cwd / project_name / "spiders/retry.py").write_text(
+        """
+import scrapy_poet
+from scrapy import Request, Spider
+from web_poet.exceptions import UseFallback
+
+from foo.po import SamplePage
+
+
+class TestSpider(Spider):
+    name = "test_spider"
+
+    def parse(self, response, page: SamplePage):
+        try:
+            return page.to_item()
+        except UseFallback:
+            return {"foo": "bar"}
+"""
+    )
+    with MockServer(EchoResource) as server:
+        call_scrapy_command(
+            str(cwd), "savefixture", type_name, server.root_url, "test_spider"
+        )
+
+    fixtures_dir = cwd / "fixtures"
+    fixture_dir = fixtures_dir / type_name / "test-1"
+    fixture = Fixture(fixture_dir)
+    assert fixture.is_valid()
     assert json.loads(fixture.output_path.read_bytes()) == {"foo": "bar"}
