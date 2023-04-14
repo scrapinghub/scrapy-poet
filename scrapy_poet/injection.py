@@ -3,6 +3,7 @@ import logging
 import os
 import pprint
 import warnings
+from inspect import get_annotations
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 
 import andi
@@ -17,6 +18,7 @@ from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import RulesRegistry
 from web_poet.pages import is_injectable
+from web_poet.serialization import serialize, serialize_leaf
 
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from scrapy_poet.cache import SqlitedictCache
@@ -28,7 +30,11 @@ from scrapy_poet.injection_errors import (
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils import is_min_scrapy_version
 
-from .utils import create_registry_instance, get_scrapy_data_path
+from .utils import (
+    create_registry_instance,
+    get_registered_anotations,
+    get_scrapy_data_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -238,7 +244,7 @@ class Injector:
 
             if self.cache and not cache_hit and provider.has_cache_support:
                 # Save the results in the cache
-                self.cache[fingerprint] = provider.serialize(objs)
+                self.cache[fingerprint] = serialize(objs)
                 self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
 
         return instances

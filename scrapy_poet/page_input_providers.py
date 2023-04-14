@@ -43,12 +43,15 @@ from web_poet import (
     ResponseUrl,
 )
 from web_poet.pages import is_injectable
+from web_poet.serialization import serialize_leaf
 
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.injection_errors import (
     MalformedProvidedClassesError,
     ProviderDependencyDeadlockError,
 )
+
+from .utils import get_registered_anotations
 
 
 class PageObjectInputProvider:
@@ -133,6 +136,20 @@ class PageObjectInputProvider:
                 f"{self!r}. Expected either 'set' or 'callable'"
             )
 
+    @property
+    def has_cache_support(self):
+        registered_annotations = get_registered_anotations(serialize_leaf)
+        has_cache_support = False
+        for provided_class in self.provided_classes:
+            if any(
+                issubclass(provided_class, annotation)
+                for annotation in registered_annotations
+            ):
+                has_cache_support = True
+                break
+
+        return has_cache_support
+
     # FIXME: Can't import the Injector as class annotation due to circular dep.
     def __init__(self, injector):
         """Initializes the provider. Invoked only at spider start up."""
@@ -150,40 +167,7 @@ class PageObjectInputProvider:
     # injection breaks the method overriding rules and mypy then complains.
 
 
-class CacheDataProviderMixin(abc.ABC):
-    """Providers that intend to support the ``SCRAPY_POET_CACHE`` should inherit
-    from this mixin class.
-    """
-
-    @abc.abstractmethod
-    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        """
-        Return a fingerprint that identifies this particular request. It will be used to implement
-        the cache and record/replay mechanism
-        """
-        pass
-
-    @abc.abstractmethod
-    def serialize(self, result: Sequence[Any]) -> Any:
-        """
-        Serializes the results of this provider. The data returned will be pickled.
-        """
-        pass
-
-    @abc.abstractmethod
-    def deserialize(self, data: Any) -> Sequence[Any]:
-        """
-        Deserialize some results of the provider that were previously serialized using the method
-        :meth:`serialize`.
-        """
-        pass
-
-    @property
-    def has_cache_support(self):
-        return True
-
-
-class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
+class HttpResponseProvider(PageObjectInputProvider):
     """This class provides :class:`web_poet.HttpResponse
     <web_poet.page_inputs.http.HttpResponse>` instances.
     """
