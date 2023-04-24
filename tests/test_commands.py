@@ -118,20 +118,6 @@ class SamplePage(WebPage):
         raise UseFallback
 """
     )
-    (cwd / project_name / "spiders/test.py").write_text(
-        """
-from scrapy import Spider
-
-from foo.po import SamplePage
-
-
-class TestSpider(Spider):
-    name = "test_spider"
-
-    def parse(self, response, page: SamplePage):
-        return page.to_item()
-"""
-    )
     with MockServer(EchoResource) as server:
         call_scrapy_command(str(cwd), "savefixture", type_name, server.root_url)
 
