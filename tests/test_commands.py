@@ -8,7 +8,7 @@ from pathlib import Path
 from web_poet.testing import Fixture
 
 from scrapy_poet.utils.mockserver import MockServer
-from scrapy_poet.utils.testing import EchoResource
+from scrapy_poet.utils.testing import EchoResource, HeadersResource
 
 
 def call_scrapy_command(cwd: str, *args: str) -> None:
@@ -86,19 +86,21 @@ from web_poet.pages import WebPage
 class HeadersPage(WebPage):
     async def to_item(self):
         return {
-            "ua": json.loads(self.html)["headers"].get("User-Agent"),
+            "ua": json.loads(self.html).get("User-Agent"),
         }
 """
     )
-    url = "http://httpbin.org/headers"
     type_name = "foo.po.HeadersPage"
-    call_scrapy_command(str(cwd), "savefixture", type_name, url, "myspider")
+    with MockServer(HeadersResource) as server:
+        call_scrapy_command(
+            str(cwd), "savefixture", type_name, server.root_url, "myspider"
+        )
     fixtures_dir = cwd / "fixtures"
     fixture_dir = fixtures_dir / type_name / "test-1"
     fixture = Fixture(fixture_dir)
     assert fixture.is_valid()
     item = json.loads(fixture.output_path.read_bytes())
-    assert item == {"ua": "scrapy/savefixture"}
+    assert item == {"ua": ["scrapy/savefixture"]}
 
 
 def test_savefixture_expected_exception(tmp_path) -> None:

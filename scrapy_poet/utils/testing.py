@@ -1,3 +1,4 @@
+import json
 from inspect import isasyncgenfunction
 from typing import Dict
 from unittest import mock
@@ -65,6 +66,16 @@ class DelayedResource(LeafResource):
 class EchoResource(LeafResource):
     def render_GET(self, request):
         return request.content.read()
+
+
+class HeadersResource(LeafResource):
+    def render_GET(self, request):
+        return json.dumps(
+            {
+                k.decode(): [v.decode() for v in vs]
+                for k, vs in request.requestHeaders.getAllRawHeaders()
+            }
+        ).encode()
 
 
 class StatusResource(LeafResource):
