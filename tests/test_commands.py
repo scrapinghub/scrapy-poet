@@ -8,7 +8,7 @@ from pathlib import Path
 from web_poet.testing import Fixture
 
 from scrapy_poet.utils.mockserver import MockServer
-from scrapy_poet.utils.testing import EchoResource, HeadersResource
+from scrapy_poet.utils.testing import EchoResource, HeadersResource, ProductHtml
 
 
 def call_scrapy_command(cwd: str, *args: str) -> None:
@@ -17,7 +17,9 @@ def call_scrapy_command(cwd: str, *args: str) -> None:
         subprocess.call(args, stdout=out, stderr=out, cwd=cwd)
 
 
-def test_savefixture(tmp_path) -> None:
+def test_savefixture(
+    tmp_path,
+) -> None:
     project_name = "foo"
     cwd = Path(tmp_path)
     call_scrapy_command(str(cwd), "startproject", project_name)
@@ -40,12 +42,12 @@ class BTSBookPage(WebPage):
         await self.client.request("http://toscrape.com")
         return {
             'url': self.url,
-            'name': self.css("title::text").get(),
+            'name': self.css("h1.name::text").get(),
         }
 """
     )
-    url = "http://books.toscrape.com/catalogue/the-wedding-pact-the-omalleys-2_767/index.html"
-    call_scrapy_command(str(cwd), "savefixture", type_name, url)
+    with MockServer(ProductHtml) as server:
+        call_scrapy_command(str(cwd), "savefixture", type_name, server.root_url)
     fixtures_dir = cwd / "fixtures"
     fixture_dir = fixtures_dir / type_name / "test-1"
     fixture = Fixture(fixture_dir)
