@@ -10,22 +10,7 @@ from scrapy_poet.page_input_providers import (
     HttpResponseProvider,
     PageObjectInputProvider,
 )
-from scrapy_poet.utils.testing import HtmlResource, crawl_items, crawl_single_item
-
-
-class ProductHtml(HtmlResource):
-
-    html = """
-    <html>
-        <div class="breadcrumbs">
-            <a href="/food">Food</a> /
-            <a href="/food/sweets">Sweets</a>
-        </div>
-        <h1 class="name">Chocolate</h1>
-        <p>Price: <span class="price">22€</span></p>
-        <p class="description">The best chocolate ever</p>
-    </html>
-    """
+from scrapy_poet.utils.testing import ProductHtml, crawl_items, crawl_single_item
 
 
 @inlineCallbacks

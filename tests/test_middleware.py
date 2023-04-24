@@ -19,25 +19,11 @@ from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
-    HtmlResource,
+    ProductHtml,
     capture_exceptions,
     crawl_items,
     crawl_single_item,
 )
-
-
-class ProductHtml(HtmlResource):
-    html = """
-    <html>
-        <div class="breadcrumbs">
-            <a href="/food">Food</a> /
-            <a href="/food/sweets">Sweets</a>
-        </div>
-        <h1 class="name">Chocolate</h1>
-        <p>Price: <span class="price">22€</span></p>
-        <p class="description">The best chocolate ever</p>
-    </html>
-    """
 
 
 def spider_for(injectable: Type):

@@ -86,6 +86,21 @@ class StatusResource(LeafResource):
         return b""
 
 
+class ProductHtml(HtmlResource):
+
+    html = """
+    <html>
+        <div class="breadcrumbs">
+            <a href="/food">Food</a> /
+            <a href="/food/sweets">Sweets</a>
+        </div>
+        <h1 class="name">Chocolate</h1>
+        <p>Price: <span class="price">22€</span></p>
+        <p class="description">The best chocolate ever</p>
+    </html>
+    """
+
+
 @inlineCallbacks
 def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None, port=None):
     """Use spider_cls to crawl resource_cls. URL of the resource is passed
