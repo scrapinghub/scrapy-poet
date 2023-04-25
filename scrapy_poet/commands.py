@@ -14,6 +14,7 @@ from scrapy.http import Response
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import ItemPage
+from web_poet.exceptions import PageObjectAction
 from web_poet.testing import Fixture
 from web_poet.utils import ensure_awaitable
 
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 saved_dependencies = []
 saved_items = []
+saved_exceptions = []
 frozen_time = None
 
 
@@ -74,9 +76,14 @@ def spider_for(
                 microsecond=0
             )
             with time_machine.travel(frozen_time):
-                item = await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]
-            saved_items.append(item)
-            yield item
+                try:
+                    item = await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]
+                except PageObjectAction as ex:
+                    # let other exception types fail the test generation
+                    saved_exceptions.append(ex)
+                else:
+                    saved_items.append(item)
+                    yield item
 
     return InjectableSpider
 
@@ -118,14 +125,24 @@ class SaveFixtureCommand(ScrapyCommand):
         self.crawler_process.crawl(spider_cls)
         self.crawler_process.start()
 
-        if len(saved_items) == 0:
-            logger.error("No items were scraped, check the spider output.")
+        if not saved_items and not saved_exceptions:
+            logger.error(
+                "No items were scraped and no handled exceptions were caught, check the spider output."
+            )
             return
         deps = saved_dependencies
-        item = saved_items[0]
         meta = {
             "frozen_time": frozen_time.isoformat(timespec="seconds"),
         }
         basedir = Path(self.settings.get("SCRAPY_POET_TESTS_DIR", "fixtures"))
-        fixture = Fixture.save(basedir / type_name, inputs=deps, item=item, meta=meta)
+        if saved_items:
+            item = saved_items[0]
+            fixture = Fixture.save(
+                basedir / type_name, inputs=deps, item=item, meta=meta
+            )
+        else:
+            exception = saved_exceptions[0]
+            fixture = Fixture.save(
+                basedir / type_name, inputs=deps, exception=exception, meta=meta
+            )
         logger.info(f"\nThe test fixture has been written to {fixture.path}.")

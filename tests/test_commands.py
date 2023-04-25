@@ -7,6 +7,9 @@ from pathlib import Path
 
 from web_poet.testing import Fixture
 
+from scrapy_poet.utils.mockserver import MockServer
+from scrapy_poet.utils.testing import EchoResource
+
 
 def call_scrapy_command(cwd: str, *args: str) -> None:
     with tempfile.TemporaryFile() as out:
@@ -96,3 +99,33 @@ class HeadersPage(WebPage):
     assert fixture.is_valid()
     item = json.loads(fixture.output_path.read_bytes())
     assert item == {"ua": "scrapy/savefixture"}
+
+
+def test_savefixture_expected_exception(tmp_path) -> None:
+    project_name = "foo"
+    cwd = Path(tmp_path)
+    call_scrapy_command(str(cwd), "startproject", project_name)
+    cwd /= project_name
+    type_name = "foo.po.SamplePage"
+    (cwd / project_name / "po.py").write_text(
+        """
+from web_poet.exceptions import UseFallback
+from web_poet.pages import WebPage
+
+
+class SamplePage(WebPage):
+    def to_item(self):
+        raise UseFallback
+"""
+    )
+    with MockServer(EchoResource) as server:
+        call_scrapy_command(str(cwd), "savefixture", type_name, server.root_url)
+
+    fixtures_dir = cwd / "fixtures"
+    fixture_dir = fixtures_dir / type_name / "test-1"
+    fixture = Fixture(fixture_dir)
+    assert fixture.is_valid()
+    assert (
+        json.loads(fixture.exception_path.read_bytes())["type_name"]
+        == "web_poet.exceptions.core.UseFallback"
+    )
