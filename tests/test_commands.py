@@ -14,7 +14,9 @@ from scrapy_poet.utils.testing import EchoResource, HeadersResource, ProductHtml
 def call_scrapy_command(cwd: str, *args: str) -> None:
     with tempfile.TemporaryFile() as out:
         args = (sys.executable, "-m", "scrapy.cmdline") + args
-        subprocess.call(args, stdout=out, stderr=out, cwd=cwd)
+        status = subprocess.call(args, stdout=out, stderr=out, cwd=cwd)
+        out.seek(0)
+        assert status == 0, out.read().decode()
 
 
 def test_savefixture(
