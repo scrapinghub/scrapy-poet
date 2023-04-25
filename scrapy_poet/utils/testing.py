@@ -86,6 +86,22 @@ class StatusResource(LeafResource):
         return b""
 
 
+class ForbiddenResource(LeafResource):
+    def render_GET(self, request):
+        request.setResponseCode(403)
+        return b""
+
+
+class DropResource(LeafResource):
+    def render_GET(self, request):
+        request.setHeader(b"Content-Length", b"10")
+        try:
+            request.channel.transport.loseConnection()
+        finally:
+            request.finish()
+        return NOT_DONE_YET
+
+
 class ProductHtml(HtmlResource):
 
     html = """
