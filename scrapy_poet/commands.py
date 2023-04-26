@@ -129,6 +129,7 @@ class SaveFixtureCommand(ScrapyCommand):
             logger.error(
                 "No items were scraped and no handled exceptions were caught, check the spider output."
             )
+            self.exitcode = 1
             return
         deps = saved_dependencies
         meta = {

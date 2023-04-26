@@ -1,3 +1,4 @@
+import json
 from inspect import isasyncgenfunction
 from typing import Dict
 from unittest import mock
@@ -67,12 +68,53 @@ class EchoResource(LeafResource):
         return request.content.read()
 
 
+class HeadersResource(LeafResource):
+    def render_GET(self, request):
+        return json.dumps(
+            {
+                k.decode(): [v.decode() for v in vs]
+                for k, vs in request.requestHeaders.getAllRawHeaders()
+            }
+        ).encode()
+
+
 class StatusResource(LeafResource):
     def render_GET(self, request):
         decoded_body = request.content.read().decode()
         if decoded_body:
             request.setResponseCode(int(decoded_body))
         return b""
+
+
+class ForbiddenResource(LeafResource):
+    def render_GET(self, request):
+        request.setResponseCode(403)
+        return b""
+
+
+class DropResource(LeafResource):
+    def render_GET(self, request):
+        request.setHeader(b"Content-Length", b"10")
+        try:
+            request.channel.transport.loseConnection()
+        finally:
+            request.finish()
+        return NOT_DONE_YET
+
+
+class ProductHtml(HtmlResource):
+
+    html = """
+    <html>
+        <div class="breadcrumbs">
+            <a href="/food">Food</a> /
+            <a href="/food/sweets">Sweets</a>
+        </div>
+        <h1 class="name">Chocolate</h1>
+        <p>Price: <span class="price">22€</span></p>
+        <p class="description">The best chocolate ever</p>
+    </html>
+    """
 
 
 @inlineCallbacks
