@@ -2,6 +2,22 @@
 Changelog
 =========
 
+0.12.0 (YYYY-MM-DD)
+-------------------
+
+* Now requires ``web-poet >= 0.11.0``.
+
+* The ``scrapy savefixture`` command can now generate tests that expect that
+  ``to_item()`` raises a specific exception (only
+  :class:`web_poet.exceptions.PageObjectAction` and its descendants are
+  expected).
+
+* Fixed an error when using ``scrapy shell`` with
+  :class:`scrapy_poet.InjectionMiddleware` enabled.
+
+* Add a ``twine check`` CI check.
+
+
 0.11.0 (2023-03-17)
 -------------------
 
