@@ -491,7 +491,8 @@ DOWNLOADER_MIDDLEWARES = {
     pt.command = "shell"
     pt.cwd = tmp_path
     with MockServer(EchoResource) as server:
-        _, out, _ = yield pt.execute(
+        _, out, err = yield pt.execute(
             [server.root_url, "-c", "item"], settings="settings"
         )
+    assert b"Using DummyResponse instead of downloading" not in err
     assert b"{}" in out  # noqa: P103

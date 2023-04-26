@@ -338,6 +338,10 @@ def is_callback_requiring_scrapy_response(
         # There's no type annotation, so we're probably using response here.
         return True
 
+    if not isinstance(first_parameter.annotation, type):
+        # The annotation is using something like Union, so we're probably using response here.
+        return True
+
     if issubclass(first_parameter.annotation, DummyResponse):
         # See: https://github.com/scrapinghub/scrapy-poet/issues/48
         # See: https://github.com/scrapinghub/scrapy-poet/issues/118
