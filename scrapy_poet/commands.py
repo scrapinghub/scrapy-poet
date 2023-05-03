@@ -135,6 +135,9 @@ class SaveFixtureCommand(ScrapyCommand):
         meta = {
             "frozen_time": frozen_time.isoformat(timespec="seconds"),
         }
+        adapter = self.settings.get("SCRAPY_POET_TESTS_ADAPTER")
+        if adapter:
+            meta["adapter"] = load_object(adapter)
         basedir = Path(self.settings.get("SCRAPY_POET_TESTS_DIR", "fixtures"))
         if saved_items:
             item = saved_items[0]
