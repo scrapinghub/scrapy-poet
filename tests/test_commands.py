@@ -86,6 +86,8 @@ class BTSBookPage(WebPage):
     assert (fixture.input_path / "HttpClient-0-HttpResponse.body.html").exists()
     assert (fixture.input_path / "HttpClient-1-HttpResponse.body.html").exists()
     assert (fixture.input_path / "HttpClient-2-exception.json").exists()
+    item = json.loads(fixture.output_path.read_bytes())
+    assert item["name"] == "Chocolate"
     frozen_time_str = json.loads(fixture.meta_path.read_bytes())["frozen_time"]
     frozen_time = datetime.datetime.fromisoformat(frozen_time_str)
     assert frozen_time.microsecond == 0
