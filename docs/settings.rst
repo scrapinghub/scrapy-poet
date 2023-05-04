@@ -112,7 +112,7 @@ SCRAPY_POET_TESTS_ADAPTER
 
 Default: ``None``
 
-Sets the class, or it's import path, that will be used as an adapter in the
+Sets the class, or its import path, that will be used as an adapter in the
 generated test fixtures.
 
 More info at :ref:`fixture-adapter`.

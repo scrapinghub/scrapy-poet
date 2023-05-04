@@ -55,5 +55,5 @@ Configuring the item adapter
 ============================
 
 As documented in :ref:`web-poet:web-poet-testing-adapters`, fixtures can use custom
-item adapters. ``savefixture`` will use the adapter specified in the
-``SCRAPY_POET_TESTS_ADAPTER`` setting when saving the fixture.
+item adapters. The ``savefixture`` command uses the adapter specified in the
+``SCRAPY_POET_TESTS_ADAPTER`` setting to save the fixture.
