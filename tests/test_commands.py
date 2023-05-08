@@ -34,9 +34,7 @@ class CustomResource(Resource):
         self.putChild(b"drop", DropResource())
 
 
-def test_savefixture(
-    tmp_path,
-) -> None:
+def test_savefixture(tmp_path) -> None:
     project_name = "foo"
     cwd = Path(tmp_path)
     call_scrapy_command(str(cwd), "startproject", project_name)
@@ -45,7 +43,7 @@ def test_savefixture(
     (cwd / project_name / "po.py").write_text(
         """
 import attrs
-from web_poet import HttpClient, ResponseUrl
+from web_poet import HttpClient
 from web_poet.exceptions import HttpRequestError, HttpResponseError
 from web_poet.pages import WebPage
 
@@ -53,7 +51,6 @@ from web_poet.pages import WebPage
 @attrs.define
 class BTSBookPage(WebPage):
 
-    response_url: ResponseUrl
     client: HttpClient
 
     async def to_item(self):
@@ -89,6 +86,8 @@ class BTSBookPage(WebPage):
     assert (fixture.input_path / "HttpClient-0-HttpResponse.body.html").exists()
     assert (fixture.input_path / "HttpClient-1-HttpResponse.body.html").exists()
     assert (fixture.input_path / "HttpClient-2-exception.json").exists()
+    item = json.loads(fixture.output_path.read_bytes())
+    assert item["name"] == "Chocolate"
     frozen_time_str = json.loads(fixture.meta_path.read_bytes())["frozen_time"]
     frozen_time = datetime.datetime.fromisoformat(frozen_time_str)
     assert frozen_time.microsecond == 0
@@ -164,6 +163,62 @@ class SamplePage(WebPage):
     fixture = Fixture(fixture_dir)
     assert fixture.is_valid()
     assert (
-        json.loads(fixture.exception_path.read_bytes())["type_name"]
+        json.loads(fixture.exception_path.read_bytes())["import_path"]
         == "web_poet.exceptions.core.UseFallback"
     )
+
+
+def test_savefixture_adapter(tmp_path) -> None:
+    project_name = "foo"
+    cwd = Path(tmp_path)
+    call_scrapy_command(str(cwd), "startproject", project_name)
+    cwd /= project_name
+    type_name = "foo.po.BTSBookPage"
+    (cwd / project_name / "po.py").write_text(
+        """
+from web_poet.pages import WebPage
+
+
+class BTSBookPage(WebPage):
+    async def to_item(self):
+        return {
+            'name': self.css("h1.name::text").get(),
+        }
+"""
+    )
+    (cwd / project_name / "settings.py").write_text(
+        """
+from collections import deque
+
+from itemadapter.adapter import DictAdapter, ItemAdapter
+
+
+class LowercaseDictAdapter(DictAdapter):
+    def __getitem__(self, field_name):
+        item = super().__getitem__(field_name)
+        if isinstance(item, str):
+            return item.lower()
+        return item
+
+
+class CustomItemAdapter(ItemAdapter):
+    ADAPTER_CLASSES = deque([LowercaseDictAdapter])
+
+
+SCRAPY_POET_TESTS_ADAPTER = CustomItemAdapter
+"""
+    )
+
+    with MockServer(ProductHtml) as server:
+        call_scrapy_command(
+            str(cwd),
+            "savefixture",
+            type_name,
+            f"{server.root_url}",
+        )
+    fixtures_dir = cwd / "fixtures"
+    fixture_dir = fixtures_dir / type_name / "test-1"
+    fixture = Fixture(fixture_dir)
+    assert fixture.is_valid()
+    item = json.loads(fixture.output_path.read_bytes())
+    assert item == {"name": "chocolate"}
