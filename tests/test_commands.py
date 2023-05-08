@@ -163,7 +163,7 @@ class SamplePage(WebPage):
     fixture = Fixture(fixture_dir)
     assert fixture.is_valid()
     assert (
-        json.loads(fixture.exception_path.read_bytes())["type_name"]
+        json.loads(fixture.exception_path.read_bytes())["import_path"]
         == "web_poet.exceptions.core.UseFallback"
     )
 
