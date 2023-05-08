@@ -60,7 +60,7 @@ Please, check the docs provided in the following API reference for more details:
 
 
 Cache Support in Providers
-===========================
+==========================
 
 ``scrapy-poet`` also supports caching of the provided dependencies from the
 providers. For example, :class:`~.HttpResponseProvider` supports this right off
