@@ -2,6 +2,17 @@
 Changelog
 =========
 
+0.13.0 (YYYY-MM-DD)
+-------------------
+
+* Now requires ``web-poet >= 0.12.0``.
+
+* The ``scrapy savefixture`` command now uses the adapter from the
+  ``SCRAPY_POET_TESTS_ADAPTER`` setting to save the fixture.
+
+* Fix a typo in the docs.
+
+
 0.12.0 (2023-04-26)
 -------------------
 
