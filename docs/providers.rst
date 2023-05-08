@@ -59,7 +59,7 @@ Please, check the docs provided in the following API reference for more details:
 :class:`~.PageObjectInputProvider`.
 
 
-Cache Suppport in Providers
+Cache Support in Providers
 ===========================
 
 ``scrapy-poet`` also supports caching of the provided dependencies from the
