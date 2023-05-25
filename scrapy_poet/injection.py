@@ -15,11 +15,6 @@ from scrapy.statscollectors import StatsCollector
 from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import load_object
-from twisted.internet.defer import inlineCallbacks
-from web_poet import RulesRegistry
-from web_poet.pages import is_injectable
-from web_poet.serialization import serialize, serialize_leaf
-
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.injection_errors import (
@@ -29,6 +24,14 @@ from scrapy_poet.injection_errors import (
 )
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils import is_min_scrapy_version
+from twisted.internet.defer import inlineCallbacks
+from web_poet import RulesRegistry
+from web_poet.pages import is_injectable
+from web_poet.serialization.api import (
+    SerializedDataFileStorage,
+    serialize,
+    serialize_leaf,
+)
 
 from .utils import (
     create_registry_instance,
@@ -69,33 +72,23 @@ class Injector:
         check_all_providers_are_callable(self.providers)
         # Caching whether each provider requires the scrapy response
         self.is_provider_requiring_scrapy_response = {
-            provider: is_provider_requiring_scrapy_response(provider)
-            for provider in self.providers
+            provider: is_provider_requiring_scrapy_response(provider) for provider in self.providers
         }
         # Caching the function for faster execution
         self.is_class_provided_by_any_provider = is_class_provided_by_any_provider_fn(
             self.providers
         )
 
-    def close(self) -> None:  # noqa: D102
-        if self.cache:
-            self.cache.close()
-
     def init_cache(self):  # noqa: D102
         self.cache = None
-        cache_filename = self.crawler.settings.get("SCRAPY_POET_CACHE")
-        if cache_filename and isinstance(cache_filename, bool):
-            cache_filename = os.path.join(
-                get_scrapy_data_path(createdir=True), "scrapy-poet-cache.sqlite3"
-            )
-        if cache_filename:
+        if self.crawler.settings.get("SCRAPY_POET_CACHE"):
+            cache_dir = get_scrapy_data_path(createdir=True)
             compressed = self.crawler.settings.getbool("SCRAPY_POET_CACHE_GZIP", True)
-            self.caching_errors = self.crawler.settings.getbool(
-                "SCRAPY_POET_CACHE_ERRORS", False
-            )
-            self.cache = SqlitedictCache(cache_filename, compressed=compressed)
+            self.caching_errors = self.crawler.settings.getbool("SCRAPY_POET_CACHE_ERRORS", False)
+            # TODO: Add compressed storage option
+            self.cache = SerializedDataFileStorage(cache_dir)
             logger.info(
-                f"Cache enabled. File: {cache_filename!r}. Compressed: {compressed}. Caching errors: {self.caching_errors}"
+                f"Cache enabled. Folder: {cache_dir!r}. Compressed: {compressed}. Caching errors: {self.caching_errors}"
             )
 
     def available_dependencies_for_providers(
@@ -112,9 +105,7 @@ class Injector:
         assert deps.keys() == SCRAPY_PROVIDED_CLASSES
         return deps
 
-    def discover_callback_providers(
-        self, request: Request
-    ) -> Set[PageObjectInputProvider]:
+    def discover_callback_providers(self, request: Request) -> Set[PageObjectInputProvider]:
         """Discover the providers that are required to fulfil the callback dependencies"""
         plan = self.build_plan(request)
         result = set()
@@ -157,9 +148,7 @@ class Injector:
     def build_instances(self, request: Request, response: Response, plan: andi.Plan):
         """Build the instances dict from a plan including external dependencies."""
         # First we build the external dependencies using the providers
-        instances = yield from self.build_instances_from_providers(
-            request, response, plan
-        )
+        instances = yield from self.build_instances_from_providers(request, response, plan)
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
         for cls, kwargs_spec in plan.dependencies:
@@ -169,19 +158,13 @@ class Injector:
         return instances
 
     @inlineCallbacks
-    def build_instances_from_providers(
-        self, request: Request, response: Response, plan: andi.Plan
-    ):
+    def build_instances_from_providers(self, request: Request, response: Response, plan: andi.Plan):
         """Build dependencies handled by registered providers"""
         instances: Dict[Callable, Any] = {}
-        scrapy_provided_dependencies = self.available_dependencies_for_providers(
-            request, response
-        )
+        scrapy_provided_dependencies = self.available_dependencies_for_providers(request, response)
         dependencies_set = {cls for cls, _ in plan.dependencies}
         for provider in self.providers:
-            provided_classes = {
-                cls for cls in dependencies_set if provider.is_provided(cls)
-            }
+            provided_classes = {cls for cls in dependencies_set if provider.is_provided(cls)}
             provided_classes -= instances.keys()  # ignore already provided types
             if not provided_classes:
                 continue
@@ -195,7 +178,9 @@ class Injector:
                         f" you want to use the cache. It must be unique across the providers."
                     )
                 # Return the data if it is already in the cache
-                fingerprint = f"{provider.name}_{provider.fingerprint(set(provided_classes), request)}"
+                fingerprint = (
+                    f"{provider.name}_{provider.fingerprint(set(provided_classes), request)}"
+                )
                 try:
                     data = self.cache[fingerprint]
                 except KeyError:
@@ -215,18 +200,11 @@ class Injector:
                     full_final_kwargs=False,
                 ).final_kwargs(scrapy_provided_dependencies)
                 try:
-
                     # Invoke the provider to get the data
-                    objs = yield maybeDeferred_coro(
-                        provider, set(provided_classes), **kwargs
-                    )
+                    objs = yield maybeDeferred_coro(provider, set(provided_classes), **kwargs)
 
                 except Exception as e:
-                    if (
-                        self.cache
-                        and self.caching_errors
-                        and provider.has_cache_support
-                    ):
+                    if self.cache and self.caching_errors and provider.has_cache_support:
                         # Save errors in the cache
                         self.cache[fingerprint] = e
                         self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
@@ -244,7 +222,8 @@ class Injector:
 
             if self.cache and not cache_hit and provider.has_cache_support:
                 # Save the results in the cache
-                self.cache[fingerprint] = serialize(objs)
+                serialized_inputs = serialize(objs)
+                self.cache.write(serialized_inputs)
                 self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
 
         return instances
@@ -282,9 +261,7 @@ def is_class_provided_by_any_provider_fn(
     joined together for efficiency.
     """
     sets_of_types: Set[Callable] = set()  # caching all sets found
-    individual_is_callable: List[Callable[[Callable], bool]] = [
-        sets_of_types.__contains__
-    ]
+    individual_is_callable: List[Callable[[Callable], bool]] = [sets_of_types.__contains__]
     for provider in providers:
         provided_classes = provider.provided_classes
 
@@ -320,9 +297,7 @@ def get_callback(request, spider):
 _unset = object()
 
 
-def is_callback_requiring_scrapy_response(
-    callback: Callable, raw_callback: Any = _unset
-) -> bool:
+def is_callback_requiring_scrapy_response(callback: Callable, raw_callback: Any = _unset) -> bool:
     """
     Check whether the request's callback method requires the response.
     Basically, it won't be required if the response argument in the
@@ -404,9 +379,7 @@ def get_injector_for_testing(
     class MySpider(Spider):
         name = "my_spider"
 
-    settings = Settings(
-        {**(additional_settings or {}), "SCRAPY_POET_PROVIDERS": providers}
-    )
+    settings = Settings({**(additional_settings or {}), "SCRAPY_POET_PROVIDERS": providers})
     crawler = Crawler(MySpider)
     crawler.settings = settings
     spider = MySpider()
