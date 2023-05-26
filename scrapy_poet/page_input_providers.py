@@ -8,28 +8,14 @@ is in charge of providing the response HTML from Scrapy. You could also implemen
 different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from an API for automatic extraction.
 """
-import abc
 import asyncio
-import json
 from dataclasses import make_dataclass
 from inspect import isclass
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Type,
-    Union,
-)
+from typing import Any, Callable, ClassVar, Dict, List, Optional, Set, Type, Union
 from warnings import warn
 from weakref import WeakKeyDictionary
 
 import andi
-import attr
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.http import Response
@@ -175,18 +161,6 @@ class HttpResponseProvider(PageObjectInputProvider):
     provided_classes = {HttpResponse}
     name = "response_data"
 
-    def __init__(self, crawler: Crawler):
-        if hasattr(crawler, "request_fingerprinter"):
-
-            def fingerprint(x):
-                return crawler.request_fingerprinter.fingerprint(x).hex()
-
-            self._fingerprint = fingerprint
-        else:
-            from scrapy.utils.request import request_fingerprint
-
-            self._fingerprint = request_fingerprint
-
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a :class:`web_poet.HttpResponse
         <web_poet.page_inputs.http.HttpResponse>` instance using a
@@ -199,33 +173,6 @@ class HttpResponseProvider(PageObjectInputProvider):
                 status=response.status,
                 headers=HttpResponseHeaders.from_bytes_dict(response.headers),
             )
-        ]
-
-    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        request_keys = {"url", "method", "body"}
-        _request = request.replace(callback=None, errback=None)
-        request_data = {
-            k: str(v) for k, v in _request.to_dict().items() if k in request_keys
-        }
-        fp_data = {
-            "SCRAPY_FINGERPRINT": self._fingerprint(_request),
-            **request_data,
-        }
-        return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
-
-    def serialize(self, result: Sequence[Any]) -> Any:
-        return [attr.asdict(response_data) for response_data in result]
-
-    def deserialize(self, data: Any) -> Sequence[Any]:
-        return [
-            HttpResponse(
-                response_data["url"],
-                response_data["body"],
-                status=response_data["status"],
-                headers=response_data["headers"],
-                encoding=response_data["_encoding"],
-            )
-            for response_data in data
         ]
 
 
@@ -280,7 +227,6 @@ class RequestUrlProvider(PageObjectInputProvider):
 
 
 class ResponseUrlProvider(PageObjectInputProvider):
-
     provided_classes = {ResponseUrl}
     name = "response_url"
 
@@ -292,7 +238,6 @@ class ResponseUrlProvider(PageObjectInputProvider):
 
 
 class ItemProvider(PageObjectInputProvider):
-
     name = "item"
 
     template_deadlock_msg = (
