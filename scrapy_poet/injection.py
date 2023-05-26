@@ -191,7 +191,7 @@ class Injector:
                     )
                 # This one should take `web_poet.HttpRequest` but `scrapy.Request` will work as well
                 # TODO: add `scrapy.Request` type in request_fingerprint() annotations
-                fingerprint = request_fingerprint(request)
+                fingerprint = f"{provider.name}_{request_fingerprint(request)}"
                 # Return the data if it is already in the cache
                 try:
                     data = self.cache[fingerprint].items()
