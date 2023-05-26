@@ -1,4 +1,5 @@
 import socket
+from pathlib import Path
 from typing import Optional, Type, Union
 from unittest import mock
 
@@ -10,6 +11,7 @@ from scrapy import Request, Spider
 from scrapy.http import Response
 from scrapy.utils.log import configure_logging
 from scrapy.utils.test import get_crawler
+from scrapy.utils.testproc import ProcessTest
 from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
 from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
@@ -17,27 +19,14 @@ from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl,
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
 from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from scrapy_poet.utils.mockserver import get_ephemeral_port
+from scrapy_poet.utils.mockserver import MockServer, get_ephemeral_port
 from scrapy_poet.utils.testing import (
-    HtmlResource,
+    EchoResource,
+    ProductHtml,
     capture_exceptions,
     crawl_items,
     crawl_single_item,
 )
-
-
-class ProductHtml(HtmlResource):
-    html = """
-    <html>
-        <div class="breadcrumbs">
-            <a href="/food">Food</a> /
-            <a href="/food/sweets">Sweets</a>
-        </div>
-        <h1 class="name">Chocolate</h1>
-        <p>Price: <span class="price">22€</span></p>
-        <p class="description">The best chocolate ever</p>
-    </html>
-    """
 
 
 def spider_for(injectable: Type):
@@ -487,3 +476,23 @@ def test_cache_closed_on_spider_close(mock_sqlitedictcache, settings):
         mock.call("/tmp/cache", compressed=True),
         mock.call().close(),
     ]
+
+
+@inlineCallbacks
+def test_scrapy_shell(tmp_path):
+    Path(tmp_path, "settings.py").write_text(
+        """
+DOWNLOADER_MIDDLEWARES = {
+    "scrapy_poet.InjectionMiddleware": 543,
+}
+"""
+    )
+    pt = ProcessTest()
+    pt.command = "shell"
+    pt.cwd = tmp_path
+    with MockServer(EchoResource) as server:
+        _, out, err = yield pt.execute(
+            [server.root_url, "-c", "item"], settings="settings"
+        )
+    assert b"Using DummyResponse instead of downloading" not in err
+    assert b"{}" in out  # noqa: P103

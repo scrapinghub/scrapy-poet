@@ -130,7 +130,7 @@ def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int 
     # Only checks the first element for now since it's used alongside crawling
     # a single item.
     assert not deps[0].keys() - expected.keys()
-    assert all([True for k, v in expected.items() if isinstance(deps[0][k], v)])
+    assert all(True for k, v in expected.items() if isinstance(deps[0][k], v))
 
 
 def assert_warning_tokens(caught_warnings, expected_warning_tokens):
@@ -138,11 +138,9 @@ def assert_warning_tokens(caught_warnings, expected_warning_tokens):
     for warning in caught_warnings:
         results.append(
             all(
-                [
-                    True
-                    for expected in expected_warning_tokens
-                    if expected in str(warning.message)
-                ]
+                True
+                for expected in expected_warning_tokens
+                if expected in str(warning.message)
             )
         )
     assert all(results)
@@ -469,7 +467,7 @@ def test_basic_item_with_page_object_but_different_url() -> None:
     )
     with warnings.catch_warnings(record=True) as caught_warnings:
         item, deps = yield crawl_item_and_deps(ItemWithPageObjectButForDifferentUrl)
-        assert any([True for w in caught_warnings if msg in str(w.message)])
+        assert any(True for w in caught_warnings if msg in str(w.message))
     assert item is None
     assert not deps
 
@@ -620,7 +618,7 @@ def test_item_return_parent_priority() -> None:
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         item, deps = yield crawl_item_and_deps(PriorityProductFromParent)
-        assert not any([True for w in caught_warnings if msg in str(w.message)])
+        assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == PriorityProductFromParent(name="priority parent product name")
     assert_deps(deps, {"item": PriorityProductFromParent})
@@ -672,7 +670,7 @@ def test_item_return_individually_defined_first_rule_higher_priority() -> None:
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         item, deps = yield crawl_item_and_deps(BItem)
-        assert not any([True for w in caught_warnings if msg in str(w.message)])
+        assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == BItem(name="independent B1")
     assert_deps(deps, {"item": IndependentB1Page})
@@ -724,7 +722,7 @@ def test_item_return_subclass_priority() -> None:
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         item, deps = yield crawl_item_and_deps(PriorityProductFromSubclass)
-        assert not any([True for w in caught_warnings if msg in str(w.message)])
+        assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == PriorityProductFromSubclass(name="priority subclass product name")
     assert_deps(deps, {"item": PriorityProductFromSubclass})
@@ -776,7 +774,7 @@ def test_item_return_individually_defined_second_rule_higher_priority() -> None:
 
     with warnings.catch_warnings(record=True) as caught_warnings:
         item, deps = yield crawl_item_and_deps(CItem)
-        assert not any([True for w in caught_warnings if msg in str(w.message)])
+        assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == CItem(name="independent C2")
     assert_deps(deps, {"item": IndependentC2Page})

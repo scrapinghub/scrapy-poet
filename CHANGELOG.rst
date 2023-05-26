@@ -2,6 +2,33 @@
 Changelog
 =========
 
+0.13.0 (2023-05-08)
+-------------------
+
+* Now requires ``web-poet >= 0.12.0``.
+
+* The ``scrapy savefixture`` command now uses the adapter from the
+  ``SCRAPY_POET_TESTS_ADAPTER`` setting to save the fixture.
+
+* Fix a typo in the docs.
+
+
+0.12.0 (2023-04-26)
+-------------------
+
+* Now requires ``web-poet >= 0.11.0``.
+
+* The ``scrapy savefixture`` command can now generate tests that expect that
+  ``to_item()`` raises a specific exception (only
+  :class:`web_poet.exceptions.PageObjectAction` and its descendants are
+  expected).
+
+* Fixed an error when using ``scrapy shell`` with
+  :class:`scrapy_poet.InjectionMiddleware` enabled.
+
+* Add a ``twine check`` CI check.
+
+
 0.11.0 (2023-03-17)
 -------------------
 
