@@ -1,4 +1,4 @@
-from tempfile import NamedTemporaryFile
+from tempfile import TemporaryDirectory
 
 from pytest_twisted import inlineCallbacks
 from scrapy import Request, Spider
@@ -10,7 +10,7 @@ from scrapy_poet.utils.testing import EchoResource, make_crawler
 
 @inlineCallbacks
 def test_cache_no_errors(caplog) -> None:
-    with NamedTemporaryFile() as cache_file:
+    with TemporaryDirectory() as cache_dir:
         with MockServer(EchoResource) as server:
 
             class Page(WebPage):
@@ -26,7 +26,7 @@ def test_cache_no_errors(caplog) -> None:
                         "scrapy_poet.InjectionMiddleware": 543,
                     },
                     "REQUEST_FINGERPRINTER_IMPLEMENTATION": "2.7",
-                    "SCRAPY_POET_CACHE": cache_file.name,
+                    "SCRAPY_POET_CACHE": cache_dir,
                 }
 
                 def start_requests(self):
