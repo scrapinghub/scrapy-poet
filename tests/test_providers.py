@@ -1,5 +1,5 @@
 import json
-from typing import Any, Callable, List, Sequence, Set
+from typing import Any, Callable, List, Set
 from unittest import mock
 
 import attr
@@ -14,7 +14,6 @@ from web_poet import HttpClient, HttpResponse
 from scrapy_poet import HttpResponseProvider
 from scrapy_poet.injection import Injector
 from scrapy_poet.page_input_providers import (
-    CacheDataProviderMixin,
     HttpClientProvider,
     ItemProvider,
     PageObjectInputProvider,
@@ -51,8 +50,7 @@ class Html:
     html: str
 
 
-class PriceHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
-
+class PriceHtmlDataProvider(PageObjectInputProvider):
     name = "price_html"
     provided_classes = {Price, Html}
 
@@ -71,18 +69,8 @@ class PriceHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
             ret.append(Html("Price Html!"))
         return ret
 
-    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        return "http://example.com"
 
-    def serialize(self, result: Sequence[Any]) -> Any:
-        return result
-
-    def deserialize(self, data: Any) -> Sequence[Any]:
-        return data
-
-
-class NameHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
-
+class NameHtmlDataProvider(PageObjectInputProvider):
     name = "name_html"
     provided_classes = {Name, Html}.__contains__
 
@@ -95,15 +83,6 @@ class NameHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
             ret.append(Html("Name Html!"))
         return ret
 
-    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        return "http://example.com"
-
-    def serialize(self, result: Sequence[Any]) -> Any:
-        return result
-
-    def deserialize(self, data: Any) -> Sequence[Any]:
-        return data
-
 
 class HttpResponseProviderForTest(HttpResponseProvider):
     """Uses a fixed fingerprint because the test server is always changing the URL from test to test"""
@@ -113,7 +92,6 @@ class HttpResponseProviderForTest(HttpResponseProvider):
 
 
 class PriceFirstMultiProviderSpider(scrapy.Spider):
-
     url = None
     custom_settings = {
         "SCRAPY_POET_PROVIDERS": {
@@ -146,7 +124,6 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
 
 
 class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
-
     custom_settings = {
         "SCRAPY_POET_PROVIDERS": {
             HttpResponseProviderForTest: 0,
@@ -158,7 +135,7 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
 
 @inlineCallbacks
 def test_name_first_spider(settings, tmp_path):
-    cache = tmp_path / "cache.sqlite3"
+    cache = tmp_path / "cache"
     settings.set("SCRAPY_POET_CACHE", str(cache))
     item, _, _ = yield crawl_single_item(
         NameFirstMultiProviderSpider, ProductHtml, settings
