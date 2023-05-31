@@ -1,6 +1,5 @@
 import os
 from functools import lru_cache
-from inspect import get_annotations
 from typing import Any, Callable, List, Type
 from warnings import warn
 
@@ -81,11 +80,12 @@ def is_min_scrapy_version(version: str) -> bool:
 
 def get_registered_anotations(generic_func: Callable) -> List[Any]:
     """Get argument annotations from all registered functions for a given generic function"""
-    registered_funcs = generic_func.registry.values()
+    registered_funcs: List[Callable] = generic_func.registry.values()
     registered_annotations = []
     for func in registered_funcs:
         # get all parameter annotations, except from the return value
-        annotations = get_annotations(func).values()[:-1]
+        # `inspect.get_annotations()` could be a better option but it's not compatible with python<3.10
+        annotations = func.__annotations__.values()[:-1]
         registered_annotations += annotations
 
     return registered_annotations
