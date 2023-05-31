@@ -1,5 +1,3 @@
-from typing import Any, Callable, Sequence, Set
-
 import attr
 import parsel
 import pytest
@@ -12,12 +10,7 @@ from web_poet import Injectable, ItemPage, RulesRegistry
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
-from scrapy_poet import (
-    CacheDataProviderMixin,
-    DummyResponse,
-    HttpResponseProvider,
-    PageObjectInputProvider,
-)
+from scrapy_poet import DummyResponse, HttpResponseProvider, PageObjectInputProvider
 from scrapy_poet.injection import (
     check_all_providers_are_callable,
     get_injector_for_testing,
@@ -397,7 +390,7 @@ def test_is_class_provided_by_any_provider_fn():
 
 
 def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
-    class Provider(PageObjectInputProvider, CacheDataProviderMixin):
+    class Provider(PageObjectInputProvider):
         name = a_name
         provided_classes = classes
         require_response = False
@@ -409,15 +402,6 @@ def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
             if not get_domain(request.url) == "example.com":
                 raise error("The URL is not from example.com")
             return [cls(content) if content else cls() for cls in classes]
-
-        def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-            return request.url
-
-        def serialize(self, result: Sequence[Any]) -> Any:
-            return result
-
-        def deserialize(self, data: Any) -> Sequence[Any]:
-            return data
 
     return Provider
 
