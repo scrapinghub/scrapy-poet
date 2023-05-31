@@ -1,3 +1,5 @@
+import os
+
 import attr
 import parsel
 import pytest
@@ -425,13 +427,14 @@ def test_cache(tmp_path, cache_errors):
         get_provider_for_cache({int, float}, "number", content=3): 2,
     }
 
-    cache = tmp_path / "cache3.sqlite3"
+    cache = tmp_path
     if cache.exists():
-        print(f"Cache file {cache} already exists. Weird. Deleting")
+        print(f"Cache folder {cache} already exists. Weird. Deleting")
         cache.unlink()
     settings = {"SCRAPY_POET_CACHE": cache, "SCRAPY_POET_CACHE_ERRORS": cache_errors}
     injector = get_injector_for_testing(providers, settings)
-    assert cache.exists()
+    cache_dir_empty = len(os.listdir(cache)) == 0
+    assert not cache_dir_empty
 
     def callback(response: DummyResponse, arg_str: str, arg_int: int, arg_float: float):
         pass
