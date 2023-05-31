@@ -105,3 +105,14 @@ Default: ``fixtures``
 Sets the location where the ``savefixture`` command creates tests.
 
 More info at :ref:`testing`.
+
+
+SCRAPY_POET_TESTS_ADAPTER
+-------------------------
+
+Default: ``None``
+
+Sets the class, or its import path, that will be used as an adapter in the
+generated test fixtures.
+
+More info at :ref:`fixture-adapter`.

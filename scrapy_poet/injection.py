@@ -5,6 +5,7 @@ import warnings
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set
 
 import andi
+from andi.typeutils import issubclass_safe
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Response
@@ -345,7 +346,7 @@ def is_callback_requiring_scrapy_response(
         # There's no type annotation, so we're probably using response here.
         return True
 
-    if issubclass(first_parameter.annotation, DummyResponse):
+    if issubclass_safe(first_parameter.annotation, DummyResponse):
         # See: https://github.com/scrapinghub/scrapy-poet/issues/48
         # See: https://github.com/scrapinghub/scrapy-poet/issues/118
         if raw_callback is None and not is_min_scrapy_version("2.8.0"):

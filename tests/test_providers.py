@@ -20,21 +20,12 @@ from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
     PageParamsProvider,
 )
-from scrapy_poet.utils.testing import AsyncMock, HtmlResource, crawl_single_item
-
-
-class ProductHtml(HtmlResource):
-    html = """
-    <html>
-        <div class="breadcrumbs">
-            <a href="/food">Food</a> /
-            <a href="/food/sweets">Sweets</a>
-        </div>
-        <h1 class="name">Chocolate</h1>
-        <p>Price: <span class="price">22€</span></p>
-        <p class="description">The best chocolate ever</p>
-    </html>
-    """
+from scrapy_poet.utils.testing import (
+    AsyncMock,
+    HtmlResource,
+    ProductHtml,
+    crawl_single_item,
+)
 
 
 class NonProductHtml(HtmlResource):
