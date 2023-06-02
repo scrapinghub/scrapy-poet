@@ -80,7 +80,7 @@ And then override it for a particular domain using ``settings.py``:
 .. code-block:: python
 
     SCRAPY_POET_RULES = [
-        ApplyRule("example.com", use=ISBNBookPage, instead_of=BookPage)
+        ApplyRule("toscrape.com", use=ISBNBookPage, instead_of=BookPage)
     ]
 
 This new Page Object gets the original ``BookPage`` as dependency and enrich
@@ -211,7 +211,7 @@ Let's check out an example:
         name: str
 
 
-    @handle_urls("example.com")
+    @handle_urls("toscrape.com")
     @attrs.define
     class ProductPage(WebPage[Product]):
 
@@ -225,7 +225,7 @@ Let's check out an example:
 
         def start_requests(self):
             yield scrapy.Request(
-                "https://example.com/products/some-product", self.parse
+                "https://toscrape.com/products/some-product", self.parse
             )
 
         # We can directly ask for the item here instead of the page object.
@@ -236,7 +236,7 @@ From this example, we can see that:
 
     * Spider callbacks can directly ask for items as dependencies.
     * The ``Product`` item instance directly comes from ``ProductPage``.
-    * This is made possible by the ``ApplyRule("example.com", use=ProductPage,
+    * This is made possible by the ``ApplyRule("toscrape.com", use=ProductPage,
       to_return=Product)`` instance created from the ``@handle_urls`` decorator
       on ``ProductPage``.
 
@@ -248,7 +248,7 @@ From this example, we can see that:
 
     .. code-block:: python
 
-        @handle_urls("example.com")
+        @handle_urls("toscrape.com")
         @attrs.define
         class ProductPage(WebPage[Product]):
             product_image_page: ProductImagePage
@@ -267,7 +267,7 @@ From this example, we can see that:
 
             def start_requests(self):
                 yield scrapy.Request(
-                    "https://example.com/products/some-product", self.parse
+                    "https://toscrape.com/products/some-product", self.parse
                 )
 
             async def parse(self, response: DummyResponse, product_page: ProductPage):
