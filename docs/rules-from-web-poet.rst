@@ -16,8 +16,9 @@ A list of :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` can be configur
 by passing it to the ``SCRAPY_POET_RULES`` setting.
 
 In this section, we go over its ``instead_of`` parameter for overrides and
-``to_return`` for item returns. However, please make sure you also read web-poet's
-:ref:`rules-intro` tutorial to see all of the expected behaviors of the rules.
+``to_return`` for item returns. However, please make sure you also read
+web-poet's :ref:`rules` documentation to see all of the expected behaviors of
+the rules.
 
 
 Overrides
@@ -146,9 +147,8 @@ along with where it is applied. This can be done by decorating the
 Page Objects with :py:func:`web_poet.handle_urls` provided by `web-poet`_.
 
 .. tip::
-    Make sure to read the :external:ref:`rules-intro` Tutorial section of
-    `web-poet`_ to learn all of its other functionalities that is not covered
-    in this section.
+    Make sure to read the :external:ref:`rules` documentation of `web-poet`_ to
+    learn all of its other functionalities that is not covered in this section.
 
 Let's see an example:
 
@@ -184,8 +184,7 @@ which returns a ``List[ApplyRule]``. Moreover, you also need to set the
 
     For more info and advanced features of `web-poet`_'s :py:func:`web_poet.handle_urls`
     and its registry, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
-    documentation, specifically its :external:ref:`rules-intro` tutorial
-    section.
+    documentation, specifically its :external:ref:`rules` documentation.
 
 
 Item Returns
@@ -275,4 +274,4 @@ From this example, we can see that:
 
 For more information about all the expected behavior for the ``to_return``
 parameter in :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>`, check out
-web-poet's tutorial regarding :ref:`rules-item-class-example`.
+web-poet :ref:`rules` documentation.
