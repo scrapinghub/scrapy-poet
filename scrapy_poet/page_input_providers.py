@@ -44,6 +44,7 @@ from web_poet import (
 )
 from web_poet.pages import is_injectable
 
+from scrapy_poet.api import DummyResponse
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.injection_errors import (
     MalformedProvidedClassesError,
@@ -365,7 +366,6 @@ class ItemProvider(PageObjectInputProvider):
         self,
         to_provide: Set[Callable],
         request: Request,
-        response: Response,
     ) -> List[Any]:
         results = []
         for cls in to_provide:
@@ -392,9 +392,10 @@ class ItemProvider(PageObjectInputProvider):
                 externally_provided=self.injector.is_class_provided_by_any_provider,
             )
 
+            dummy_response = DummyResponse(request=request)
             try:
                 deferred_or_future = maybe_deferred_to_future(
-                    self.injector.build_instances(request, response, plan)
+                    self.injector.build_instances(request, dummy_response, plan)
                 )
                 # RecursionError NOT raised when ``AsyncioSelectorReactor`` is used.
                 # Could be related: https://github.com/python/cpython/issues/93837

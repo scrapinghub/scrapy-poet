@@ -27,7 +27,14 @@ class DummyResponse(Response):
     :class:`~.DummyResponse` to your parser instead.
     """
 
-    def __init__(self, url: str, request=Optional[Request]):
+    def __init__(self, url: Optional[str] = None, request: Optional[Request] = None):
+        if url is None:
+            if request is None:
+                raise ValueError(
+                    "One of the parameters, url or request, must have a "
+                    "non-default value."
+                )
+            url = request.url
         super().__init__(url=url, request=request)
 
 

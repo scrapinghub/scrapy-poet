@@ -248,13 +248,20 @@ def test_page_params_provider(settings):
     assert results[0] == expected_data
 
 
-def test_item_provider_cache(settings):
+def test_item_provider(settings):
     """Note that the bulk of the tests for the ``ItemProvider`` alongside the
-    ``Injector`` is tested in ``tests/test_web_poet_rules.py``.
+    ``Injector`` is tested in ``tests/test_web_poet_rules.py``."""
+    crawler = get_crawler(Spider, settings)
+    injector = Injector(crawler)
+    provider = ItemProvider(injector)
+    request = scrapy.http.Request("https://example.com")
 
-    We'll only test its caching behavior here if its properly garbage collected.
-    """
+    # The fact that no exception is raised below proves that a Response
+    # parameter is not required by ItemProvider.
+    provider(set(), request)
 
+
+def test_item_provider_cache(settings):
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)
     provider = ItemProvider(injector)
