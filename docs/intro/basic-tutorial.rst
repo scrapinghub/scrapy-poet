@@ -513,7 +513,7 @@ For more info on this, you can refer to these docs:
     * ``scrapy-poet``'s :ref:`rules-from-web-poet` Tutorial section.
     * External `web-poet`_ docs.
 
-        * Specifically, the :external:ref:`rules-intro` Tutorial section.
+        * Specifically, the :ref:`rules` documentation.
 
 Next steps
 ==========
