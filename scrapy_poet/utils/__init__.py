@@ -78,7 +78,7 @@ def is_min_scrapy_version(version: str) -> bool:
     return Version(SCRAPY_VERSION) >= Version(version)
 
 
-def get_registered_anotations(generic_func: Callable) -> List[Any]:
+def get_registered_anotations(generic_func: Callable) -> List[type]:
     """Get argument annotations from all registered functions for a given generic function"""
     registered_funcs: List[Callable] = list(generic_func.registry.values())  # type: ignore[attr-defined]
     registered_annotations = []
@@ -88,4 +88,4 @@ def get_registered_anotations(generic_func: Callable) -> List[Any]:
         annotations = list(func.__annotations__.values())[:-1]
         registered_annotations += annotations
 
-    return registered_annotations
+    return [t for t in registered_annotations if t != Any]
