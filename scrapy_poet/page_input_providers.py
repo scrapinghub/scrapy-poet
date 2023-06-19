@@ -126,11 +126,8 @@ class PageObjectInputProvider:
     def has_cache_support(self):
         registered_annotations = get_registered_anotations(serialize_leaf)
         has_cache_support = False
-        for provided_class in self.provided_classes:
-            if any(
-                issubclass(provided_class, annotation)
-                for annotation in registered_annotations
-            ):
+        for annotation in registered_annotations:
+            if self.is_provided(annotation):
                 has_cache_support = True
                 break
 
