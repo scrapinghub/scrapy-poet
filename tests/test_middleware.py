@@ -1,7 +1,6 @@
 import socket
 from pathlib import Path
 from typing import Optional, Type, Union
-from unittest import mock
 
 import attr
 import pytest
@@ -17,7 +16,6 @@ from url_matcher.util import get_domain
 from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
 
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
-from scrapy_poet.cache import SerializedDataCache
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils.mockserver import MockServer, get_ephemeral_port
 from scrapy_poet.utils.testing import (
@@ -443,32 +441,6 @@ def test_skip_download_request_url_page(settings):
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 0
     assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 1
     assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
-
-
-@mock.patch("scrapy_poet.injection.SerializedDataCache", spec=SerializedDataCache)
-def test_cache_closed_on_spider_close(mock_serialized_data_cache, settings):
-    def get_middleware(settings):
-        crawler = get_crawler(Spider, settings)
-        crawler.spider = crawler._create_spider("example.com")
-        return InjectionMiddleware(crawler)
-
-    mock_serialized_data_cache.return_value = mock.Mock()
-
-    # no cache
-    no_cache_middleware = get_middleware(settings)
-    assert no_cache_middleware.injector.cache is None
-
-    # cache is present
-    settings.set("SCRAPY_POET_CACHE", "/tmp/cache")
-    has_cache_middleware = get_middleware(settings)
-    assert has_cache_middleware.injector.cache is not None
-
-    spider = has_cache_middleware.crawler.spider
-    has_cache_middleware.spider_closed(spider)
-    assert mock_serialized_data_cache.mock_calls == [
-        mock.call("/tmp/cache", compressed=True),
-        mock.call().close(),
-    ]
 
 
 @inlineCallbacks

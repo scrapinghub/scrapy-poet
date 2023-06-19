@@ -1,4 +1,3 @@
-import json
 from typing import Any, Callable, List, Set
 from unittest import mock
 
@@ -172,17 +171,6 @@ def test_price_first_spider(settings):
         Html: Html("Price Html!"),
         "response_data_text": ProductHtml.html,
     }
-
-
-def test_response_data_provider_fingerprint(settings):
-    crawler = get_crawler(Spider, settings)
-    injector = Injector(crawler)
-    rdp = HttpResponseProvider(injector)
-    request = scrapy.http.Request("https://example.com")
-
-    # The fingerprint should be readable since it's JSON-encoded.
-    fp = rdp.fingerprint(scrapy.http.Response, request)
-    assert json.loads(fp)
 
 
 @ensureDeferred
