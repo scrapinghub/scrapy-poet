@@ -18,6 +18,7 @@ from scrapy_poet.page_input_providers import (
     PageObjectInputProvider,
     PageParamsProvider,
 )
+from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
     AsyncMock,
     HtmlResource,
@@ -134,10 +135,11 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
 
 @inlineCallbacks
 def test_name_first_spider(settings, tmp_path):
+    port = get_ephemeral_port()
     cache = tmp_path / "cache"
     settings.set("SCRAPY_POET_CACHE", str(cache))
     item, _, _ = yield crawl_single_item(
-        NameFirstMultiProviderSpider, ProductHtml, settings
+        NameFirstMultiProviderSpider, ProductHtml, settings, port=port
     )
     assert cache.exists()
     assert item == {
@@ -150,7 +152,7 @@ def test_name_first_spider(settings, tmp_path):
     # Let's see that the cache is working. We use a different and wrong resource,
     # but it should be ignored by the cached version used
     item, _, _ = yield crawl_single_item(
-        NameFirstMultiProviderSpider, NonProductHtml, settings
+        NameFirstMultiProviderSpider, NonProductHtml, settings, port=port
     )
     assert item == {
         Price: Price("22€"),
