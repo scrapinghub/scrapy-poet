@@ -84,14 +84,11 @@ class Injector:
         # SCRAPY_POET_CACHE: <cache_path>
         if cache_path:
             self.cache = SerializedDataCache(cache_path)
-            self.cache_compressed = self.crawler.settings.getbool(
-                "SCRAPY_POET_CACHE_GZIP", True
-            )
             self.caching_errors = self.crawler.settings.getbool(
                 "SCRAPY_POET_CACHE_ERRORS", False
             )
             logger.info(
-                f"Cache enabled. Folder: {cache_path!r}. Compressed: {self.cache_compressed}. Caching errors: {self.caching_errors}"
+                f"Cache enabled. Folder: {cache_path!r}. Caching errors: {self.caching_errors}"
             )
 
     def available_dependencies_for_providers(
