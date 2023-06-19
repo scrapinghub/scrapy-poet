@@ -174,6 +174,7 @@ class Injector:
             request, response
         )
         dependencies_set = {cls for cls, _ in plan.dependencies}
+        objs: List[Any]
         for provider in self.providers:
             provided_classes = {
                 cls for cls in dependencies_set if provider.is_provided(cls)
@@ -182,7 +183,7 @@ class Injector:
             if not provided_classes:
                 continue
 
-            objs, fingerprint = None, None
+            objs, fingerprint = [], None
             cache_hit = False
             if self.cache and provider.has_cache_support:
                 if not provider.name:
