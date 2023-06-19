@@ -1,6 +1,7 @@
 import abc
 import os
 import pickle
+from pathlib import Path
 from typing import Any, Union
 
 from web_poet.serialization.api import SerializedData, SerializedDataFileStorage
@@ -42,6 +43,9 @@ class SerializedDataCache(_Cache):
         if isinstance(value, Exception):
             self.write_exception(fingerprint, value)
         else:
+            storage_path = Path(self._get_directory_path(fingerprint))
+            if not storage_path.exists():
+                storage_path.mkdir(parents=True)
             storage = SerializedDataFileStorage(self._get_directory_path(fingerprint))
             storage.write(value)
 
