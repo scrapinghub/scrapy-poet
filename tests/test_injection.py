@@ -29,6 +29,7 @@ from scrapy_poet.injection_errors import (
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
+from scrapy_poet.page_input_providers import ItemProvider
 
 
 def get_provider(classes, content=None):
@@ -268,6 +269,56 @@ class TestInjector:
             "b": Cls2,
             "c": WrapCls,
             "d": ClsNoProviderRequired,
+        }
+
+    @inlineCallbacks
+    def test_build_callback_dependencies_minimize_provider_calls(self):
+        """Test that build_callback_dependencies does not call any given
+        provider more times than it needs when dependency nesting is
+        involved."""
+
+        class ExpensiveDependency1:
+            pass
+
+        class ExpensiveDependency2:
+            pass
+
+        class ExpensiveProvider(PageObjectInputProvider):
+            provided_classes = {ExpensiveDependency1, ExpensiveDependency2}
+
+            def __call__(self, to_provide):
+                if to_provide != self.provided_classes:
+                    raise RuntimeError(
+                        "The expensive dependency provider has been called "
+                        "with a subset of the classes that it provides and "
+                        "that are required for the callback in this test."
+                    )
+                return [cls() for cls in to_provide]
+
+        @attr.s(auto_attribs=True, frozen=True, eq=True, order=True)
+        class CheapWrapper(Injectable):
+            expensive: ExpensiveDependency2
+
+        def callback(
+            response: DummyResponse,
+            expensive: ExpensiveDependency1,
+            cheap: CheapWrapper,
+        ):
+            pass
+
+        providers = {
+            ItemProvider: 1,
+            ExpensiveProvider: 2,
+        }
+        injector = get_injector_for_testing(providers)
+        response = get_response_for_testing(callback)
+        kwargs = yield from injector.build_callback_dependencies(
+            response.request, response
+        )
+        kwargs_types = {key: type(value) for key, value in kwargs.items()}
+        assert kwargs_types == {
+            "expensive": ExpensiveDependency1,
+            "cheap": CheapWrapper,
         }
 
 
