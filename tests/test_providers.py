@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Set
+from typing import Any, Callable, List, Set, Type
 from unittest import mock
 
 import attr
@@ -9,6 +9,7 @@ from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
 from twisted.python.failure import Failure
 from web_poet import HttpClient, HttpResponse
+from web_poet.serialization import SerializedLeafData, register_serialization
 
 from scrapy_poet import HttpResponseProvider
 from scrapy_poet.injection import Injector
@@ -89,6 +90,17 @@ class HttpResponseProviderForTest(HttpResponseProvider):
 
     def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
         return "http://example.com"
+
+
+for dep_cls in [Price, Name, Html]:
+    # all these types have the same structure so we can DRY
+    def _serialize(o: dep_cls) -> SerializedLeafData:
+        return {"txt": attr.astuple(o)[0].encode()}
+
+    def _deserialize(cls: Type[dep_cls], data: SerializedLeafData) -> dep_cls:
+        return cls(data["txt"].decode())
+
+    register_serialization(_serialize, _deserialize)
 
 
 class PriceFirstMultiProviderSpider(scrapy.Spider):
