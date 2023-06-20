@@ -274,8 +274,9 @@ class TestInjector:
     @inlineCallbacks
     def test_build_callback_dependencies_minimize_provider_calls(self):
         """Test that build_callback_dependencies does not call any given
-        provider more times than it needs when dependency nesting is
-        involved."""
+        provider more times than it needs when one provided class is requested
+        directly while another is a page object dependency requested through
+        an item."""
 
         class ExpensiveDependency1:
             pass
@@ -295,14 +296,17 @@ class TestInjector:
                     )
                 return [cls() for cls in to_provide]
 
-        @attr.s(auto_attribs=True, frozen=True, eq=True, order=True)
-        class CheapWrapper(Injectable):
+        @attr.define
+        class MyItem:
+            pass
+
+        @attr.define
+        class MyPage(ItemPage[MyItem]):
             expensive: ExpensiveDependency2
 
         def callback(
-            response: DummyResponse,
             expensive: ExpensiveDependency1,
-            cheap: CheapWrapper,
+            item: MyItem,
         ):
             pass
 
@@ -311,15 +315,17 @@ class TestInjector:
             ExpensiveProvider: 2,
         }
         injector = get_injector_for_testing(providers)
+        injector.registry.add_rule(ApplyRule("", use=MyPage, to_return=MyItem))
         response = get_response_for_testing(callback)
+
+        # This would raise RuntimeError if expectations are not met.
         kwargs = yield from injector.build_callback_dependencies(
             response.request, response
         )
-        kwargs_types = {key: type(value) for key, value in kwargs.items()}
-        assert kwargs_types == {
-            "expensive": ExpensiveDependency1,
-            "cheap": CheapWrapper,
-        }
+
+        # Make sure the test does not simply pass because some dependencies were
+        # not injected at all.
+        assert set(kwargs.keys()) == {"expensive", "item"}
 
 
 class Html(Injectable):
