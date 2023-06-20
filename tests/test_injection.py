@@ -1,3 +1,5 @@
+import shutil
+
 import attr
 import parsel
 import pytest
@@ -22,6 +24,8 @@ from scrapy_poet.injection_errors import (
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
+
+from .test_providers import Name, Price
 
 
 def get_provider(classes, content=None):
@@ -416,24 +420,22 @@ def test_cache(tmp_path, cache_errors):
     """
 
     def validate_instances(instances):
-        assert instances[str] == "foo"
-        assert instances[int] == 3
-        assert instances[float] == 3.0
+        assert instances[Price].price == "price1"
+        assert instances[Name].name == "name1"
 
     providers = {
-        get_provider_for_cache({str}, "str", content="foo"): 1,
-        get_provider_for_cache({int, float}, "number", content=3): 2,
+        get_provider_for_cache({Price}, "price", content="price1"): 1,
+        get_provider_for_cache({Name}, "name", content="name1"): 2,
     }
 
     cache = tmp_path / "cache"
     if cache.exists():
         print(f"Cache folder {cache} already exists. Weird. Deleting")
-        cache.unlink()
+        shutil.rmtree(cache)
     settings = {"SCRAPY_POET_CACHE": cache, "SCRAPY_POET_CACHE_ERRORS": cache_errors}
     injector = get_injector_for_testing(providers, settings)
-    assert cache.exists()
 
-    def callback(response: DummyResponse, arg_str: str, arg_int: int, arg_float: float):
+    def callback(response: DummyResponse, arg_price: Price, arg_name: Name):
         pass
 
     response = get_response_for_testing(callback)
@@ -441,6 +443,7 @@ def test_cache(tmp_path, cache_errors):
     instances = yield from injector.build_instances_from_providers(
         response.request, response, plan
     )
+    assert cache.exists()
 
     validate_instances(instances)
 
@@ -456,8 +459,8 @@ def test_cache(tmp_path, cache_errors):
 
     # Different providers. They return a different result, but the cache data should prevail.
     providers = {
-        get_provider_for_cache({str}, "str", content="bar", error=KeyError): 1,
-        get_provider_for_cache({int, float}, "number", content=4, error=KeyError): 2,
+        get_provider_for_cache({Price}, "price", content="price2", error=KeyError): 1,
+        get_provider_for_cache({Name}, "name", content="name2", error=KeyError): 2,
     }
     injector = get_injector_for_testing(providers, settings)
 

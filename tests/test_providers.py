@@ -94,11 +94,11 @@ class HttpResponseProviderForTest(HttpResponseProvider):
 
 for dep_cls in [Price, Name, Html]:
     # all these types have the same structure so we can DRY
-    def _serialize(o: dep_cls) -> SerializedLeafData:
+    def _serialize(o: dep_cls) -> SerializedLeafData:  # type: ignore[valid-type]
         return {"txt": attr.astuple(o)[0].encode()}
 
-    def _deserialize(cls: Type[dep_cls], data: SerializedLeafData) -> dep_cls:
-        return cls(data["txt"].decode())
+    def _deserialize(cls: Type[dep_cls], data: SerializedLeafData) -> dep_cls:  # type: ignore[valid-type]
+        return cls(data["txt"].decode())  # type: ignore[misc]
 
     register_serialization(_serialize, _deserialize)
 

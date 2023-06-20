@@ -27,7 +27,7 @@ class SerializedDataCache(_Cache):
     """
 
     def __init__(self, directory: Union[str, os.PathLike]) -> None:
-        self.directory = directory
+        self.directory = Path(directory)
 
     def __getitem__(self, fingerprint: str) -> SerializedData:
         storage = SerializedDataFileStorage(self._get_directory_path(fingerprint))
@@ -43,23 +43,22 @@ class SerializedDataCache(_Cache):
         if isinstance(value, Exception):
             self.write_exception(fingerprint, value)
         else:
-            storage_path = Path(self._get_directory_path(fingerprint))
-            if not storage_path.exists():
-                storage_path.mkdir(parents=True)
-            storage = SerializedDataFileStorage(self._get_directory_path(fingerprint))
+            storage_path = self._get_directory_path(fingerprint)
+            storage_path.mkdir(parents=True, exist_ok=True)
+            storage = SerializedDataFileStorage(storage_path)
             storage.write(value)
 
     def write_exception(self, fingerprint: str, exception: Exception) -> None:
-        with open(self._get_exception_file_path(fingerprint), "wb") as file:
+        exception_path = self._get_exception_file_path(fingerprint)
+        exception_path.parent.mkdir(parents=True, exist_ok=True)
+        with exception_path.open("wb") as file:
             pickle.dump(exception, file)
 
-    def _get_directory_path(self, fingerprint: str) -> str:
-        return os.path.join(self.directory, fingerprint)
+    def _get_directory_path(self, fingerprint: str) -> Path:
+        return self.directory / fingerprint
 
-    def _get_exception_file_path(self, fingerprint: str) -> str:
+    def _get_exception_file_path(self, fingerprint: str) -> Path:
         """Save exception inside self.directory, so that `storage.read()` can read it correctly"""
-        return os.path.join(
-            self._get_directory_path(fingerprint), f"{fingerprint}.error"
-        )
+        return self._get_directory_path(fingerprint) / "error"
 
     # TODO: Add option for compressed cache
