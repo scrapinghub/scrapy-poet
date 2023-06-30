@@ -1,6 +1,6 @@
 import os
 from functools import lru_cache
-from typing import Any, Callable, List, Type
+from typing import Type
 from warnings import warn
 
 from packaging.version import Version
@@ -76,16 +76,3 @@ def create_registry_instance(cls: Type, crawler: Crawler):
 @lru_cache()
 def is_min_scrapy_version(version: str) -> bool:
     return Version(SCRAPY_VERSION) >= Version(version)
-
-
-def get_registered_anotations(generic_func: Callable) -> List[type]:
-    """Get argument annotations from all registered functions for a given generic function"""
-    registered_funcs: List[Callable] = list(generic_func.registry.values())  # type: ignore[attr-defined]
-    registered_annotations = []
-    for func in registered_funcs:
-        # get all parameter annotations, except from the return value
-        # `inspect.get_annotations()` could be a better option but it's not compatible with python<3.10
-        annotations = list(func.__annotations__.values())[:-1]
-        registered_annotations += annotations
-
-    return [t for t in registered_annotations if t != Any]

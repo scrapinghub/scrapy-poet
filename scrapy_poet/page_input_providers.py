@@ -29,15 +29,12 @@ from web_poet import (
     ResponseUrl,
 )
 from web_poet.pages import is_injectable
-from web_poet.serialization import serialize_leaf
 
 from scrapy_poet.downloader import create_scrapy_downloader
 from scrapy_poet.injection_errors import (
     MalformedProvidedClassesError,
     ProviderDependencyDeadlockError,
 )
-
-from .utils import get_registered_anotations
 
 
 class PageObjectInputProvider:
@@ -121,17 +118,6 @@ class PageObjectInputProvider:
                 f"Unexpected type {type_!r} for 'provided_classes' attribute of"
                 f"{self!r}. Expected either 'set' or 'callable'"
             )
-
-    @property
-    def has_cache_support(self):
-        registered_annotations = get_registered_anotations(serialize_leaf)
-        has_cache_support = False
-        for annotation in registered_annotations:
-            if self.is_provided(annotation):
-                has_cache_support = True
-                break
-
-        return has_cache_support
 
     # FIXME: Can't import the Injector as class annotation due to circular dep.
     def __init__(self, injector):
