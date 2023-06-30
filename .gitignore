@@ -10,6 +10,7 @@
 
 # IDE
 /.idea/
+/.vscode/
 
 .mypy_cache/
 .cache/
