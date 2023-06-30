@@ -1,5 +1,6 @@
 import inspect
 import logging
+import os
 import pprint
 import warnings
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set
@@ -79,7 +80,9 @@ class Injector:
 
         # SCRAPY_POET_CACHE: True
         if cache_path and isinstance(cache_path, bool):
-            cache_path = get_scrapy_data_path(createdir=True)
+            cache_path = os.path.join(
+                get_scrapy_data_path(createdir=True), "scrapy-poet-cache"
+            )
 
         # SCRAPY_POET_CACHE: <cache_path>
         if cache_path:
