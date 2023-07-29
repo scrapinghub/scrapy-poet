@@ -17,10 +17,12 @@ from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import RulesRegistry
+from web_poet.page_inputs.http import request_fingerprint
 from web_poet.pages import is_injectable
+from web_poet.serialization.api import deserialize_leaf, load_class, serialize
 
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
-from scrapy_poet.cache import SqlitedictCache
+from scrapy_poet.cache import SerializedDataCache
 from scrapy_poet.injection_errors import (
     InjectionError,
     NonCallableProviderError,
@@ -72,25 +74,24 @@ class Injector:
             self.providers
         )
 
-    def close(self) -> None:  # noqa: D102
-        if self.cache:
-            self.cache.close()
-
     def init_cache(self):  # noqa: D102
-        self.cache = None
-        cache_filename = self.crawler.settings.get("SCRAPY_POET_CACHE")
-        if cache_filename and isinstance(cache_filename, bool):
-            cache_filename = os.path.join(
-                get_scrapy_data_path(createdir=True), "scrapy-poet-cache.sqlite3"
+        self.cache = {}
+        cache_path = self.crawler.settings.get("SCRAPY_POET_CACHE")
+
+        # SCRAPY_POET_CACHE: True
+        if cache_path and isinstance(cache_path, bool):
+            cache_path = os.path.join(
+                get_scrapy_data_path(createdir=True), "scrapy-poet-cache"
             )
-        if cache_filename:
-            compressed = self.crawler.settings.getbool("SCRAPY_POET_CACHE_GZIP", True)
+
+        # SCRAPY_POET_CACHE: <cache_path>
+        if cache_path:
+            self.cache = SerializedDataCache(cache_path)
             self.caching_errors = self.crawler.settings.getbool(
                 "SCRAPY_POET_CACHE_ERRORS", False
             )
-            self.cache = SqlitedictCache(cache_filename, compressed=compressed)
             logger.info(
-                f"Cache enabled. File: {cache_filename!r}. Compressed: {compressed}. Caching errors: {self.caching_errors}"
+                f"Cache enabled. Folder: {cache_path!r}. Caching errors: {self.caching_errors}"
             )
 
     def available_dependencies_for_providers(
@@ -173,6 +174,7 @@ class Injector:
             request, response
         )
         dependencies_set = {cls for cls, _ in plan.dependencies}
+        objs: List[Any]
         for provider in self.providers:
             provided_classes = {
                 cls for cls in dependencies_set if provider.is_provided(cls)
@@ -181,25 +183,32 @@ class Injector:
             if not provided_classes:
                 continue
 
-            objs, fingerprint = None, None
+            objs, fingerprint = [], None
             cache_hit = False
-            if self.cache and provider.has_cache_support:
+            if self.cache:
                 if not provider.name:
                     raise NotImplementedError(
                         f"The provider {type(provider)} must have a `name` defined if"
                         f" you want to use the cache. It must be unique across the providers."
                     )
+                # This one should take `web_poet.HttpRequest` but `scrapy.Request` will work as well
+                # TODO: add `scrapy.Request` type in request_fingerprint() annotations
+                fingerprint = f"{provider.name}_{request_fingerprint(request)}"
                 # Return the data if it is already in the cache
-                fingerprint = f"{provider.name}_{provider.fingerprint(set(provided_classes), request)}"
                 try:
-                    data = self.cache[fingerprint]
+                    data = self.cache[fingerprint].items()
                 except KeyError:
                     self.crawler.stats.inc_value("scrapy-poet/cache/miss")
                 else:
                     self.crawler.stats.inc_value("scrapy-poet/cache/hit")
                     if isinstance(data, Exception):
                         raise data
-                    objs = provider.deserialize(data)
+                    objs = [
+                        deserialize_leaf(
+                            load_class(dep_type_name), serialized_leaf_data
+                        )
+                        for dep_type_name, serialized_leaf_data in data
+                    ]
                     cache_hit = True
 
             if not objs:
@@ -210,18 +219,13 @@ class Injector:
                     full_final_kwargs=False,
                 ).final_kwargs(scrapy_provided_dependencies)
                 try:
-
                     # Invoke the provider to get the data
                     objs = yield maybeDeferred_coro(
                         provider, set(provided_classes), **kwargs
                     )
 
                 except Exception as e:
-                    if (
-                        self.cache
-                        and self.caching_errors
-                        and provider.has_cache_support
-                    ):
+                    if self.cache and self.caching_errors:
                         # Save errors in the cache
                         self.cache[fingerprint] = e
                         self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
@@ -237,9 +241,9 @@ class Injector:
                 )
             instances.update(objs_by_type)
 
-            if self.cache and not cache_hit and provider.has_cache_support:
+            if self.cache and not cache_hit:
                 # Save the results in the cache
-                self.cache[fingerprint] = provider.serialize(objs)
+                self.cache[fingerprint] = serialize(objs)
                 self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
 
         return instances

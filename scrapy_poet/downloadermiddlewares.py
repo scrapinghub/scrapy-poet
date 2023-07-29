@@ -7,7 +7,7 @@ import logging
 import warnings
 from typing import Generator, Optional, Type, TypeVar
 
-from scrapy import Spider, signals
+from scrapy import Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from twisted.internet.defer import Deferred, inlineCallbacks
@@ -62,11 +62,7 @@ class InjectionMiddleware:
         cls: Type[InjectionMiddlewareTV], crawler: Crawler
     ) -> InjectionMiddlewareTV:
         o = cls(crawler)
-        crawler.signals.connect(o.spider_closed, signal=signals.spider_closed)
         return o
-
-    def spider_closed(self, spider: Spider) -> None:
-        self.injector.close()
 
     def process_request(
         self, request: Request, spider: Spider

@@ -1,7 +1,6 @@
 import socket
 from pathlib import Path
 from typing import Optional, Type, Union
-from unittest import mock
 
 import attr
 import pytest
@@ -17,7 +16,6 @@ from url_matcher.util import get_domain
 from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
 
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
-from scrapy_poet.cache import SqlitedictCache
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils.mockserver import MockServer, get_ephemeral_port
 from scrapy_poet.utils.testing import (
@@ -31,7 +29,6 @@ from scrapy_poet.utils.testing import (
 
 def spider_for(injectable: Type):
     class InjectableSpider(scrapy.Spider):
-
         url = None
         custom_settings = {
             "SCRAPY_POET_PROVIDERS": {
@@ -166,7 +163,6 @@ class ProvidedWithFutures(ProvidedWithDeferred):
 
 
 class WithDeferredProvider(PageObjectInputProvider):
-
     provided_classes = {ProvidedWithDeferred}
 
     @inlineCallbacks
@@ -176,7 +172,6 @@ class WithDeferredProvider(PageObjectInputProvider):
 
 
 class WithFuturesProvider(PageObjectInputProvider):
-
     provided_classes = {ProvidedWithFutures}
 
     async def async_fn(self):
@@ -196,7 +191,6 @@ class ExtraClassData(ItemPage):
 
 
 class ExtraClassDataProvider(PageObjectInputProvider):
-
     provided_classes = {ExtraClassData}
 
     def __call__(self, to_provide):
@@ -239,7 +233,6 @@ def test_providers_returning_wrong_classes(settings, caplog):
 
 
 class MultiArgsCallbackSpider(scrapy.Spider):
-
     url = None
     custom_settings = {"SCRAPY_POET_PROVIDERS": {WithDeferredProvider: 1}}
 
@@ -291,7 +284,6 @@ def test_injection_failure(settings):
 
 
 class MySpider(scrapy.Spider):
-
     url = None
 
     def start_requests(self):
@@ -304,7 +296,6 @@ class MySpider(scrapy.Spider):
 
 
 class SkipDownloadSpider(scrapy.Spider):
-
     url = None
 
     def start_requests(self):
@@ -450,32 +441,6 @@ def test_skip_download_request_url_page(settings):
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 0
     assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 1
     assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
-
-
-@mock.patch("scrapy_poet.injection.SqlitedictCache", spec=SqlitedictCache)
-def test_cache_closed_on_spider_close(mock_sqlitedictcache, settings):
-    def get_middleware(settings):
-        crawler = get_crawler(Spider, settings)
-        crawler.spider = crawler._create_spider("example.com")
-        return InjectionMiddleware(crawler)
-
-    mock_sqlitedictcache.return_value = mock.Mock()
-
-    # no cache
-    no_cache_middleware = get_middleware(settings)
-    assert no_cache_middleware.injector.cache is None
-
-    # cache is present
-    settings.set("SCRAPY_POET_CACHE", "/tmp/cache")
-    has_cache_middleware = get_middleware(settings)
-    assert has_cache_middleware.injector.cache is not None
-
-    spider = has_cache_middleware.crawler.spider
-    has_cache_middleware.spider_closed(spider)
-    assert mock_sqlitedictcache.mock_calls == [
-        mock.call("/tmp/cache", compressed=True),
-        mock.call().close(),
-    ]
 
 
 @inlineCallbacks

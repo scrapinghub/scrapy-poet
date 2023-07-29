@@ -1,10 +1,10 @@
 import abc
-import gzip
+import os
 import pickle
-import sqlite3
-from typing import Any
+from pathlib import Path
+from typing import Any, Union
 
-import sqlitedict
+from web_poet.serialization.api import SerializedData, SerializedDataFileStorage
 
 
 class _Cache(abc.ABC):
@@ -20,54 +20,45 @@ class _Cache(abc.ABC):
         pass
 
 
-class SqlitedictCache(_Cache):
-    """Stores dependencies from Providers in a persistent local storage using
-    https://github.com/RaRe-Technologies/sqlitedict.
+class SerializedDataCache(_Cache):
+    """
+    Stores dependencies from Providers in a persistent local storage using
+    `web_poet.serialization.SerializedDataFileStorage`
     """
 
-    def __init__(self, path: str, *, compressed=True):
-        self.path = path
-        self.compressed = compressed
-        tablename = "responses_gzip" if compressed else "responses"
-        self.db = sqlitedict.SqliteDict(
-            path,
-            tablename=tablename,
-            autocommit=True,
-            encode=self.encode,
-            decode=self.decode,
-        )
+    def __init__(self, directory: Union[str, os.PathLike]) -> None:
+        self.directory = Path(directory)
 
-    def encode(self, obj: Any) -> memoryview:
-        # based on sqlitedict.encode
-        data = pickle.dumps(obj, pickle.HIGHEST_PROTOCOL)
-        if self.compressed:
-            data = gzip.compress(data, compresslevel=3)
-        return sqlite3.Binary(data)
+    def __getitem__(self, fingerprint: str) -> SerializedData:
+        storage = SerializedDataFileStorage(self._get_directory_path(fingerprint))
+        try:
+            serialized_data = storage.read()
+        except FileNotFoundError:
+            raise KeyError(f"Fingerprint '{fingerprint}' not found in cache")
+        return serialized_data
 
-    def decode(self, obj: Any) -> Any:
-        # based on sqlitedict.decode
-        data = bytes(obj)
-        if self.compressed:
-            # gzip is slightly less efficient than raw zlib, but it does
-            # e.g. crc checks out of box
-            data = gzip.decompress(data)
-        return pickle.loads(data)
+    def __setitem__(
+        self, fingerprint: str, value: Union[SerializedData, Exception]
+    ) -> None:
+        if isinstance(value, Exception):
+            self.write_exception(fingerprint, value)
+        else:
+            storage_path = self._get_directory_path(fingerprint)
+            storage_path.mkdir(parents=True, exist_ok=True)
+            storage = SerializedDataFileStorage(storage_path)
+            storage.write(value)
 
-    def __str__(self) -> str:
-        return (  # pragma: no cover
-            f"SqlitedictCache <{self.db.filename} | "
-            f"compressed: {self.compressed} | "
-            f"{len(self.db)} records>"
-        )
+    def write_exception(self, fingerprint: str, exception: Exception) -> None:
+        exception_path = self._get_exception_file_path(fingerprint)
+        exception_path.parent.mkdir(parents=True, exist_ok=True)
+        with exception_path.open("wb") as file:
+            pickle.dump(exception, file)
 
-    def __repr__(self) -> str:
-        return f"SqlitedictCache({self.path!r}, compressed={self.compressed})"  # pragma: no cover
+    def _get_directory_path(self, fingerprint: str) -> Path:
+        return self.directory / fingerprint
 
-    def __getitem__(self, fingerprint: str) -> Any:
-        return self.db[fingerprint]
+    def _get_exception_file_path(self, fingerprint: str) -> Path:
+        """Save exception inside self.directory, so that `storage.read()` can read it correctly"""
+        return self._get_directory_path(fingerprint) / "error"
 
-    def __setitem__(self, fingerprint: str, value: Any) -> None:
-        self.db[fingerprint] = value
-
-    def close(self) -> None:
-        self.db.close()
+    # TODO: Add option for compressed cache
