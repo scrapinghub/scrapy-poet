@@ -10,6 +10,7 @@ from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import Injectable, ItemPage, RulesRegistry
 from web_poet.mixins import ResponseShortcutsMixin
+from web_poet.page_inputs.http import HttpResponse
 from web_poet.rules import ApplyRule
 
 from scrapy_poet import DummyResponse, HttpResponseProvider, PageObjectInputProvider
@@ -287,7 +288,7 @@ class OtherEurDollarRate(Injectable):
 
 @attr.s(auto_attribs=True)
 class PricePO(ItemPage, ResponseShortcutsMixin):
-    response: Html
+    response: HttpResponse
 
     def to_item(self):
         return dict(price=float(self.css(".price::text").get()), currency="€")
