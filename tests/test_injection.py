@@ -287,7 +287,7 @@ class OtherEurDollarRate(Injectable):
 
 @attr.s(auto_attribs=True)
 class PricePO(ItemPage, ResponseShortcutsMixin):
-    response: Html
+    response: Html  # type: ignore[assignment]
 
     def to_item(self):
         return dict(price=float(self.css(".price::text").get()), currency="€")
