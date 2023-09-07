@@ -461,3 +461,28 @@ DOWNLOADER_MIDDLEWARES = {
         )
     assert b"Using DummyResponse instead of downloading" not in err
     assert b"{}" in out  # noqa: P103
+
+@pytest.mark.parametrize(
+    "spider,name,expected",
+    (
+        (RequestUrlPageSpider, "RequestUrlPage", 1),
+        (ResponseUrlPageSpider, "ResponseUrlPage", 1),
+        (ResponseUrlSpider, None, None),
+        (SkipDownloadSpider, None, None),
+        (MySpider, None, None),
+        (MultiArgsCallbackSpider, "ProductPage", 1),
+    )
+)
+@inlineCallbacks
+def test_po_stats(spider, name, expected, settings):
+    _, _, crawler = yield crawl_single_item(spider, ProductHtml, settings)
+    if name:
+        key = f"scrapy_poet/page_objects/tests/test_middleware/{name}"
+        assert crawler.stats.get_value(key) == expected
+    else:
+        po_stats = [
+            value
+            for stat_name, value in crawler.stats.get_stats().items()
+            if stat_name.startswith("scrapy_poet/page_objects")
+        ]
+        assert not po_stats

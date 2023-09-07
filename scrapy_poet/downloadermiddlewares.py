@@ -153,8 +153,8 @@ class InjectionMiddleware:
                 continue
             request.cb_kwargs[arg] = value
             if issubclass(type(value), ItemPage):
-                po_fqn = ".".join((type(value).__module__, type(value).__qualname__))
-                self.crawler.stats.inc_value(f"scrapy_poet/page-objects/{po_fqn}")
+                po_fqn = "/".join((type(value).__module__, type(value).__qualname__)).replace(".", "/")
+                self.crawler.stats.inc_value(f"scrapy_poet/page_objects/{po_fqn}")
             # TODO: check if all arguments are fulfilled somehow?
 
         return response
