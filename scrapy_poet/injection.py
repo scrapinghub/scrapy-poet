@@ -198,9 +198,9 @@ class Injector:
                 try:
                     data = self.cache[fingerprint].items()
                 except KeyError:
-                    self.crawler.stats.inc_value("scrapy-poet/cache/miss")
+                    self.crawler.stats.inc_value("scrapy_poet/cache/miss")
                 else:
-                    self.crawler.stats.inc_value("scrapy-poet/cache/hit")
+                    self.crawler.stats.inc_value("scrapy_poet/cache/hit")
                     if isinstance(data, Exception):
                         raise data
                     objs = [
@@ -228,7 +228,7 @@ class Injector:
                     if self.cache and self.caching_errors:
                         # Save errors in the cache
                         self.cache[fingerprint] = e
-                        self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
+                        self.crawler.stats.inc_value("scrapy_poet/cache/firsthand")
                     raise
 
             objs_by_type: Dict[Callable, Any] = {type(obj): obj for obj in objs}
@@ -244,7 +244,7 @@ class Injector:
             if self.cache and not cache_hit:
                 # Save the results in the cache
                 self.cache[fingerprint] = serialize(objs)
-                self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
+                self.crawler.stats.inc_value("scrapy_poet/cache/firsthand")
 
         return instances
 
