@@ -11,6 +11,7 @@ from scrapy_poet.utils import (
     create_registry_instance,
     get_scrapy_data_path,
     http_request_to_scrapy_request,
+    http_response_to_scrapy_response,
     scrapy_response_to_http_response,
 )
 
@@ -175,6 +176,83 @@ def test_scrapy_response_to_http_response(scrapy_response, http_response):
     assert result.status == http_response.status
     assert result.headers == http_response.headers
     assert result._encoding == http_response._encoding
+
+
+@pytest.mark.parametrize(
+    "scrapy_response,http_response",
+    (
+        (
+            Response("https://example.com"),
+            HttpResponse("https://example.com", body=b"", status=200),
+        ),
+        (
+            Response("https://example.com", body=b"a"),
+            HttpResponse("https://example.com", body=b"a", status=200),
+        ),
+        (
+            Response("https://example.com", status=429),
+            HttpResponse("https://example.com", body=b"", status=429),
+        ),
+        (
+            Response("https://example.com", headers={"a": "b"}),
+            HttpResponse(
+                "https://example.com",
+                body=b"",
+                status=200,
+                headers={"a": "b"},
+            ),
+        ),
+        (
+            Response("https://example.com", headers={"a": "b"}),
+            HttpResponse(
+                "https://example.com",
+                body=b"",
+                status=200,
+                headers=(("a", "b"),),
+            ),
+        ),
+        (
+            Response("https://example.com", headers=(("a", "b"),)),
+            HttpResponse(
+                "https://example.com",
+                body=b"",
+                status=200,
+                headers=(("a", "b"),),
+            ),
+        ),
+        pytest.param(
+            Response("https://example.com", headers=(("a", "b"), ("a", "c"))),
+            HttpResponse(
+                "https://example.com",
+                body=b"",
+                status=200,
+                headers=(("a", "b"), ("a", "c")),
+            ),
+            marks=pytest.mark.xfail(
+                reason="https://github.com/scrapy/scrapy/issues/5515",
+            ),
+        ),
+        (
+            TextResponse("https://example.com", body="a", encoding="ascii"),
+            HttpResponse(
+                "https://example.com", body=b"a", status=200, encoding="ascii"
+            ),
+        ),
+        (
+            TextResponse("https://example.com", body="a", encoding="utf-8"),
+            HttpResponse(
+                "https://example.com", body=b"a", status=200, encoding="utf-8"
+            ),
+        ),
+    ),
+)
+def test_http_response_to_scrapy_response(scrapy_response, http_response):
+    result = http_response_to_scrapy_response(http_response)
+    assert str(result.url) == str(http_response.url)
+    assert result.body == scrapy_response.body
+    assert result.status == scrapy_response.status
+    assert result.headers == scrapy_response.headers
+    assert result._encoding == getattr(scrapy_response, "_encoding", "utf-8")
 
 
 @mock.patch("scrapy_poet.utils.consume_modules")
