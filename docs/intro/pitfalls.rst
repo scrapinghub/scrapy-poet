@@ -194,17 +194,16 @@ behavior is to avoid defining a ``parse()`` method and instead choose any other 
 Open in browser
 ---------------
 
-If you encounter a `TypeError` when trying to use the `open_in_browser`
-function from Scrapy with the `scrapy_poet` library:
+When using scrapy-poet, the ``open_in_browser`` function from Scrapy may raise
+the following exception:
 
 .. code-block:: python
 
     TypeError: Unsupported response type: HttpResponse
 
-Therefore, to use the open_in_browser function in your Scrapy project with scrapy_poet,
-make sure to import it from the `scrapy_poet.utils` module using the following import statement:
+To avoid that, use the ``open_in_browser`` function from ``scrapy_poet.utils``
+instead:
 
 .. code-block:: python
 
     from scrapy_poet.utils import open_in_browser
-
