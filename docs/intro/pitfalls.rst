@@ -191,8 +191,8 @@ skip any dependency from being built because there is none:
 Similarly, the best way to completely avoid the said warning and this **scrapy-poet**
 behavior is to avoid defining a ``parse()`` method and instead choose any other name.
 
-Open in browser
----------------
+Opening a response in a web browser
+===================================
 
 When using scrapy-poet, the ``open_in_browser`` function from Scrapy may raise
 the following exception:
