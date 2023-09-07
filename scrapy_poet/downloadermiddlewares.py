@@ -11,7 +11,7 @@ from scrapy import Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from twisted.internet.defer import Deferred, inlineCallbacks
-from web_poet import RulesRegistry
+from web_poet import ItemPage, RulesRegistry
 
 from .api import DummyResponse
 from .injection import Injector
@@ -152,6 +152,9 @@ class InjectionMiddleware:
             if value is None and arg in request.cb_kwargs:
                 continue
             request.cb_kwargs[arg] = value
+            if issubclass(type(value), ItemPage):
+                po_fqn = ".".join((type(value).__module__, type(value).__qualname__))
+                self.crawler.stats.inc_value(f"scrapy_poet/page-objects/{po_fqn}")
             # TODO: check if all arguments are fulfilled somehow?
 
         return response
