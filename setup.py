@@ -19,6 +19,7 @@ setup(
         "scrapy.commands": ["savefixture = scrapy_poet.commands:SaveFixtureCommand"]
     },
     package_data={"scrapy_poet": ["VERSION"]},
+    python_requires=">=3.8",
     install_requires=[
         "andi >= 0.4.1",
         "attrs >= 21.3.0",
