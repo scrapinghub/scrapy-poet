@@ -340,12 +340,13 @@ class ItemProvider(PageObjectInputProvider):
 class CrawlerStatCollector(StatCollector):
     def __init__(self, stats):
         self._stats = stats
+        self._prefix = "scrapy-poet/stats/"
 
     def set(self, key: str, value: Any) -> None:  # noqa: D102
-        self._stats.set_value(key, value)
+        self._stats.set_value(f"{self._prefix}{key}", value)
 
     def inc(self, key: str, value: int = 1) -> None:  # noqa: D102
-        self._stats.inc_value(key, value)
+        self._stats.inc_value(f"{self._prefix}{key}", value)
 
 
 class StatsProvider(PageObjectInputProvider):

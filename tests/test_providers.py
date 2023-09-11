@@ -273,5 +273,6 @@ def test_stats_provider(settings):
     stats.inc("c")
 
     expected = {"a": "1", "b": 8, "c": 1}
+    expected = {f"scrapy-poet/stats/{k}": v for k, v in expected.items()}
     actual = {k: v for k, v in crawler.stats._stats.items() if k in expected}
     assert actual == expected
