@@ -8,7 +8,7 @@ from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
-from web_poet import Injectable, ItemPage, RulesRegistry
+from web_poet import Injectable, ItemPage, RulesRegistry, Returns
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
@@ -303,6 +303,59 @@ class PriceInDollarsPO(ItemPage):
         item["price"] *= self.conversion.rate
         item["currency"] = "$"
         return item
+
+
+@attr.s(auto_attribs=True)
+class TestItem:
+    foo: int
+    bar: str
+
+
+class TestItemPage(ItemPage, Returns[TestItem]):
+    pass
+
+
+class TestInjectorStats:
+
+    @pytest.mark.parametrize(
+        "cb_args, expected",
+        (
+            (
+                {"response": DummyResponse, "price_po": PricePO, "rate_po": EurDollarRate},
+                {"tests.test_injection.PricePO"}
+            ),
+            (
+                {"response": DummyResponse, "price_po": PriceInDollarsPO},
+                {"tests.test_injection.PricePO", "tests.test_injection.PriceInDollarsPO"}
+            ),
+            (
+                {"response": DummyResponse},
+                set()
+            ),
+            (
+                {"response": DummyResponse, "item": TestItem},
+                set()  # TODO: add the right set of injected classes.
+            )
+        )
+    )
+    @inlineCallbacks
+    def test_stats(self, cb_args, expected, injector):
+        def callback_factory():
+            args = ", ".join([f"{k}: {v.__name__}"for k, v in cb_args.items()])
+            exec(f"def callback({args}): pass")
+            return locals().get("callback")
+        callback = callback_factory()
+        response = get_response_for_testing(callback)
+        kwargs = yield from injector.build_callback_dependencies(
+            response.request, response
+        )
+        prefix = "scrapy_poet/page_objects/"
+        poet_stats = {
+            name.replace(prefix, ""): value
+            for name, value in injector.crawler.stats.get_stats().items()
+            if name.startswith(prefix)
+        }
+        assert set(poet_stats) == expected
 
 
 class TestInjectorOverrides:

@@ -16,10 +16,12 @@ from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
-from web_poet import RulesRegistry
+from web_poet import ItemPage, RulesRegistry
 from web_poet.page_inputs.http import request_fingerprint
 from web_poet.pages import is_injectable
 from web_poet.serialization.api import deserialize_leaf, load_class, serialize
+from web_poet.utils import get_fq_class_name
+
 
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from scrapy_poet.cache import SerializedDataCache
@@ -161,6 +163,9 @@ class Injector:
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances.keys():
                 instances[cls] = cls(**kwargs_spec.kwargs(instances))
+                if issubclass(cls, ItemPage):
+                    cls_fqn = get_fq_class_name(cls)
+                    self.crawler.stats.inc_value(f"scrapy_poet/page_objects/{cls_fqn}")
 
         return instances
 
