@@ -272,4 +272,4 @@ def test_stats_provider(settings):
     stats.inc("b", 5)
     stats.inc("c")
 
-    assert stats._stats._stats._stats == {"a": "1", "b": 8, "c": 1}
+    assert crawler.stats._stats == {"a": "1", "b": 8, "c": 1}
