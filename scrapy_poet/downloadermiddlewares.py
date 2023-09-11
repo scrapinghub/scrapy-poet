@@ -12,6 +12,7 @@ from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from twisted.internet.defer import Deferred, inlineCallbacks
 from web_poet import ItemPage, RulesRegistry
+from web_poet.utils import get_fq_class_name
 
 from .api import DummyResponse
 from .injection import Injector
@@ -153,7 +154,7 @@ class InjectionMiddleware:
                 continue
             request.cb_kwargs[arg] = value
             if issubclass(type(value), ItemPage):
-                po_fqn = "/".join((type(value).__module__, type(value).__qualname__)).replace(".", "/")
+                po_fqn = get_fq_class_name(type(value))
                 self.crawler.stats.inc_value(f"scrapy_poet/page_objects/{po_fqn}")
             # TODO: check if all arguments are fulfilled somehow?
 
