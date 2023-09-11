@@ -337,7 +337,7 @@ class ItemProvider(PageObjectInputProvider):
         return results
 
 
-class CrawlerStatCollector(StatCollector):
+class ScrapyPoetStatCollector(StatCollector):
     def __init__(self, stats):
         self._stats = stats
         self._prefix = "scrapy-poet/stats/"
@@ -362,4 +362,4 @@ class StatsProvider(PageObjectInputProvider):
         stat collector.
         """
 
-        return [Stats(stat_collector=CrawlerStatCollector(crawler.stats))]
+        return [Stats(stat_collector=ScrapyPoetStatCollector(crawler.stats))]
