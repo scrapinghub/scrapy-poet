@@ -27,6 +27,7 @@ from web_poet import (
     PageParams,
     RequestUrl,
     ResponseUrl,
+    Stats,
 )
 from web_poet.pages import is_injectable
 
@@ -333,3 +334,30 @@ class ItemProvider(PageObjectInputProvider):
 
             results.append(item)
         return results
+
+
+class StatCollector:
+    def __init__(self, stats):
+        self._stats = stats
+
+    def set(self, key: str, value: Any) -> None:  # noqa: D102
+        self._stats.set_value(key, value)
+
+    def inc(self, key: str, value: int = 1) -> None:  # noqa: D102
+        self._stats.inc_value(key, value)
+
+
+class StatsProvider(PageObjectInputProvider):
+    """This class provides :class:`web_poet.Stats
+    <web_poet.page_inputs.client.Stats>` instances.
+    """
+
+    provided_classes = {Stats}
+
+    def __call__(self, to_provide: Set[Callable], crawler: Crawler):
+        """Creates an :class:`web_poet.Stats
+        <web_poet.page_inputs.client.Stats>` instance using Scrapy's
+        stat collector.
+        """
+
+        return [Stats(stat_collector=StatCollector(crawler.stats))]
