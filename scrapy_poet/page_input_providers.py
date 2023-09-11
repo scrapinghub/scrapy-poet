@@ -340,7 +340,7 @@ class ItemProvider(PageObjectInputProvider):
 class ScrapyPoetStatCollector(StatCollector):
     def __init__(self, stats):
         self._stats = stats
-        self._prefix = "scrapy-poet/stats/"
+        self._prefix = "poet/stats/"
 
     def set(self, key: str, value: Any) -> None:  # noqa: D102
         self._stats.set_value(f"{self._prefix}{key}", value)
