@@ -29,7 +29,7 @@ from web_poet import (
     ResponseUrl,
     Stats,
 )
-from web_poet.page_inputs.stats import StatCollector
+from web_poet.page_inputs.stats import StatCollector, StatNum
 from web_poet.pages import is_injectable
 
 from scrapy_poet.downloader import create_scrapy_downloader
@@ -345,7 +345,7 @@ class CrawlerStatCollector(StatCollector):
     def set(self, key: str, value: Any) -> None:  # noqa: D102
         self._stats.set_value(f"{self._prefix}{key}", value)
 
-    def inc(self, key: str, value: int = 1) -> None:  # noqa: D102
+    def inc(self, key: str, value: StatNum = 1) -> None:  # noqa: D102
         self._stats.inc_value(f"{self._prefix}{key}", value)
 
 
