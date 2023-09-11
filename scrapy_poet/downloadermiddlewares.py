@@ -153,9 +153,6 @@ class InjectionMiddleware:
             if value is None and arg in request.cb_kwargs:
                 continue
             request.cb_kwargs[arg] = value
-            if issubclass(type(value), ItemPage):
-                po_fqn = get_fq_class_name(type(value))
-                self.crawler.stats.inc_value(f"scrapy_poet/page_objects/{po_fqn}")
             # TODO: check if all arguments are fulfilled somehow?
 
         return response
