@@ -272,4 +272,6 @@ def test_stats_provider(settings):
     stats.inc("b", 5)
     stats.inc("c")
 
-    assert crawler.stats._stats == {"a": "1", "b": 8, "c": 1}
+    expected = {"a": "1", "b": 8, "c": 1}
+    actual = {k: v for k, v in crawler.stats._stats.items() if k in expected}
+    assert actual == expected

@@ -29,6 +29,7 @@ from web_poet import (
     ResponseUrl,
     Stats,
 )
+from web_poet.page_inputs.stats import StatCollector
 from web_poet.pages import is_injectable
 
 from scrapy_poet.downloader import create_scrapy_downloader
@@ -336,7 +337,7 @@ class ItemProvider(PageObjectInputProvider):
         return results
 
 
-class StatCollector:
+class CrawlerStatCollector(StatCollector):
     def __init__(self, stats):
         self._stats = stats
 
@@ -360,4 +361,4 @@ class StatsProvider(PageObjectInputProvider):
         stat collector.
         """
 
-        return [Stats(stat_collector=StatCollector(crawler.stats))]
+        return [Stats(stat_collector=CrawlerStatCollector(crawler.stats))]
