@@ -2,6 +2,38 @@
 Changelog
 =========
 
+0.15.0 (2023-09-12)
+-------------------
+
+* Now requires ``web-poet >= 0.15.0``.
+
+* :external+web-poet:ref:`Web-poet stats <stats>` are now :ref:`supported
+  <stats>`.
+
+
+0.14.0 (2023-09-08)
+-------------------
+
+* Python 3.7 support has been dropped.
+
+* Caching is now built on top of web-poet serialization, extending caching
+  support to additional inputs, while making our code simpler, more reliable,
+  and more future-proof.
+
+  This has resulted in a few backward-incompatible changes:
+
+  * The ``scrapy_poet.page_input_providers.CacheDataProviderMixin`` mixin class
+    has been removed. Providers no longer need to use it or reimplement its
+    methods.
+
+  * The ``SCRAPY_POET_CACHE_GZIP`` setting has been removed.
+
+* Added ``scrapy_poet.utils.open_in_browser``, an alternative to
+  ``scrapy.utils.response.open_in_browser`` that supports scrapy-poet.
+
+* Fixed some documentation links.
+
+
 0.13.0 (2023-05-08)
 -------------------
 

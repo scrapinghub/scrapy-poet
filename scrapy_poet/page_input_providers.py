@@ -27,7 +27,9 @@ from web_poet import (
     PageParams,
     RequestUrl,
     ResponseUrl,
+    Stats,
 )
+from web_poet.page_inputs.stats import StatCollector, StatNum
 from web_poet.pages import is_injectable
 
 from scrapy_poet.downloader import create_scrapy_downloader
@@ -333,3 +335,31 @@ class ItemProvider(PageObjectInputProvider):
 
             results.append(item)
         return results
+
+
+class ScrapyPoetStatCollector(StatCollector):
+    def __init__(self, stats):
+        self._stats = stats
+        self._prefix = "poet/stats/"
+
+    def set(self, key: str, value: Any) -> None:  # noqa: D102
+        self._stats.set_value(f"{self._prefix}{key}", value)
+
+    def inc(self, key: str, value: StatNum = 1) -> None:  # noqa: D102
+        self._stats.inc_value(f"{self._prefix}{key}", value)
+
+
+class StatsProvider(PageObjectInputProvider):
+    """This class provides :class:`web_poet.Stats
+    <web_poet.page_inputs.client.Stats>` instances.
+    """
+
+    provided_classes = {Stats}
+
+    def __call__(self, to_provide: Set[Callable], crawler: Crawler):
+        """Creates an :class:`web_poet.Stats
+        <web_poet.page_inputs.client.Stats>` instance using Scrapy's
+        stat collector.
+        """
+
+        return [Stats(stat_collector=ScrapyPoetStatCollector(crawler.stats))]
