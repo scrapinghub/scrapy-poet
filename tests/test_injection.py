@@ -312,7 +312,8 @@ class TestItem:
 
 
 class TestItemPage(ItemPage, Returns[TestItem]):
-    pass
+    async def to_item(self):
+        return TestItem(foo=1, bar="bar")
 
 
 class TestInjectorStats:
@@ -334,7 +335,7 @@ class TestInjectorStats:
             ),
             (
                 {"response": DummyResponse, "item": TestItem},
-                set()  # TODO: add the right set of injected classes.
+                set()  # there must be no stats as ItemProvider is not enabled
             )
         )
     )
@@ -356,6 +357,25 @@ class TestInjectorStats:
             if name.startswith(prefix)
         }
         assert set(poet_stats) == expected
+
+    @inlineCallbacks
+    def test_po_provided_via_item(self, providers, injector):
+        rules = [
+            ApplyRule(
+                Patterns(include=()), use=TestItemPage, instead_of=TestItemPage, to_return=TestItem
+            )
+        ]
+        registry = RulesRegistry(rules=rules)
+        item_provider_path = {"scrapy_poet.page_input_providers.ItemProvider": 10}
+        providers.update(item_provider_path)
+        injector = get_injector_for_testing(providers, registry=registry)
+        def callback(response: DummyResponse, item: TestItem):
+            pass
+        response = get_response_for_testing(callback)
+        kwargs = yield from injector.build_callback_dependencies(
+            response.request, response
+        )
+        assert "scrapy_poet/page_objects/tests.test_injection.TestItemPage" in set(injector.crawler.stats.get_stats())
 
 
 class TestInjectorOverrides:
