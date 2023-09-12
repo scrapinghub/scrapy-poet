@@ -29,7 +29,7 @@ setup(
         "time_machine",
         "twisted >= 18.9.0",
         "url-matcher >= 0.2.0",
-        "web-poet >= 0.12.0",
+        "web-poet >= 0.15",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

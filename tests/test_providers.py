@@ -18,6 +18,7 @@ from scrapy_poet.page_input_providers import (
     ItemProvider,
     PageObjectInputProvider,
     PageParamsProvider,
+    StatsProvider,
 )
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
@@ -253,3 +254,25 @@ def test_item_provider_cache(settings):
     # garbage collected.
     inside()
     assert len(provider._cached_instances) == 0
+
+
+def test_stats_provider(settings):
+    crawler = get_crawler(Spider, settings)
+    injector = Injector(crawler)
+    provider = StatsProvider(injector)
+
+    results = provider(set(), crawler)
+
+    stats = results[0]
+    assert stats._stats._stats == crawler.stats
+
+    stats.set("a", "1")
+    stats.set("b", 2)
+    stats.inc("b")
+    stats.inc("b", 5)
+    stats.inc("c")
+
+    expected = {"a": "1", "b": 8, "c": 1}
+    expected = {f"poet/stats/{k}": v for k, v in expected.items()}
+    actual = {k: v for k, v in crawler.stats._stats.items() if k in expected}
+    assert actual == expected
