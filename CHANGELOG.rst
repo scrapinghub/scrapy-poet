@@ -2,6 +2,15 @@
 Changelog
 =========
 
+0.15.0 (to be released)
+-----------------------
+
+* Now requires ``web-poet >= 0.15.0``.
+
+* :external+web-poet:ref:`Web-poet stats <stats>` are now :ref:`supported
+  <stats>`.
+
+
 0.14.0 (2023-09-08)
 -------------------
 
