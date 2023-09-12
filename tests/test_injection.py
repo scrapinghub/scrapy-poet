@@ -367,10 +367,9 @@ class TestInjectorStats:
         def callback(response: DummyResponse, item: TestItem):
             pass
         response = get_response_for_testing(callback)
-        kwargs = yield from injector.build_callback_dependencies(
-            response.request, response
-        )
-        assert "scrapy_poet/page_objects/tests.test_injection.TestItemPage" in set(injector.crawler.stats.get_stats())
+        kwargs = yield from injector.build_callback_dependencies(response.request, response)
+        key = "scrapy_poet/page_objects/tests.test_injection.TestItemPage"
+        assert key in set(injector.crawler.stats.get_stats())
 
 
 class TestInjectorOverrides:
