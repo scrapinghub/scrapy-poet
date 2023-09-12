@@ -163,9 +163,9 @@ class Injector:
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances.keys():
                 instances[cls] = cls(**kwargs_spec.kwargs(instances))
-                if issubclass(cast(type, cls), ItemPage):
-                    cls_fqn = get_fq_class_name(cast(type, cls))
-                    self.crawler.stats.inc_value(f"scrapy_poet/page_objects/{cls_fqn}")
+                # if issubclass(cast(type, cls), ItemPage):
+                cls_fqn = get_fq_class_name(cast(type, cls))
+                self.crawler.stats.inc_value(f"poet/page_objects/{cls_fqn}")
 
         return instances
 
