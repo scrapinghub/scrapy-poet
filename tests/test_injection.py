@@ -359,15 +359,14 @@ class TestInjectorStats:
         assert set(poet_stats) == expected
 
     @inlineCallbacks
-    def test_po_provided_via_item(self, providers, injector):
+    def test_po_provided_via_item(self, injector):
         rules = [
             ApplyRule(
                 Patterns(include=()), use=TestItemPage, instead_of=TestItemPage, to_return=TestItem
             )
         ]
         registry = RulesRegistry(rules=rules)
-        item_provider_path = {"scrapy_poet.page_input_providers.ItemProvider": 10}
-        providers.update(item_provider_path)
+        providers = {"scrapy_poet.page_input_providers.ItemProvider": 10}
         injector = get_injector_for_testing(providers, registry=registry)
         def callback(response: DummyResponse, item: TestItem):
             pass
