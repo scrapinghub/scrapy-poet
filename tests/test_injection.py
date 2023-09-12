@@ -360,11 +360,7 @@ class TestInjectorStats:
 
     @inlineCallbacks
     def test_po_provided_via_item(self, injector):
-        rules = [
-            ApplyRule(
-                Patterns(include=()), use=TestItemPage, instead_of=TestItemPage, to_return=TestItem
-            )
-        ]
+        rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
         registry = RulesRegistry(rules=rules)
         providers = {"scrapy_poet.page_input_providers.ItemProvider": 10}
         injector = get_injector_for_testing(providers, registry=registry)
