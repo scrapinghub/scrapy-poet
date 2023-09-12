@@ -11,8 +11,7 @@ from scrapy import Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Request, Response
 from twisted.internet.defer import Deferred, inlineCallbacks
-from web_poet import ItemPage, RulesRegistry
-from web_poet.utils import get_fq_class_name
+from web_poet import RulesRegistry
 
 from .api import DummyResponse
 from .injection import Injector
