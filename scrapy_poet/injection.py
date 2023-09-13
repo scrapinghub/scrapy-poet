@@ -22,7 +22,6 @@ from web_poet.pages import is_injectable
 from web_poet.serialization.api import deserialize_leaf, load_class, serialize
 from web_poet.utils import get_fq_class_name
 
-
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from scrapy_poet.cache import SerializedDataCache
 from scrapy_poet.injection_errors import (

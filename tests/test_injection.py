@@ -8,7 +8,7 @@ from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
-from web_poet import Injectable, ItemPage, RulesRegistry, Returns
+from web_poet import Injectable, ItemPage, Returns, RulesRegistry
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
@@ -317,7 +317,6 @@ class TestItemPage(ItemPage, Returns[TestItem]):
 
 
 class TestInjectorStats:
-
     @pytest.mark.parametrize(
         "cb_args, expected",
         (
@@ -327,7 +326,7 @@ class TestInjectorStats:
                     "tests.test_injection.PricePO",
                     "tests.test_injection.EurDollarRate",
                     "tests.test_injection.Html",
-                }
+                },
             ),
             (
                 {"price_po": PriceInDollarsPO},
@@ -336,21 +335,25 @@ class TestInjectorStats:
                     "tests.test_injection.PriceInDollarsPO",
                     "tests.test_injection.Html",
                     "tests.test_injection.EurDollarRate",
-                }
+                },
             ),
-            ({},set(),),
+            (
+                {},
+                set(),
+            ),
             (
                 {"item": TestItem},
-                set()  # there must be no stats as ItemProvider is not enabled
-            )
-        )
+                set(),  # there must be no stats as ItemProvider is not enabled
+            ),
+        ),
     )
     @inlineCallbacks
     def test_stats(self, cb_args, expected, injector):
         def callback_factory():
-            args = ", ".join([f"{k}: {v.__name__}"for k, v in cb_args.items()])
+            args = ", ".join([f"{k}: {v.__name__}" for k, v in cb_args.items()])
             exec(f"def callback(response: DummyResponse, {args}): pass")
             return locals().get("callback")
+
         callback = callback_factory()
         response = get_response_for_testing(callback)
         kwargs = yield from injector.build_callback_dependencies(
@@ -370,10 +373,14 @@ class TestInjectorStats:
         registry = RulesRegistry(rules=rules)
         providers = {"scrapy_poet.page_input_providers.ItemProvider": 10}
         injector = get_injector_for_testing(providers, registry=registry)
+
         def callback(response: DummyResponse, item: TestItem):
             pass
+
         response = get_response_for_testing(callback)
-        kwargs = yield from injector.build_callback_dependencies(response.request, response)
+        kwargs = yield from injector.build_callback_dependencies(
+            response.request, response
+        )
         key = "poet/injector/tests.test_injection.TestItemPage"
         assert key in set(injector.crawler.stats.get_stats())
 
