@@ -305,6 +305,82 @@ class PriceInDollarsPO(ItemPage):
         return item
 
 
+@attr.s(auto_attribs=True)
+class TestItem:
+    foo: int
+    bar: str
+
+
+class TestItemPage(ItemPage[TestItem]):
+    async def to_item(self):
+        return TestItem(foo=1, bar="bar")
+
+
+class TestInjectorStats:
+    @pytest.mark.parametrize(
+        "cb_args, expected",
+        (
+            (
+                {"price_po": PricePO, "rate_po": EurDollarRate},
+                {
+                    "tests.test_injection.PricePO",
+                    "tests.test_injection.EurDollarRate",
+                    "tests.test_injection.Html",
+                },
+            ),
+            (
+                {"price_po": PriceInDollarsPO},
+                {
+                    "tests.test_injection.PricePO",
+                    "tests.test_injection.PriceInDollarsPO",
+                    "tests.test_injection.Html",
+                    "tests.test_injection.EurDollarRate",
+                },
+            ),
+            (
+                {},
+                set(),
+            ),
+            (
+                {"item": TestItem},
+                set(),  # there must be no stats as ItemProvider is not enabled
+            ),
+        ),
+    )
+    @inlineCallbacks
+    def test_stats(self, cb_args, expected, injector):
+        def callback_factory():
+            args = ", ".join([f"{k}: {v.__name__}" for k, v in cb_args.items()])
+            exec(f"def callback(response: DummyResponse, {args}): pass")
+            return locals().get("callback")
+
+        callback = callback_factory()
+        response = get_response_for_testing(callback)
+        _ = yield from injector.build_callback_dependencies(response.request, response)
+        prefix = "poet/injector/"
+        poet_stats = {
+            name.replace(prefix, ""): value
+            for name, value in injector.crawler.stats.get_stats().items()
+            if name.startswith(prefix)
+        }
+        assert set(poet_stats) == expected
+
+    @inlineCallbacks
+    def test_po_provided_via_item(self, injector):
+        rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
+        registry = RulesRegistry(rules=rules)
+        providers = {"scrapy_poet.page_input_providers.ItemProvider": 10}
+        injector = get_injector_for_testing(providers, registry=registry)
+
+        def callback(response: DummyResponse, item: TestItem):
+            pass
+
+        response = get_response_for_testing(callback)
+        _ = yield from injector.build_callback_dependencies(response.request, response)
+        key = "poet/injector/tests.test_injection.TestItemPage"
+        assert key in set(injector.crawler.stats.get_stats())
+
+
 class TestInjectorOverrides:
     @pytest.mark.parametrize("override_should_happen", [True, False])
     @inlineCallbacks

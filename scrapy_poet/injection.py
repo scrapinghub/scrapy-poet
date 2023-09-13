@@ -3,7 +3,7 @@ import logging
 import os
 import pprint
 import warnings
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, cast
 
 import andi
 from andi.typeutils import issubclass_safe
@@ -20,6 +20,7 @@ from web_poet import RulesRegistry
 from web_poet.page_inputs.http import request_fingerprint
 from web_poet.pages import is_injectable
 from web_poet.serialization.api import deserialize_leaf, load_class, serialize
+from web_poet.utils import get_fq_class_name
 
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from scrapy_poet.cache import SerializedDataCache
@@ -161,6 +162,8 @@ class Injector:
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances.keys():
                 instances[cls] = cls(**kwargs_spec.kwargs(instances))
+                cls_fqn = get_fq_class_name(cast(type, cls))
+                self.crawler.stats.inc_value(f"poet/injector/{cls_fqn}")
 
         return instances
 
@@ -198,9 +201,9 @@ class Injector:
                 try:
                     data = self.cache[fingerprint].items()
                 except KeyError:
-                    self.crawler.stats.inc_value("scrapy-poet/cache/miss")
+                    self.crawler.stats.inc_value("poet/cache/miss")
                 else:
-                    self.crawler.stats.inc_value("scrapy-poet/cache/hit")
+                    self.crawler.stats.inc_value("poet/cache/hit")
                     if isinstance(data, Exception):
                         raise data
                     objs = [
@@ -228,7 +231,7 @@ class Injector:
                     if self.cache and self.caching_errors:
                         # Save errors in the cache
                         self.cache[fingerprint] = e
-                        self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
+                        self.crawler.stats.inc_value("poet/cache/firsthand")
                     raise
 
             objs_by_type: Dict[Callable, Any] = {type(obj): obj for obj in objs}
@@ -244,7 +247,7 @@ class Injector:
             if self.cache and not cache_hit:
                 # Save the results in the cache
                 self.cache[fingerprint] = serialize(objs)
-                self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
+                self.crawler.stats.inc_value("poet/cache/firsthand")
 
         return instances
 
