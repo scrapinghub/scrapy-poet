@@ -8,7 +8,7 @@ from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
-from web_poet import Injectable, ItemPage, Returns, RulesRegistry
+from web_poet import Injectable, ItemPage, RulesRegistry
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
@@ -311,7 +311,7 @@ class TestItem:
     bar: str
 
 
-class TestItemPage(ItemPage, Returns[TestItem]):
+class TestItemPage(ItemPage[TestItem]):
     async def to_item(self):
         return TestItem(foo=1, bar="bar")
 
