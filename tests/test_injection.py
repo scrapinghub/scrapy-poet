@@ -356,9 +356,7 @@ class TestInjectorStats:
 
         callback = callback_factory()
         response = get_response_for_testing(callback)
-        kwargs = yield from injector.build_callback_dependencies(
-            response.request, response
-        )
+        _ = yield from injector.build_callback_dependencies(response.request, response)
         prefix = "poet/injector/"
         poet_stats = {
             name.replace(prefix, ""): value
@@ -378,9 +376,7 @@ class TestInjectorStats:
             pass
 
         response = get_response_for_testing(callback)
-        kwargs = yield from injector.build_callback_dependencies(
-            response.request, response
-        )
+        _ = yield from injector.build_callback_dependencies(response.request, response)
         key = "poet/injector/tests.test_injection.TestItemPage"
         assert key in set(injector.crawler.stats.get_stats())
 
