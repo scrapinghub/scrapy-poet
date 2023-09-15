@@ -2,6 +2,15 @@
 Changelog
 =========
 
+0.15.1 (2023-09-15)
+-------------------
+
+* :ref:`scrapy-poet stats <stats>` now also include counters for injected
+  dependencies (``poet/injector/<dependency import path>``).
+
+* All scrapy-poet stats  that used to be prefixed with ``scrapy-poet/`` are now
+  prefixed with ``poet/`` instead.
+
 0.15.0 (2023-09-12)
 -------------------
 
