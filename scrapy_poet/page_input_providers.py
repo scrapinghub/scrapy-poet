@@ -10,7 +10,7 @@ for example, from scrapy-playwright or from an API for automatic extraction.
 """
 import asyncio
 from dataclasses import make_dataclass
-from inspect import isclass
+from inspect import isclass, signature
 from typing import Any, Callable, ClassVar, Dict, List, Optional, Set, Type, Union
 from warnings import warn
 from weakref import WeakKeyDictionary
@@ -105,6 +105,8 @@ class PageObjectInputProvider:
 
     provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
+
+    allow_prev_instances: bool = False
 
     def is_provided(self, type_: Callable) -> bool:
         """
@@ -230,6 +232,8 @@ class ItemProvider(PageObjectInputProvider):
         "trying to resolve this plan: {plan}"
     )
 
+    allow_prev_instances: bool = True
+
     def __init__(self, injector):
         super().__init__(injector)
         self.registry = self.injector.registry
@@ -280,11 +284,11 @@ class ItemProvider(PageObjectInputProvider):
         to_provide: Set[Callable],
         request: Request,
         response: Response,
+        prev_instances: Any,
     ) -> List[Any]:
         results = []
         for cls in to_provide:
-            item = self.get_from_cache(request, cls)
-            if item:
+            if item := self.get_from_cache(request, cls):
                 results.append(item)
                 continue
 
@@ -306,32 +310,50 @@ class ItemProvider(PageObjectInputProvider):
                 externally_provided=self.injector.is_class_provided_by_any_provider,
             )
 
-            try:
-                deferred_or_future = maybe_deferred_to_future(
-                    self.injector.build_instances(request, response, plan)
-                )
-                # RecursionError NOT raised when ``AsyncioSelectorReactor`` is used.
-                # Could be related: https://github.com/python/cpython/issues/93837
+            # If dependencies are already built for the PO, we can build it here.
+            # Avoid calling build_instances() since it may result in deadlocks.
+            po_deps = [cls for cls, kwargs_spec in plan.dependencies][:-1]
+            if prev_instances.keys() == set(po_deps):
+                _, kwargs_spec = plan.dependencies[-1]
+                po_instances = {
+                    page_object_cls: page_object_cls(
+                        **kwargs_spec.kwargs(prev_instances)
+                    )
+                }
 
-                # Need to check before awaiting on the ``asyncio.Future``
-                # before it gets stuck on a potential deadlock.
-                if asyncio.isfuture(deferred_or_future):
-                    if self.check_if_deadlock(request):
-                        raise ProviderDependencyDeadlockError(
-                            self.template_deadlock_msg.format(plan=plan)
+            else:
+                try:
+                    deferred_or_future = maybe_deferred_to_future(
+                        self.injector.build_instances(
+                            request, response, plan, prev_instances
                         )
+                    )
+                    # RecursionError NOT raised when ``AsyncioSelectorReactor`` is used.
+                    # Could be related: https://github.com/python/cpython/issues/93837
 
-                po_instances = await deferred_or_future
-            except RecursionError:
-                raise ProviderDependencyDeadlockError(
-                    self.template_deadlock_msg.format(plan=plan)
-                )
+                    # Need to check before awaiting on the ``asyncio.Future``
+                    # before it gets stuck on a potential deadlock.
+                    if asyncio.isfuture(deferred_or_future):
+                        if self.check_if_deadlock(request):
+                            raise ProviderDependencyDeadlockError(
+                                self.template_deadlock_msg.format(plan=plan)
+                            )
 
-            page_object = po_instances[page_object_cls]
-            item = await page_object.to_item()
+                    po_instances = await deferred_or_future
+                except RecursionError:
+                    raise ProviderDependencyDeadlockError(
+                        self.template_deadlock_msg.format(plan=plan)
+                    )
 
-            self.update_cache(request, po_instances)
-            self.update_cache(request, {type(item): item})
+            # See if the recursive calls produced an item and put it in the cache.
+            # Otherwise, ``to_item()`` will be called multiple times which can
+            # lead to bad values in some fields.
+            if not (item := self.get_from_cache(request, cls)):
+                page_object = po_instances[page_object_cls]
+                item = await page_object.to_item()
+
+                self.update_cache(request, po_instances)
+                self.update_cache(request, {type(item): item})
 
             results.append(item)
         return results

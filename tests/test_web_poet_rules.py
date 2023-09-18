@@ -10,7 +10,7 @@ import os
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Dict, List, Tuple, Type, Set, Callable, Optional
 
 import attrs
 import pytest
@@ -32,6 +32,7 @@ from web_poet.pages import ItemT
 
 from scrapy_poet import callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils import is_min_scrapy_version
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
@@ -54,11 +55,7 @@ def rules_settings() -> dict:
 
 def spider_for(injectable: Type):
     class InjectableSpider(scrapy.Spider):
-
         url = None
-        custom_settings = {
-            "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
-        }
 
         def start_requests(self):
             yield scrapy.Request(self.url, capture_exceptions(callback_for(injectable)))
@@ -103,14 +100,21 @@ class PageObjectCounterMixin:
 
 
 @inlineCallbacks
-def crawl_item_and_deps(PageObject) -> Tuple[Any, Any]:
+def crawl_item_and_deps(
+    PageObject, override_settings: Optional[Dict] = None
+) -> Tuple[Any, Any]:
     """Helper function to easily return the item and injected dependencies from
     a simulated Scrapy callback which asks for either of these dependencies:
         - page object
         - item class
     """
+
+    settings = {**rules_settings(), **{"SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS}}
+    if override_settings:
+        settings.update(override_settings)
+
     item, _, crawler = yield crawl_single_item(
-        spider_for(PageObject), ProductHtml, rules_settings(), port=PORT
+        spider_for(PageObject), ProductHtml, settings, port=PORT
     )
     return item, crawler.spider.collected_response_deps
 
@@ -1487,6 +1491,59 @@ def test_page_object_with_item_dependency_deadlock_2_c(caplog) -> None:
 def test_page_object_with_item_dependency_deadlock_2_d(caplog) -> None:
     item, deps = yield crawl_item_and_deps(Egg2DeadlockPage)
     assert "ProviderDependencyDeadlockError" in caplog.text
+
+
+@attrs.define
+class Mobius:
+    name: str
+
+
+@handle_urls(URL)
+@attrs.define
+class MobiusPage(WebPage[Mobius]):
+    mobius_item: Mobius
+
+    @field
+    def name(self) -> str:
+        return f"(modified) {self.mobius_item.name}"
+
+
+class MobiusProvider(PageObjectInputProvider):
+    provided_classes = {Mobius}
+
+    def __call__(self, to_provide: Set[Callable], request: scrapy.Request):
+        return [Mobius(name="mobius from MobiusProvider")]
+
+
+@inlineCallbacks
+def test_page_object_returning_item_which_is_also_a_dep() -> None:
+    settings = {
+        "SCRAPY_POET_PROVIDERS": {**DEFAULT_PROVIDERS, **{MobiusProvider: 1000}}
+    }
+
+    # item from 'to_return'
+    item, deps = yield crawl_item_and_deps(Mobius, override_settings=settings)
+    assert item == Mobius(name="(modified) mobius from MobiusProvider")
+    assert_deps(deps, {"item": Mobius})
+
+    # calling the actual page objects should still work
+    # item, deps = yield crawl_item_and_deps(MobiusPage)
+    # assert item == Mobius(name="(modified) mobius from MobiusProvider")
+    # assert_deps(deps, {"item": Mobius})
+
+
+# TODO: USE CASE: ProductItem as a dependency of ProductPage. ProductPage
+# returns ProductItem after modfiying some contents to it. ProductItem is
+# provided by:
+# - some provider
+# - some page objects in their ApplyRule
+
+# TODO: Same as the previous tests but multiple ApplyRules are available and top one is selected
+
+# TODO: Same as the 1st test but the settings is not overridden
+
+# TODO: Having the 2 new test cases above, update ``test_created_apply_rules``
+# below.
 
 
 def test_created_apply_rules() -> None:

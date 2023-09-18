@@ -34,7 +34,7 @@ DEFAULT_PROVIDERS = {
     PageParamsProvider: 700,
     RequestUrlProvider: 800,
     ResponseUrlProvider: 900,
-    ItemProvider: 1000,
+    ItemProvider: 2000,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")

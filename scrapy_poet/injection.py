@@ -151,11 +151,20 @@ class Injector:
         )
 
     @inlineCallbacks
-    def build_instances(self, request: Request, response: Response, plan: andi.Plan):
+    def build_instances(
+        self,
+        request: Request,
+        response: Response,
+        plan: andi.Plan,
+        prev_instances: Optional[Dict] = None,
+    ):
         """Build the instances dict from a plan including external dependencies."""
         # First we build the external dependencies using the providers
         instances = yield from self.build_instances_from_providers(
-            request, response, plan
+            request,
+            response,
+            plan,
+            prev_instances,
         )
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
@@ -169,10 +178,14 @@ class Injector:
 
     @inlineCallbacks
     def build_instances_from_providers(
-        self, request: Request, response: Response, plan: andi.Plan
+        self,
+        request: Request,
+        response: Response,
+        plan: andi.Plan,
+        prev_instances: Optional[Dict] = None,
     ):
         """Build dependencies handled by registered providers"""
-        instances: Dict[Callable, Any] = {}
+        instances: Dict[Callable, Any] = prev_instances or {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response
         )
@@ -182,7 +195,11 @@ class Injector:
             provided_classes = {
                 cls for cls in dependencies_set if provider.is_provided(cls)
             }
-            provided_classes -= instances.keys()  # ignore already provided types
+
+            # ignore already provided types if provider doesn't need to use them
+            if not provider.allow_prev_instances:
+                provided_classes -= instances.keys()
+
             if not provided_classes:
                 continue
 
@@ -221,6 +238,8 @@ class Injector:
                     externally_provided=scrapy_provided_dependencies,
                     full_final_kwargs=False,
                 ).final_kwargs(scrapy_provided_dependencies)
+                if provider.allow_prev_instances:
+                    kwargs.update({"prev_instances": instances})
                 try:
                     # Invoke the provider to get the data
                     objs = yield maybeDeferred_coro(
