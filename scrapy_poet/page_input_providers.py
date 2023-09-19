@@ -106,6 +106,10 @@ class PageObjectInputProvider:
     provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
+    # If set to True, the Injector will not skip the Provider when the dependency has
+    # been built. Instead, the Injector will pass the previously built instances (by
+    # the other providers) to the Provider. The Provider can then choose to modify
+    # these previous instances before returning them to the Injector.
     allow_prev_instances: bool = False
 
     def is_provided(self, type_: Callable) -> bool:
