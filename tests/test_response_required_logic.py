@@ -8,6 +8,7 @@ from pytest_twisted import inlineCallbacks
 from scrapy.crawler import Crawler
 from scrapy.http import HtmlResponse, Request, TextResponse
 from scrapy.settings import Settings
+from scrapy.statscollectors import MemoryStatsCollector
 from web_poet import ItemPage, WebPage
 
 from scrapy_poet import DummyResponse, callback_for
@@ -360,6 +361,7 @@ def test_is_response_going_to_be_used():
     crawler = Crawler(MySpider)
     spider = MySpider()
     crawler.spider = spider
+    crawler.stats = MemoryStatsCollector(crawler)
 
     def response(request):
         return HtmlResponse(request.url, request=request, body=b"<html></html>")

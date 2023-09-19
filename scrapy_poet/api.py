@@ -27,7 +27,7 @@ class DummyResponse(Response):
     :class:`~.DummyResponse` to your parser instead.
     """
 
-    def __init__(self, url: str, request=Optional[Request]):
+    def __init__(self, url: str, request: Optional[Request] = None):
         super().__init__(url=url, request=request)
 
 

@@ -11,7 +11,7 @@ from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Response
 from scrapy.settings import Settings
-from scrapy.statscollectors import StatsCollector
+from scrapy.statscollectors import MemoryStatsCollector, StatsCollector
 from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import load_object
@@ -409,11 +409,9 @@ def get_injector_for_testing(
     settings = Settings(
         {**(additional_settings or {}), "SCRAPY_POET_PROVIDERS": providers}
     )
-    crawler = Crawler(MySpider)
-    crawler.settings = settings
-    spider = MySpider()
-    spider.settings = settings
-    crawler.spider = spider
+    crawler = Crawler(MySpider, settings)
+    crawler.spider = MySpider.from_crawler(crawler)
+    crawler.stats = MemoryStatsCollector(crawler)
     if not registry:
         registry = create_registry_instance(RulesRegistry, crawler)
     return Injector(crawler, registry=registry)
