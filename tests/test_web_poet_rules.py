@@ -10,7 +10,7 @@ import os
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple, Type, Set, Callable, Optional
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type
 
 import attrs
 import pytest

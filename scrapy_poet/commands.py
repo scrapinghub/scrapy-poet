@@ -1,7 +1,7 @@
 import datetime
 import logging
 from pathlib import Path
-from typing import Optional, Type
+from typing import Dict, Optional, Type
 
 import andi
 import scrapy
@@ -34,10 +34,14 @@ frozen_time = None
 class SavingInjector(Injector):
     @inlineCallbacks
     def build_instances_from_providers(
-        self, request: Request, response: Response, plan: andi.Plan
+        self,
+        request: Request,
+        response: Response,
+        plan: andi.Plan,
+        prev_instances: Optional[Dict] = None,
     ):
         instances = yield super().build_instances_from_providers(
-            request, response, plan
+            request, response, plan, prev_instances
         )
         if request.meta.get("savefixture", False):
             saved_dependencies.extend(instances.values())

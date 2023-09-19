@@ -10,7 +10,7 @@ for example, from scrapy-playwright or from an API for automatic extraction.
 """
 import asyncio
 from dataclasses import make_dataclass
-from inspect import isclass, signature
+from inspect import isclass
 from typing import Any, Callable, ClassVar, Dict, List, Optional, Set, Type, Union
 from warnings import warn
 from weakref import WeakKeyDictionary
