@@ -441,6 +441,7 @@ def get_injector_for_testing(
     spider = MySpider()
     spider.settings = settings
     crawler.spider = spider
+    crawler.stats = load_object(crawler.settings["STATS_CLASS"])(crawler)
     if not registry:
         registry = create_registry_instance(RulesRegistry, crawler)
     return Injector(crawler, registry=registry)
