@@ -284,7 +284,7 @@ class ItemProvider(PageObjectInputProvider):
         to_provide: Set[Callable],
         request: Request,
         response: Response,
-        prev_instances: Any,
+        prev_instances: Dict,
     ) -> List[Any]:
         results = []
         for cls in to_provide:

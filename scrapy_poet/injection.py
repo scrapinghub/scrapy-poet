@@ -203,6 +203,14 @@ class Injector:
             if not provided_classes:
                 continue
 
+            # If dependency instances were already made by previously invoked
+            # providers, don't try to build them again since it may result in
+            # incorrect values (e.g. PO modifying an item > 2 times).
+            required_deps = set(plan.dependencies[-1][1].values())
+            built_deps = set(instances.keys())
+            if required_deps and required_deps == built_deps:
+                continue
+
             objs, fingerprint = [], None
             cache_hit = False
             if self.cache:

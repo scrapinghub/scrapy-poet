@@ -1520,16 +1520,15 @@ def test_page_object_returning_item_which_is_also_a_dep() -> None:
     settings = {
         "SCRAPY_POET_PROVIDERS": {**DEFAULT_PROVIDERS, **{MobiusProvider: 1000}}
     }
-
     # item from 'to_return'
     item, deps = yield crawl_item_and_deps(Mobius, override_settings=settings)
     assert item == Mobius(name="(modified) mobius from MobiusProvider")
     assert_deps(deps, {"item": Mobius})
 
     # calling the actual page objects should still work
-    # item, deps = yield crawl_item_and_deps(MobiusPage)
-    # assert item == Mobius(name="(modified) mobius from MobiusProvider")
-    # assert_deps(deps, {"item": Mobius})
+    item, deps = yield crawl_item_and_deps(MobiusPage, override_settings=settings)
+    assert item == Mobius(name="(modified) mobius from MobiusProvider")
+    assert_deps(deps, {"page": MobiusPage})
 
 
 # TODO: USE CASE: ProductItem as a dependency of ProductPage. ProductPage
