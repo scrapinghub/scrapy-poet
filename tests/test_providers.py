@@ -21,12 +21,7 @@ from scrapy_poet.page_input_providers import (
     StatsProvider,
 )
 from scrapy_poet.utils.mockserver import get_ephemeral_port
-from scrapy_poet.utils.testing import (
-    AsyncMock,
-    HtmlResource,
-    ProductHtml,
-    crawl_single_item,
-)
+from scrapy_poet.utils.testing import HtmlResource, ProductHtml, crawl_single_item
 
 
 class NonProductHtml(HtmlResource):
@@ -191,7 +186,7 @@ def test_price_first_spider(settings):
 @ensureDeferred
 async def test_http_client_provider(settings):
     crawler = get_crawler(Spider, settings)
-    crawler.engine = AsyncMock()
+    crawler.engine = mock.AsyncMock()
     injector = Injector(crawler)
 
     with mock.patch(
