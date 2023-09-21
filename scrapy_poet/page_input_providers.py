@@ -173,6 +173,7 @@ class HttpClientProvider(PageObjectInputProvider):
         <web_poet.page_inputs.client.HttpClient>` instance using Scrapy's
         downloader.
         """
+        assert crawler.engine
         downloader = create_scrapy_downloader(crawler.engine.download)
         save_responses = crawler.settings.getbool("_SCRAPY_POET_SAVEFIXTURE")
         return [

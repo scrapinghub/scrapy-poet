@@ -28,7 +28,7 @@ from scrapy_poet.utils import is_min_scrapy_version
 try:
     from scrapy.http.request import NO_CALLBACK  # available on Scrapy >= 2.8
 except ImportError:
-    NO_CALLBACK = lambda: None  # noqa: E731
+    NO_CALLBACK = lambda: None  # type: ignore[misc]  # noqa: E731
 
 
 @attr.s(auto_attribs=True)
@@ -75,13 +75,13 @@ class TextProductProvider(HttpResponseProvider):
 
     # This is wrong. You should not annotate provider dependencies with classes
     # like TextResponse or HtmlResponse, you should use Response instead.
-    def __call__(self, to_provide, response: TextResponse):
+    def __call__(self, to_provide, response: TextResponse):  # type: ignore[override]
         return super().__call__(to_provide, response)
 
 
 class StringProductProvider(HttpResponseProvider):
-    def __call__(self, to_provide, response: str):
-        return super().__call__(to_provide, response)
+    def __call__(self, to_provide, response: str):  # type: ignore[override]
+        return super().__call__(to_provide, response)  # type: ignore[arg-type]
 
 
 @attr.s(auto_attribs=True)

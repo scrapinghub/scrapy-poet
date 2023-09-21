@@ -85,6 +85,7 @@ class InjectionMiddleware:
             return None
 
         logger.debug(f"Using DummyResponse instead of downloading {request}")
+        assert self.crawler.stats
         self.crawler.stats.inc_value("scrapy_poet/dummy_response_count")
         return DummyResponse(url=request.url, request=request)
 
