@@ -479,8 +479,11 @@ def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
             self.crawler = crawler
 
         def __call__(self, to_provide, request: Request):
-            if not get_domain(request.url) == "example.com":
-                raise error("The URL is not from example.com")
+            domain = get_domain(request.url)
+            if not domain == "example.com":
+                raise error(
+                    f"Domain ({domain}) of URL ({request.url}) is not example.com"
+                )
             return [cls(content) if content else cls() for cls in classes]
 
     return Provider
