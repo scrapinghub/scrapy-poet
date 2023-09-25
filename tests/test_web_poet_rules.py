@@ -10,7 +10,7 @@ import os
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type
 
 import attrs
 import pytest
@@ -32,6 +32,7 @@ from web_poet.pages import ItemT
 
 from scrapy_poet import callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils import is_min_scrapy_version
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
@@ -54,11 +55,7 @@ def rules_settings() -> dict:
 
 def spider_for(injectable: Type):
     class InjectableSpider(scrapy.Spider):
-
         url = None
-        custom_settings = {
-            "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
-        }
 
         def start_requests(self):
             yield scrapy.Request(self.url, capture_exceptions(callback_for(injectable)))
@@ -103,14 +100,21 @@ class PageObjectCounterMixin:
 
 
 @inlineCallbacks
-def crawl_item_and_deps(PageObject) -> Tuple[Any, Any]:
+def crawl_item_and_deps(
+    page_object, override_settings: Optional[Dict] = None
+) -> Tuple[Any, Any]:
     """Helper function to easily return the item and injected dependencies from
     a simulated Scrapy callback which asks for either of these dependencies:
         - page object
         - item class
     """
+
+    settings = {**rules_settings(), **{"SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS}}
+    if override_settings:
+        settings.update(override_settings)
+
     item, _, crawler = yield crawl_single_item(
-        spider_for(PageObject), ProductHtml, rules_settings(), port=PORT
+        spider_for(page_object), ProductHtml, settings, port=PORT
     )
     return item, crawler.spider.collected_response_deps
 
@@ -223,7 +227,7 @@ class ReplacementPage(WebPage):
 def test_basic_overrides() -> None:
     """Basic overrides use case.
 
-    If a page object is asked for and it's available in a rule's ``instead_of``
+    If a page object is asked for, and it's available in a rule's ``instead_of``
     parameter, it would be replaced by the page object inside the rule's ``use``
     parameter.
     """
@@ -372,7 +376,7 @@ class ProductPage(ItemPage[Product]):
 def test_basic_item_return() -> None:
     """Basic item use case.
 
-    If an item class is asked for and it's available in some rule's ``to_return``
+    If an item class is asked for, and it's available in some rule's ``to_return``
     parameter, an item class's instance shall be produced by the page object
     declared inside the rule's ``use`` parameter.
     """
@@ -399,7 +403,7 @@ def test_basic_item_but_no_page_object() -> None:
     """
 
     # Starting Scrapy 2.7, there's better support for async callbacks. This
-    # means that errors aren't suppresed.
+    # means that errors aren't suppressed.
     if is_min_scrapy_version("2.7.0"):
         expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
         with pytest.raises(TypeError, match=expected_msg):
@@ -810,7 +814,7 @@ def test_item_to_return_in_handle_urls() -> None:
     parameter when the class inherits from something like ``ItemPage[ItemType]``,
     any value passed through its ``to_return`` parameter should take precedence.
 
-    Note that that this produces some inconsistencies between the rule's item
+    Note that this produces some inconsistencies between the rule's item
     class vs the class that is actually returned. Using the ``to_return``
     parameter in ``@handle_urls`` isn't recommended because of this.
     """
@@ -1399,25 +1403,25 @@ def test_page_object_with_item_dependency_deadlock_a(caplog) -> None:
     """Items with page objects which depend on each other resulting in a deadlock
     should have a corresponding error raised.
     """
-    item, deps = yield crawl_item_and_deps(ChickenItem)
+    yield crawl_item_and_deps(ChickenItem)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
 @inlineCallbacks
 def test_page_object_with_item_dependency_deadlock_b(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(EggItem)
+    yield crawl_item_and_deps(EggItem)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
 @inlineCallbacks
 def test_page_object_with_item_dependency_deadlock_c(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(ChickenDeadlockPage)
+    yield crawl_item_and_deps(ChickenDeadlockPage)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
 @inlineCallbacks
 def test_page_object_with_item_dependency_deadlock_d(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(EggDeadlockPage)
+    yield crawl_item_and_deps(EggDeadlockPage)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
@@ -1467,26 +1471,146 @@ def test_page_object_with_item_dependency_deadlock_2_a(caplog) -> None:
     """Same with ``test_page_object_with_item_dependency_deadlock()`` but one
     of the page objects requires a page object instead of an item.
     """
-    item, deps = yield crawl_item_and_deps(Chicken2Item)
+    yield crawl_item_and_deps(Chicken2Item)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
 @inlineCallbacks
 def test_page_object_with_item_dependency_deadlock_2_b(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(Egg2Item)
+    yield crawl_item_and_deps(Egg2Item)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
 @inlineCallbacks
 def test_page_object_with_item_dependency_deadlock_2_c(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(Chicken2DeadlockPage)
+    yield crawl_item_and_deps(Chicken2DeadlockPage)
     assert "ProviderDependencyDeadlockError" in caplog.text
 
 
 @inlineCallbacks
 def test_page_object_with_item_dependency_deadlock_2_d(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(Egg2DeadlockPage)
+    yield crawl_item_and_deps(Egg2DeadlockPage)
     assert "ProviderDependencyDeadlockError" in caplog.text
+
+
+@attrs.define
+class Mobius:
+    name: str
+
+
+@handle_urls(URL)
+@attrs.define
+class MobiusPage(WebPage[Mobius]):
+    mobius_item: Mobius
+
+    @field
+    def name(self) -> str:
+        return f"(modified) {self.mobius_item.name}"
+
+
+class MobiusProvider(PageObjectInputProvider):
+    provided_classes = {Mobius}
+
+    def __call__(self, to_provide: Set[Callable], request: scrapy.Request):
+        return [Mobius(name="mobius from MobiusProvider")]
+
+
+@inlineCallbacks
+def test_page_object_returning_item_which_is_also_a_dep() -> None:
+    """Tests that the item from a provider has been modified correctly
+    by the corresponding PO.
+    """
+
+    settings = {
+        "SCRAPY_POET_PROVIDERS": {**DEFAULT_PROVIDERS, **{MobiusProvider: 1000}}
+    }
+    # item from 'to_return'
+    item, deps = yield crawl_item_and_deps(Mobius, override_settings=settings)
+    assert item == Mobius(name="(modified) mobius from MobiusProvider")
+    assert_deps(deps, {"item": Mobius})
+
+    # calling the actual page objects should still work
+    item, deps = yield crawl_item_and_deps(MobiusPage, override_settings=settings)
+    assert item == Mobius(name="(modified) mobius from MobiusProvider")
+    assert_deps(deps, {"page": MobiusPage})
+
+
+@inlineCallbacks
+def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_item(
+    caplog,
+) -> None:
+    """Same as ``test_page_object_returning_item_which_is_also_a_dep()``
+    but there's no provider for the original item
+    """
+    yield crawl_item_and_deps(Mobius)
+    assert "ProviderDependencyDeadlockError" in caplog.text
+
+
+@inlineCallbacks
+def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_po(
+    caplog,
+) -> None:
+    """Same with ``test_page_object_returning_item_which_is_also_a_dep_but_no_provider_item()``
+    but tests the PO instead of the item.
+    """
+    yield crawl_item_and_deps(MobiusPage)
+    assert "ProviderDependencyDeadlockError" in caplog.text
+
+
+@attrs.define
+class Kangaroo:
+    name: str
+
+
+@handle_urls(URL)
+@attrs.define
+class KangarooPage(WebPage[Kangaroo]):
+    kangaroo_item: Kangaroo
+
+    @field
+    def name(self) -> str:
+        return f"(modified) {self.kangaroo_item.name}"
+
+
+@handle_urls(URL, priority=600)
+@attrs.define
+class JoeyPage(KangarooPage):
+    @field
+    def name(self) -> str:
+        return f"(modified by Joey) {self.kangaroo_item.name}"
+
+
+class KangarooProvider(PageObjectInputProvider):
+    provided_classes = {Kangaroo}
+
+    def __call__(self, to_provide: Set[Callable], request: scrapy.Request):
+        return [Kangaroo(name="data from KangarooProvider")]
+
+
+@inlineCallbacks
+def test_page_object_returning_item_which_is_also_a_dep_2() -> None:
+    """Same with ``test_page_object_returning_item_which_is_also_a_dep()`` but
+    there are now 2 POs with different priorities that returns the item.
+
+    The PO with the higher priority should be the one returning the item.
+    """
+
+    settings = {
+        "SCRAPY_POET_PROVIDERS": {**DEFAULT_PROVIDERS, **{KangarooProvider: 1000}}
+    }
+    # item from 'to_return'
+    item, deps = yield crawl_item_and_deps(Kangaroo, override_settings=settings)
+    assert item == Kangaroo(name="(modified by Joey) data from KangarooProvider")
+    assert_deps(deps, {"item": Kangaroo})
+
+    # calling the actual page objects should still work
+    item, deps = yield crawl_item_and_deps(KangarooPage, override_settings=settings)
+    assert item == Kangaroo(name="(modified) data from KangarooProvider")
+    assert_deps(deps, {"page": KangarooPage})
+
+    item, deps = yield crawl_item_and_deps(JoeyPage, override_settings=settings)
+    assert item == Kangaroo(name="(modified by Joey) data from KangarooProvider")
+    assert_deps(deps, {"page": JoeyPage})
 
 
 def test_created_apply_rules() -> None:
@@ -1584,4 +1708,7 @@ def test_created_apply_rules() -> None:
         ApplyRule(URL, use=EggDeadlockPage, to_return=EggItem),
         ApplyRule(URL, use=Chicken2DeadlockPage, to_return=Chicken2Item),
         ApplyRule(URL, use=Egg2DeadlockPage, to_return=Egg2Item),
+        ApplyRule(URL, use=MobiusPage, to_return=Mobius),
+        ApplyRule(URL, use=KangarooPage, to_return=Kangaroo),
+        ApplyRule(Patterns([URL], priority=600), use=JoeyPage, to_return=Kangaroo),
     ]
