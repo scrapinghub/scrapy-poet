@@ -2,6 +2,17 @@
 Changelog
 =========
 
+0.16.0 (YYYY-MM-DD)
+-------------------
+
+* Now requires ``time_machine >= 2.2.0``.
+
+* ``ItemProvider`` now supports page objects that declare a dependency on the 
+  same type of item that they return, as long as there is an earlier page 
+  object input provider that can provide such dependency.
+
+* Fix running tests with Scrapy 2.11.
+
 0.15.1 (2023-09-15)
 -------------------
 
