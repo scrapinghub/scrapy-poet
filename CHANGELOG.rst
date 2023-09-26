@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.16.0 (YYYY-MM-DD)
+0.16.0 (2023-09-26)
 -------------------
 
 * Now requires ``time_machine >= 2.2.0``.
