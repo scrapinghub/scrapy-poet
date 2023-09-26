@@ -2,6 +2,15 @@
 Changelog
 =========
 
+0.16.0 (YYYY-MM-DD)
+-------------------
+
+* Now requires ``time_machine >= 2.2.0``.
+
+* Add support for having the same item type as a dependency and a result.
+
+* Fix running tests with Scrapy 2.11.
+
 0.15.1 (2023-09-15)
 -------------------
 
