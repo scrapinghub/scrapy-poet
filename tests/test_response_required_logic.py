@@ -33,18 +33,15 @@ except ImportError:
 
 @attr.s(auto_attribs=True)
 class DummyProductResponse:
-
     data: Dict[str, Any]
 
 
 @attr.s(auto_attribs=True)
 class FakeProductResponse:
-
     data: Dict[str, Any]
 
 
 class DummyProductProvider(PageObjectInputProvider):
-
     provided_classes = {DummyProductResponse}
 
     def __call__(self, to_provide, request: scrapy.Request):
@@ -58,7 +55,6 @@ class DummyProductProvider(PageObjectInputProvider):
 
 
 class FakeProductProvider(PageObjectInputProvider):
-
     provided_classes = {FakeProductResponse}
 
     def __call__(self, to_provide):
@@ -72,7 +68,6 @@ class FakeProductProvider(PageObjectInputProvider):
 
 
 class TextProductProvider(HttpResponseProvider):
-
     # This is wrong. You should not annotate provider dependencies with classes
     # like TextResponse or HtmlResponse, you should use Response instead.
     def __call__(self, to_provide, response: TextResponse):  # type: ignore[override]
@@ -86,7 +81,6 @@ class StringProductProvider(HttpResponseProvider):
 
 @attr.s(auto_attribs=True)
 class DummyProductPage(ItemPage):
-
     response: DummyProductResponse
 
     @property
@@ -100,7 +94,6 @@ class DummyProductPage(ItemPage):
 
 @attr.s(auto_attribs=True)
 class FakeProductPage(ItemPage):
-
     response: FakeProductResponse
 
     @property
@@ -118,7 +111,6 @@ class BookPage(WebPage):
 
 
 class MySpider(scrapy.Spider):
-
     name = "foo"
     custom_settings = {
         "SCRAPY_POET_PROVIDERS": {

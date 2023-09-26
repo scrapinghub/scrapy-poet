@@ -106,6 +106,12 @@ class PageObjectInputProvider:
     provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
+    # If set to True, the Injector will not skip the Provider when the dependency has
+    # been built. Instead, the Injector will pass the previously built instances (by
+    # the other providers) to the Provider. The Provider can then choose to modify
+    # these previous instances before returning them to the Injector.
+    allow_prev_instances: bool = False
+
     def is_provided(self, type_: Callable) -> bool:
         """
         Return ``True`` if the given type is provided by this provider based
@@ -231,6 +237,8 @@ class ItemProvider(PageObjectInputProvider):
         "trying to resolve this plan: {plan}"
     )
 
+    allow_prev_instances: bool = True
+
     def __init__(self, injector):
         super().__init__(injector)
         self.registry = self.injector.registry
@@ -281,11 +289,11 @@ class ItemProvider(PageObjectInputProvider):
         to_provide: Set[Callable],
         request: Request,
         response: Response,
+        prev_instances: Dict,
     ) -> List[Any]:
         results = []
         for cls in to_provide:
-            item = self.get_from_cache(request, cls)
-            if item:
+            if item := self.get_from_cache(request, cls):
                 results.append(item)
                 continue
 
@@ -309,7 +317,9 @@ class ItemProvider(PageObjectInputProvider):
 
             try:
                 deferred_or_future = maybe_deferred_to_future(
-                    self.injector.build_instances(request, response, plan)
+                    self.injector.build_instances(
+                        request, response, plan, prev_instances
+                    )
                 )
                 # RecursionError NOT raised when ``AsyncioSelectorReactor`` is used.
                 # Could be related: https://github.com/python/cpython/issues/93837
