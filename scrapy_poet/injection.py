@@ -2,11 +2,12 @@ import inspect
 import logging
 import os
 import pprint
+import sys
 import warnings
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, cast
 
 import andi
-from andi.typeutils import issubclass_safe
+from andi.typeutils import issubclass_safe, strip_annotated
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Response
@@ -117,7 +118,7 @@ class Injector:
         result = set()
         for cls, _ in plan:
             for provider in self.providers:
-                if provider.is_provided(cls):
+                if provider.is_provided(strip_annotated(cls)):
                     result.add(provider)
 
         return result
@@ -193,7 +194,9 @@ class Injector:
         objs: List[Any]
         for provider in self.providers:
             provided_classes = {
-                cls for cls in dependencies_set if provider.is_provided(cls)
+                cls
+                for cls in dependencies_set
+                if provider.is_provided(strip_annotated(cls))
             }
 
             # ignore already provided types if provider doesn't need to use them
@@ -261,7 +264,16 @@ class Injector:
                         self.crawler.stats.inc_value("poet/cache/firsthand")
                     raise
 
-            objs_by_type: Dict[Callable, Any] = {type(obj): obj for obj in objs}
+            objs_by_type: Dict[Callable, Any] = {}
+            for obj in objs:
+                cls = type(obj)
+                if sys.version_info >= (3, 9) and (
+                    metadata := getattr(obj, "__metadata__", None)
+                ):
+                    from typing import Annotated
+
+                    cls = Annotated[cls, *metadata]
+                objs_by_type[cls] = obj
             extra_classes = objs_by_type.keys() - provided_classes
             if extra_classes:
                 raise UndeclaredProvidedTypeError(
@@ -330,7 +342,7 @@ def is_class_provided_by_any_provider_fn(
 
     def is_provided_fn(type: Callable) -> bool:
         for is_provided in individual_is_callable:
-            if is_provided(type):
+            if is_provided(strip_annotated(type)):
                 return True
         return False
 

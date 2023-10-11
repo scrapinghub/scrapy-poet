@@ -1,4 +1,5 @@
 import shutil
+import sys
 
 import attr
 import parsel
@@ -37,7 +38,13 @@ def get_provider(classes, content=None):
             self.crawler = crawler
 
         def __call__(self, to_provide):
-            return [cls(content) if content else cls() for cls in classes]
+            result = []
+            for cls in to_provide:
+                obj = cls(content) if content else cls()
+                if metadata := getattr(cls, "__metadata__", None):
+                    obj.__metadata__ = metadata
+                result.append(obj)
+            return result
 
     return Provider
 
@@ -265,6 +272,78 @@ class TestInjector:
             "b": Cls2,
             "c": WrapCls,
             "d": ClsNoProviderRequired,
+        }
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    def test_annotated_provide(self, injector):
+        from typing import Annotated
+
+        assert injector.is_class_provided_by_any_provider(Annotated[Cls1, 42])
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_annotated_build(self, injector):
+        from typing import Annotated
+
+        def callback(
+            a: Cls1,
+            b: Annotated[Cls2, 42],
+        ):
+            pass
+
+        response = get_response_for_testing(callback)
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances(request, response, plan)
+        assert instances == {
+            Cls1: Cls1(),
+            Annotated[Cls2, 42]: Cls2(),
+        }
+
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        assert kwargs == {
+            "a": Cls1(),
+            "b": Cls2(),
+        }
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_annotated_build_duplicate(self, injector):
+        from typing import Annotated
+
+        def callback(
+            a: Cls1,
+            b: Cls2,
+            c: Annotated[Cls2, 42],
+            d: Annotated[Cls2, 43],
+        ):
+            pass
+
+        response = get_response_for_testing(callback)
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances(request, response, plan)
+        assert instances == {
+            Cls1: Cls1(),
+            Cls2: Cls2(),
+            Annotated[Cls2, 42]: Cls2(),
+            Annotated[Cls2, 43]: Cls2(),
+        }
+
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        assert kwargs == {
+            "a": Cls1(),
+            "b": Cls2(),
+            "c": Cls2(),
+            "d": Cls2(),
         }
 
 
