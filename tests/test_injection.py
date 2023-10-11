@@ -315,6 +315,32 @@ class TestInjector:
         sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
     )
     @inlineCallbacks
+    def test_annotated_build_only(self, injector):
+        from typing import Annotated
+
+        def callback(
+            a: Annotated[Cls1, 42],
+        ):
+            pass
+
+        response = get_response_for_testing(callback)
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances(request, response, plan)
+        assert instances == {
+            Annotated[Cls1, 42]: Cls1(),
+        }
+
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        assert kwargs == {
+            "a": Cls1(),
+        }
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
     def test_annotated_build_duplicate(self, injector):
         from typing import Annotated
 
