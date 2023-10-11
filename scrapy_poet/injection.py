@@ -272,7 +272,7 @@ class Injector:
                 ):
                     from typing import Annotated
 
-                    cls = Annotated[cls, *metadata]
+                    cls = Annotated[(cls, *metadata)]
                 objs_by_type[cls] = obj
             extra_classes = objs_by_type.keys() - provided_classes
             if extra_classes:
