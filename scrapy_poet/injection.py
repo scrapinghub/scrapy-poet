@@ -2,7 +2,6 @@ import inspect
 import logging
 import os
 import pprint
-import sys
 import warnings
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, cast
 
@@ -23,7 +22,7 @@ from web_poet.pages import is_injectable
 from web_poet.serialization.api import deserialize_leaf, load_class, serialize
 from web_poet.utils import get_fq_class_name
 
-from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
+from scrapy_poet.api import _CALLBACK_FOR_MARKER, AnnotatedResult, DummyResponse
 from scrapy_poet.cache import SerializedDataCache
 from scrapy_poet.injection_errors import (
     InjectionError,
@@ -266,13 +265,11 @@ class Injector:
 
             objs_by_type: Dict[Callable, Any] = {}
             for obj in objs:
-                cls = type(obj)
-                if sys.version_info >= (3, 9) and (
-                    metadata := getattr(obj, "__metadata__", None)
-                ):
-                    from typing import Annotated
-
-                    cls = Annotated[(cls, *metadata)]
+                if isinstance(obj, AnnotatedResult):
+                    cls = obj.get_annotated_cls()
+                    obj = obj.result
+                else:
+                    cls = type(obj)
                 objs_by_type[cls] = obj
             extra_classes = objs_by_type.keys() - provided_classes
             if extra_classes:

@@ -15,6 +15,7 @@ from web_poet.rules import ApplyRule
 
 from scrapy_poet import DummyResponse, HttpResponseProvider, PageObjectInputProvider
 from scrapy_poet.injection import (
+    AnnotatedResult,
     check_all_providers_are_callable,
     get_injector_for_testing,
     get_response_for_testing,
@@ -42,7 +43,7 @@ def get_provider(classes, content=None):
             for cls in to_provide:
                 obj = cls(content) if content else cls()
                 if metadata := getattr(cls, "__metadata__", None):
-                    obj.__metadata__ = metadata
+                    obj = AnnotatedResult(obj, metadata)
                 result.append(obj)
             return result
 

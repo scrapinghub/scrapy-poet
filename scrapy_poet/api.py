@@ -1,5 +1,6 @@
+from dataclasses import dataclass
 from inspect import iscoroutinefunction
-from typing import Callable, Optional, Type
+from typing import Any, Callable, Optional, Tuple, Type
 
 from scrapy.http import Request, Response
 from web_poet.pages import ItemPage
@@ -133,3 +134,14 @@ def callback_for(page_or_item_cls: Type) -> Callable:
 
     setattr(parse, _CALLBACK_FOR_MARKER, True)
     return parse
+
+
+@dataclass
+class AnnotatedResult:
+    result: Any
+    metadata: Tuple[Any, ...]
+
+    def get_annotated_cls(self):
+        from typing import Annotated
+
+        return Annotated[(type(self.result), *self.metadata)]
