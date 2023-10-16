@@ -276,7 +276,7 @@ class Injector:
                 raise UndeclaredProvidedTypeError(
                     f"{provider} has returned instances of types {extra_classes} "
                     "that are not among the declared supported classes in the "
-                    f"provider: {provider.provided_classes}"
+                    f"provider: {provided_classes}"
                 )
             instances.update(objs_by_type)
 

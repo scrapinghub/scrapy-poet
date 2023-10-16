@@ -4,6 +4,7 @@ import sys
 import attr
 import parsel
 import pytest
+from andi.typeutils import strip_annotated
 from pytest_twisted import inlineCallbacks
 from scrapy import Request
 from scrapy.http import Response
@@ -372,6 +373,77 @@ class TestInjector:
             "c": Cls2(),
             "d": Cls2(),
         }
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_annotated_build_no_support(self, injector):
+        from typing import Annotated
+
+        # get_provider_requiring_response() returns a provider that doesn't support Annotated
+        def callback(
+            a: Cls1,
+            b: Annotated[ClsReqResponse, 42],
+        ):
+            pass
+
+        response = get_response_for_testing(callback)
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        with pytest.raises(UndeclaredProvidedTypeError) as ex:
+            yield from injector.build_instances(request, response, plan)
+        assert "typing.Annotated" in str(ex)
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_annotated_build_duplicate_forbidden(
+        self,
+    ):
+        from typing import Annotated
+
+        class Provider(PageObjectInputProvider):
+            provided_classes = {Cls1}
+            require_response = False
+
+            def __init__(self, crawler):
+                self.crawler = crawler
+
+            def __call__(self, to_provide):
+                result = []
+                processed_classes = set()
+                for cls in to_provide:
+                    if (cls_stripped := strip_annotated(cls)) in processed_classes:
+                        raise ValueError(
+                            f"Different instances of {cls_stripped.__name__} requested"
+                        )
+                    processed_classes.add(cls_stripped)
+                    obj = cls()
+                    if metadata := getattr(cls, "__metadata__", None):
+                        obj = AnnotatedResult(obj, metadata)
+                    result.append(obj)
+                return result
+
+        def callback(
+            a: Annotated[Cls1, 42],
+            b: Annotated[Cls1, 43],
+        ):
+            pass
+
+        response = get_response_for_testing(callback)
+        request = response.request
+
+        providers = {
+            Provider: 1,
+        }
+        injector = get_injector_for_testing(providers)
+
+        plan = injector.build_plan(response.request)
+        with pytest.raises(ValueError, match="Different instances of Cls1 requested"):
+            yield from injector.build_instances(request, response, plan)
 
 
 class Html(Injectable):
