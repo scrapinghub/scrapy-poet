@@ -459,7 +459,7 @@ def test_additional_requests_no_cb_deps() -> None:
 
         @attr.define
         class ItemPage(WebPage):
-            response: BrowserResponse
+            browser_response: BrowserResponse
             http: HttpClient
 
             async def to_item(self):
@@ -468,7 +468,7 @@ def test_additional_requests_no_cb_deps() -> None:
                     body=b"a",
                 )
                 return {
-                    "main": str(self.response.html),
+                    "main": str(self.browser_response.html),
                     "additional": additional_response.body.decode(),
                 }
 
