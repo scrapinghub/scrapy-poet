@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.16.1 (YYYY-MM-DD)
+0.16.1 (2023-11-02)
 -------------------
 
 * Fix the bug that caused requests produced by
