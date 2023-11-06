@@ -27,7 +27,7 @@ else:
 
         def __init__(self, crawler: Crawler) -> None:
             settings = crawler.settings
-            self._fallback_request_fingerprinter = create_instance(
+            self._base_request_fingerprinter = create_instance(
                 load_object(
                     settings.get(
                         "SCRAPY_POET_REQUEST_FINGERPRINTER_BASE_CLASS",
@@ -82,7 +82,7 @@ else:
         def fingerprint(self, request: Request) -> bytes:
             if request in self._request_cache:
                 return self._request_cache[request]
-            fingerprint = self._fallback_request_fingerprinter.fingerprint(request)
+            fingerprint = self._base_request_fingerprinter.fingerprint(request)
             deps_fingerprint = self.fingerprint_deps(request)
             if deps_fingerprint is None:
                 return fingerprint

@@ -132,7 +132,7 @@ def test_different_annotations():
     assert fingerprint1 != fingerprint2
 
 
-def test_fallback_default():
+def test_base_default():
     class TestSpider(Spider):
         name = "test_spider"
 
@@ -141,22 +141,20 @@ def test_fallback_default():
 
     crawler = get_crawler(spider_cls=TestSpider)
     fingerprinter = crawler.request_fingerprinter
-    fallback_fingerprinter = (
-        crawler.request_fingerprinter._fallback_request_fingerprinter
-    )
+    base_fingerprinter = crawler.request_fingerprinter._base_request_fingerprinter
 
     request1 = Request("https://toscrape.com")
     fingerprint1 = fingerprinter.fingerprint(request1)
-    fallback_fingerprint = fallback_fingerprinter.fingerprint(request1)
-    assert fingerprint1 == fallback_fingerprint
+    base_fingerprint = base_fingerprinter.fingerprint(request1)
+    assert fingerprint1 == base_fingerprint
 
     request2 = Request("https://toscrape.com", callback=crawler.spider.parse_page)
     fingerprint2 = fingerprinter.fingerprint(request2)
-    assert fallback_fingerprint == fallback_fingerprinter.fingerprint(request2)
-    assert fingerprint2 != fallback_fingerprint
+    assert base_fingerprint == base_fingerprinter.fingerprint(request2)
+    assert fingerprint2 != base_fingerprint
 
 
-def test_fallback_custom():
+def test_base_custom():
     class TestSpider(Spider):
         name = "test_spider"
 
