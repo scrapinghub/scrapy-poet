@@ -32,6 +32,7 @@ of your Scrapy project:
     SPIDER_MIDDLEWARES = {
         "scrapy_poet.RetryMiddleware": 275,
     }
+    REQUEST_FINGERPRINTER_CLASS = "scrapy_poet.ScrapyPoetRequestFingerprinter"
 
 Things that are good to know
 ============================
