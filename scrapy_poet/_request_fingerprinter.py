@@ -62,7 +62,7 @@ else:
             root_deps = plan[-1][1]
             if not root_deps:
                 return None
-            return [repr(cls) for cls in root_deps.values()]
+            return sorted([repr(cls) for cls in root_deps.values()])
 
         def fingerprint_deps(self, request: Request) -> Optional[bytes]:
             """Return a fingerprint based on dependencies requested through

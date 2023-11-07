@@ -85,6 +85,25 @@ def test_same_deps_different_callbacks():
     assert fingerprint1 == fingerprint2
 
 
+def test_same_deps_different_order():
+    class TestSpider(Spider):
+        name = "test_spider"
+
+        async def parse_a(self, response, a: WebPage, b: ItemPage):
+            pass
+
+        async def parse_b(self, response, a: ItemPage, b: WebPage):
+            pass
+
+    crawler = get_crawler(spider_cls=TestSpider)
+    fingerprinter = crawler.request_fingerprinter
+    request1 = Request("https://toscrape.com", callback=crawler.spider.parse_a)
+    fingerprint1 = fingerprinter.fingerprint(request1)
+    request2 = Request("https://toscrape.com", callback=crawler.spider.parse_b)
+    fingerprint2 = fingerprinter.fingerprint(request2)
+    assert fingerprint1 == fingerprint2
+
+
 def test_different_deps():
     class TestSpider(Spider):
         name = "test_spider"
