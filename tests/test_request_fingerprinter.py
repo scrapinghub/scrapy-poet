@@ -1,4 +1,5 @@
 import sys
+from unittest.mock import patch
 
 import pytest
 from packaging.version import Version
@@ -204,3 +205,39 @@ def test_missing_middleware():
     request = Request("https://example.com")
     with pytest.raises(RuntimeError):
         fingerprinter.fingerprint(request)
+
+
+def test_callback_cache():
+    class TestSpider(Spider):
+        name = "test_spider"
+
+        async def parse_page(self, response, page: WebPage):
+            pass
+
+    crawler = get_crawler(spider_cls=TestSpider)
+    fingerprinter = crawler.request_fingerprinter
+    to_wrap = fingerprinter._get_deps
+    request1 = Request("https://example.com", callback=crawler.spider.parse_page)
+    request2 = Request("https://toscrape.com", callback=crawler.spider.parse_page)
+    with patch.object(fingerprinter, "_get_deps", wraps=to_wrap) as mock:
+        fingerprinter.fingerprint(request1)
+        fingerprinter.fingerprint(request2)
+        mock.assert_called_once_with(request1)
+
+
+def test_request_cache():
+    class TestSpider(Spider):
+        name = "test_spider"
+
+        async def parse_page(self, response, page: WebPage):
+            pass
+
+    crawler = get_crawler(spider_cls=TestSpider)
+    fingerprinter = crawler.request_fingerprinter
+    base_fingerprinter = fingerprinter._base_request_fingerprinter
+    to_wrap = base_fingerprinter.fingerprint
+    request = Request("https://example.com", callback=crawler.spider.parse_page)
+    with patch.object(base_fingerprinter, "fingerprint", wraps=to_wrap) as mock:
+        fingerprinter.fingerprint(request)
+        fingerprinter.fingerprint(request)
+        mock.assert_called_once_with(request)
