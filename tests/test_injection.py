@@ -343,7 +343,7 @@ class TestInjectorStats:
             ),
             (
                 {"item": TestItem},
-                set(),  # there must be no stats as ItemProvider is not enabled
+                set(),  # there must be no stats as item providers are not enabled
             ),
         ),
     )
@@ -369,7 +369,7 @@ class TestInjectorStats:
     def test_po_provided_via_item(self, injector):
         rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
         registry = RulesRegistry(rules=rules)
-        providers = {"scrapy_poet.page_input_providers.ItemProvider": 10}
+        providers = {"scrapy_poet.page_input_providers.ResponseItemProvider": 10}
         injector = get_injector_for_testing(providers, registry=registry)
 
         def callback(response: DummyResponse, item: TestItem):

@@ -8,16 +8,18 @@ from scrapy import Request, Spider
 from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
 from twisted.python.failure import Failure
-from web_poet import HttpClient, HttpResponse
+from web_poet import HttpClient, HttpResponse, ItemPage, WebPage
+from web_poet.rules import ApplyRule, RulesRegistry
 from web_poet.serialization import SerializedLeafData, register_serialization
 
 from scrapy_poet import HttpResponseProvider
 from scrapy_poet.injection import Injector
 from scrapy_poet.page_input_providers import (
     HttpClientProvider,
-    ItemProvider,
     PageObjectInputProvider,
     PageParamsProvider,
+    RequestItemProvider,
+    ResponseItemProvider,
     StatsProvider,
 )
 from scrapy_poet.utils.mockserver import get_ephemeral_port
@@ -228,23 +230,39 @@ def test_page_params_provider(settings):
     assert results[0] == expected_data
 
 
-def test_item_provider(settings):
-    """Note that the bulk of the tests for the ``ItemProvider`` alongside the
-    ``Injector`` is tested in ``tests/test_web_poet_rules.py``."""
-    crawler = get_crawler(Spider, settings)
-    injector = Injector(crawler)
-    provider = ItemProvider(injector)
-    request = scrapy.http.Request("https://example.com")
+def test_item_providers(settings):
+    """We have 2 item providers, one that does not require a Scrapy response
+    and one that does, and only one of them should be used for any given
+    injectable based on whether or not its dependency tree requires a Scrapy
+    response."""
 
-    # The fact that no exception is raised below proves that a Response
-    # parameter is not required by ItemProvider.
-    provider(set(), request, {})
+    class RequestItem:
+        pass
+
+    class ResponseItem:
+        pass
+
+    crawler = get_crawler(Spider, settings)
+    request_rule = ApplyRule(for_patterns="*", use=ItemPage, to_return=RequestItem)
+    response_rule = ApplyRule(for_patterns="*", use=WebPage, to_return=ResponseItem)
+    registry = RulesRegistry(rules=[request_rule, response_rule])
+    injector = Injector(crawler, registry=registry)
+
+    request_provider = RequestItemProvider(injector)
+    # assert request_provider.provided_classes(RequestItem) is True
+    assert request_provider.provided_classes(ResponseItem) is False
+
+    response_provider = ResponseItemProvider(injector)
+    assert response_provider.provided_classes(RequestItem) is False
+    assert response_provider.provided_classes(ResponseItem) is True
+
+    # TODO: Test chain, i.e. request item | response item. → page → request item | response item.
 
 
 def test_item_provider_cache(settings):
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)
-    provider = ItemProvider(injector)
+    provider = ResponseItemProvider(injector)
 
     assert len(provider._cached_instances) == 0
 

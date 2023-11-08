@@ -29,7 +29,10 @@ from scrapy_poet.injection_errors import (
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
-from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.page_input_providers import (
+    SCRAPY_PROVIDED_CLASSES,
+    PageObjectInputProvider,
+)
 from scrapy_poet.utils import is_min_scrapy_version
 
 from .utils import create_registry_instance, get_scrapy_data_path
@@ -392,16 +395,6 @@ def is_callback_requiring_scrapy_response(
 
     # Type annotation is not DummyResponse, so we're probably using it.
     return True
-
-
-SCRAPY_PROVIDED_CLASSES = {
-    Spider,
-    Request,
-    Response,
-    Crawler,
-    Settings,
-    StatsCollector,
-}
 
 
 def is_provider_requiring_scrapy_response(provider):

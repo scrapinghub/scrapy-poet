@@ -16,9 +16,11 @@ from warnings import warn
 from weakref import WeakKeyDictionary
 
 import andi
-from scrapy import Request
+from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Response
+from scrapy.settings import Settings
+from scrapy.statscollectors import StatsCollector
 from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import (
     HttpClient,
@@ -38,6 +40,15 @@ from scrapy_poet.injection_errors import (
     MalformedProvidedClassesError,
     ProviderDependencyDeadlockError,
 )
+
+SCRAPY_PROVIDED_CLASSES = {
+    Spider,
+    Request,
+    Response,
+    Crawler,
+    Settings,
+    StatsCollector,
+}
 
 
 class PageObjectInputProvider:
@@ -229,7 +240,7 @@ class ResponseUrlProvider(PageObjectInputProvider):
         return [ResponseUrl(url=response.url)]
 
 
-class ItemProvider(PageObjectInputProvider):
+class ResponseItemProvider(PageObjectInputProvider):
     name = "item"
 
     template_deadlock_msg = (
@@ -241,6 +252,7 @@ class ItemProvider(PageObjectInputProvider):
 
     def __init__(self, injector):
         super().__init__(injector)
+        self._injector = injector
         self.registry = self.injector.registry
 
         # The key that's used here is the ``scrapy.Request`` instance to ensure
@@ -256,11 +268,32 @@ class ItemProvider(PageObjectInputProvider):
         # Similar to ``_cached_instances`` above, the key is ``scrapy.Request``.
         self._build_instances_call_counter = WeakKeyDictionary()
 
+    def _requires_scrapy_response(self, injectable):
+        plan = andi.plan(
+            injectable,
+            is_injectable=is_injectable,
+            externally_provided=SCRAPY_PROVIDED_CLASSES,
+        )
+        for dependency, _ in plan.dependencies:
+            for provider in self._injector.providers:
+                if provider.is_provided(dependency):
+                    if self._injector.is_provider_requiring_scrapy_response[provider]:
+                        return True
+                    continue
+        raise ValueError(f"{injectable}: {plan.dependencies}")
+        # Gives ValueError: <class 'web_poet.pages.WebPage'>: [], why is HttpResponse not detected?!
+        return False
+
     def provided_classes(self, cls):
         """If the item is in any of the ``to_return`` in the rules, then it can
         be provided by using the corresponding page object in ``use``.
         """
-        return isclass(cls) and self.registry.search(to_return=cls)
+        if not isclass(cls):
+            return False
+        rules = self.registry.search(to_return=cls)
+        if not rules:
+            return False
+        return self._requires_scrapy_response(rules[0].use)
 
     def update_cache(self, request: Request, mapping: Dict[Type, Any]) -> None:
         if request not in self._cached_instances:
@@ -288,6 +321,7 @@ class ItemProvider(PageObjectInputProvider):
         self,
         to_provide: Set[Callable],
         request: Request,
+        response: Response,
         prev_instances: Dict,
     ) -> List[Any]:
         results = []
@@ -314,11 +348,10 @@ class ItemProvider(PageObjectInputProvider):
                 externally_provided=self.injector.is_class_provided_by_any_provider,
             )
 
-            dummy_response = DummyResponse(request=request)
             try:
                 deferred_or_future = maybe_deferred_to_future(
                     self.injector.build_instances(
-                        request, dummy_response, plan, prev_instances
+                        request, response, plan, prev_instances
                     )
                 )
                 # RecursionError NOT raised when ``AsyncioSelectorReactor`` is used.
@@ -346,6 +379,30 @@ class ItemProvider(PageObjectInputProvider):
 
             results.append(item)
         return results
+
+
+class RequestItemProvider(ResponseItemProvider):
+    async def __call__(
+        self,
+        to_provide: Set[Callable],
+        request: Request,
+        prev_instances: Dict,
+    ) -> List[Any]:
+        response = DummyResponse(request=request)
+        await super()(
+            to_provide=to_provide,
+            request=request,
+            response=response,
+            prev_instances=prev_instances,
+        )
+
+    def provided_classes(self, cls):
+        if not isclass(cls):
+            return False
+        rules = self.registry.search(to_return=cls)
+        if not rules:
+            return False
+        return not self._requires_scrapy_response(rules[0].use)
 
 
 class ScrapyPoetStatCollector(StatCollector):

@@ -74,7 +74,7 @@ class PageObjectCounterMixin:
     to produce the same item. This is extremely wasteful should there be any
     additional requests used to produce the item.
 
-    ``ItemProvider`` should cache up such instances and prevent them from being
+    Item providers should cache up such instances and prevent them from being
     built again.
     """
 
@@ -432,7 +432,7 @@ class DelayedProductPage(ItemPage[DelayedProduct]):
 )
 @inlineCallbacks
 def test_item_using_asyncio() -> None:
-    """This ensures that ``ItemProvider`` works properly for page objects using
+    """This ensures that item providers work properly for page objects using
     the ``asyncio`` functionalities.
     """
     item, deps = yield crawl_item_and_deps(DelayedProduct)

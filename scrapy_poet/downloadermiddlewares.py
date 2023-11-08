@@ -18,9 +18,10 @@ from .injection import Injector
 from .page_input_providers import (
     HttpClientProvider,
     HttpResponseProvider,
-    ItemProvider,
     PageParamsProvider,
+    RequestItemProvider,
     RequestUrlProvider,
+    ResponseItemProvider,
     ResponseUrlProvider,
 )
 from .utils import create_registry_instance, is_min_scrapy_version
@@ -34,7 +35,8 @@ DEFAULT_PROVIDERS = {
     PageParamsProvider: 700,
     RequestUrlProvider: 800,
     ResponseUrlProvider: 900,
-    ItemProvider: 2000,
+    RequestItemProvider: 2000,
+    ResponseItemProvider: 2100,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")
