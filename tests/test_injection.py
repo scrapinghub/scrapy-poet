@@ -101,9 +101,10 @@ class WrapCls(Injectable):
 class TestInjector:
     def test_constructor(self):
         injector = get_injector_for_testing(get_providers_for_testing())
-        assert injector.is_class_provided_by_any_provider(ClsReqResponse)
-        assert injector.is_class_provided_by_any_provider(Cls1)
-        assert not injector.is_class_provided_by_any_provider(ClsNoProvided)
+        request = Request("https://example.com")
+        assert injector.is_class_provided_by_any_provider(ClsReqResponse, request)
+        assert injector.is_class_provided_by_any_provider(Cls1, request)
+        assert not injector.is_class_provided_by_any_provider(ClsNoProvided, request)
 
         for provider in injector.providers:
             assert (

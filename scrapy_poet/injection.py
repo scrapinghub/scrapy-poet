@@ -3,6 +3,7 @@ import logging
 import os
 import pprint
 import warnings
+from functools import partial
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, cast
 
 import andi
@@ -120,7 +121,7 @@ class Injector:
         result = set()
         for cls, _ in plan:
             for provider in self.providers:
-                if provider.is_provided(cls):
+                if provider.is_provided(cls, request):
                     result.add(provider)
 
         return result
@@ -146,7 +147,9 @@ class Injector:
         return andi.plan(
             callback,
             is_injectable=is_injectable,
-            externally_provided=self.is_class_provided_by_any_provider,
+            externally_provided=partial(
+                self.is_class_provided_by_any_provider, request=request
+            ),
             # Ignore the type since andi.plan expects overrides to be
             # Callable[[Callable], Optional[Callable]] but the registry
             # returns the typing for ``dict.get()`` method.
@@ -196,7 +199,7 @@ class Injector:
         objs: List[Any]
         for provider in self.providers:
             provided_classes = {
-                cls for cls in dependencies_set if provider.is_provided(cls)
+                cls for cls in dependencies_set if provider.is_provided(cls, request)
             }
 
             # ignore already provided types if provider doesn't need to use them
@@ -304,7 +307,7 @@ def check_all_providers_are_callable(providers):
 
 def is_class_provided_by_any_provider_fn(
     providers: List[PageObjectInputProvider],
-) -> Callable[[Callable], bool]:
+) -> Callable[[Callable, Request], bool]:
     """
     Return a function of type ``Callable[[Type], bool]`` that return
     True if the given type is provided by any of the registered providers.
@@ -314,9 +317,11 @@ def is_class_provided_by_any_provider_fn(
     joined together for efficiency.
     """
     sets_of_types: Set[Callable] = set()  # caching all sets found
-    individual_is_callable: List[Callable[[Callable], bool]] = [
-        sets_of_types.__contains__
-    ]
+
+    def in_set(type, request):
+        return type in sets_of_types
+
+    individual_is_callable: List[Callable[[Callable], bool]] = [in_set]
     for provider in providers:
         provided_classes = provider.provided_classes
 
@@ -331,9 +336,9 @@ def is_class_provided_by_any_provider_fn(
                 f"or 'callable'"
             )
 
-    def is_provided_fn(type: Callable) -> bool:
+    def is_provided_fn(type: Callable, request: Request) -> bool:
         for is_provided in individual_is_callable:
-            if is_provided(type):
+            if is_provided(type, request):
                 return True
         return False
 

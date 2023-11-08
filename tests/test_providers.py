@@ -13,6 +13,7 @@ from web_poet.rules import ApplyRule, RulesRegistry
 from web_poet.serialization import SerializedLeafData, register_serialization
 
 from scrapy_poet import HttpResponseProvider
+from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
 from scrapy_poet.injection import Injector
 from scrapy_poet.page_input_providers import (
     HttpClientProvider,
@@ -246,17 +247,19 @@ def test_item_providers(settings):
     request_rule = ApplyRule(for_patterns="*", use=ItemPage, to_return=RequestItem)
     response_rule = ApplyRule(for_patterns="*", use=WebPage, to_return=ResponseItem)
     registry = RulesRegistry(rules=[request_rule, response_rule])
-    injector = Injector(crawler, registry=registry)
+    injector = Injector(crawler, registry=registry, default_providers=DEFAULT_PROVIDERS)
+    request = Request("https://example.com")
 
     request_provider = RequestItemProvider(injector)
-    # assert request_provider.provided_classes(RequestItem) is True
-    assert request_provider.provided_classes(ResponseItem) is False
+    assert request_provider.provided_classes(RequestItem, request) is True
+    assert request_provider.provided_classes(ResponseItem, request) is False
 
     response_provider = ResponseItemProvider(injector)
-    assert response_provider.provided_classes(RequestItem) is False
-    assert response_provider.provided_classes(ResponseItem) is True
+    assert response_provider.provided_classes(RequestItem, request) is False
+    assert response_provider.provided_classes(ResponseItem, request) is True
 
     # TODO: Test chain, i.e. request item | response item. → page → request item | response item.
+    # TODO: Test overrides that should change things for one URL but not for another.
 
 
 def test_item_provider_cache(settings):

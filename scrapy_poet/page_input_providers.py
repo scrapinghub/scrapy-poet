@@ -10,6 +10,7 @@ for example, from scrapy-playwright or from an API for automatic extraction.
 """
 import asyncio
 from dataclasses import make_dataclass
+from functools import partial
 from inspect import isclass
 from typing import Any, Callable, ClassVar, Dict, List, Optional, Set, Type, Union
 from warnings import warn
@@ -124,7 +125,7 @@ class PageObjectInputProvider:
     # these previous instances before returning them to the Injector.
     allow_prev_instances: bool = False
 
-    def is_provided(self, type_: Callable) -> bool:
+    def is_provided(self, type_: Callable, request: Request) -> bool:
         """
         Return ``True`` if the given type is provided by this provider based
         on the value of the attribute ``provided_classes``
@@ -132,7 +133,7 @@ class PageObjectInputProvider:
         if isinstance(self.provided_classes, Set):
             return type_ in self.provided_classes
         elif callable(self.provided_classes):
-            return self.provided_classes(type_)
+            return self.provided_classes(type_, request)
         else:
             raise MalformedProvidedClassesError(
                 f"Unexpected type {type_!r} for 'provided_classes' attribute of"
@@ -268,11 +269,14 @@ class ResponseItemProvider(PageObjectInputProvider):
         # Similar to ``_cached_instances`` above, the key is ``scrapy.Request``.
         self._build_instances_call_counter = WeakKeyDictionary()
 
-    def _requires_scrapy_response(self, injectable):
+    def _requires_scrapy_response(self, injectable, request):
         plan = andi.plan(
             injectable,
             is_injectable=is_injectable,
-            externally_provided=SCRAPY_PROVIDED_CLASSES,
+            externally_provided=partial(
+                self._injector.is_class_provided_by_any_provider, request=request
+            ),
+            overrides=self._injector.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
         )
         for dependency, _ in plan.dependencies:
             for provider in self._injector.providers:
@@ -280,11 +284,10 @@ class ResponseItemProvider(PageObjectInputProvider):
                     if self._injector.is_provider_requiring_scrapy_response[provider]:
                         return True
                     continue
-        raise ValueError(f"{injectable}: {plan.dependencies}")
-        # Gives ValueError: <class 'web_poet.pages.WebPage'>: [], why is HttpResponse not detected?!
+
         return False
 
-    def provided_classes(self, cls):
+    def provided_classes(self, cls, request):
         """If the item is in any of the ``to_return`` in the rules, then it can
         be provided by using the corresponding page object in ``use``.
         """
@@ -293,7 +296,7 @@ class ResponseItemProvider(PageObjectInputProvider):
         rules = self.registry.search(to_return=cls)
         if not rules:
             return False
-        return self._requires_scrapy_response(rules[0].use)
+        return self._requires_scrapy_response(rules[0].use, request)
 
     def update_cache(self, request: Request, mapping: Dict[Type, Any]) -> None:
         if request not in self._cached_instances:
@@ -396,13 +399,13 @@ class RequestItemProvider(ResponseItemProvider):
             prev_instances=prev_instances,
         )
 
-    def provided_classes(self, cls):
+    def provided_classes(self, cls, request):
         if not isclass(cls):
             return False
         rules = self.registry.search(to_return=cls)
         if not rules:
             return False
-        return not self._requires_scrapy_response(rules[0].use)
+        return not self._requires_scrapy_response(rules[0].use, request)
 
 
 class ScrapyPoetStatCollector(StatCollector):
