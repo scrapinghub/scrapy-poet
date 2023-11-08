@@ -16,13 +16,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - python-version: "3.7"
+        - python-version: "3.8"
           toxenv: "min"
-        - python-version: "3.7"
+        - python-version: "3.8"
           toxenv: "pinned-scrapy-2x7"
-        - python-version: "3.7"
+        - python-version: "3.8"
           toxenv: "pinned-scrapy-2x8"
-        - python-version: "3.7"
+        - python-version: "3.8"
           toxenv: "asyncio-min"
         - python-version: "3.8"
         - python-version: "3.9"

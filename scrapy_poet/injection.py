@@ -3,7 +3,7 @@ import logging
 import os
 import pprint
 import warnings
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, cast
 
 import andi
 from andi.typeutils import issubclass_safe
@@ -11,16 +11,19 @@ from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Response
 from scrapy.settings import Settings
-from scrapy.statscollectors import StatsCollector
+from scrapy.statscollectors import MemoryStatsCollector, StatsCollector
 from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import maybeDeferred_coro
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import RulesRegistry
+from web_poet.page_inputs.http import request_fingerprint
 from web_poet.pages import is_injectable
+from web_poet.serialization.api import deserialize_leaf, load_class, serialize
+from web_poet.utils import get_fq_class_name
 
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
-from scrapy_poet.cache import SqlitedictCache
+from scrapy_poet.cache import SerializedDataCache
 from scrapy_poet.injection_errors import (
     InjectionError,
     NonCallableProviderError,
@@ -72,25 +75,24 @@ class Injector:
             self.providers
         )
 
-    def close(self) -> None:  # noqa: D102
-        if self.cache:
-            self.cache.close()
-
     def init_cache(self):  # noqa: D102
-        self.cache = None
-        cache_filename = self.crawler.settings.get("SCRAPY_POET_CACHE")
-        if cache_filename and isinstance(cache_filename, bool):
-            cache_filename = os.path.join(
-                get_scrapy_data_path(createdir=True), "scrapy-poet-cache.sqlite3"
+        self.cache = {}
+        cache_path = self.crawler.settings.get("SCRAPY_POET_CACHE")
+
+        # SCRAPY_POET_CACHE: True
+        if cache_path and isinstance(cache_path, bool):
+            cache_path = os.path.join(
+                get_scrapy_data_path(createdir=True), "scrapy-poet-cache"
             )
-        if cache_filename:
-            compressed = self.crawler.settings.getbool("SCRAPY_POET_CACHE_GZIP", True)
+
+        # SCRAPY_POET_CACHE: <cache_path>
+        if cache_path:
+            self.cache = SerializedDataCache(cache_path)
             self.caching_errors = self.crawler.settings.getbool(
                 "SCRAPY_POET_CACHE_ERRORS", False
             )
-            self.cache = SqlitedictCache(cache_filename, compressed=compressed)
             logger.info(
-                f"Cache enabled. File: {cache_filename!r}. Compressed: {compressed}. Caching errors: {self.caching_errors}"
+                f"Cache enabled. Folder: {cache_path!r}. Caching errors: {self.caching_errors}"
             )
 
     def available_dependencies_for_providers(
@@ -149,57 +151,92 @@ class Injector:
         )
 
     @inlineCallbacks
-    def build_instances(self, request: Request, response: Response, plan: andi.Plan):
+    def build_instances(
+        self,
+        request: Request,
+        response: Response,
+        plan: andi.Plan,
+        prev_instances: Optional[Dict] = None,
+    ):
         """Build the instances dict from a plan including external dependencies."""
         # First we build the external dependencies using the providers
         instances = yield from self.build_instances_from_providers(
-            request, response, plan
+            request,
+            response,
+            plan,
+            prev_instances,
         )
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances.keys():
                 instances[cls] = cls(**kwargs_spec.kwargs(instances))
+                cls_fqn = get_fq_class_name(cast(type, cls))
+                self.crawler.stats.inc_value(f"poet/injector/{cls_fqn}")
 
         return instances
 
     @inlineCallbacks
     def build_instances_from_providers(
-        self, request: Request, response: Response, plan: andi.Plan
+        self,
+        request: Request,
+        response: Response,
+        plan: andi.Plan,
+        prev_instances: Optional[Dict] = None,
     ):
         """Build dependencies handled by registered providers"""
-        instances: Dict[Callable, Any] = {}
+        instances: Dict[Callable, Any] = prev_instances or {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response
         )
         dependencies_set = {cls for cls, _ in plan.dependencies}
+        objs: List[Any]
         for provider in self.providers:
             provided_classes = {
                 cls for cls in dependencies_set if provider.is_provided(cls)
             }
-            provided_classes -= instances.keys()  # ignore already provided types
+
+            # ignore already provided types if provider doesn't need to use them
+            if not provider.allow_prev_instances:
+                provided_classes -= instances.keys()
+
             if not provided_classes:
                 continue
 
-            objs, fingerprint = None, None
+            # If dependency instances were already made by previously invoked
+            # providers, don't try to build them again since it may result in
+            # incorrect values (e.g. PO modifying an item > 2 times).
+            required_deps = set(plan.dependencies[-1][1].values())
+            built_deps = set(instances.keys())
+            if required_deps and required_deps == built_deps:
+                continue
+
+            objs, fingerprint = [], None
             cache_hit = False
-            if self.cache and provider.has_cache_support:
+            if self.cache:
                 if not provider.name:
                     raise NotImplementedError(
                         f"The provider {type(provider)} must have a `name` defined if"
                         f" you want to use the cache. It must be unique across the providers."
                     )
+                # This one should take `web_poet.HttpRequest` but `scrapy.Request` will work as well
+                # TODO: add `scrapy.Request` type in request_fingerprint() annotations
+                fingerprint = f"{provider.name}_{request_fingerprint(request)}"
                 # Return the data if it is already in the cache
-                fingerprint = f"{provider.name}_{provider.fingerprint(set(provided_classes), request)}"
                 try:
-                    data = self.cache[fingerprint]
+                    data = self.cache[fingerprint].items()
                 except KeyError:
-                    self.crawler.stats.inc_value("scrapy-poet/cache/miss")
+                    self.crawler.stats.inc_value("poet/cache/miss")
                 else:
-                    self.crawler.stats.inc_value("scrapy-poet/cache/hit")
+                    self.crawler.stats.inc_value("poet/cache/hit")
                     if isinstance(data, Exception):
                         raise data
-                    objs = provider.deserialize(data)
+                    objs = [
+                        deserialize_leaf(
+                            load_class(dep_type_name), serialized_leaf_data
+                        )
+                        for dep_type_name, serialized_leaf_data in data
+                    ]
                     cache_hit = True
 
             if not objs:
@@ -209,22 +246,19 @@ class Injector:
                     externally_provided=scrapy_provided_dependencies,
                     full_final_kwargs=False,
                 ).final_kwargs(scrapy_provided_dependencies)
+                if provider.allow_prev_instances:
+                    kwargs.update({"prev_instances": instances})
                 try:
-
                     # Invoke the provider to get the data
                     objs = yield maybeDeferred_coro(
                         provider, set(provided_classes), **kwargs
                     )
 
                 except Exception as e:
-                    if (
-                        self.cache
-                        and self.caching_errors
-                        and provider.has_cache_support
-                    ):
+                    if self.cache and self.caching_errors:
                         # Save errors in the cache
                         self.cache[fingerprint] = e
-                        self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
+                        self.crawler.stats.inc_value("poet/cache/firsthand")
                     raise
 
             objs_by_type: Dict[Callable, Any] = {type(obj): obj for obj in objs}
@@ -237,10 +271,10 @@ class Injector:
                 )
             instances.update(objs_by_type)
 
-            if self.cache and not cache_hit and provider.has_cache_support:
+            if self.cache and not cache_hit:
                 # Save the results in the cache
-                self.cache[fingerprint] = provider.serialize(objs)
-                self.crawler.stats.inc_value("scrapy-poet/cache/firsthand")
+                self.cache[fingerprint] = serialize(objs)
+                self.crawler.stats.inc_value("poet/cache/firsthand")
 
         return instances
 
@@ -402,11 +436,9 @@ def get_injector_for_testing(
     settings = Settings(
         {**(additional_settings or {}), "SCRAPY_POET_PROVIDERS": providers}
     )
-    crawler = Crawler(MySpider)
-    crawler.settings = settings
-    spider = MySpider()
-    spider.settings = settings
-    crawler.spider = spider
+    crawler = Crawler(MySpider, settings)
+    crawler.spider = MySpider.from_crawler(crawler)
+    crawler.stats = MemoryStatsCollector(crawler)
     if not registry:
         registry = create_registry_instance(RulesRegistry, crawler)
     return Injector(crawler, registry=registry)

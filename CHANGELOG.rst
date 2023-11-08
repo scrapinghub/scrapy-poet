@@ -2,6 +2,67 @@
 Changelog
 =========
 
+0.16.1 (2023-11-02)
+-------------------
+
+* Fix the bug that caused requests produced by
+  :class:`~scrapy_poet.page_input_providers.HttpClientProvider` to
+  be treated as if they need arguments of the ``parse`` callback as
+  dependencies, which could cause returning an empty response and/or making
+  extra provider calls.
+
+0.16.0 (2023-09-26)
+-------------------
+
+* Now requires ``time_machine >= 2.2.0``.
+
+* ``ItemProvider`` now supports page objects that declare a dependency on the 
+  same type of item that they return, as long as there is an earlier page 
+  object input provider that can provide such dependency.
+
+* Fix running tests with Scrapy 2.11.
+
+0.15.1 (2023-09-15)
+-------------------
+
+* :ref:`scrapy-poet stats <stats>` now also include counters for injected
+  dependencies (``poet/injector/<dependency import path>``).
+
+* All scrapy-poet stats  that used to be prefixed with ``scrapy-poet/`` are now
+  prefixed with ``poet/`` instead.
+
+0.15.0 (2023-09-12)
+-------------------
+
+* Now requires ``web-poet >= 0.15.0``.
+
+* :external+web-poet:ref:`Web-poet stats <stats>` are now :ref:`supported
+  <stats>`.
+
+
+0.14.0 (2023-09-08)
+-------------------
+
+* Python 3.7 support has been dropped.
+
+* Caching is now built on top of web-poet serialization, extending caching
+  support to additional inputs, while making our code simpler, more reliable,
+  and more future-proof.
+
+  This has resulted in a few backward-incompatible changes:
+
+  * The ``scrapy_poet.page_input_providers.CacheDataProviderMixin`` mixin class
+    has been removed. Providers no longer need to use it or reimplement its
+    methods.
+
+  * The ``SCRAPY_POET_CACHE_GZIP`` setting has been removed.
+
+* Added ``scrapy_poet.utils.open_in_browser``, an alternative to
+  ``scrapy.utils.response.open_in_browser`` that supports scrapy-poet.
+
+* Fixed some documentation links.
+
+
 0.13.0 (2023-05-08)
 -------------------
 

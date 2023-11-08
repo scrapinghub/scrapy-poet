@@ -73,15 +73,6 @@ On the other hand, you can also set this as a ``str`` pointing to any path relat
 to your `local Scrapy project`.
 
 
-SCRAPY_POET_CACHE_GZIP
-----------------------
-
-Default: ``True``
-
-Enables compression of the cached data using the **Gzip**. `Recommended` to be
-set to ``True`` in order to preserve disk space when caching.
-
-
 SCRAPY_POET_CACHE_ERRORS
 ------------------------
 

@@ -1,4 +1,4 @@
-from typing import Any, Callable, Sequence, Set
+import shutil
 
 import attr
 import parsel
@@ -12,12 +12,7 @@ from web_poet import Injectable, ItemPage, RulesRegistry
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
-from scrapy_poet import (
-    CacheDataProviderMixin,
-    DummyResponse,
-    HttpResponseProvider,
-    PageObjectInputProvider,
-)
+from scrapy_poet import DummyResponse, HttpResponseProvider, PageObjectInputProvider
 from scrapy_poet.injection import (
     check_all_providers_are_callable,
     get_injector_for_testing,
@@ -29,6 +24,8 @@ from scrapy_poet.injection_errors import (
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
+
+from .test_providers import Name, Price
 
 
 def get_provider(classes, content=None):
@@ -290,7 +287,7 @@ class OtherEurDollarRate(Injectable):
 
 @attr.s(auto_attribs=True)
 class PricePO(ItemPage, ResponseShortcutsMixin):
-    response: Html
+    response: Html  # type: ignore[assignment]
 
     def to_item(self):
         return dict(price=float(self.css(".price::text").get()), currency="€")
@@ -306,6 +303,82 @@ class PriceInDollarsPO(ItemPage):
         item["price"] *= self.conversion.rate
         item["currency"] = "$"
         return item
+
+
+@attr.s(auto_attribs=True)
+class TestItem:
+    foo: int
+    bar: str
+
+
+class TestItemPage(ItemPage[TestItem]):
+    async def to_item(self):
+        return TestItem(foo=1, bar="bar")
+
+
+class TestInjectorStats:
+    @pytest.mark.parametrize(
+        "cb_args, expected",
+        (
+            (
+                {"price_po": PricePO, "rate_po": EurDollarRate},
+                {
+                    "tests.test_injection.PricePO",
+                    "tests.test_injection.EurDollarRate",
+                    "tests.test_injection.Html",
+                },
+            ),
+            (
+                {"price_po": PriceInDollarsPO},
+                {
+                    "tests.test_injection.PricePO",
+                    "tests.test_injection.PriceInDollarsPO",
+                    "tests.test_injection.Html",
+                    "tests.test_injection.EurDollarRate",
+                },
+            ),
+            (
+                {},
+                set(),
+            ),
+            (
+                {"item": TestItem},
+                set(),  # there must be no stats as ItemProvider is not enabled
+            ),
+        ),
+    )
+    @inlineCallbacks
+    def test_stats(self, cb_args, expected, injector):
+        def callback_factory():
+            args = ", ".join([f"{k}: {v.__name__}" for k, v in cb_args.items()])
+            exec(f"def callback(response: DummyResponse, {args}): pass")
+            return locals().get("callback")
+
+        callback = callback_factory()
+        response = get_response_for_testing(callback)
+        _ = yield from injector.build_callback_dependencies(response.request, response)
+        prefix = "poet/injector/"
+        poet_stats = {
+            name.replace(prefix, ""): value
+            for name, value in injector.crawler.stats.get_stats().items()
+            if name.startswith(prefix)
+        }
+        assert set(poet_stats) == expected
+
+    @inlineCallbacks
+    def test_po_provided_via_item(self, injector):
+        rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
+        registry = RulesRegistry(rules=rules)
+        providers = {"scrapy_poet.page_input_providers.ItemProvider": 10}
+        injector = get_injector_for_testing(providers, registry=registry)
+
+        def callback(response: DummyResponse, item: TestItem):
+            pass
+
+        response = get_response_for_testing(callback)
+        _ = yield from injector.build_callback_dependencies(response.request, response)
+        key = "poet/injector/tests.test_injection.TestItemPage"
+        assert key in set(injector.crawler.stats.get_stats())
 
 
 class TestInjectorOverrides:
@@ -397,7 +470,7 @@ def test_is_class_provided_by_any_provider_fn():
 
 
 def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
-    class Provider(PageObjectInputProvider, CacheDataProviderMixin):
+    class Provider(PageObjectInputProvider):
         name = a_name
         provided_classes = classes
         require_response = False
@@ -406,18 +479,12 @@ def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
             self.crawler = crawler
 
         def __call__(self, to_provide, request: Request):
-            if not get_domain(request.url) == "example.com":
-                raise error("The URL is not from example.com")
+            domain = get_domain(request.url)
+            if not domain == "example.com":
+                raise error(
+                    f"Domain ({domain}) of URL ({request.url}) is not example.com"
+                )
             return [cls(content) if content else cls() for cls in classes]
-
-        def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-            return request.url
-
-        def serialize(self, result: Sequence[Any]) -> Any:
-            return result
-
-        def deserialize(self, data: Any) -> Sequence[Any]:
-            return data
 
     return Provider
 
@@ -432,24 +499,22 @@ def test_cache(tmp_path, cache_errors):
     """
 
     def validate_instances(instances):
-        assert instances[str] == "foo"
-        assert instances[int] == 3
-        assert instances[float] == 3.0
+        assert instances[Price].price == "price1"
+        assert instances[Name].name == "name1"
 
     providers = {
-        get_provider_for_cache({str}, "str", content="foo"): 1,
-        get_provider_for_cache({int, float}, "number", content=3): 2,
+        get_provider_for_cache({Price}, "price", content="price1"): 1,
+        get_provider_for_cache({Name}, "name", content="name1"): 2,
     }
 
-    cache = tmp_path / "cache3.sqlite3"
+    cache = tmp_path / "cache"
     if cache.exists():
-        print(f"Cache file {cache} already exists. Weird. Deleting")
-        cache.unlink()
+        print(f"Cache folder {cache} already exists. Weird. Deleting")
+        shutil.rmtree(cache)
     settings = {"SCRAPY_POET_CACHE": cache, "SCRAPY_POET_CACHE_ERRORS": cache_errors}
     injector = get_injector_for_testing(providers, settings)
-    assert cache.exists()
 
-    def callback(response: DummyResponse, arg_str: str, arg_int: int, arg_float: float):
+    def callback(response: DummyResponse, arg_price: Price, arg_name: Name):
         pass
 
     response = get_response_for_testing(callback)
@@ -457,6 +522,7 @@ def test_cache(tmp_path, cache_errors):
     instances = yield from injector.build_instances_from_providers(
         response.request, response, plan
     )
+    assert cache.exists()
 
     validate_instances(instances)
 
@@ -472,8 +538,8 @@ def test_cache(tmp_path, cache_errors):
 
     # Different providers. They return a different result, but the cache data should prevail.
     providers = {
-        get_provider_for_cache({str}, "str", content="bar", error=KeyError): 1,
-        get_provider_for_cache({int, float}, "number", content=4, error=KeyError): 2,
+        get_provider_for_cache({Price}, "price", content="price2", error=KeyError): 1,
+        get_provider_for_cache({Name}, "name", content="name2", error=KeyError): 2,
     }
     injector = get_injector_for_testing(providers, settings)
 

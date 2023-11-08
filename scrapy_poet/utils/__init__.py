@@ -6,8 +6,9 @@ from warnings import warn
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
 from scrapy.crawler import Crawler
-from scrapy.http import Request, Response
+from scrapy.http import HtmlResponse, Request, Response
 from scrapy.utils.project import inside_project, project_data_dir
+from scrapy.utils.response import open_in_browser as scrapy_open_in_browser
 from web_poet import (
     HttpRequest,
     HttpResponse,
@@ -15,6 +16,12 @@ from web_poet import (
     consume_modules,
     default_registry,
 )
+
+try:
+    from scrapy.http.request import NO_CALLBACK  # available on Scrapy >= 2.8
+except ImportError:
+    # NO_CALLBACK = lambda: None  # noqa: E731
+    NO_CALLBACK = None
 
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
@@ -36,6 +43,7 @@ def http_request_to_scrapy_request(request: HttpRequest, **kwargs) -> Request:
         method=request.method,
         headers=request.headers,
         body=request.body,
+        callback=NO_CALLBACK,
         **kwargs,
     )
 
@@ -53,6 +61,27 @@ def scrapy_response_to_http_response(response: Response) -> HttpResponse:
         body=response.body,
         status=response.status,
         headers=HttpResponseHeaders.from_bytes_dict(response.headers),
+        **kwargs,
+    )
+
+
+def open_in_browser(response):
+    scrapy_open_in_browser(http_response_to_scrapy_response(response))
+
+
+def http_response_to_scrapy_response(response: HttpResponse) -> HtmlResponse:
+    """Convenience method to convert a ``web_poet.HttpResponse`` into a
+    ``scrapy.http.HtmlResponse``.
+    """
+    kwargs = {}
+    encoding = getattr(response, "_encoding", None) or "utf-8"
+    kwargs["encoding"] = encoding
+
+    return HtmlResponse(
+        url=response.url._url,
+        body=response.text,
+        status=response.status,
+        headers=response.headers,
         **kwargs,
     )
 

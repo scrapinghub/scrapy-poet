@@ -8,28 +8,14 @@ is in charge of providing the response HTML from Scrapy. You could also implemen
 different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from an API for automatic extraction.
 """
-import abc
 import asyncio
-import json
 from dataclasses import make_dataclass
 from inspect import isclass
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Type,
-    Union,
-)
+from typing import Any, Callable, ClassVar, Dict, List, Optional, Set, Type, Union
 from warnings import warn
 from weakref import WeakKeyDictionary
 
 import andi
-import attr
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.http import Response
@@ -41,7 +27,9 @@ from web_poet import (
     PageParams,
     RequestUrl,
     ResponseUrl,
+    Stats,
 )
+from web_poet.page_inputs.stats import StatCollector, StatNum
 from web_poet.pages import is_injectable
 
 from scrapy_poet.api import DummyResponse
@@ -119,6 +107,12 @@ class PageObjectInputProvider:
     provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
+    # If set to True, the Injector will not skip the Provider when the dependency has
+    # been built. Instead, the Injector will pass the previously built instances (by
+    # the other providers) to the Provider. The Provider can then choose to modify
+    # these previous instances before returning them to the Injector.
+    allow_prev_instances: bool = False
+
     def is_provided(self, type_: Callable) -> bool:
         """
         Return ``True`` if the given type is provided by this provider based
@@ -151,58 +145,13 @@ class PageObjectInputProvider:
     # injection breaks the method overriding rules and mypy then complains.
 
 
-class CacheDataProviderMixin(abc.ABC):
-    """Providers that intend to support the ``SCRAPY_POET_CACHE`` should inherit
-    from this mixin class.
-    """
-
-    @abc.abstractmethod
-    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        """
-        Return a fingerprint that identifies this particular request. It will be used to implement
-        the cache and record/replay mechanism
-        """
-        pass
-
-    @abc.abstractmethod
-    def serialize(self, result: Sequence[Any]) -> Any:
-        """
-        Serializes the results of this provider. The data returned will be pickled.
-        """
-        pass
-
-    @abc.abstractmethod
-    def deserialize(self, data: Any) -> Sequence[Any]:
-        """
-        Deserialize some results of the provider that were previously serialized using the method
-        :meth:`serialize`.
-        """
-        pass
-
-    @property
-    def has_cache_support(self):
-        return True
-
-
-class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
+class HttpResponseProvider(PageObjectInputProvider):
     """This class provides :class:`web_poet.HttpResponse
     <web_poet.page_inputs.http.HttpResponse>` instances.
     """
 
     provided_classes = {HttpResponse}
     name = "response_data"
-
-    def __init__(self, crawler: Crawler):
-        if hasattr(crawler, "request_fingerprinter"):
-
-            def fingerprint(x):
-                return crawler.request_fingerprinter.fingerprint(x).hex()
-
-            self._fingerprint = fingerprint
-        else:
-            from scrapy.utils.request import request_fingerprint
-
-            self._fingerprint = request_fingerprint
 
     def __call__(self, to_provide: Set[Callable], response: Response):
         """Builds a :class:`web_poet.HttpResponse
@@ -216,33 +165,6 @@ class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
                 status=response.status,
                 headers=HttpResponseHeaders.from_bytes_dict(response.headers),
             )
-        ]
-
-    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        request_keys = {"url", "method", "body"}
-        _request = request.replace(callback=None, errback=None)
-        request_data = {
-            k: str(v) for k, v in _request.to_dict().items() if k in request_keys
-        }
-        fp_data = {
-            "SCRAPY_FINGERPRINT": self._fingerprint(_request),
-            **request_data,
-        }
-        return json.dumps(fp_data, ensure_ascii=False, sort_keys=True)
-
-    def serialize(self, result: Sequence[Any]) -> Any:
-        return [attr.asdict(response_data) for response_data in result]
-
-    def deserialize(self, data: Any) -> Sequence[Any]:
-        return [
-            HttpResponse(
-                response_data["url"],
-                response_data["body"],
-                status=response_data["status"],
-                headers=response_data["headers"],
-                encoding=response_data["_encoding"],
-            )
-            for response_data in data
         ]
 
 
@@ -297,7 +219,6 @@ class RequestUrlProvider(PageObjectInputProvider):
 
 
 class ResponseUrlProvider(PageObjectInputProvider):
-
     provided_classes = {ResponseUrl}
     name = "response_url"
 
@@ -309,13 +230,14 @@ class ResponseUrlProvider(PageObjectInputProvider):
 
 
 class ItemProvider(PageObjectInputProvider):
-
     name = "item"
 
     template_deadlock_msg = (
         "Deadlock detected! A loop has been detected to "
         "trying to resolve this plan: {plan}"
     )
+
+    allow_prev_instances: bool = True
 
     def __init__(self, injector):
         super().__init__(injector)
@@ -366,11 +288,11 @@ class ItemProvider(PageObjectInputProvider):
         self,
         to_provide: Set[Callable],
         request: Request,
+        prev_instances: Dict,
     ) -> List[Any]:
         results = []
         for cls in to_provide:
-            item = self.get_from_cache(request, cls)
-            if item:
+            if item := self.get_from_cache(request, cls):
                 results.append(item)
                 continue
 
@@ -395,7 +317,9 @@ class ItemProvider(PageObjectInputProvider):
             dummy_response = DummyResponse(request=request)
             try:
                 deferred_or_future = maybe_deferred_to_future(
-                    self.injector.build_instances(request, dummy_response, plan)
+                    self.injector.build_instances(
+                        request, dummy_response, plan, prev_instances
+                    )
                 )
                 # RecursionError NOT raised when ``AsyncioSelectorReactor`` is used.
                 # Could be related: https://github.com/python/cpython/issues/93837
@@ -422,3 +346,31 @@ class ItemProvider(PageObjectInputProvider):
 
             results.append(item)
         return results
+
+
+class ScrapyPoetStatCollector(StatCollector):
+    def __init__(self, stats):
+        self._stats = stats
+        self._prefix = "poet/stats/"
+
+    def set(self, key: str, value: Any) -> None:  # noqa: D102
+        self._stats.set_value(f"{self._prefix}{key}", value)
+
+    def inc(self, key: str, value: StatNum = 1) -> None:  # noqa: D102
+        self._stats.inc_value(f"{self._prefix}{key}", value)
+
+
+class StatsProvider(PageObjectInputProvider):
+    """This class provides :class:`web_poet.Stats
+    <web_poet.page_inputs.client.Stats>` instances.
+    """
+
+    provided_classes = {Stats}
+
+    def __call__(self, to_provide: Set[Callable], crawler: Crawler):
+        """Creates an :class:`web_poet.Stats
+        <web_poet.page_inputs.client.Stats>` instance using Scrapy's
+        stat collector.
+        """
+
+        return [Stats(stat_collector=ScrapyPoetStatCollector(crawler.stats))]
