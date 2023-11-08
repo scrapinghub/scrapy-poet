@@ -238,7 +238,7 @@ def test_item_provider(settings):
 
     # The fact that no exception is raised below proves that a Response
     # parameter is not required by ItemProvider.
-    provider(set(), request)
+    provider(set(), request, {})
 
 
 def test_item_provider_cache(settings):
