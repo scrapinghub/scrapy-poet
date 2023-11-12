@@ -20,8 +20,7 @@ from web_poet import (
 try:
     from scrapy.http.request import NO_CALLBACK  # available on Scrapy >= 2.8
 except ImportError:
-    # NO_CALLBACK = lambda: None  # noqa: E731
-    NO_CALLBACK = None
+    NO_CALLBACK = None  # type: ignore[assignment]
 
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:

@@ -444,6 +444,7 @@ def test_additional_requests_no_cb_deps() -> None:
             custom_request = Request(
                 request.url, body=request.body, callback=NO_CALLBACK
             )
+            assert crawler.engine
             scrapy_response: Response = await maybe_deferred_to_future(
                 crawler.engine.download(custom_request)
             )

@@ -22,13 +22,7 @@ from scrapy_poet.page_input_providers import (
     HttpResponseProvider,
     PageObjectInputProvider,
 )
-from scrapy_poet.utils import is_min_scrapy_version
-
-# See: https://github.com/scrapinghub/scrapy-poet/issues/118
-try:
-    from scrapy.http.request import NO_CALLBACK  # available on Scrapy >= 2.8
-except ImportError:
-    NO_CALLBACK = lambda: None  # type: ignore[misc]  # noqa: E731
+from scrapy_poet.utils import NO_CALLBACK, is_min_scrapy_version
 
 
 @attr.s(auto_attribs=True)
