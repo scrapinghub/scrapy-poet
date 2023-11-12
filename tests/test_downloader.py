@@ -1,7 +1,7 @@
 import sys
 import warnings
 from functools import partial
-from typing import Callable, List, Optional
+from typing import Any, Callable, List, Optional, Sequence, Set
 from unittest import mock
 
 import attr
@@ -11,14 +11,21 @@ import twisted
 import web_poet
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
+from scrapy.crawler import Crawler
 from scrapy.exceptions import IgnoreRequest
-from web_poet import HttpClient
+from scrapy.http import Response
+from scrapy.utils.defer import maybe_deferred_to_future
+from web_poet import BrowserResponse, HttpClient
 from web_poet.exceptions import HttpError, HttpRequestError, HttpResponseError
 from web_poet.pages import WebPage
 
-from scrapy_poet import DummyResponse
+from scrapy_poet import DummyResponse, PageObjectInputProvider
 from scrapy_poet.downloader import create_scrapy_downloader
-from scrapy_poet.utils import http_request_to_scrapy_request, is_min_scrapy_version
+from scrapy_poet.utils import (
+    NO_CALLBACK,
+    http_request_to_scrapy_request,
+    is_min_scrapy_version,
+)
 from scrapy_poet.utils.mockserver import MockServer
 from scrapy_poet.utils.testing import (
     DelayedResource,
@@ -415,6 +422,79 @@ def test_additional_requests_dont_filter() -> None:
         yield crawler.crawl()
 
     assert items == [{"a": "a"}]
+
+
+@inlineCallbacks
+def test_additional_requests_no_cb_deps() -> None:
+    # https://github.com/scrapy-plugins/scrapy-zyte-api/issues/135
+    # This tests that the additional request doesn't go through dep resolving
+    # like if it used self.parse as a callback.
+
+    items = []
+    provider_calls = 0
+
+    class BrowserResponseProvider(PageObjectInputProvider):
+        provided_classes = {BrowserResponse}
+
+        async def __call__(
+            self, to_provide: Set[Callable], request: Request, crawler: Crawler
+        ) -> Sequence[Any]:
+            nonlocal provider_calls
+            provider_calls += 1
+            custom_request = Request(
+                request.url, body=request.body, callback=NO_CALLBACK
+            )
+            scrapy_response: Response = await maybe_deferred_to_future(
+                crawler.engine.download(custom_request)
+            )
+            result = BrowserResponse(
+                url=scrapy_response.url,
+                html=scrapy_response.text,
+                status=scrapy_response.status,
+            )
+            return [result]
+
+    with MockServer(EchoResource) as server:
+
+        @attr.define
+        class ItemPage(WebPage):
+            browser_response: BrowserResponse
+            http: HttpClient
+
+            async def to_item(self):
+                additional_response = await self.http.request(
+                    server.root_url,
+                    body=b"a",
+                )
+                return {
+                    "main": str(self.browser_response.html),
+                    "additional": additional_response.body.decode(),
+                }
+
+        class TestSpider(Spider):
+            name = "test_spider"
+
+            custom_settings = {
+                "DOWNLOADER_MIDDLEWARES": {
+                    "scrapy_poet.InjectionMiddleware": 543,
+                },
+                "SCRAPY_POET_PROVIDERS": {
+                    BrowserResponseProvider: 1100,
+                },
+            }
+
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
+
+            async def parse(self, response: DummyResponse, page: ItemPage):
+                item = await page.to_item()
+                items.append(item)
+
+        crawler = make_crawler(TestSpider, {})
+        yield crawler.crawl()
+
+    assert provider_calls == 1
+    assert items == [{"main": "", "additional": "a"}]
 
 
 @attr.define

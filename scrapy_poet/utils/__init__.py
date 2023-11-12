@@ -17,6 +17,12 @@ from web_poet import (
     default_registry,
 )
 
+try:
+    from scrapy.http.request import NO_CALLBACK  # available on Scrapy >= 2.8
+except ImportError:
+    # NO_CALLBACK = lambda: None  # noqa: E731
+    NO_CALLBACK = None
+
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
     """Return a path to a folder where Scrapy is storing data.
@@ -37,6 +43,7 @@ def http_request_to_scrapy_request(request: HttpRequest, **kwargs) -> Request:
         method=request.method,
         headers=request.headers,
         body=request.body,
+        callback=NO_CALLBACK,
         **kwargs,
     )
 

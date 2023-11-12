@@ -2,6 +2,26 @@
 Changelog
 =========
 
+0.16.1 (2023-11-02)
+-------------------
+
+* Fix the bug that caused requests produced by
+  :class:`~scrapy_poet.page_input_providers.HttpClientProvider` to
+  be treated as if they need arguments of the ``parse`` callback as
+  dependencies, which could cause returning an empty response and/or making
+  extra provider calls.
+
+0.16.0 (2023-09-26)
+-------------------
+
+* Now requires ``time_machine >= 2.2.0``.
+
+* ``ItemProvider`` now supports page objects that declare a dependency on the 
+  same type of item that they return, as long as there is an earlier page 
+  object input provider that can provide such dependency.
+
+* Fix running tests with Scrapy 2.11.
+
 0.15.1 (2023-09-15)
 -------------------
 
