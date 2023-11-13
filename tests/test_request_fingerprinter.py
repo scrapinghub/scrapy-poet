@@ -11,9 +11,10 @@ if Version(SCRAPY_VERSION) < Version("2.7"):
 from importlib.metadata import version as package_version
 
 from scrapy import Request, Spider
-from web_poet import ItemPage, WebPage
+from scrapy.http import Response
+from web_poet import HttpResponse, ItemPage, PageParams, RequestUrl, WebPage
 
-from scrapy_poet import ScrapyPoetRequestFingerprinter
+from scrapy_poet import DummyResponse, ScrapyPoetRequestFingerprinter
 from scrapy_poet.utils.testing import get_crawler as _get_crawler
 
 ANDI_VERSION = Version(package_version("andi"))
@@ -109,6 +110,97 @@ def test_different_deps():
     request1 = Request("https://toscrape.com", callback=crawler.spider.parse_item)
     fingerprint1 = fingerprinter.fingerprint(request1)
     request2 = Request("https://toscrape.com", callback=crawler.spider.parse_web)
+    fingerprint2 = fingerprinter.fingerprint(request2)
+    assert fingerprint1 != fingerprint2
+
+
+def test_response_typing():
+    """The type of the response parameter is ignored, even when it is
+    DummyResponse."""
+
+    class TestSpider(Spider):
+        name = "test_spider"
+
+        async def parse_untyped(self, response, web: WebPage):
+            pass
+
+        async def parse_typed(self, response: Response, web: WebPage):
+            pass
+
+        async def parse_dummy(self, response: DummyResponse, web: WebPage):
+            pass
+
+    crawler = get_crawler(spider_cls=TestSpider)
+    fingerprinter = crawler.request_fingerprinter
+    request1 = Request("https://toscrape.com", callback=crawler.spider.parse_untyped)
+    fingerprint1 = fingerprinter.fingerprint(request1)
+    request2 = Request("https://toscrape.com", callback=crawler.spider.parse_typed)
+    fingerprint2 = fingerprinter.fingerprint(request2)
+    request3 = Request("https://toscrape.com", callback=crawler.spider.parse_dummy)
+    fingerprint3 = fingerprinter.fingerprint(request3)
+    assert fingerprint1 == fingerprint2
+    assert fingerprint1 == fingerprint3
+
+
+def test_responseless_inputs():
+    """Inputs that have no impact on the actual requests sent because they do
+    not require sending a request at all are considered valid, different
+    dependencies for fingerprinting purposes nonetheless."""
+
+    class TestSpider(Spider):
+        name = "test_spider"
+
+        async def parse_nothing(self, response: DummyResponse):
+            pass
+
+        async def parse_page_params(
+            self, response: DummyResponse, page_params: PageParams
+        ):
+            # NOTE: requesting PageParams or not should not affect the request
+            # fingerprinting, setting page_params on the request should.
+            pass
+
+        async def parse_request_url(
+            self, response: DummyResponse, request_url: RequestUrl
+        ):
+            pass
+
+    crawler = get_crawler(spider_cls=TestSpider)
+    fingerprinter = crawler.request_fingerprinter
+    request1 = Request("https://toscrape.com", callback=crawler.spider.parse_nothing)
+    fingerprint1 = fingerprinter.fingerprint(request1)
+    request2 = Request(
+        "https://toscrape.com", callback=crawler.spider.parse_page_params
+    )
+    fingerprint2 = fingerprinter.fingerprint(request2)
+    request3 = Request(
+        "https://toscrape.com", callback=crawler.spider.parse_request_url
+    )
+    fingerprint3 = fingerprinter.fingerprint(request3)
+    assert fingerprint1 != fingerprint2
+    assert fingerprint1 != fingerprint3
+    assert fingerprint2 != fingerprint3
+
+
+def test_dep_resolution():
+    """We do not resolve dependencies, so it is possible for 2 callbacks that
+    when resolved have identical dependencies to get a different
+    fingerprint."""
+
+    class TestSpider(Spider):
+        name = "test_spider"
+
+        async def parse_a(self, response, web: WebPage):
+            pass
+
+        async def parse_b(self, response, web: WebPage, http_response: HttpResponse):
+            pass
+
+    crawler = get_crawler(spider_cls=TestSpider)
+    fingerprinter = crawler.request_fingerprinter
+    request1 = Request("https://toscrape.com", callback=crawler.spider.parse_a)
+    fingerprint1 = fingerprinter.fingerprint(request1)
+    request2 = Request("https://toscrape.com", callback=crawler.spider.parse_b)
     fingerprint2 = fingerprinter.fingerprint(request2)
     assert fingerprint1 != fingerprint2
 
