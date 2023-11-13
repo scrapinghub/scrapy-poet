@@ -15,6 +15,7 @@ from scrapy.http import Response
 from web_poet import HttpResponse, ItemPage, PageParams, RequestUrl, WebPage
 
 from scrapy_poet import DummyResponse, ScrapyPoetRequestFingerprinter
+from scrapy_poet._request_fingerprinter import _serialize_dep
 from scrapy_poet.utils.testing import get_crawler as _get_crawler
 
 ANDI_VERSION = Version(package_version("andi"))
@@ -231,6 +232,22 @@ def test_different_annotations():
     request2 = Request("https://toscrape.com", callback=crawler.spider.parse_b)
     fingerprint2 = fingerprinter.fingerprint(request2)
     assert fingerprint1 != fingerprint2
+
+
+def test_serialize_dep():
+    assert _serialize_dep(HttpResponse) == "web_poet.page_inputs.http.HttpResponse"
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+)
+def test_serialize_dep_annotated():
+    from typing import Annotated
+
+    assert (
+        _serialize_dep(Annotated[HttpResponse, "foo"])
+        == "web_poet.page_inputs.http.HttpResponse['foo']"
+    )
 
 
 def test_base_default():

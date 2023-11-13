@@ -1,15 +1,15 @@
-from typing import TYPE_CHECKING
-
 try:
     from scrapy.utils.request import RequestFingerprinter  # NOQA
 except ImportError:
+    from typing import TYPE_CHECKING
+
     if not TYPE_CHECKING:
         ScrapyPoetRequestFingerprinter = None
 else:
     import hashlib
     import json
     from functools import cached_property
-    from typing import Callable, Dict, List, Optional
+    from typing import Callable, Dict, List, Optional, get_args, get_origin
     from weakref import WeakKeyDictionary
 
     from scrapy import Request
@@ -19,6 +19,17 @@ else:
 
     from scrapy_poet import InjectionMiddleware
     from scrapy_poet.injection import get_callback
+
+    def _serialize_dep(cls):
+        try:
+            from typing import Annotated
+        except ImportError:
+            pass
+        else:
+            if get_origin(cls) is Annotated:
+                annotated, *annotations = get_args(cls)
+                return f"{_serialize_dep(annotated)}{repr(annotations)}"
+        return f"{cls.__module__}.{cls.__qualname__}"
 
     class ScrapyPoetRequestFingerprinter:
         @classmethod
@@ -62,7 +73,7 @@ else:
             root_deps = plan[-1][1]
             if not root_deps:
                 return None
-            return sorted([repr(cls) for cls in root_deps.values()])
+            return sorted([_serialize_dep(cls) for cls in root_deps.values()])
 
         def fingerprint_deps(self, request: Request) -> Optional[bytes]:
             """Return a fingerprint based on dependencies requested through
