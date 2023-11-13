@@ -14,8 +14,7 @@ from scrapy import Request, Spider
 from web_poet import ItemPage, WebPage
 
 from scrapy_poet import ScrapyPoetRequestFingerprinter
-
-from . import get_crawler as _get_crawler
+from scrapy_poet.utils.testing import get_crawler as _get_crawler
 
 ANDI_VERSION = Version(package_version("andi"))
 
