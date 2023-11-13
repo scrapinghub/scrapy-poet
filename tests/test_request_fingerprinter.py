@@ -34,7 +34,7 @@ def get_crawler(spider_cls=None, settings=None):
     return _get_crawler(settings=settings, **kwargs)
 
 
-def test_no_deps_vs_dep():
+def test_no_and_same_deps():
     class TestSpider(Spider):
         name = "test_spider"
 
@@ -47,23 +47,10 @@ def test_no_deps_vs_dep():
     fingerprint1 = fingerprinter.fingerprint(request1)
     request2 = Request("https://toscrape.com", callback=crawler.spider.parse_page)
     fingerprint2 = fingerprinter.fingerprint(request2)
+    request3 = Request("https://toscrape.com", callback=crawler.spider.parse_page)
+    fingerprint3 = fingerprinter.fingerprint(request3)
     assert fingerprint1 != fingerprint2
-
-
-def test_same_deps():
-    class TestSpider(Spider):
-        name = "test_spider"
-
-        async def parse_page(self, response, page: WebPage):
-            pass
-
-    crawler = get_crawler(spider_cls=TestSpider)
-    fingerprinter = crawler.request_fingerprinter
-    request1 = Request("https://toscrape.com", callback=crawler.spider.parse_page)
-    fingerprint1 = fingerprinter.fingerprint(request1)
-    request2 = Request("https://toscrape.com", callback=crawler.spider.parse_page)
-    fingerprint2 = fingerprinter.fingerprint(request2)
-    assert fingerprint1 == fingerprint2
+    assert fingerprint2 == fingerprint3
 
 
 def test_same_deps_different_callbacks():
