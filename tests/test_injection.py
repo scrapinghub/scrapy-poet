@@ -1,6 +1,6 @@
 import shutil
 import sys
-from typing import Callable
+from typing import Any, Callable, Dict
 
 import attr
 import parsel
@@ -18,6 +18,7 @@ from web_poet.rules import ApplyRule
 from scrapy_poet import DummyResponse, HttpResponseProvider, PageObjectInputProvider
 from scrapy_poet.injection import (
     AnnotatedResult,
+    Injector,
     check_all_providers_are_callable,
     get_injector_for_testing,
     get_response_for_testing,
@@ -281,6 +282,24 @@ class TestInjector:
             "d": ClsNoProviderRequired,
         }
 
+    @staticmethod
+    @inlineCallbacks
+    def _assert_instances(
+        injector: Injector,
+        callback: Callable,
+        expected_instances: Dict[type, Any],
+        expected_kwargs: Dict[str, Any],
+    ) -> None:
+        response = get_response_for_testing(callback)
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances(request, response, plan)
+        assert instances == expected_instances
+
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        assert kwargs == expected_kwargs
+
     @pytest.mark.skipif(
         sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
     )
@@ -302,21 +321,17 @@ class TestInjector:
         ):
             pass
 
-        response = get_response_for_testing(callback)
-        request = response.request
-
-        plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances(request, response, plan)
-        assert instances == {
+        expected_instances = {
             Cls1: Cls1(),
             Annotated[Cls2, 42]: Cls2(),
         }
-
-        kwargs = yield from injector.build_callback_dependencies(request, response)
-        assert kwargs == {
+        expected_kwargs = {
             "a": Cls1(),
             "b": Cls2(),
         }
+        yield self._assert_instances(
+            injector, callback, expected_instances, expected_kwargs
+        )
 
     @pytest.mark.skipif(
         sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
@@ -330,19 +345,15 @@ class TestInjector:
         ):
             pass
 
-        response = get_response_for_testing(callback)
-        request = response.request
-
-        plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances(request, response, plan)
-        assert instances == {
+        expected_instances = {
             Annotated[Cls1, 42]: Cls1(),
         }
-
-        kwargs = yield from injector.build_callback_dependencies(request, response)
-        assert kwargs == {
+        expected_kwargs = {
             "a": Cls1(),
         }
+        yield self._assert_instances(
+            injector, callback, expected_instances, expected_kwargs
+        )
 
     @pytest.mark.skipif(
         sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
@@ -359,25 +370,21 @@ class TestInjector:
         ):
             pass
 
-        response = get_response_for_testing(callback)
-        request = response.request
-
-        plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances(request, response, plan)
-        assert instances == {
+        expected_instances = {
             Cls1: Cls1(),
             Cls2: Cls2(),
             Annotated[Cls2, 42]: Cls2(),
             Annotated[Cls2, 43]: Cls2(),
         }
-
-        kwargs = yield from injector.build_callback_dependencies(request, response)
-        assert kwargs == {
+        expected_kwargs = {
             "a": Cls1(),
             "b": Cls2(),
             "c": Cls2(),
             "d": Cls2(),
         }
+        yield self._assert_instances(
+            injector, callback, expected_instances, expected_kwargs
+        )
 
     @pytest.mark.skipif(
         sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
