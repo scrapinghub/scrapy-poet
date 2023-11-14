@@ -1,5 +1,6 @@
 import shutil
 import sys
+from typing import Callable
 
 import attr
 import parsel
@@ -24,6 +25,7 @@ from scrapy_poet.injection import (
 )
 from scrapy_poet.injection_errors import (
     InjectionError,
+    MalformedProvidedClassesError,
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
@@ -38,6 +40,9 @@ def get_provider(classes, content=None):
 
         def __init__(self, crawler):
             self.crawler = crawler
+
+        def is_provided(self, type_: Callable) -> bool:
+            return super().is_provided(strip_annotated(type_))
 
         def __call__(self, to_provide):
             result = []
@@ -392,9 +397,12 @@ class TestInjector:
         request = response.request
 
         plan = injector.build_plan(response.request)
-        with pytest.raises(UndeclaredProvidedTypeError) as ex:
-            yield from injector.build_instances(request, response, plan)
-        assert "typing.Annotated" in str(ex)
+        instances = yield from injector.build_instances_from_providers(
+            request, response, plan
+        )
+        assert instances == {
+            Cls1: Cls1(),
+        }
 
     @pytest.mark.skipif(
         sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
@@ -411,6 +419,9 @@ class TestInjector:
 
             def __init__(self, crawler):
                 self.crawler = crawler
+
+            def is_provided(self, type_: Callable) -> bool:
+                return super().is_provided(strip_annotated(type_))
 
             def __call__(self, to_provide):
                 result = []
@@ -623,11 +634,12 @@ def test_check_all_providers_are_callable():
     assert "not callable" in str(exinf.value)
 
 
-def test_is_class_provided_by_any_provider_fn():
+def test_is_class_provided_by_any_provider_fn(injector):
+    crawler = injector.crawler
     providers = [
-        get_provider({str}),
-        get_provider(lambda x: issubclass(x, InjectionError)),
-        get_provider(frozenset({int, float})),
+        get_provider({str})(crawler),
+        get_provider(lambda self, x: issubclass(x, InjectionError))(crawler),
+        get_provider(frozenset({int, float}))(crawler),
     ]
     is_provided = is_class_provided_by_any_provider_fn(providers)
     is_provided_empty = is_class_provided_by_any_provider_fn([])
@@ -643,8 +655,8 @@ def test_is_class_provided_by_any_provider_fn():
     class WrongProvider(PageObjectInputProvider):
         provided_classes = [str]  # Lists are not allowed, only sets or funcs
 
-    with pytest.raises(InjectionError):
-        is_class_provided_by_any_provider_fn([WrongProvider])
+    with pytest.raises(MalformedProvidedClassesError):
+        is_class_provided_by_any_provider_fn([WrongProvider(injector)])(str)
 
 
 def get_provider_for_cache(classes, a_name, content=None, error=ValueError):

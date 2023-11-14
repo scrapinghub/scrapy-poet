@@ -6,7 +6,7 @@ import warnings
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, cast
 
 import andi
-from andi.typeutils import issubclass_safe, strip_annotated
+from andi.typeutils import issubclass_safe
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Response
@@ -25,7 +25,6 @@ from web_poet.utils import get_fq_class_name
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, AnnotatedResult, DummyResponse
 from scrapy_poet.cache import SerializedDataCache
 from scrapy_poet.injection_errors import (
-    InjectionError,
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
@@ -117,7 +116,7 @@ class Injector:
         result = set()
         for cls, _ in plan:
             for provider in self.providers:
-                if provider.is_provided(strip_annotated(cls)):
+                if provider.is_provided(cls):
                     result.add(provider)
 
         return result
@@ -193,9 +192,7 @@ class Injector:
         objs: List[Any]
         for provider in self.providers:
             provided_classes = {
-                cls
-                for cls in dependencies_set
-                if provider.is_provided(strip_annotated(cls))
+                cls for cls in dependencies_set if provider.is_provided(cls)
             }
 
             # ignore already provided types if provider doesn't need to use them
@@ -315,31 +312,15 @@ def is_class_provided_by_any_provider_fn(
     Return a function of type ``Callable[[Type], bool]`` that return
     True if the given type is provided by any of the registered providers.
 
-    The attribute ``provided_classes`` from each provided is used.
-    This attribute can be a :class:`set` or a ``Callable``. All sets are
-    joined together for efficiency.
+    The ``is_provided`` method from each provider is used.
     """
-    sets_of_types: Set[Callable] = set()  # caching all sets found
-    individual_is_callable: List[Callable[[Callable], bool]] = [
-        sets_of_types.__contains__
-    ]
+    callables: List[Callable[[Callable], bool]] = []
     for provider in providers:
-        provided_classes = provider.provided_classes
+        callables.append(provider.is_provided)
 
-        if isinstance(provided_classes, (Set, frozenset)):
-            sets_of_types.update(provided_classes)
-        elif callable(provider.provided_classes):
-            individual_is_callable.append(provided_classes)
-        else:
-            raise InjectionError(
-                f"Unexpected type '{type(provided_classes)}' for "
-                f"'{type(provider)}.provided_classes'. Expected either 'set' "
-                f"or 'callable'"
-            )
-
-    def is_provided_fn(type: Callable) -> bool:
-        for is_provided in individual_is_callable:
-            if is_provided(strip_annotated(type)):
+    def is_provided_fn(type_: Callable) -> bool:
+        for is_provided in callables:
+            if is_provided(type_):
                 return True
         return False
 

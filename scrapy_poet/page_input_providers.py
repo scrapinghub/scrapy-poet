@@ -11,7 +11,18 @@ for example, from scrapy-playwright or from an API for automatic extraction.
 import asyncio
 from dataclasses import make_dataclass
 from inspect import isclass
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Set, Type, Union
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Dict,
+    FrozenSet,
+    List,
+    Optional,
+    Set,
+    Type,
+    Union,
+)
 from warnings import warn
 from weakref import WeakKeyDictionary
 
@@ -117,7 +128,7 @@ class PageObjectInputProvider:
         Return ``True`` if the given type is provided by this provider based
         on the value of the attribute ``provided_classes``
         """
-        if isinstance(self.provided_classes, Set):
+        if isinstance(self.provided_classes, (Set, FrozenSet)):
             return type_ in self.provided_classes
         elif callable(self.provided_classes):
             return self.provided_classes(type_)
