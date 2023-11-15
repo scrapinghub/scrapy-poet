@@ -16,6 +16,15 @@ else:
     from scrapy.crawler import Crawler
     from scrapy.settings.default_settings import REQUEST_FINGERPRINTER_CLASS
     from scrapy.utils.misc import create_instance, load_object
+    from web_poet import (
+        HttpClient,
+        HttpRequest,
+        HttpRequestBody,
+        HttpRequestHeaders,
+        PageParams,
+        RequestUrl,
+        Stats,
+    )
 
     from scrapy_poet import InjectionMiddleware
     from scrapy_poet.injection import get_callback
@@ -32,6 +41,22 @@ else:
         return f"{cls.__module__}.{cls.__qualname__}"
 
     class ScrapyPoetRequestFingerprinter:
+
+        IGNORED_UNANNOTATED_DEPS = {
+            # These dependencies are tools for page objects that should have no
+            # bearing on the request itself.
+            HttpClient,
+            Stats,
+            # These dependencies do not impact the fingerprint as dependencies,
+            # it is their value on the request itself that should have an
+            # impact on the request fingerprint.
+            HttpRequest,
+            HttpRequestBody,
+            HttpRequestHeaders,
+            PageParams,
+            RequestUrl,
+        }
+
         @classmethod
         def from_crawler(cls, crawler):
             return cls(crawler)
@@ -73,7 +98,13 @@ else:
             root_deps = plan[-1][1]
             if not root_deps:
                 return None
-            return sorted([_serialize_dep(cls) for cls in root_deps.values()])
+            return sorted(
+                [
+                    _serialize_dep(cls)
+                    for cls in root_deps.values()
+                    if cls not in self.IGNORED_UNANNOTATED_DEPS
+                ]
+            )
 
         def fingerprint_deps(self, request: Request) -> Optional[bytes]:
             """Return a fingerprint based on dependencies requested through
@@ -83,7 +114,7 @@ else:
                 return self._callback_cache[callback]
 
             deps = self._get_deps(request)
-            if deps is None:
+            if not deps:
                 return None
 
             deps_key = json.dumps(deps, sort_keys=True).encode()

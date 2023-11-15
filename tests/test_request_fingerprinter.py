@@ -1,4 +1,6 @@
 import sys
+from itertools import combinations
+from typing import Callable, Set
 from unittest.mock import patch
 
 import pytest
@@ -12,10 +14,30 @@ from importlib.metadata import version as package_version
 
 from scrapy import Request, Spider
 from scrapy.http import Response
-from web_poet import HttpResponse, ItemPage, PageParams, RequestUrl, WebPage
+from scrapy.utils.misc import load_object
+from web_poet import (
+    BrowserHtml,
+    BrowserResponse,
+    HttpClient,
+    HttpRequest,
+    HttpRequestBody,
+    HttpRequestHeaders,
+    HttpResponse,
+    HttpResponseBody,
+    HttpResponseHeaders,
+    ItemPage,
+    PageParams,
+    RequestUrl,
+    ResponseUrl,
+    Stats,
+    WebPage,
+)
 
 from scrapy_poet import DummyResponse, ScrapyPoetRequestFingerprinter
 from scrapy_poet._request_fingerprinter import _serialize_dep
+from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
+from scrapy_poet.injection import Injector, is_class_provided_by_any_provider_fn
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils.testing import get_crawler as _get_crawler
 
 ANDI_VERSION = Version(package_version("andi"))
@@ -28,12 +50,48 @@ SETTINGS = {
 }
 
 
-def get_crawler(spider_cls=None, settings=None):
-    settings = SETTINGS if settings is None else settings
+def get_crawler(spider_cls=None, settings=None, ensure_providers_for=None):
+    settings = {**SETTINGS} if settings is None else settings
+
     kwargs = {}
     if spider_cls is not None:
         kwargs["spider_cls"] = spider_cls
+
+    ensure_providers_for = ensure_providers_for or tuple()
+    if ensure_providers_for:
+        dummy_providers = get_dummy_providers(*ensure_providers_for)
+        if dummy_providers:
+            settings["SCRAPY_POET_PROVIDERS"] = {
+                provider: 0 for provider in dummy_providers
+            }
+
     return _get_crawler(settings=settings, **kwargs)
+
+
+dummy_injector = Injector(crawler=get_crawler())
+default_providers = [load_object(cls)(dummy_injector) for cls in DEFAULT_PROVIDERS]
+is_class_provided_by_any_default_provider = is_class_provided_by_any_provider_fn(
+    default_providers
+)
+
+
+def get_dummy_providers(*input_classes):
+    dummy_providers = []
+
+    for input_cls in input_classes:
+        if is_class_provided_by_any_default_provider(input_cls):
+            continue
+
+        class DummyProvider(PageObjectInputProvider):
+            provided_classes = {input_cls}
+
+            def __call__(self, to_provide: Set[Callable]):
+                input_cls = next(iter(self.provided_classes))
+                return [input_cls()]
+
+        dummy_providers.append(DummyProvider)
+
+    return dummy_providers
 
 
 def test_single_callback():
@@ -117,7 +175,8 @@ def test_different_deps():
 
 def test_response_typing():
     """The type of the response parameter is ignored, even when it is
-    DummyResponse."""
+    DummyResponse. It’s the other injected parameters that should alter the
+    fingerprint."""
 
     class TestSpider(Spider):
         name = "test_spider"
@@ -143,40 +202,102 @@ def test_response_typing():
     assert fingerprint1 == fingerprint3
 
 
-def test_responseless_inputs():
-    """Inputs that have no impact on the actual requests sent because they do
-    not require sending a request at all are considered valid, different
-    dependencies for fingerprinting purposes nonetheless."""
+@pytest.mark.parametrize(
+    "input_cls",
+    (
+        HttpClient,
+        HttpRequest,
+        HttpRequestBody,
+        HttpRequestHeaders,
+        PageParams,
+        RequestUrl,
+        Stats,
+    ),
+)
+def test_ignored_unannotated_page_inputs(input_cls):
+    """These web-poet page input classes, unless annotated, cannot have any
+    bearing on the request on their own, so they should not alter the request
+    fingerprint."""
 
     class TestSpider(Spider):
         name = "test_spider"
 
-        async def parse_nothing(self, response: DummyResponse):
+        async def parse_input(self, response, some_input: input_cls):
             pass
 
-        async def parse_page_params(
-            self, response: DummyResponse, page_params: PageParams
-        ):
-            # NOTE: requesting PageParams or not should not affect the request
-            # fingerprinting, setting page_params on the request should.
-            pass
-
-        async def parse_request_url(
-            self, response: DummyResponse, request_url: RequestUrl
-        ):
-            pass
-
-    crawler = get_crawler(spider_cls=TestSpider)
+    crawler = get_crawler(spider_cls=TestSpider, ensure_providers_for=[input_cls])
     fingerprinter = crawler.request_fingerprinter
-    request1 = Request("https://toscrape.com", callback=crawler.spider.parse_nothing)
+    request1 = Request("https://toscrape.com")
     fingerprint1 = fingerprinter.fingerprint(request1)
-    request2 = Request(
-        "https://toscrape.com", callback=crawler.spider.parse_page_params
-    )
+    request2 = Request("https://toscrape.com", callback=crawler.spider.parse_input)
     fingerprint2 = fingerprinter.fingerprint(request2)
-    request3 = Request(
-        "https://toscrape.com", callback=crawler.spider.parse_request_url
+    assert fingerprint1 == fingerprint2
+
+
+# Inputs that affect the fingerprint.
+#
+# We do not try to be smart. e.g. although ResponseUrl should always be
+# available, that could technically not be the case given a custom user
+# provider.
+FINGERPRINTING_INPUTS = (
+    BrowserHtml,
+    BrowserResponse,
+    HttpResponse,
+    HttpResponseBody,
+    HttpResponseHeaders,
+    ResponseUrl,
+)
+
+
+@pytest.mark.parametrize("input_cls", FINGERPRINTING_INPUTS)
+def test_fingerprinting_unannotated_page_inputs(input_cls):
+    """Inputs that may have an impact on the actual request sent even without
+    annotations."""
+
+    class TestSpider(Spider):
+        name = "test_spider"
+
+        async def parse_input(self, response, some_input: input_cls):
+            pass
+
+    crawler = get_crawler(spider_cls=TestSpider, ensure_providers_for=[input_cls])
+    fingerprinter = crawler.request_fingerprinter
+    request1 = Request("https://toscrape.com")
+    fingerprint1 = fingerprinter.fingerprint(request1)
+    request2 = Request("https://toscrape.com", callback=crawler.spider.parse_input)
+    fingerprint2 = fingerprinter.fingerprint(request2)
+    assert fingerprint1 != fingerprint2
+
+
+@pytest.mark.parametrize(
+    "input_cls_a, input_cls_b",
+    (tuple(combination) for combination in combinations(FINGERPRINTING_INPUTS, 2)),
+)
+def test_fingerprinting_unannotated_page_input_combinations(input_cls_a, input_cls_b):
+    """Make sure that a combination of known inputs that alter the request
+    fingerprint does not result in the same fingerprint."""
+
+    class TestSpider(Spider):
+        name = "test_spider"
+
+        async def parse_a(self, response, input_a: input_cls_a):
+            pass
+
+        async def parse_b(self, response, input_b: input_cls_b):
+            pass
+
+        async def parse_all(self, response, input_a: input_cls_a, input_b: input_cls_b):
+            pass
+
+    crawler = get_crawler(
+        spider_cls=TestSpider, ensure_providers_for=[input_cls_a, input_cls_b]
     )
+    fingerprinter = crawler.request_fingerprinter
+    request1 = Request("https://toscrape.com", callback=crawler.spider.parse_a)
+    fingerprint1 = fingerprinter.fingerprint(request1)
+    request2 = Request("https://toscrape.com", callback=crawler.spider.parse_b)
+    fingerprint2 = fingerprinter.fingerprint(request2)
+    request3 = Request("https://toscrape.com", callback=crawler.spider.parse_all)
     fingerprint3 = fingerprinter.fingerprint(request3)
     assert fingerprint1 != fingerprint2
     assert fingerprint1 != fingerprint3
@@ -184,9 +305,15 @@ def test_responseless_inputs():
 
 
 def test_dep_resolution():
-    """We do not resolve dependencies, so it is possible for 2 callbacks that
-    when resolved have identical dependencies to get a different
-    fingerprint."""
+    """Currently we do not resolve dependencies, so it is possible to get a
+    different fingerprint for callbacks that resolve to identical
+    dependencies.
+
+    The reason for not resolving dependencies is that it could be hard where
+    items are involved. This might be addressed in the future, in which case
+    we should consider to fingerprint based on leaf dependencies (those with a
+    provider) and not on the root dependencies present in the callback.
+    """
 
     class TestSpider(Spider):
         name = "test_spider"
