@@ -9,6 +9,7 @@ else:
     import hashlib
     import json
     from functools import cached_property
+    from logging import getLogger
     from typing import Callable, Dict, List, Optional, get_args, get_origin
     from weakref import WeakKeyDictionary
 
@@ -28,6 +29,8 @@ else:
 
     from scrapy_poet import InjectionMiddleware
     from scrapy_poet.injection import get_callback
+
+    logger = getLogger(__name__)
 
     def _serialize_dep(cls):
         try:
@@ -78,6 +81,7 @@ else:
                 WeakKeyDictionary()
             )
             self._crawler: Crawler = crawler
+            self._saw_unserializable_page_params = False
 
         @cached_property
         def _injector(self):
@@ -106,9 +110,10 @@ else:
                 ]
             )
 
-        def fingerprint_deps(self, request: Request) -> Optional[bytes]:
-            """Return a fingerprint based on dependencies requested through
-            scrapy-poet injection, or None if no injection was requested."""
+        def get_deps_key(self, request: Request) -> Optional[bytes]:
+            """Return a JSON array as bytes that uniquely identifies the
+            dependencies requested through scrapy-poet injection that could
+            impact the request, or None if there are no such dependencies."""
             callback = get_callback(request, self._crawler.spider)
             if callback in self._callback_cache:
                 return self._callback_cache[callback]
@@ -118,16 +123,49 @@ else:
                 return None
 
             deps_key = json.dumps(deps, sort_keys=True).encode()
-            self._callback_cache[callback] = hashlib.sha1(deps_key).digest()
+            self._callback_cache[callback] = deps_key
             return self._callback_cache[callback]
+
+        def serialize_page_params(self, request: Request) -> Optional[bytes]:
+            """Returns a JSON object as bytes that represents the page params,
+            or None if there are no page params or they are not
+            JSON-serializable."""
+            page_params = request.meta.get("page_params", None)
+            if not page_params:
+                return None
+
+            try:
+                return json.dumps(page_params, sort_keys=True).encode()
+            except TypeError:
+                if not self._saw_unserializable_page_params:
+                    self._saw_unserializable_page_params = True
+                    logger.warning(
+                        f"Cannot serialize page params {page_params!r} of "
+                        f"request {request} as JSON. This can be an issue if "
+                        f"you have requests that are identical except for "
+                        f"their page params, because unserializable page "
+                        f"params are treated the same as missing or empty "
+                        f"page params for purposes of request fingerprinting "
+                        f"(see "
+                        f"https://docs.scrapy.org/en/latest/topics/request-response.html#request-fingerprints). "
+                        f"This will be the only warning about this issue, "
+                        f"other requests might be also affected."
+                    )
+                return None
 
         def fingerprint(self, request: Request) -> bytes:
             if request in self._request_cache:
                 return self._request_cache[request]
+
             fingerprint = self._base_request_fingerprinter.fingerprint(request)
-            deps_fingerprint = self.fingerprint_deps(request)
-            if deps_fingerprint is None:
+            deps_key = self.get_deps_key(request)
+            serialized_page_params = self.serialize_page_params(request)
+            if deps_key is None and serialized_page_params is None:
                 return fingerprint
-            fingerprints = fingerprint + deps_fingerprint
-            self._request_cache[request] = hashlib.sha1(fingerprints).digest()
+            if deps_key is not None:
+                fingerprint += deps_key
+            if serialized_page_params is not None:
+                fingerprint += serialized_page_params
+
+            self._request_cache[request] = hashlib.sha1(fingerprint).digest()
             return self._request_cache[request]

@@ -333,6 +333,38 @@ def test_dep_resolution():
     assert fingerprint1 != fingerprint2
 
 
+def test_page_params(caplog):
+    class TestSpider(Spider):
+        name = "test_spider"
+
+    Unserializable = object()
+
+    crawler = get_crawler(spider_cls=TestSpider)
+    fingerprinter = crawler.request_fingerprinter
+
+    request1 = Request("https://toscrape.com")
+    fingerprint1 = fingerprinter.fingerprint(request1)
+
+    request2 = Request("https://toscrape.com", meta={"page_params": {"a": "1"}})
+    fingerprint2 = fingerprinter.fingerprint(request2)
+
+    request3 = Request("https://toscrape.com", meta={"page_params": {"a": "2"}})
+    fingerprint3 = fingerprinter.fingerprint(request3)
+
+    request4 = Request(
+        "https://toscrape.com", meta={"page_params": {"a": Unserializable}}
+    )
+    assert "Cannot serialize page params" not in caplog.text
+    caplog.clear()
+    fingerprint4 = fingerprinter.fingerprint(request4)
+    assert "Cannot serialize page params" in caplog.text
+
+    assert fingerprint1 != fingerprint2
+    assert fingerprint1 != fingerprint3
+    assert fingerprint2 != fingerprint3
+    assert fingerprint1 == fingerprint4
+
+
 @pytest.mark.skipif(
     sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
 )
