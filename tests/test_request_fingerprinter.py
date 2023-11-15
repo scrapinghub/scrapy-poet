@@ -334,12 +334,9 @@ def test_dep_resolution():
 
 
 def test_page_params(caplog):
-    class TestSpider(Spider):
-        name = "test_spider"
-
     Unserializable = object()
 
-    crawler = get_crawler(spider_cls=TestSpider)
+    crawler = get_crawler()
     fingerprinter = crawler.request_fingerprinter
 
     request1 = Request("https://toscrape.com")
@@ -352,17 +349,44 @@ def test_page_params(caplog):
     fingerprint3 = fingerprinter.fingerprint(request3)
 
     request4 = Request(
+        "https://toscrape.com", meta={"page_params": {"a": "2"}, "foo": "bar"}
+    )
+    fingerprint4 = fingerprinter.fingerprint(request4)
+
+    request5 = Request(
         "https://toscrape.com", meta={"page_params": {"a": Unserializable}}
     )
     assert "Cannot serialize page params" not in caplog.text
     caplog.clear()
-    fingerprint4 = fingerprinter.fingerprint(request4)
+    fingerprint5 = fingerprinter.fingerprint(request5)
     assert "Cannot serialize page params" in caplog.text
 
     assert fingerprint1 != fingerprint2
     assert fingerprint1 != fingerprint3
     assert fingerprint2 != fingerprint3
-    assert fingerprint1 == fingerprint4
+    assert fingerprint3 == fingerprint4
+    assert fingerprint1 == fingerprint5
+
+
+@pytest.mark.parametrize(
+    "meta",
+    (
+        {},
+        {"page_params": None},
+        {"page_params": {}},
+        {"foo": "bar"},
+        {"foo": "bar", "page_params": None},
+        {"foo": "bar", "page_params": {}},
+    ),
+)
+def test_meta(meta):
+    crawler = get_crawler()
+    fingerprinter = crawler.request_fingerprinter
+    request1 = Request("https://toscrape.com")
+    fingerprint1 = fingerprinter.fingerprint(request1)
+    request2 = Request("https://toscrape.com", meta=meta)
+    fingerprint2 = fingerprinter.fingerprint(request2)
+    assert fingerprint1 == fingerprint2
 
 
 @pytest.mark.skipif(
