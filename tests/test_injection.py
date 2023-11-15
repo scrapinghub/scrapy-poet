@@ -1,6 +1,6 @@
 import shutil
 import sys
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Generator
 
 import attr
 import parsel
@@ -289,7 +289,7 @@ class TestInjector:
         callback: Callable,
         expected_instances: Dict[type, Any],
         expected_kwargs: Dict[str, Any],
-    ) -> None:
+    ) -> Generator[Any, Any, None]:
         response = get_response_for_testing(callback)
         request = response.request
 
