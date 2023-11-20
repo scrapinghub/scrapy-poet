@@ -157,7 +157,7 @@ class HttpRequestProvider(PageObjectInputProvider):
     def __call__(self, to_provide: Set[Callable], request: Request):
         """Builds a :class:`web_poet.HttpRequest
         <web_poet.page_inputs.http.HttpRequest>` instance using a
-        :class:`scrapy.http.Response` instance.
+        :class:`scrapy.http.Request` instance.
         """
         return [
             HttpRequest(
