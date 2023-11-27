@@ -110,6 +110,9 @@ class SaveFixtureCommand(ScrapyCommand):
             raise UsageError(f"Error: {type_name} is not a descendant of ItemPage")
 
         self.settings["DOWNLOADER_MIDDLEWARES"][
+            "scrapy_poet.InjectionMiddleware"
+        ] = None
+        self.settings["DOWNLOADER_MIDDLEWARES"][
             "scrapy_poet.downloadermiddlewares.InjectionMiddleware"
         ] = None
         self.settings["DOWNLOADER_MIDDLEWARES"][InjectionMiddleware] = None
