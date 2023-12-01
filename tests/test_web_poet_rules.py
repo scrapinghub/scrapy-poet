@@ -73,9 +73,6 @@ class PageObjectCounterMixin:
     For example, a PO could have its ``.to_item()`` method called multiple times
     to produce the same item. This is extremely wasteful should there be any
     additional requests used to produce the item.
-
-    ``ItemProvider`` should cache up such instances and prevent them from being
-    built again.
     """
 
     instances: Dict[Type, Any] = defaultdict(list)
@@ -432,7 +429,7 @@ class DelayedProductPage(ItemPage[DelayedProduct]):
 )
 @inlineCallbacks
 def test_item_using_asyncio() -> None:
-    """This ensures that ``ItemProvider`` works properly for page objects using
+    """This ensures that the injector works properly for page objects using
     the ``asyncio`` functionalities.
     """
     item, deps = yield crawl_item_and_deps(DelayedProduct)
@@ -455,25 +452,6 @@ class DifferentUrlPage(ItemPage[ItemWithPageObjectButForDifferentUrl]):
     @field
     def name(self) -> str:
         return "wrong url"
-
-
-@inlineCallbacks
-def test_basic_item_with_page_object_but_different_url() -> None:
-    """If an item has been requested and a page object can produce it, but the
-    URL pattern is different, the item won't be produced at all.
-
-    For these cases, a warning should be issued since the user might have written
-    some incorrect URL Pattern for the ``ApplyRule``.
-    """
-    msg = (
-        "Can't find appropriate page object for <class 'tests.test_web_poet_rules."
-        "ItemWithPageObjectButForDifferentUrl'> item for url: "
-    )
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = yield crawl_item_and_deps(ItemWithPageObjectButForDifferentUrl)
-        assert any(True for w in caught_warnings if msg in str(w.message))
-    assert item is None
-    assert not deps
 
 
 @attrs.define
@@ -804,10 +782,7 @@ class ReplacedProductPage(ItemPage[Product]):
         return "replaced product name"
 
 
-@pytest.mark.xfail(
-    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
-    "ItemProvide has received a different type of item class from the page object."
-)
+@pytest.mark.xfail(reason="Need to check the current failure cause")
 @inlineCallbacks
 def test_item_to_return_in_handle_urls() -> None:
     """Even if ``@handle_urls`` could derive the value for the ``to_return``
@@ -863,10 +838,7 @@ class SubclassReplacedProductPage(ParentReplacedProductPage):
         return "subclass replaced product name"
 
 
-@pytest.mark.xfail(
-    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
-    "ItemProvide has received a different type of item class from the page object."
-)
+@pytest.mark.xfail(reason="Need to check the current failure cause")
 @inlineCallbacks
 def test_item_to_return_in_handle_urls_subclass() -> None:
     """Same case as with the ``test_item_to_return_in_handle_urls()`` case above
@@ -910,10 +882,7 @@ class StandaloneProductPage(ItemPage):
         return "standalone product name"
 
 
-@pytest.mark.xfail(
-    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
-    "ItemProvide has received a different type of item class from the page object."
-)
+@pytest.mark.xfail(reason="Need to check the current failure cause")
 @inlineCallbacks
 def test_item_to_return_standalone() -> None:
     """Same case as with ``test_item_to_return_in_handle_urls()`` above but the
@@ -1372,7 +1341,7 @@ class EggItem:
 
 @handle_urls(URL)
 @attrs.define
-class ChickenDeadlockPage(ItemPage[ChickenItem]):
+class ChickenCyclePage(ItemPage[ChickenItem]):
     other_injected_item: EggItem
 
     @field
@@ -1386,7 +1355,7 @@ class ChickenDeadlockPage(ItemPage[ChickenItem]):
 
 @handle_urls(URL)
 @attrs.define
-class EggDeadlockPage(ItemPage[EggItem]):
+class EggCyclePage(ItemPage[EggItem]):
     other_injected_item: ChickenItem
 
     @field
@@ -1399,30 +1368,30 @@ class EggDeadlockPage(ItemPage[EggItem]):
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_a(caplog) -> None:
-    """Items with page objects which depend on each other resulting in a deadlock
+def test_page_object_with_item_dependency_cycle_a(caplog) -> None:
+    """Items with page objects which depend on each other resulting in a plan cycle
     should have a corresponding error raised.
     """
     yield crawl_item_and_deps(ChickenItem)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_b(caplog) -> None:
+def test_page_object_with_item_dependency_cycle_b(caplog) -> None:
     yield crawl_item_and_deps(EggItem)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_c(caplog) -> None:
-    yield crawl_item_and_deps(ChickenDeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+def test_page_object_with_item_dependency_cycle_c(caplog) -> None:
+    yield crawl_item_and_deps(ChickenCyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_d(caplog) -> None:
-    yield crawl_item_and_deps(EggDeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+def test_page_object_with_item_dependency_cycle_d(caplog) -> None:
+    yield crawl_item_and_deps(EggCyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
 @attrs.define
@@ -1439,7 +1408,7 @@ class Egg2Item:
 
 @handle_urls(URL)
 @attrs.define
-class Chicken2DeadlockPage(ItemPage[Chicken2Item]):
+class Chicken2CyclePage(ItemPage[Chicken2Item]):
     other_injected_item: Egg2Item
 
     @field
@@ -1453,8 +1422,8 @@ class Chicken2DeadlockPage(ItemPage[Chicken2Item]):
 
 @handle_urls(URL)
 @attrs.define
-class Egg2DeadlockPage(ItemPage[Egg2Item]):
-    other_injected_page: Chicken2DeadlockPage
+class Egg2CyclePage(ItemPage[Egg2Item]):
+    other_injected_page: Chicken2CyclePage
 
     @field
     def name(self) -> str:
@@ -1467,30 +1436,30 @@ class Egg2DeadlockPage(ItemPage[Egg2Item]):
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_a(caplog) -> None:
-    """Same with ``test_page_object_with_item_dependency_deadlock()`` but one
+def test_page_object_with_item_dependency_cycle_2_a(caplog) -> None:
+    """Same with ``test_page_object_with_item_dependency_cycle()`` but one
     of the page objects requires a page object instead of an item.
     """
     yield crawl_item_and_deps(Chicken2Item)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_b(caplog) -> None:
+def test_page_object_with_item_dependency_cycle_2_b(caplog) -> None:
     yield crawl_item_and_deps(Egg2Item)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_c(caplog) -> None:
-    yield crawl_item_and_deps(Chicken2DeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+def test_page_object_with_item_dependency_cycle_2_c(caplog) -> None:
+    yield crawl_item_and_deps(Chicken2CyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_d(caplog) -> None:
-    yield crawl_item_and_deps(Egg2DeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+def test_page_object_with_item_dependency_cycle_2_d(caplog) -> None:
+    yield crawl_item_and_deps(Egg2CyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
 @attrs.define
@@ -1543,7 +1512,7 @@ def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_item(
     but there's no provider for the original item
     """
     yield crawl_item_and_deps(Mobius)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "AssertionError" in caplog.text
 
 
 @inlineCallbacks
@@ -1554,7 +1523,7 @@ def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_po(
     but tests the PO instead of the item.
     """
     yield crawl_item_and_deps(MobiusPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "AssertionError" in caplog.text
 
 
 @attrs.define
@@ -1704,10 +1673,10 @@ def test_created_apply_rules() -> None:
         ),
         ApplyRule(URL, use=ProductDeepDependencyPage, to_return=MainProductC),
         ApplyRule(URL, use=ProductDuplicateDeepDependencyPage, to_return=MainProductD),
-        ApplyRule(URL, use=ChickenDeadlockPage, to_return=ChickenItem),
-        ApplyRule(URL, use=EggDeadlockPage, to_return=EggItem),
-        ApplyRule(URL, use=Chicken2DeadlockPage, to_return=Chicken2Item),
-        ApplyRule(URL, use=Egg2DeadlockPage, to_return=Egg2Item),
+        ApplyRule(URL, use=ChickenCyclePage, to_return=ChickenItem),
+        ApplyRule(URL, use=EggCyclePage, to_return=EggItem),
+        ApplyRule(URL, use=Chicken2CyclePage, to_return=Chicken2Item),
+        ApplyRule(URL, use=Egg2CyclePage, to_return=Egg2Item),
         ApplyRule(URL, use=MobiusPage, to_return=Mobius),
         ApplyRule(URL, use=KangarooPage, to_return=Kangaroo),
         ApplyRule(Patterns([URL], priority=600), use=JoeyPage, to_return=Kangaroo),

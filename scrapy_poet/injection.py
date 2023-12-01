@@ -3,7 +3,7 @@ import logging
 import os
 import pprint
 import warnings
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set, cast
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Type, cast
 
 import andi
 from andi.typeutils import issubclass_safe
@@ -13,12 +13,12 @@ from scrapy.http import Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import MemoryStatsCollector, StatsCollector
 from scrapy.utils.conf import build_component_list
-from scrapy.utils.defer import maybeDeferred_coro
+from scrapy.utils.defer import deferred_from_coro, maybeDeferred_coro
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import RulesRegistry
 from web_poet.page_inputs.http import request_fingerprint
-from web_poet.pages import is_injectable
+from web_poet.pages import ItemPage, is_injectable
 from web_poet.serialization.api import deserialize_leaf, load_class, serialize
 from web_poet.utils import get_fq_class_name
 
@@ -148,7 +148,36 @@ class Injector:
             # Callable[[Callable], Optional[Callable]] but the registry
             # returns the typing for ``dict.get()`` method.
             overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
+            custom_builder_fn=self._get_item_builder(request),
         )
+
+    def _get_item_builder(
+        self, request: Request
+    ) -> Callable[[Callable], Optional[Callable]]:
+        """Return a function suitable for passing as ``custom_builder_fn`` to ``andi.plan``.
+
+        The returned function can map an item to a factory for that item based
+        on the registry.
+        """
+        factory_cache: Dict[Callable, Optional[Callable]] = {}
+
+        def mapping_fn(item_cls: Callable) -> Optional[Callable]:
+            if item_cls in factory_cache:
+                return factory_cache.get(item_cls)
+            page_object_cls: Optional[Type[ItemPage]] = self.registry.page_cls_for_item(
+                request.url, cast(type, item_cls)
+            )
+            if not page_object_cls:
+                factory_cache[item_cls] = None
+                return None
+
+            async def item_factory(page: page_object_cls) -> item_cls:  # type: ignore[valid-type]
+                return await page.to_item()  # type: ignore[attr-defined]
+
+            factory_cache[item_cls] = item_factory
+            return item_factory
+
+        return mapping_fn
 
     @inlineCallbacks
     def build_instances(
@@ -170,8 +199,15 @@ class Injector:
         # following the andi plan.
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances.keys():
-                instances[cls] = cls(**kwargs_spec.kwargs(instances))
-                cls_fqn = get_fq_class_name(cast(type, cls))
+                result_cls: type = cast(type, cls)
+                if isinstance(cls, andi.CustomBuilder):
+                    result_cls = cls.result_class_or_fn
+                    instances[result_cls] = yield deferred_from_coro(
+                        cls.factory(**kwargs_spec.kwargs(instances))
+                    )
+                else:
+                    instances[result_cls] = cls(**kwargs_spec.kwargs(instances))
+                cls_fqn = get_fq_class_name(result_cls)
                 self.crawler.stats.inc_value(f"poet/injector/{cls_fqn}")
 
         return instances
