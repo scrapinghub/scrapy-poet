@@ -168,6 +168,7 @@ class Injector:
         )
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
+        assert self.crawler.stats
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances.keys():
                 instances[cls] = cls(**kwargs_spec.kwargs(instances))
@@ -185,6 +186,7 @@ class Injector:
         prev_instances: Optional[Dict] = None,
     ):
         """Build dependencies handled by registered providers"""
+        assert self.crawler.stats
         instances: Dict[Callable, Any] = prev_instances or {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response
@@ -221,7 +223,7 @@ class Injector:
                     )
                 # This one should take `web_poet.HttpRequest` but `scrapy.Request` will work as well
                 # TODO: add `scrapy.Request` type in request_fingerprint() annotations
-                fingerprint = f"{provider.name}_{request_fingerprint(request)}"
+                fingerprint = f"{provider.name}_{request_fingerprint(request)}"  # type: ignore[arg-type]
                 # Return the data if it is already in the cache
                 try:
                     data = self.cache[fingerprint].items()
