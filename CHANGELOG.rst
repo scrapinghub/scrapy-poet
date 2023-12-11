@@ -9,7 +9,10 @@ Changelog
 
 * Add :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`.
 
-* More robust disabling of :class:`~scrapy_poet.InjectionMiddleware` in the
+* Enable :class:`~scrapy_poet.page_input_providers.StatsProvider` by default.
+
+* More robust disabling of
+  :class:`~scrapy_poet.downloadermiddlewares.InjectionMiddleware` in the
   ``scrapy savefixture`` command.
 
 * Official support for Python 3.12.
