@@ -7,9 +7,12 @@ Changelog
 
 * Now requires ``web-poet >= 0.15.1``.
 
-* Add :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`.
+* :class:`~web_poet.page_inputs.http.HttpRequest` dependencies are now
+  supported, via :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`
+  (enabled by default).
 
-* Enable :class:`~scrapy_poet.page_input_providers.StatsProvider` by default.
+* Enable :class:`~scrapy_poet.page_input_providers.StatsProvider`, which
+  provides :class:`~web_poet.page_inputs.stats.Stats` dependencies, by default.
 
 * More robust disabling of
   :class:`~scrapy_poet.downloadermiddlewares.InjectionMiddleware` in the
