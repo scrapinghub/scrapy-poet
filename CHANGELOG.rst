@@ -2,6 +2,18 @@
 Changelog
 =========
 
+0.17.0 (YYYY-MM-DD)
+-------------------
+
+* Now requires ``web-poet >= 0.15.1``.
+
+* Add :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`.
+
+* More robust disabling of :class:`~scrapy_poet.InjectionMiddleware` in the
+  ``scrapy savefixture`` command.
+
+* Official support for Python 3.12.
+
 0.16.1 (2023-11-02)
 -------------------
 
