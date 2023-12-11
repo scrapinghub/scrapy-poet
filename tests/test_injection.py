@@ -493,7 +493,7 @@ def test_load_provider_classes():
     injector = get_injector_for_testing(
         {provider_as_string: 2, HttpResponseProvider: 1}
     )
-    assert all(type(prov) == HttpResponseProvider for prov in injector.providers)
+    assert all(type(prov) is HttpResponseProvider for prov in injector.providers)
     assert len(injector.providers) == 2
 
 

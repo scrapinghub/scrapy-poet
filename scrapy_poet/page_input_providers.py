@@ -16,6 +16,8 @@ from scrapy.crawler import Crawler
 from scrapy.http import Response
 from web_poet import (
     HttpClient,
+    HttpRequest,
+    HttpRequestHeaders,
     HttpResponse,
     HttpResponseHeaders,
     PageParams,
@@ -132,6 +134,29 @@ class PageObjectInputProvider:
     #
     # The technical reason why this method was not declared abstract is that
     # injection breaks the method overriding rules and mypy then complains.
+
+
+class HttpRequestProvider(PageObjectInputProvider):
+    """This class provides :class:`web_poet.HttpRequest
+    <web_poet.page_inputs.http.HttpRequest>` instances.
+    """
+
+    provided_classes = {HttpRequest}
+    name = "request_data"
+
+    def __call__(self, to_provide: Set[Callable], request: Request):
+        """Builds a :class:`web_poet.HttpRequest
+        <web_poet.page_inputs.http.HttpRequest>` instance using a
+        :class:`scrapy.http.Request` instance.
+        """
+        return [
+            HttpRequest(
+                url=RequestUrl(request.url),
+                method=request.method,
+                headers=HttpRequestHeaders.from_bytes_dict(request.headers),
+                body=request.body,
+            )
+        ]
 
 
 class HttpResponseProvider(PageObjectInputProvider):

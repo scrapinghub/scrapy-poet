@@ -9,13 +9,21 @@ from scrapy import Request, Spider
 from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
 from twisted.python.failure import Failure
-from web_poet import HttpClient, HttpResponse
+from web_poet import (
+    HttpClient,
+    HttpRequest,
+    HttpRequestBody,
+    HttpRequestHeaders,
+    HttpResponse,
+    RequestUrl,
+)
 from web_poet.serialization import SerializedLeafData, register_serialization
 
 from scrapy_poet import HttpResponseProvider
 from scrapy_poet.injection import Injector
 from scrapy_poet.page_input_providers import (
     HttpClientProvider,
+    HttpRequestProvider,
     ItemProvider,
     PageObjectInputProvider,
     PageParamsProvider,
@@ -203,6 +211,37 @@ async def test_http_client_provider(settings):
         assert isinstance(results[0], HttpClient)
 
     assert results[0]._request_downloader == mock_factory.return_value
+
+
+@ensureDeferred
+async def test_http_request_provider(settings):
+    crawler = get_crawler(Spider, settings)
+    injector = Injector(crawler)
+    provider = HttpRequestProvider(injector)
+
+    empty_scrapy_request = scrapy.http.Request("https://example.com")
+    (empty_request,) = provider(set(), empty_scrapy_request)
+    assert isinstance(empty_request, HttpRequest)
+    assert isinstance(empty_request.url, RequestUrl)
+    assert str(empty_request.url) == "https://example.com"
+    assert empty_request.method == "GET"
+    assert isinstance(empty_request.headers, HttpRequestHeaders)
+    assert empty_request.headers == HttpRequestHeaders()
+    assert isinstance(empty_request.body, HttpRequestBody)
+    assert empty_request.body == HttpRequestBody()
+
+    full_scrapy_request = scrapy.http.Request(
+        "https://example.com", method="POST", body=b"a", headers={"a": "b"}
+    )
+    (full_request,) = provider(set(), full_scrapy_request)
+    assert isinstance(full_request, HttpRequest)
+    assert isinstance(full_request.url, RequestUrl)
+    assert str(full_request.url) == "https://example.com"
+    assert full_request.method == "POST"
+    assert isinstance(full_request.headers, HttpRequestHeaders)
+    assert full_request.headers == HttpRequestHeaders([("a", "b")])
+    assert isinstance(full_request.body, HttpRequestBody)
+    assert full_request.body == HttpRequestBody(b"a")
 
 
 def test_page_params_provider(settings):
