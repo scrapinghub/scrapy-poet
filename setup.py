@@ -21,7 +21,7 @@ setup(
     package_data={"scrapy_poet": ["VERSION"]},
     python_requires=">=3.8",
     install_requires=[
-        "andi >= 0.4.1",
+        "andi >= 0.5.0",
         "attrs >= 21.3.0",
         "parsel >= 1.5.0",
         "scrapy >= 2.6.0",
