@@ -2,6 +2,14 @@
 Changelog
 =========
 
+0.18.0 (YYYY-MM-DD)
+-------------------
+
+* Now requires ``andi >= 0.5.0``.
+
+* Add support for dependency metadata via ``typing.Annotated`` (requires
+  Python 3.9+).
+
 0.17.0 (2023-12-11)
 -------------------
 
