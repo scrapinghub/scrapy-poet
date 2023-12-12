@@ -8,7 +8,7 @@ is in charge of providing the response HTML from Scrapy. You could also implemen
 different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from an API for automatic extraction.
 """
-from typing import Any, Callable, ClassVar, Dict, List, Set, Union
+from typing import Any, Callable, ClassVar, Dict, FrozenSet, List, Set, Union
 from warnings import warn
 
 from scrapy import Request
@@ -109,7 +109,7 @@ class PageObjectInputProvider:
         Return ``True`` if the given type is provided by this provider based
         on the value of the attribute ``provided_classes``
         """
-        if isinstance(self.provided_classes, Set):
+        if isinstance(self.provided_classes, (Set, FrozenSet)):
             return type_ in self.provided_classes
         elif callable(self.provided_classes):
             return self.provided_classes(type_)

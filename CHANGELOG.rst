@@ -2,6 +2,32 @@
 Changelog
 =========
 
+0.18.0 (2023-12-12)
+-------------------
+
+* Now requires ``andi >= 0.5.0``.
+
+* Add support for dependency metadata via ``typing.Annotated`` (requires
+  Python 3.9+).
+
+0.17.0 (2023-12-11)
+-------------------
+
+* Now requires ``web-poet >= 0.15.1``.
+
+* :class:`~web_poet.page_inputs.http.HttpRequest` dependencies are now
+  supported, via :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`
+  (enabled by default).
+
+* Enable :class:`~scrapy_poet.page_input_providers.StatsProvider`, which
+  provides :class:`~web_poet.page_inputs.stats.Stats` dependencies, by default.
+
+* More robust disabling of
+  :class:`~scrapy_poet.downloadermiddlewares.InjectionMiddleware` in the
+  ``scrapy savefixture`` command.
+
+* Official support for Python 3.12.
+
 0.16.1 (2023-11-02)
 -------------------
 

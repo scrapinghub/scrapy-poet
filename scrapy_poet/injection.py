@@ -22,10 +22,9 @@ from web_poet.pages import ItemPage, is_injectable
 from web_poet.serialization.api import deserialize_leaf, load_class, serialize
 from web_poet.utils import get_fq_class_name
 
-from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
+from scrapy_poet.api import _CALLBACK_FOR_MARKER, AnnotatedResult, DummyResponse
 from scrapy_poet.cache import SerializedDataCache
 from scrapy_poet.injection_errors import (
-    InjectionError,
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
@@ -297,13 +296,20 @@ class Injector:
                         self.crawler.stats.inc_value("poet/cache/firsthand")
                     raise
 
-            objs_by_type: Dict[Callable, Any] = {type(obj): obj for obj in objs}
+            objs_by_type: Dict[Callable, Any] = {}
+            for obj in objs:
+                if isinstance(obj, AnnotatedResult):
+                    cls = obj.get_annotated_cls()
+                    obj = obj.result
+                else:
+                    cls = type(obj)
+                objs_by_type[cls] = obj
             extra_classes = objs_by_type.keys() - provided_classes
             if extra_classes:
                 raise UndeclaredProvidedTypeError(
                     f"{provider} has returned instances of types {extra_classes} "
                     "that are not among the declared supported classes in the "
-                    f"provider: {provider.provided_classes}"
+                    f"provider: {provided_classes}"
                 )
             instances.update(objs_by_type)
 
@@ -342,31 +348,15 @@ def is_class_provided_by_any_provider_fn(
     Return a function of type ``Callable[[Type], bool]`` that return
     True if the given type is provided by any of the registered providers.
 
-    The attribute ``provided_classes`` from each provided is used.
-    This attribute can be a :class:`set` or a ``Callable``. All sets are
-    joined together for efficiency.
+    The ``is_provided`` method from each provider is used.
     """
-    sets_of_types: Set[Callable] = set()  # caching all sets found
-    individual_is_callable: List[Callable[[Callable], bool]] = [
-        sets_of_types.__contains__
-    ]
+    callables: List[Callable[[Callable], bool]] = []
     for provider in providers:
-        provided_classes = provider.provided_classes
+        callables.append(provider.is_provided)
 
-        if isinstance(provided_classes, (Set, frozenset)):
-            sets_of_types.update(provided_classes)
-        elif callable(provider.provided_classes):
-            individual_is_callable.append(provided_classes)
-        else:
-            raise InjectionError(
-                f"Unexpected type '{type(provided_classes)}' for "
-                f"'{type(provider)}.provided_classes'. Expected either 'set' "
-                f"or 'callable'"
-            )
-
-    def is_provided_fn(type: Callable) -> bool:
-        for is_provided in individual_is_callable:
-            if is_provided(type):
+    def is_provided_fn(type_: Callable) -> bool:
+        for is_provided in callables:
+            if is_provided(type_):
                 return True
         return False
 

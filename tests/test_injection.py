@@ -1,8 +1,11 @@
 import shutil
+import sys
+from typing import Any, Callable, Dict, Generator
 
 import attr
 import parsel
 import pytest
+from andi.typeutils import strip_annotated
 from pytest_twisted import inlineCallbacks
 from scrapy import Request
 from scrapy.http import Response
@@ -14,6 +17,8 @@ from web_poet.rules import ApplyRule
 
 from scrapy_poet import DummyResponse, HttpResponseProvider, PageObjectInputProvider
 from scrapy_poet.injection import (
+    AnnotatedResult,
+    Injector,
     check_all_providers_are_callable,
     get_injector_for_testing,
     get_response_for_testing,
@@ -21,6 +26,7 @@ from scrapy_poet.injection import (
 )
 from scrapy_poet.injection_errors import (
     InjectionError,
+    MalformedProvidedClassesError,
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
@@ -36,8 +42,17 @@ def get_provider(classes, content=None):
         def __init__(self, crawler):
             self.crawler = crawler
 
+        def is_provided(self, type_: Callable) -> bool:
+            return super().is_provided(strip_annotated(type_))
+
         def __call__(self, to_provide):
-            return [cls(content) if content else cls() for cls in classes]
+            result = []
+            for cls in to_provide:
+                obj = cls(content) if content else cls()
+                if metadata := getattr(cls, "__metadata__", None):
+                    obj = AnnotatedResult(obj, metadata)
+                result.append(obj)
+            return result
 
     return Provider
 
@@ -266,6 +281,187 @@ class TestInjector:
             "c": WrapCls,
             "d": ClsNoProviderRequired,
         }
+
+    @staticmethod
+    @inlineCallbacks
+    def _assert_instances(
+        injector: Injector,
+        callback: Callable,
+        expected_instances: Dict[type, Any],
+        expected_kwargs: Dict[str, Any],
+    ) -> Generator[Any, Any, None]:
+        response = get_response_for_testing(callback)
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances(request, response, plan)
+        assert instances == expected_instances
+
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        assert kwargs == expected_kwargs
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    def test_annotated_provide(self, injector):
+        from typing import Annotated
+
+        assert injector.is_class_provided_by_any_provider(Annotated[Cls1, 42])
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_annotated_build(self, injector):
+        from typing import Annotated
+
+        def callback(
+            a: Cls1,
+            b: Annotated[Cls2, 42],
+        ):
+            pass
+
+        expected_instances = {
+            Cls1: Cls1(),
+            Annotated[Cls2, 42]: Cls2(),
+        }
+        expected_kwargs = {
+            "a": Cls1(),
+            "b": Cls2(),
+        }
+        yield self._assert_instances(
+            injector, callback, expected_instances, expected_kwargs
+        )
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_annotated_build_only(self, injector):
+        from typing import Annotated
+
+        def callback(
+            a: Annotated[Cls1, 42],
+        ):
+            pass
+
+        expected_instances = {
+            Annotated[Cls1, 42]: Cls1(),
+        }
+        expected_kwargs = {
+            "a": Cls1(),
+        }
+        yield self._assert_instances(
+            injector, callback, expected_instances, expected_kwargs
+        )
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_annotated_build_duplicate(self, injector):
+        from typing import Annotated
+
+        def callback(
+            a: Cls1,
+            b: Cls2,
+            c: Annotated[Cls2, 42],
+            d: Annotated[Cls2, 43],
+        ):
+            pass
+
+        expected_instances = {
+            Cls1: Cls1(),
+            Cls2: Cls2(),
+            Annotated[Cls2, 42]: Cls2(),
+            Annotated[Cls2, 43]: Cls2(),
+        }
+        expected_kwargs = {
+            "a": Cls1(),
+            "b": Cls2(),
+            "c": Cls2(),
+            "d": Cls2(),
+        }
+        yield self._assert_instances(
+            injector, callback, expected_instances, expected_kwargs
+        )
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_annotated_build_no_support(self, injector):
+        from typing import Annotated
+
+        # get_provider_requiring_response() returns a provider that doesn't support Annotated
+        def callback(
+            a: Cls1,
+            b: Annotated[ClsReqResponse, 42],
+        ):
+            pass
+
+        response = get_response_for_testing(callback)
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances_from_providers(
+            request, response, plan
+        )
+        assert instances == {
+            Cls1: Cls1(),
+        }
+
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_annotated_build_duplicate_forbidden(
+        self,
+    ):
+        from typing import Annotated
+
+        class Provider(PageObjectInputProvider):
+            provided_classes = {Cls1}
+            require_response = False
+
+            def __init__(self, crawler):
+                self.crawler = crawler
+
+            def is_provided(self, type_: Callable) -> bool:
+                return super().is_provided(strip_annotated(type_))
+
+            def __call__(self, to_provide):
+                result = []
+                processed_classes = set()
+                for cls in to_provide:
+                    if (cls_stripped := strip_annotated(cls)) in processed_classes:
+                        raise ValueError(
+                            f"Different instances of {cls_stripped.__name__} requested"
+                        )
+                    processed_classes.add(cls_stripped)
+                    obj = cls()
+                    if metadata := getattr(cls, "__metadata__", None):
+                        obj = AnnotatedResult(obj, metadata)
+                    result.append(obj)
+                return result
+
+        def callback(
+            a: Annotated[Cls1, 42],
+            b: Annotated[Cls1, 43],
+        ):
+            pass
+
+        response = get_response_for_testing(callback)
+        request = response.request
+
+        providers = {
+            Provider: 1,
+        }
+        injector = get_injector_for_testing(providers)
+
+        plan = injector.build_plan(response.request)
+        with pytest.raises(ValueError, match="Different instances of Cls1 requested"):
+            yield from injector.build_instances(request, response, plan)
 
     @inlineCallbacks
     def test_build_callback_dependencies_minimize_provider_calls(self):
@@ -508,11 +704,12 @@ def test_check_all_providers_are_callable():
     assert "not callable" in str(exinf.value)
 
 
-def test_is_class_provided_by_any_provider_fn():
+def test_is_class_provided_by_any_provider_fn(injector):
+    crawler = injector.crawler
     providers = [
-        get_provider({str}),
-        get_provider(lambda x: issubclass(x, InjectionError)),
-        get_provider(frozenset({int, float})),
+        get_provider({str})(crawler),
+        get_provider(lambda self, x: issubclass(x, InjectionError))(crawler),
+        get_provider(frozenset({int, float}))(crawler),
     ]
     is_provided = is_class_provided_by_any_provider_fn(providers)
     is_provided_empty = is_class_provided_by_any_provider_fn([])
@@ -528,8 +725,8 @@ def test_is_class_provided_by_any_provider_fn():
     class WrongProvider(PageObjectInputProvider):
         provided_classes = [str]  # Lists are not allowed, only sets or funcs
 
-    with pytest.raises(InjectionError):
-        is_class_provided_by_any_provider_fn([WrongProvider])
+    with pytest.raises(MalformedProvidedClassesError):
+        is_class_provided_by_any_provider_fn([WrongProvider(injector)])(str)
 
 
 def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
