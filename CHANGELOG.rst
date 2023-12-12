@@ -2,6 +2,33 @@
 Changelog
 =========
 
+0.17.0 (2023-12-11)
+-------------------
+
+* Now requires ``web-poet >= 0.15.1``.
+
+* :class:`~web_poet.page_inputs.http.HttpRequest` dependencies are now
+  supported, via :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`
+  (enabled by default).
+
+* Enable :class:`~scrapy_poet.page_input_providers.StatsProvider`, which
+  provides :class:`~web_poet.page_inputs.stats.Stats` dependencies, by default.
+
+* More robust disabling of
+  :class:`~scrapy_poet.downloadermiddlewares.InjectionMiddleware` in the
+  ``scrapy savefixture`` command.
+
+* Official support for Python 3.12.
+
+0.16.1 (2023-11-02)
+-------------------
+
+* Fix the bug that caused requests produced by
+  :class:`~scrapy_poet.page_input_providers.HttpClientProvider` to
+  be treated as if they need arguments of the ``parse`` callback as
+  dependencies, which could cause returning an empty response and/or making
+  extra provider calls.
+
 0.16.0 (2023-09-26)
 -------------------
 

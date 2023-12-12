@@ -8,6 +8,7 @@ from scrapy.utils.test import get_crawler
 from web_poet import HttpRequest, HttpResponse
 
 from scrapy_poet.utils import (
+    NO_CALLBACK,
     create_registry_instance,
     get_scrapy_data_path,
     http_request_to_scrapy_request,
@@ -39,32 +40,32 @@ def test_get_scrapy_data_path(mock_inside_project, mock_makedirs, tmp_path):
         (
             HttpRequest("https://example.com"),
             {},
-            Request("https://example.com"),
+            Request("https://example.com", callback=NO_CALLBACK),
         ),
         (
             HttpRequest("https://example.com"),
             {"dont_filter": True},
-            Request("https://example.com", dont_filter=True),
+            Request("https://example.com", callback=NO_CALLBACK, dont_filter=True),
         ),
         (
             HttpRequest("https://example.com", method="POST"),
             {},
-            Request("https://example.com", method="POST"),
+            Request("https://example.com", callback=NO_CALLBACK, method="POST"),
         ),
         (
             HttpRequest("https://example.com", headers={"a": "b"}),
             {},
-            Request("https://example.com", headers={"a": "b"}),
+            Request("https://example.com", callback=NO_CALLBACK, headers={"a": "b"}),
         ),
         (
             HttpRequest("https://example.com", headers={"a": "b"}),
             {},
-            Request("https://example.com", headers=(("a", "b"),)),
+            Request("https://example.com", callback=NO_CALLBACK, headers=(("a", "b"),)),
         ),
         (
             HttpRequest("https://example.com", headers=(("a", "b"),)),
             {},
-            Request("https://example.com", headers=(("a", "b"),)),
+            Request("https://example.com", callback=NO_CALLBACK, headers=(("a", "b"),)),
         ),
         (
             HttpRequest(
@@ -74,13 +75,14 @@ def test_get_scrapy_data_path(mock_inside_project, mock_makedirs, tmp_path):
             {},
             Request(
                 "https://example.com",
+                callback=NO_CALLBACK,
                 headers=(("a", "b"), ("a", "c")),
             ),
         ),
         (
             HttpRequest("https://example.com", body=b"a"),
             {},
-            Request("https://example.com", body=b"a"),
+            Request("https://example.com", callback=NO_CALLBACK, body=b"a"),
         ),
     ),
 )

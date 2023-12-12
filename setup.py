@@ -29,7 +29,7 @@ setup(
         "time_machine >= 2.2.0",
         "twisted >= 18.9.0",
         "url-matcher >= 0.2.0",
-        "web-poet >= 0.15",
+        "web-poet >= 0.15.1",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -43,5 +43,6 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
 )

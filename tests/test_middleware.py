@@ -262,8 +262,8 @@ class MultiArgsCallbackSpider(scrapy.Spider):
 @inlineCallbacks
 def test_multi_args_callbacks(settings):
     item, _, _ = yield crawl_single_item(MultiArgsCallbackSpider, ProductHtml, settings)
-    assert type(item["product"]) == ProductPage
-    assert type(item["provided"]) == ProvidedWithDeferred
+    assert type(item["product"]) is ProductPage
+    assert type(item["provided"]) is ProvidedWithDeferred
     assert item["cb_arg"] == "arg!"
     assert item["cb_arg2"] is False
     assert item["non_cb_arg"] is None
