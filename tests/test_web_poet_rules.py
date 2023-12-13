@@ -1512,7 +1512,7 @@ def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_item(
     but there's no provider for the original item
     """
     yield crawl_item_and_deps(Mobius)
-    assert "AssertionError" in caplog.text
+    assert "NonProvidableError" in caplog.text
 
 
 @inlineCallbacks
@@ -1523,7 +1523,7 @@ def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_po(
     but tests the PO instead of the item.
     """
     yield crawl_item_and_deps(MobiusPage)
-    assert "AssertionError" in caplog.text
+    assert "NonProvidableError" in caplog.text
 
 
 @attrs.define
