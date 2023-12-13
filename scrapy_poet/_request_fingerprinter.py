@@ -26,6 +26,7 @@ else:
         RequestUrl,
         Stats,
     )
+    from web_poet.utils import get_fq_class_name
 
     from scrapy_poet import InjectionMiddleware
     from scrapy_poet.injection import get_callback
@@ -41,7 +42,7 @@ else:
             if get_origin(cls) is Annotated:
                 annotated, *annotations = get_args(cls)
                 return f"{_serialize_dep(annotated)}{repr(annotations)}"
-        return f"{cls.__module__}.{cls.__qualname__}"
+        return get_fq_class_name(cls)
 
     class ScrapyPoetRequestFingerprinter:
 
@@ -120,6 +121,7 @@ else:
 
             deps = self._get_deps(request)
             if not deps:
+                self._callback_cache[callback] = None
                 return None
 
             deps_key = json.dumps(deps, sort_keys=True).encode()
@@ -127,7 +129,7 @@ else:
             return self._callback_cache[callback]
 
         def serialize_page_params(self, request: Request) -> Optional[bytes]:
-            """Returns a JSON object as bytes that represents the page params,
+            """Return a JSON object as bytes that represents the page params,
             or None if there are no page params or they are not
             JSON-serializable."""
             page_params = request.meta.get("page_params", None)
