@@ -77,7 +77,7 @@ else:
                 settings=crawler.settings,
                 crawler=crawler,
             )
-            self._callback_cache: Dict[Callable, bytes] = {}
+            self._callback_cache: Dict[Callable, Optional[bytes]] = {}
             self._request_cache: "WeakKeyDictionary[Request, bytes]" = (
                 WeakKeyDictionary()
             )
