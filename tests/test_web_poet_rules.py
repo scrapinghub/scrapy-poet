@@ -790,7 +790,6 @@ class ReplacedProductPage(ItemPage[Product]):
         return "replaced product name"
 
 
-@pytest.mark.xfail(reason="Need to check the current failure cause")
 @inlineCallbacks
 def test_item_to_return_in_handle_urls() -> None:
     """Even if ``@handle_urls`` could derive the value for the ``to_return``
@@ -803,14 +802,8 @@ def test_item_to_return_in_handle_urls() -> None:
     """
     item, deps = yield crawl_item_and_deps(ReplacedProduct)
     assert item == Product(name="replaced product name")
-    assert_deps(deps, {"page": ReplacedProductPage})
+    assert_deps(deps, {"item": Product})
 
-
-@inlineCallbacks
-def test_item_to_return_in_handle_urls_other() -> None:
-    """Remaining tests for ``test_item_to_return_in_handle_urls()`` which are
-    not expected to be xfail.
-    """
     # Requesting the underlying item class from the PO should still work.
     item, deps = yield crawl_item_and_deps(Product)
     assert item == Product(name="product name")
@@ -846,7 +839,6 @@ class SubclassReplacedProductPage(ParentReplacedProductPage):
         return "subclass replaced product name"
 
 
-@pytest.mark.xfail(reason="Need to check the current failure cause")
 @inlineCallbacks
 def test_item_to_return_in_handle_urls_subclass() -> None:
     """Same case as with the ``test_item_to_return_in_handle_urls()`` case above
@@ -854,14 +846,8 @@ def test_item_to_return_in_handle_urls_subclass() -> None:
     """
     item, deps = yield crawl_item_and_deps(SubclassReplacedProduct)
     assert item == ParentReplacedProduct(name="subclass replaced product name")
-    assert_deps(deps, {"page": SubclassReplacedProductPage})
+    assert_deps(deps, {"item": ParentReplacedProduct})
 
-
-@inlineCallbacks
-def test_item_to_return_in_handle_urls_subclass_others() -> None:
-    """Remaining tests for ``test_item_to_return_in_handle_urls_subclass()``
-    which are not expected to be xfail.
-    """
     # Requesting the underlying item class from the parent PO should still work.
     item, deps = yield crawl_item_and_deps(ParentReplacedProduct)
     assert item == ParentReplacedProduct(name="parent replaced product name")
@@ -890,7 +876,6 @@ class StandaloneProductPage(ItemPage):
         return "standalone product name"
 
 
-@pytest.mark.xfail(reason="Need to check the current failure cause")
 @inlineCallbacks
 def test_item_to_return_standalone() -> None:
     """Same case as with ``test_item_to_return_in_handle_urls()`` above but the
@@ -898,14 +883,7 @@ def test_item_to_return_standalone() -> None:
     """
     item, deps = yield crawl_item_and_deps(StandaloneProduct)
     assert item == {"name": "standalone product name"}
-    assert_deps(deps, {"page": StandaloneProductPage})
-
-
-@inlineCallbacks
-def test_item_to_return_standalone_others() -> None:
-    """Remaining tests for ``test_item_to_return_standalone()``
-    which are not expected to be xfail.
-    """
+    assert_deps(deps, {"item": dict})
 
     # calling the actual page object should still work
     item, deps = yield crawl_item_and_deps(StandaloneProductPage)
