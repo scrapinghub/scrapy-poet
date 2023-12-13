@@ -603,7 +603,7 @@ class TestInjectorStats:
             ),
             (
                 {"item": TestItem},
-                set(),
+                set(),  # there must be no stats as TestItem is not in the registry
             ),
         ),
     )
@@ -626,7 +626,7 @@ class TestInjectorStats:
         assert set(poet_stats) == expected
 
     @inlineCallbacks
-    def test_po_provided_via_item(self, injector):
+    def test_po_provided_via_item(self):
         rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
         registry = RulesRegistry(rules=rules)
         injector = get_injector_for_testing({}, registry=registry)
