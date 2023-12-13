@@ -131,18 +131,14 @@ def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int 
     # Only checks the first element for now since it's used alongside crawling
     # a single item.
     assert not deps[0].keys() - expected.keys()
-    assert all(True for k, v in expected.items() if isinstance(deps[0][k], v))
+    assert all(isinstance(deps[0][k], v) for k, v in expected.items())
 
 
 def assert_warning_tokens(caught_warnings, expected_warning_tokens):
     results = []
-    for warning in caught_warnings:
+    for expected in expected_warning_tokens:
         results.append(
-            all(
-                True
-                for expected in expected_warning_tokens
-                if expected in str(warning.message)
-            )
+            any(expected in str(warning.message) for warning in caught_warnings)
         )
     assert all(results)
 
@@ -563,7 +559,7 @@ def test_item_return_individually_defined() -> None:
         assert_warning_tokens(caught_warnings, expected_warning_tokens)
 
     assert item == AItem(name="independent A2")
-    assert_deps(deps, {"item": IndependentA2Page})
+    assert_deps(deps, {"item": AItem})
 
     # calling the actual page objects should still work
 
@@ -667,7 +663,7 @@ def test_item_return_individually_defined_first_rule_higher_priority() -> None:
         assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == BItem(name="independent B1")
-    assert_deps(deps, {"item": IndependentB1Page})
+    assert_deps(deps, {"item": BItem})
 
     # calling the actual page objects should still work
 
@@ -771,7 +767,7 @@ def test_item_return_individually_defined_second_rule_higher_priority() -> None:
         assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == CItem(name="independent C2")
-    assert_deps(deps, {"item": IndependentC2Page})
+    assert_deps(deps, {"item": CItem})
 
     item, deps = yield crawl_item_and_deps(IndependentC1Page)
     assert item == CItem(name="independent C1")
