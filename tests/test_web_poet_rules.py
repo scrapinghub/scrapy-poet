@@ -147,6 +147,19 @@ def assert_warning_tokens(caught_warnings, expected_warning_tokens):
     assert all(results)
 
 
+@inlineCallbacks
+def assert_no_item(page: type) -> None:
+    # Starting Scrapy 2.7, there's better support for async callbacks. This
+    # means that errors aren't suppressed.
+    if is_min_scrapy_version("2.7.0"):
+        expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
+        with pytest.raises(TypeError, match=expected_msg):
+            yield crawl_item_and_deps(page)
+    else:
+        item = yield crawl_item_and_deps(page)
+        assert item == (None, [{}])
+
+
 @handle_urls(URL)
 class UrlMatchPage(ItemPage):
     async def to_item(self) -> dict:
@@ -398,16 +411,7 @@ def test_basic_item_but_no_page_object() -> None:
     assigned to it in any of the given ``ApplyRule``, it would result to an error
     in the spider callback since
     """
-
-    # Starting Scrapy 2.7, there's better support for async callbacks. This
-    # means that errors aren't suppressed.
-    if is_min_scrapy_version("2.7.0"):
-        expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
-        with pytest.raises(TypeError, match=expected_msg):
-            yield crawl_item_and_deps(ItemButNoPageObject)
-    else:
-        item = yield crawl_item_and_deps(ItemButNoPageObject)
-        assert item == (None, [{}])
+    yield assert_no_item(ItemButNoPageObject)
 
 
 @attrs.define
@@ -452,6 +456,14 @@ class DifferentUrlPage(ItemPage[ItemWithPageObjectButForDifferentUrl]):
     @field
     def name(self) -> str:
         return "wrong url"
+
+
+@inlineCallbacks
+def test_basic_item_with_page_object_but_different_url() -> None:
+    """If an item has been requested and a page object can produce it, but the
+    URL pattern is different, the item won't be produced at all.
+    """
+    yield assert_no_item(ItemWithPageObjectButForDifferentUrl)
 
 
 @attrs.define
