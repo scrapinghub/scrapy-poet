@@ -139,13 +139,9 @@ def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int 
 
 def assert_warning_tokens(caught_warnings, expected_warning_tokens):
     results = []
-    for warning in caught_warnings:
+    for expected in expected_warning_tokens:
         results.append(
-            all(
-                True
-                for expected in expected_warning_tokens
-                if expected in str(warning.message)
-            )
+            any(expected in str(warning.message) for warning in caught_warnings)
         )
     assert all(results)
 
