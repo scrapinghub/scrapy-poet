@@ -1558,11 +1558,14 @@ def test_page_object_returning_item_which_is_also_a_dep_2() -> None:
     assert item == Kangaroo(name="(modified by Joey) data from KangarooProvider")
     assert_deps(deps, {"item": Kangaroo})
 
-    # calling the actual page objects should still work
+    # both page objects are called
     item, deps = yield crawl_item_and_deps(KangarooPage, override_settings=settings)
-    assert item == Kangaroo(name="(modified) data from KangarooProvider")
+    assert item == Kangaroo(
+        name="(modified) (modified by Joey) data from KangarooProvider"
+    )
     assert_deps(deps, {"page": KangarooPage})
 
+    # calling the actual page object should still work
     item, deps = yield crawl_item_and_deps(JoeyPage, override_settings=settings)
     assert item == Kangaroo(name="(modified by Joey) data from KangarooProvider")
     assert_deps(deps, {"page": JoeyPage})
