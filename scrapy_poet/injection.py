@@ -1,3 +1,4 @@
+import functools
 import inspect
 import logging
 import os
@@ -158,22 +159,18 @@ class Injector:
         The returned function can map an item to a factory for that item based
         on the registry.
         """
-        factory_cache: Dict[Callable, Optional[Callable]] = {}
 
+        @functools.cache  # to minimize the registry queries
         def mapping_fn(item_cls: Callable) -> Optional[Callable]:
-            if item_cls in factory_cache:
-                return factory_cache.get(item_cls)
             page_object_cls: Optional[Type[ItemPage]] = self.registry.page_cls_for_item(
                 request.url, cast(type, item_cls)
             )
             if not page_object_cls:
-                factory_cache[item_cls] = None
                 return None
 
             async def item_factory(page: page_object_cls) -> item_cls:  # type: ignore[valid-type]
                 return await page.to_item()  # type: ignore[attr-defined]
 
-            factory_cache[item_cls] = item_factory
             return item_factory
 
         return mapping_fn

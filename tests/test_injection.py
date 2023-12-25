@@ -479,12 +479,16 @@ class TestInjector:
         class ExpensiveProvider(PageObjectInputProvider):
             provided_classes = {ExpensiveDependency1, ExpensiveDependency2}
 
+            def __init__(self, injector):
+                super().__init__(injector)
+                self.call_count = 0
+
             def __call__(self, to_provide):
-                if to_provide != self.provided_classes:
+                self.call_count += 1
+                if self.call_count > 1:
                     raise RuntimeError(
                         "The expensive dependency provider has been called "
-                        "with a subset of the classes that it provides and "
-                        "that are required for the callback in this test."
+                        "more than once."
                     )
                 return [cls() for cls in to_provide]
 
