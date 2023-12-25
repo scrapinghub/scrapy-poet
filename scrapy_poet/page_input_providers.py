@@ -8,7 +8,7 @@ is in charge of providing the response HTML from Scrapy. You could also implemen
 different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from an API for automatic extraction.
 """
-from typing import Any, Callable, ClassVar, Dict, FrozenSet, List, Set, Union
+from typing import Any, Callable, ClassVar, FrozenSet, List, Set, Union
 from warnings import warn
 
 from scrapy import Request
@@ -97,12 +97,6 @@ class PageObjectInputProvider:
 
     provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
-
-    # If set to True, the Injector will not skip the Provider when the dependency has
-    # been built. Instead, the Injector will pass the previously built instances (by
-    # the other providers) to the Provider. The Provider can then choose to modify
-    # these previous instances before returning them to the Injector.
-    allow_prev_instances: bool = False
 
     def is_provided(self, type_: Callable) -> bool:
         """
@@ -257,7 +251,6 @@ class ItemProvider(PageObjectInputProvider):
         to_provide: Set[Callable],
         request: Request,
         response: Response,
-        prev_instances: Dict,
     ) -> List[Any]:
         return []
 
