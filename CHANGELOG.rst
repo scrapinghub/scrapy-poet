@@ -8,9 +8,9 @@ Changelog
 * Now requires ``andi >= 0.6.0``.
 
 * Change the implementation of resolving and building item dependencies from
-  page objects. Now the ``andi`` custom builders are used to create a single
-  plan that includes building page objects and items. This fixes problems
-  such as providers being called multiple times.
+  page objects. Now ``andi`` custom builders are used to create a single plan 
+  that includes building page objects and items. This fixes problems such as 
+  providers being called multiple times.
 
   * :class:`~scrapy_poet.page_input_providers.ItemProvider` is now no-op. It's
     no longer enabled by default and users should also stop enabling it.
