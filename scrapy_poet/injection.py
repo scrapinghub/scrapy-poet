@@ -1,9 +1,10 @@
+import functools
 import inspect
 import logging
 import os
 import pprint
 import warnings
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set, cast
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Type, cast
 
 import andi
 from andi.typeutils import issubclass_safe
@@ -13,12 +14,12 @@ from scrapy.http import Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import MemoryStatsCollector, StatsCollector
 from scrapy.utils.conf import build_component_list
-from scrapy.utils.defer import maybeDeferred_coro
+from scrapy.utils.defer import deferred_from_coro, maybeDeferred_coro
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import RulesRegistry
 from web_poet.page_inputs.http import request_fingerprint
-from web_poet.pages import is_injectable
+from web_poet.pages import ItemPage, is_injectable
 from web_poet.serialization.api import deserialize_leaf, load_class, serialize
 from web_poet.utils import get_fq_class_name
 
@@ -147,7 +148,32 @@ class Injector:
             # Callable[[Callable], Optional[Callable]] but the registry
             # returns the typing for ``dict.get()`` method.
             overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
+            custom_builder_fn=self._get_item_builder(request),
         )
+
+    def _get_item_builder(
+        self, request: Request
+    ) -> Callable[[Callable], Optional[Callable]]:
+        """Return a function suitable for passing as ``custom_builder_fn`` to ``andi.plan``.
+
+        The returned function can map an item to a factory for that item based
+        on the registry.
+        """
+
+        @functools.lru_cache(maxsize=None)  # to minimize the registry queries
+        def mapping_fn(item_cls: Callable) -> Optional[Callable]:
+            page_object_cls: Optional[Type[ItemPage]] = self.registry.page_cls_for_item(
+                request.url, cast(type, item_cls)
+            )
+            if not page_object_cls:
+                return None
+
+            async def item_factory(page: page_object_cls) -> item_cls:  # type: ignore[valid-type]
+                return await page.to_item()  # type: ignore[attr-defined]
+
+            return item_factory
+
+        return mapping_fn
 
     @inlineCallbacks
     def build_instances(
@@ -155,7 +181,6 @@ class Injector:
         request: Request,
         response: Response,
         plan: andi.Plan,
-        prev_instances: Optional[Dict] = None,
     ):
         """Build the instances dict from a plan including external dependencies."""
         # First we build the external dependencies using the providers
@@ -163,14 +188,20 @@ class Injector:
             request,
             response,
             plan,
-            prev_instances,
         )
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances.keys():
-                instances[cls] = cls(**kwargs_spec.kwargs(instances))
-                cls_fqn = get_fq_class_name(cast(type, cls))
+                result_cls: type = cast(type, cls)
+                if isinstance(cls, andi.CustomBuilder):
+                    result_cls = cls.result_class_or_fn
+                    instances[result_cls] = yield deferred_from_coro(
+                        cls.factory(**kwargs_spec.kwargs(instances))
+                    )
+                else:
+                    instances[result_cls] = cls(**kwargs_spec.kwargs(instances))
+                cls_fqn = get_fq_class_name(result_cls)
                 self.crawler.stats.inc_value(f"poet/injector/{cls_fqn}")
 
         return instances
@@ -181,10 +212,9 @@ class Injector:
         request: Request,
         response: Response,
         plan: andi.Plan,
-        prev_instances: Optional[Dict] = None,
     ):
         """Build dependencies handled by registered providers"""
-        instances: Dict[Callable, Any] = prev_instances or {}
+        instances: Dict[Callable, Any] = {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response
         )
@@ -194,20 +224,9 @@ class Injector:
             provided_classes = {
                 cls for cls in dependencies_set if provider.is_provided(cls)
             }
-
-            # ignore already provided types if provider doesn't need to use them
-            if not provider.allow_prev_instances:
-                provided_classes -= instances.keys()
+            provided_classes -= instances.keys()  # ignore already provided types
 
             if not provided_classes:
-                continue
-
-            # If dependency instances were already made by previously invoked
-            # providers, don't try to build them again since it may result in
-            # incorrect values (e.g. PO modifying an item > 2 times).
-            required_deps = set(plan.dependencies[-1][1].values())
-            built_deps = set(instances.keys())
-            if required_deps and required_deps == built_deps:
                 continue
 
             objs, fingerprint = [], None
@@ -245,8 +264,6 @@ class Injector:
                     externally_provided=scrapy_provided_dependencies,
                     full_final_kwargs=False,
                 ).final_kwargs(scrapy_provided_dependencies)
-                if provider.allow_prev_instances:
-                    kwargs.update({"prev_instances": instances})
                 try:
                     # Invoke the provider to get the data
                     objs = yield maybeDeferred_coro(

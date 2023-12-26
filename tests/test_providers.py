@@ -2,6 +2,7 @@ from typing import Any, Callable, List, Set, Type
 from unittest import mock
 
 import attr
+import pytest
 import scrapy
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
@@ -267,32 +268,13 @@ def test_page_params_provider(settings):
     assert results[0] == expected_data
 
 
-def test_item_provider_cache(settings):
-    """Note that the bulk of the tests for the ``ItemProvider`` alongside the
-    ``Injector`` is tested in ``tests/test_web_poet_rules.py``.
-
-    We'll only test its caching behavior here if its properly garbage collected.
-    """
-
+def test_item_provider_deprecated(settings):
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)
-    provider = ItemProvider(injector)
-
-    assert len(provider._cached_instances) == 0
-
-    def inside():
-        request = Request("https://example.com")
-        provider.update_cache(request, {Name: Name("test")})
-        assert len(provider._cached_instances) == 1
-
-        cached_instance = provider.get_from_cache(request, Name)
-        assert isinstance(cached_instance, Name)
-
-    # The cache should be empty after the ``inside`` scope has finished which
-    # means that the corresponding ``request`` and the contents under it are
-    # garbage collected.
-    inside()
-    assert len(provider._cached_instances) == 0
+    msg = "The ItemProvider now does nothing and you should disable it."
+    with pytest.warns(DeprecationWarning, match=msg):
+        provider = ItemProvider(injector)
+    assert len(provider.provided_classes) == 0
 
 
 def test_stats_provider(settings):

@@ -11,7 +11,7 @@ from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
-from web_poet import Injectable, ItemPage, RulesRegistry
+from web_poet import Injectable, ItemPage, RulesRegistry, field
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
@@ -463,6 +463,74 @@ class TestInjector:
         with pytest.raises(ValueError, match="Different instances of Cls1 requested"):
             yield from injector.build_instances(request, response, plan)
 
+    @inlineCallbacks
+    def test_build_callback_dependencies_minimize_provider_calls(self):
+        """Test that build_callback_dependencies does not call any given
+        provider more times than it needs when one provided class is requested
+        directly while another is a page object dependency requested through
+        an item."""
+
+        class ExpensiveDependency1:
+            pass
+
+        class ExpensiveDependency2:
+            pass
+
+        class ExpensiveProvider(PageObjectInputProvider):
+            provided_classes = {ExpensiveDependency1, ExpensiveDependency2}
+
+            def __init__(self, injector):
+                super().__init__(injector)
+                self.call_count = 0
+
+            def __call__(self, to_provide):
+                self.call_count += 1
+                if self.call_count > 1:
+                    raise RuntimeError(
+                        "The expensive dependency provider has been called "
+                        "more than once."
+                    )
+                return [cls() for cls in to_provide]
+
+        @attr.define
+        class MyItem(Injectable):
+            exp: ExpensiveDependency2
+            i: int
+
+        @attr.define
+        class MyPage(ItemPage[MyItem]):
+            expensive: ExpensiveDependency2
+
+            @field
+            def i(self):
+                return 42
+
+            @field
+            def exp(self):
+                return self.expensive
+
+        def callback(
+            expensive: ExpensiveDependency1,
+            item: MyItem,
+        ):
+            pass
+
+        providers = {
+            ExpensiveProvider: 2,
+        }
+        injector = get_injector_for_testing(providers)
+        injector.registry.add_rule(ApplyRule("", use=MyPage, to_return=MyItem))
+        response = get_response_for_testing(callback)
+
+        # This would raise RuntimeError if expectations are not met.
+        kwargs = yield from injector.build_callback_dependencies(
+            response.request, response
+        )
+
+        # Make sure the test does not simply pass because some dependencies were
+        # not injected at all.
+        assert set(kwargs.keys()) == {"expensive", "item"}
+
 
 class Html(Injectable):
     url = "http://example.com"
@@ -539,7 +607,7 @@ class TestInjectorStats:
             ),
             (
                 {"item": TestItem},
-                set(),  # there must be no stats as ItemProvider is not enabled
+                set(),  # there must be no stats as TestItem is not in the registry
             ),
         ),
     )
@@ -562,11 +630,10 @@ class TestInjectorStats:
         assert set(poet_stats) == expected
 
     @inlineCallbacks
-    def test_po_provided_via_item(self, injector):
+    def test_po_provided_via_item(self):
         rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
         registry = RulesRegistry(rules=rules)
-        providers = {"scrapy_poet.page_input_providers.ItemProvider": 10}
-        injector = get_injector_for_testing(providers, registry=registry)
+        injector = get_injector_for_testing({}, registry=registry)
 
         def callback(response: DummyResponse, item: TestItem):
             pass

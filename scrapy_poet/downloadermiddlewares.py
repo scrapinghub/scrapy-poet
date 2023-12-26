@@ -18,7 +18,6 @@ from .injection import Injector
 from .page_input_providers import (
     HttpClientProvider,
     HttpResponseProvider,
-    ItemProvider,
     PageParamsProvider,
     RequestUrlProvider,
     ResponseUrlProvider,
@@ -36,7 +35,6 @@ DEFAULT_PROVIDERS = {
     RequestUrlProvider: 800,
     ResponseUrlProvider: 900,
     StatsProvider: 1000,
-    ItemProvider: 2000,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")

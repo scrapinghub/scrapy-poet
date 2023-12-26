@@ -8,29 +8,12 @@ is in charge of providing the response HTML from Scrapy. You could also implemen
 different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from an API for automatic extraction.
 """
-import asyncio
-from dataclasses import make_dataclass
-from inspect import isclass
-from typing import (
-    Any,
-    Callable,
-    ClassVar,
-    Dict,
-    FrozenSet,
-    List,
-    Optional,
-    Set,
-    Type,
-    Union,
-)
+from typing import Any, Callable, ClassVar, FrozenSet, List, Set, Union
 from warnings import warn
-from weakref import WeakKeyDictionary
 
-import andi
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.http import Response
-from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import (
     HttpClient,
     HttpRequest,
@@ -43,13 +26,9 @@ from web_poet import (
     Stats,
 )
 from web_poet.page_inputs.stats import StatCollector, StatNum
-from web_poet.pages import is_injectable
 
 from scrapy_poet.downloader import create_scrapy_downloader
-from scrapy_poet.injection_errors import (
-    MalformedProvidedClassesError,
-    ProviderDependencyDeadlockError,
-)
+from scrapy_poet.injection_errors import MalformedProvidedClassesError
 
 
 class PageObjectInputProvider:
@@ -118,12 +97,6 @@ class PageObjectInputProvider:
 
     provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
-
-    # If set to True, the Injector will not skip the Provider when the dependency has
-    # been built. Instead, the Injector will pass the previously built instances (by
-    # the other providers) to the Provider. The Provider can then choose to modify
-    # these previous instances before returning them to the Injector.
-    allow_prev_instances: bool = False
 
     def is_provided(self, type_: Callable) -> bool:
         """
@@ -265,122 +238,21 @@ class ResponseUrlProvider(PageObjectInputProvider):
 
 
 class ItemProvider(PageObjectInputProvider):
+    provided_classes = set()
     name = "item"
-
-    template_deadlock_msg = (
-        "Deadlock detected! A loop has been detected to "
-        "trying to resolve this plan: {plan}"
-    )
-
-    allow_prev_instances: bool = True
 
     def __init__(self, injector):
         super().__init__(injector)
-        self.registry = self.injector.registry
-
-        # The key that's used here is the ``scrapy.Request`` instance to ensure
-        # that the cached instances under it are properly garbage collected
-        # after processing such request.
-        self._cached_instances = WeakKeyDictionary()
-
-        # This is only used when the reactor is ``AsyncioSelectorReactor`` since
-        # the ``asyncio.Future`` that it uses doesn't trigger a RecursionError
-        # unlike Twisted's Deferred. So we use this as a soft-proxy to recursion
-        # depth to check how many calls to ``self.injector.build_instances`` are
-        # made.
-        # Similar to ``_cached_instances`` above, the key is ``scrapy.Request``.
-        self._build_instances_call_counter = WeakKeyDictionary()
-
-    def provided_classes(self, cls):
-        """If the item is in any of the ``to_return`` in the rules, then it can
-        be provided by using the corresponding page object in ``use``.
-        """
-        return isclass(cls) and self.registry.search(to_return=cls)
-
-    def update_cache(self, request: Request, mapping: Dict[Type, Any]) -> None:
-        if request not in self._cached_instances:
-            self._cached_instances[request] = {}
-        self._cached_instances[request].update(mapping)
-
-    def get_from_cache(self, request: Request, cls: Callable) -> Optional[Any]:
-        return self._cached_instances.get(request, {}).get(cls)
-
-    def check_if_deadlock(self, request: Request) -> bool:
-        """Should only be used when ``AsyncioSelectorReactor`` is the reactor."""
-        if request not in self._build_instances_call_counter:
-            self._build_instances_call_counter[request] = 0
-        self._build_instances_call_counter[request] += 1
-
-        # If there are more than 100 calls to ``injector.build_instances()``
-        # for a given request, it might be a deadlock. This limit is large
-        # enough since the dependency tree for item dependencies needing page
-        # objects and/or items wouldn't reach this far.
-        if self._build_instances_call_counter[request] > 100:
-            return True
-        return False
+        msg = "The ItemProvider now does nothing and you should disable it."
+        warn(msg, DeprecationWarning, stacklevel=2)
 
     async def __call__(
         self,
         to_provide: Set[Callable],
         request: Request,
         response: Response,
-        prev_instances: Dict,
     ) -> List[Any]:
-        results = []
-        for cls in to_provide:
-            if item := self.get_from_cache(request, cls):
-                results.append(item)
-                continue
-
-            page_object_cls = self.registry.page_cls_for_item(request.url, cls)
-            if not page_object_cls:
-                warn(
-                    f"Can't find appropriate page object for {cls} item for "
-                    f"url: '{request.url}'. Check the ApplyRules you're using."
-                )
-                continue
-
-            # https://github.com/scrapinghub/andi/issues/23#issuecomment-1331682180
-            fake_call_signature = make_dataclass(
-                "FakeCallSignature", [("page_object", page_object_cls)]
-            )
-            plan = andi.plan(
-                fake_call_signature,
-                is_injectable=is_injectable,
-                externally_provided=self.injector.is_class_provided_by_any_provider,
-            )
-
-            try:
-                deferred_or_future = maybe_deferred_to_future(
-                    self.injector.build_instances(
-                        request, response, plan, prev_instances
-                    )
-                )
-                # RecursionError NOT raised when ``AsyncioSelectorReactor`` is used.
-                # Could be related: https://github.com/python/cpython/issues/93837
-
-                # Need to check before awaiting on the ``asyncio.Future``
-                # before it gets stuck on a potential deadlock.
-                if asyncio.isfuture(deferred_or_future):
-                    if self.check_if_deadlock(request):
-                        raise ProviderDependencyDeadlockError(
-                            self.template_deadlock_msg.format(plan=plan)
-                        )
-
-                po_instances = await deferred_or_future
-            except RecursionError:
-                raise ProviderDependencyDeadlockError(
-                    self.template_deadlock_msg.format(plan=plan)
-                )
-
-            page_object = po_instances[page_object_cls]
-            item = await page_object.to_item()
-
-            self.update_cache(request, po_instances)
-            self.update_cache(request, {type(item): item})
-
-            results.append(item)
-        return results
+        return []
 
 
 class ScrapyPoetStatCollector(StatCollector):
