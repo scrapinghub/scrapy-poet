@@ -12,20 +12,34 @@ ignore =
     C408,
 
     # To be addressed:
-    D100,  # Missing docstring in public module
-    D101,  # Missing docstring in public class
-    D102,  # Missing docstring in public method
-    D103,  # Missing docstring in public function
-    D104,  # Missing docstring in public package
-    D105,  # Missing docstring in magic method
-    D107,  # Missing docstring in __init__
-    D200,  # One-line docstring should fit on one line with quotes
-    D202,  # No blank lines allowed after function docstring
-    D205,  # 1 blank line required between summary line and description
-    D209,  # Multi-line docstring closing quotes should be on a separate line
-    D400,  # First line should end with a period
-    D401,  # First line should be in imperative mood
-    D402   # First line should not be the function's "signature"
+    # Missing docstring in public module
+    D100,
+    # Missing docstring in public class
+    D101,
+    # Missing docstring in public method
+    D102,
+    # Missing docstring in public function
+    D103,
+    # Missing docstring in public package
+    D104,
+    # Missing docstring in magic method
+    D105,
+    # Missing docstring in __init__
+    D107,
+    # One-line docstring should fit on one line with quotes
+    D200,
+    # No blank lines allowed after function docstring
+    D202,
+    # 1 blank line required between summary line and description
+    D205,
+    # Multi-line docstring closing quotes should be on a separate line
+    D209,
+    # First line should end with a period
+    D400,
+    # First line should be in imperative mood
+    D401,
+    # First line should not be the function's "signature"
+    D402
 
 per-file-ignores =
     # F401: Ignore "imported but unused" errors in __init__ files, as those

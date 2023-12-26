@@ -2,6 +2,49 @@
 Changelog
 =========
 
+0.19.0 (2023-12-26)
+-------------------
+
+* Now requires ``andi >= 0.6.0``.
+
+* Changed the implementation of resolving and building item dependencies from
+  page objects. Now ``andi`` custom builders are used to create a single plan 
+  that includes building page objects and items. This fixes problems such as 
+  providers being called multiple times.
+
+  * :class:`~scrapy_poet.page_input_providers.ItemProvider` is now no-op. It's
+    no longer enabled by default and users should also stop enabling it.
+  * ``PageObjectInputProvider.allow_prev_instances`` and code related to it
+    were removed so custom providers may need updating.
+
+* Fixed some tests.
+
+0.18.0 (2023-12-12)
+-------------------
+
+* Now requires ``andi >= 0.5.0``.
+
+* Add support for dependency metadata via ``typing.Annotated`` (requires
+  Python 3.9+).
+
+0.17.0 (2023-12-11)
+-------------------
+
+* Now requires ``web-poet >= 0.15.1``.
+
+* :class:`~web_poet.page_inputs.http.HttpRequest` dependencies are now
+  supported, via :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`
+  (enabled by default).
+
+* Enable :class:`~scrapy_poet.page_input_providers.StatsProvider`, which
+  provides :class:`~web_poet.page_inputs.stats.Stats` dependencies, by default.
+
+* More robust disabling of
+  :class:`~scrapy_poet.downloadermiddlewares.InjectionMiddleware` in the
+  ``scrapy savefixture`` command.
+
+* Official support for Python 3.12.
+
 0.16.1 (2023-11-02)
 -------------------
 

@@ -312,3 +312,47 @@ but not the others.
 To have other settings respected, in addition to ``CONCURRENT_REQUESTS``, you'd
 need to use ``crawler.engine.download`` or something like that. Alternatively,
 you could implement those limits in the library itself.
+
+Attaching metadata to dependencies
+==================================
+
+.. note:: This feature requires Python 3.9+.
+
+Providers can support dependencies with arbitrary metadata attached and use
+that metadata when creating them. Attaching the metadata is done by wrapping
+the dependency class in :data:`typing.Annotated`:
+
+.. code-block:: python
+
+    @attr.define
+    class MyPageObject(ItemPage):
+        response: Annotated[HtmlResponse, "foo", "bar"]
+
+To handle this you need the following changes in your provider:
+
+.. code-block:: python
+
+    from andi.typeutils import strip_annotated
+    from scrapy_poet import AnnotatedResult, PageObjectInputProvider
+
+
+    class Provider(PageObjectInputProvider):
+        ...
+
+        def is_provided(self, type_: Callable) -> bool:
+            # needed so that you can list just the base type in provided_classes
+            return super().is_provided(strip_annotated(type_))
+
+        def __call__(self, to_provide):
+            result = []
+            for cls in to_provide:
+                metadata = getattr(cls, "__metadata__", None)
+                obj = ...  # create the instance using cls and metadata
+                if metadata:
+                    # wrap the instance into a scrapy_poet.AnnotatedResult object
+                    obj = AnnotatedResult(obj, metadata)
+                result.append(obj)
+            return result
+
+.. autoclass:: scrapy_poet.AnnotatedResult
+   :members:

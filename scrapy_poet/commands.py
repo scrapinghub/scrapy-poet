@@ -1,7 +1,7 @@
 import datetime
 import logging
 from pathlib import Path
-from typing import Dict, Optional, Type
+from typing import Optional, Type
 
 import andi
 import scrapy
@@ -38,10 +38,9 @@ class SavingInjector(Injector):
         request: Request,
         response: Response,
         plan: andi.Plan,
-        prev_instances: Optional[Dict] = None,
     ):
         instances = yield super().build_instances_from_providers(
-            request, response, plan, prev_instances
+            request, response, plan
         )
         if request.meta.get("savefixture", False):
             saved_dependencies.extend(instances.values())
@@ -109,6 +108,9 @@ class SaveFixtureCommand(ScrapyCommand):
         if not issubclass(cls, ItemPage):
             raise UsageError(f"Error: {type_name} is not a descendant of ItemPage")
 
+        self.settings["DOWNLOADER_MIDDLEWARES"][
+            "scrapy_poet.InjectionMiddleware"
+        ] = None
         self.settings["DOWNLOADER_MIDDLEWARES"][
             "scrapy_poet.downloadermiddlewares.InjectionMiddleware"
         ] = None

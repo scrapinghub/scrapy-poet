@@ -2,19 +2,28 @@ from typing import Any, Callable, List, Set, Type
 from unittest import mock
 
 import attr
+import pytest
 import scrapy
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
 from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
 from twisted.python.failure import Failure
-from web_poet import HttpClient, HttpResponse
+from web_poet import (
+    HttpClient,
+    HttpRequest,
+    HttpRequestBody,
+    HttpRequestHeaders,
+    HttpResponse,
+    RequestUrl,
+)
 from web_poet.serialization import SerializedLeafData, register_serialization
 
 from scrapy_poet import HttpResponseProvider
 from scrapy_poet.injection import Injector
 from scrapy_poet.page_input_providers import (
     HttpClientProvider,
+    HttpRequestProvider,
     ItemProvider,
     PageObjectInputProvider,
     PageParamsProvider,
@@ -204,6 +213,37 @@ async def test_http_client_provider(settings):
     assert results[0]._request_downloader == mock_factory.return_value
 
 
+@ensureDeferred
+async def test_http_request_provider(settings):
+    crawler = get_crawler(Spider, settings)
+    injector = Injector(crawler)
+    provider = HttpRequestProvider(injector)
+
+    empty_scrapy_request = scrapy.http.Request("https://example.com")
+    (empty_request,) = provider(set(), empty_scrapy_request)
+    assert isinstance(empty_request, HttpRequest)
+    assert isinstance(empty_request.url, RequestUrl)
+    assert str(empty_request.url) == "https://example.com"
+    assert empty_request.method == "GET"
+    assert isinstance(empty_request.headers, HttpRequestHeaders)
+    assert empty_request.headers == HttpRequestHeaders()
+    assert isinstance(empty_request.body, HttpRequestBody)
+    assert empty_request.body == HttpRequestBody()
+
+    full_scrapy_request = scrapy.http.Request(
+        "https://example.com", method="POST", body=b"a", headers={"a": "b"}
+    )
+    (full_request,) = provider(set(), full_scrapy_request)
+    assert isinstance(full_request, HttpRequest)
+    assert isinstance(full_request.url, RequestUrl)
+    assert str(full_request.url) == "https://example.com"
+    assert full_request.method == "POST"
+    assert isinstance(full_request.headers, HttpRequestHeaders)
+    assert full_request.headers == HttpRequestHeaders([("a", "b")])
+    assert isinstance(full_request.body, HttpRequestBody)
+    assert full_request.body == HttpRequestBody(b"a")
+
+
 def test_page_params_provider(settings):
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)
@@ -228,32 +268,13 @@ def test_page_params_provider(settings):
     assert results[0] == expected_data
 
 
-def test_item_provider_cache(settings):
-    """Note that the bulk of the tests for the ``ItemProvider`` alongside the
-    ``Injector`` is tested in ``tests/test_web_poet_rules.py``.
-
-    We'll only test its caching behavior here if its properly garbage collected.
-    """
-
+def test_item_provider_deprecated(settings):
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)
-    provider = ItemProvider(injector)
-
-    assert len(provider._cached_instances) == 0
-
-    def inside():
-        request = Request("https://example.com")
-        provider.update_cache(request, {Name: Name("test")})
-        assert len(provider._cached_instances) == 1
-
-        cached_instance = provider.get_from_cache(request, Name)
-        assert isinstance(cached_instance, Name)
-
-    # The cache should be empty after the ``inside`` scope has finished which
-    # means that the corresponding ``request`` and the contents under it are
-    # garbage collected.
-    inside()
-    assert len(provider._cached_instances) == 0
+    msg = "The ItemProvider now does nothing and you should disable it."
+    with pytest.warns(DeprecationWarning, match=msg):
+        provider = ItemProvider(injector)
+    assert len(provider.provided_classes) == 0
 
 
 def test_stats_provider(settings):

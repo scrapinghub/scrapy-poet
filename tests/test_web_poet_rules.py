@@ -73,9 +73,6 @@ class PageObjectCounterMixin:
     For example, a PO could have its ``.to_item()`` method called multiple times
     to produce the same item. This is extremely wasteful should there be any
     additional requests used to produce the item.
-
-    ``ItemProvider`` should cache up such instances and prevent them from being
-    built again.
     """
 
     instances: Dict[Type, Any] = defaultdict(list)
@@ -134,20 +131,29 @@ def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int 
     # Only checks the first element for now since it's used alongside crawling
     # a single item.
     assert not deps[0].keys() - expected.keys()
-    assert all(True for k, v in expected.items() if isinstance(deps[0][k], v))
+    assert all(isinstance(deps[0][k], v) for k, v in expected.items())
 
 
 def assert_warning_tokens(caught_warnings, expected_warning_tokens):
     results = []
-    for warning in caught_warnings:
+    for expected in expected_warning_tokens:
         results.append(
-            all(
-                True
-                for expected in expected_warning_tokens
-                if expected in str(warning.message)
-            )
+            any(expected in str(warning.message) for warning in caught_warnings)
         )
     assert all(results)
+
+
+@inlineCallbacks
+def assert_no_item(page: type) -> None:
+    # Starting Scrapy 2.7, there's better support for async callbacks. This
+    # means that errors aren't suppressed.
+    if is_min_scrapy_version("2.7.0"):
+        expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
+        with pytest.raises(TypeError, match=expected_msg):
+            yield crawl_item_and_deps(page)
+    else:
+        item = yield crawl_item_and_deps(page)
+        assert item == (None, [{}])
 
 
 @handle_urls(URL)
@@ -401,16 +407,7 @@ def test_basic_item_but_no_page_object() -> None:
     assigned to it in any of the given ``ApplyRule``, it would result to an error
     in the spider callback since
     """
-
-    # Starting Scrapy 2.7, there's better support for async callbacks. This
-    # means that errors aren't suppressed.
-    if is_min_scrapy_version("2.7.0"):
-        expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
-        with pytest.raises(TypeError, match=expected_msg):
-            yield crawl_item_and_deps(ItemButNoPageObject)
-    else:
-        item = yield crawl_item_and_deps(ItemButNoPageObject)
-        assert item == (None, [{}])
+    yield assert_no_item(ItemButNoPageObject)
 
 
 @attrs.define
@@ -432,7 +429,7 @@ class DelayedProductPage(ItemPage[DelayedProduct]):
 )
 @inlineCallbacks
 def test_item_using_asyncio() -> None:
-    """This ensures that ``ItemProvider`` works properly for page objects using
+    """This ensures that the injector works properly for page objects using
     the ``asyncio`` functionalities.
     """
     item, deps = yield crawl_item_and_deps(DelayedProduct)
@@ -461,19 +458,8 @@ class DifferentUrlPage(ItemPage[ItemWithPageObjectButForDifferentUrl]):
 def test_basic_item_with_page_object_but_different_url() -> None:
     """If an item has been requested and a page object can produce it, but the
     URL pattern is different, the item won't be produced at all.
-
-    For these cases, a warning should be issued since the user might have written
-    some incorrect URL Pattern for the ``ApplyRule``.
     """
-    msg = (
-        "Can't find appropriate page object for <class 'tests.test_web_poet_rules."
-        "ItemWithPageObjectButForDifferentUrl'> item for url: "
-    )
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = yield crawl_item_and_deps(ItemWithPageObjectButForDifferentUrl)
-        assert any(True for w in caught_warnings if msg in str(w.message))
-    assert item is None
-    assert not deps
+    yield assert_no_item(ItemWithPageObjectButForDifferentUrl)
 
 
 @attrs.define
@@ -573,7 +559,7 @@ def test_item_return_individually_defined() -> None:
         assert_warning_tokens(caught_warnings, expected_warning_tokens)
 
     assert item == AItem(name="independent A2")
-    assert_deps(deps, {"item": IndependentA2Page})
+    assert_deps(deps, {"item": AItem})
 
     # calling the actual page objects should still work
 
@@ -677,7 +663,7 @@ def test_item_return_individually_defined_first_rule_higher_priority() -> None:
         assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == BItem(name="independent B1")
-    assert_deps(deps, {"item": IndependentB1Page})
+    assert_deps(deps, {"item": BItem})
 
     # calling the actual page objects should still work
 
@@ -781,7 +767,7 @@ def test_item_return_individually_defined_second_rule_higher_priority() -> None:
         assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == CItem(name="independent C2")
-    assert_deps(deps, {"item": IndependentC2Page})
+    assert_deps(deps, {"item": CItem})
 
     item, deps = yield crawl_item_and_deps(IndependentC1Page)
     assert item == CItem(name="independent C1")
@@ -804,10 +790,6 @@ class ReplacedProductPage(ItemPage[Product]):
         return "replaced product name"
 
 
-@pytest.mark.xfail(
-    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
-    "ItemProvide has received a different type of item class from the page object."
-)
 @inlineCallbacks
 def test_item_to_return_in_handle_urls() -> None:
     """Even if ``@handle_urls`` could derive the value for the ``to_return``
@@ -820,14 +802,8 @@ def test_item_to_return_in_handle_urls() -> None:
     """
     item, deps = yield crawl_item_and_deps(ReplacedProduct)
     assert item == Product(name="replaced product name")
-    assert_deps(deps, {"page": ReplacedProductPage})
+    assert_deps(deps, {"item": Product})
 
-
-@inlineCallbacks
-def test_item_to_return_in_handle_urls_other() -> None:
-    """Remaining tests for ``test_item_to_return_in_handle_urls()`` which are
-    not expected to be xfail.
-    """
     # Requesting the underlying item class from the PO should still work.
     item, deps = yield crawl_item_and_deps(Product)
     assert item == Product(name="product name")
@@ -863,10 +839,6 @@ class SubclassReplacedProductPage(ParentReplacedProductPage):
         return "subclass replaced product name"
 
 
-@pytest.mark.xfail(
-    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
-    "ItemProvide has received a different type of item class from the page object."
-)
 @inlineCallbacks
 def test_item_to_return_in_handle_urls_subclass() -> None:
     """Same case as with the ``test_item_to_return_in_handle_urls()`` case above
@@ -874,14 +846,8 @@ def test_item_to_return_in_handle_urls_subclass() -> None:
     """
     item, deps = yield crawl_item_and_deps(SubclassReplacedProduct)
     assert item == ParentReplacedProduct(name="subclass replaced product name")
-    assert_deps(deps, {"page": SubclassReplacedProductPage})
+    assert_deps(deps, {"item": ParentReplacedProduct})
 
-
-@inlineCallbacks
-def test_item_to_return_in_handle_urls_subclass_others() -> None:
-    """Remaining tests for ``test_item_to_return_in_handle_urls_subclass()``
-    which are not expected to be xfail.
-    """
     # Requesting the underlying item class from the parent PO should still work.
     item, deps = yield crawl_item_and_deps(ParentReplacedProduct)
     assert item == ParentReplacedProduct(name="parent replaced product name")
@@ -910,10 +876,6 @@ class StandaloneProductPage(ItemPage):
         return "standalone product name"
 
 
-@pytest.mark.xfail(
-    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
-    "ItemProvide has received a different type of item class from the page object."
-)
 @inlineCallbacks
 def test_item_to_return_standalone() -> None:
     """Same case as with ``test_item_to_return_in_handle_urls()`` above but the
@@ -921,14 +883,7 @@ def test_item_to_return_standalone() -> None:
     """
     item, deps = yield crawl_item_and_deps(StandaloneProduct)
     assert item == {"name": "standalone product name"}
-    assert_deps(deps, {"page": StandaloneProductPage})
-
-
-@inlineCallbacks
-def test_item_to_return_standalone_others() -> None:
-    """Remaining tests for ``test_item_to_return_standalone()``
-    which are not expected to be xfail.
-    """
+    assert_deps(deps, {"item": dict})
 
     # calling the actual page object should still work
     item, deps = yield crawl_item_and_deps(StandaloneProductPage)
@@ -1372,7 +1327,7 @@ class EggItem:
 
 @handle_urls(URL)
 @attrs.define
-class ChickenDeadlockPage(ItemPage[ChickenItem]):
+class ChickenCyclePage(ItemPage[ChickenItem]):
     other_injected_item: EggItem
 
     @field
@@ -1386,7 +1341,7 @@ class ChickenDeadlockPage(ItemPage[ChickenItem]):
 
 @handle_urls(URL)
 @attrs.define
-class EggDeadlockPage(ItemPage[EggItem]):
+class EggCyclePage(ItemPage[EggItem]):
     other_injected_item: ChickenItem
 
     @field
@@ -1399,30 +1354,30 @@ class EggDeadlockPage(ItemPage[EggItem]):
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_a(caplog) -> None:
-    """Items with page objects which depend on each other resulting in a deadlock
+def test_page_object_with_item_dependency_cycle_a(caplog) -> None:
+    """Items with page objects which depend on each other resulting in a plan cycle
     should have a corresponding error raised.
     """
     yield crawl_item_and_deps(ChickenItem)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_b(caplog) -> None:
+def test_page_object_with_item_dependency_cycle_b(caplog) -> None:
     yield crawl_item_and_deps(EggItem)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_c(caplog) -> None:
-    yield crawl_item_and_deps(ChickenDeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+def test_page_object_with_item_dependency_cycle_c(caplog) -> None:
+    yield crawl_item_and_deps(ChickenCyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_d(caplog) -> None:
-    yield crawl_item_and_deps(EggDeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+def test_page_object_with_item_dependency_cycle_d(caplog) -> None:
+    yield crawl_item_and_deps(EggCyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
 @attrs.define
@@ -1439,7 +1394,7 @@ class Egg2Item:
 
 @handle_urls(URL)
 @attrs.define
-class Chicken2DeadlockPage(ItemPage[Chicken2Item]):
+class Chicken2CyclePage(ItemPage[Chicken2Item]):
     other_injected_item: Egg2Item
 
     @field
@@ -1453,8 +1408,8 @@ class Chicken2DeadlockPage(ItemPage[Chicken2Item]):
 
 @handle_urls(URL)
 @attrs.define
-class Egg2DeadlockPage(ItemPage[Egg2Item]):
-    other_injected_page: Chicken2DeadlockPage
+class Egg2CyclePage(ItemPage[Egg2Item]):
+    other_injected_page: Chicken2CyclePage
 
     @field
     def name(self) -> str:
@@ -1467,30 +1422,30 @@ class Egg2DeadlockPage(ItemPage[Egg2Item]):
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_a(caplog) -> None:
-    """Same with ``test_page_object_with_item_dependency_deadlock()`` but one
+def test_page_object_with_item_dependency_cycle_2_a(caplog) -> None:
+    """Same with ``test_page_object_with_item_dependency_cycle()`` but one
     of the page objects requires a page object instead of an item.
     """
     yield crawl_item_and_deps(Chicken2Item)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_b(caplog) -> None:
+def test_page_object_with_item_dependency_cycle_2_b(caplog) -> None:
     yield crawl_item_and_deps(Egg2Item)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_c(caplog) -> None:
-    yield crawl_item_and_deps(Chicken2DeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+def test_page_object_with_item_dependency_cycle_2_c(caplog) -> None:
+    yield crawl_item_and_deps(Chicken2CyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
 @inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_d(caplog) -> None:
-    yield crawl_item_and_deps(Egg2DeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+def test_page_object_with_item_dependency_cycle_2_d(caplog) -> None:
+    yield crawl_item_and_deps(Egg2CyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
 @attrs.define
@@ -1543,7 +1498,7 @@ def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_item(
     but there's no provider for the original item
     """
     yield crawl_item_and_deps(Mobius)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "NonProvidableError" in caplog.text
 
 
 @inlineCallbacks
@@ -1554,7 +1509,7 @@ def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_po(
     but tests the PO instead of the item.
     """
     yield crawl_item_and_deps(MobiusPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    assert "NonProvidableError" in caplog.text
 
 
 @attrs.define
@@ -1603,11 +1558,14 @@ def test_page_object_returning_item_which_is_also_a_dep_2() -> None:
     assert item == Kangaroo(name="(modified by Joey) data from KangarooProvider")
     assert_deps(deps, {"item": Kangaroo})
 
-    # calling the actual page objects should still work
+    # both page objects are called
     item, deps = yield crawl_item_and_deps(KangarooPage, override_settings=settings)
-    assert item == Kangaroo(name="(modified) data from KangarooProvider")
+    assert item == Kangaroo(
+        name="(modified) (modified by Joey) data from KangarooProvider"
+    )
     assert_deps(deps, {"page": KangarooPage})
 
+    # calling the actual page object should still work
     item, deps = yield crawl_item_and_deps(JoeyPage, override_settings=settings)
     assert item == Kangaroo(name="(modified by Joey) data from KangarooProvider")
     assert_deps(deps, {"page": JoeyPage})
@@ -1704,10 +1662,10 @@ def test_created_apply_rules() -> None:
         ),
         ApplyRule(URL, use=ProductDeepDependencyPage, to_return=MainProductC),
         ApplyRule(URL, use=ProductDuplicateDeepDependencyPage, to_return=MainProductD),
-        ApplyRule(URL, use=ChickenDeadlockPage, to_return=ChickenItem),
-        ApplyRule(URL, use=EggDeadlockPage, to_return=EggItem),
-        ApplyRule(URL, use=Chicken2DeadlockPage, to_return=Chicken2Item),
-        ApplyRule(URL, use=Egg2DeadlockPage, to_return=Egg2Item),
+        ApplyRule(URL, use=ChickenCyclePage, to_return=ChickenItem),
+        ApplyRule(URL, use=EggCyclePage, to_return=EggItem),
+        ApplyRule(URL, use=Chicken2CyclePage, to_return=Chicken2Item),
+        ApplyRule(URL, use=Egg2CyclePage, to_return=Egg2Item),
         ApplyRule(URL, use=MobiusPage, to_return=Mobius),
         ApplyRule(URL, use=KangarooPage, to_return=Kangaroo),
         ApplyRule(Patterns([URL], priority=600), use=JoeyPage, to_return=Kangaroo),
