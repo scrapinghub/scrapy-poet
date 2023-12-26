@@ -7,7 +7,7 @@ Changelog
 
 * Now requires ``andi >= 0.6.0``.
 
-* Change the implementation of resolving and building item dependencies from
+* Changed the implementation of resolving and building item dependencies from
   page objects. Now ``andi`` custom builders are used to create a single plan 
   that includes building page objects and items. This fixes problems such as 
   providers being called multiple times.
@@ -17,7 +17,7 @@ Changelog
   * ``PageObjectInputProvider.allow_prev_instances`` and code related to it
     were removed so custom providers may need updating.
 
-* Fix some tests.
+* Fixed some tests.
 
 0.18.0 (2023-12-12)
 -------------------
