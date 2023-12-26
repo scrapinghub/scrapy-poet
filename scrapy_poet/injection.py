@@ -160,7 +160,7 @@ class Injector:
         on the registry.
         """
 
-        @functools.cache  # to minimize the registry queries
+        @functools.lru_cache(maxsize=None)  # to minimize the registry queries
         def mapping_fn(item_cls: Callable) -> Optional[Callable]:
             page_object_cls: Optional[Type[ItemPage]] = self.registry.page_cls_for_item(
                 request.url, cast(type, item_cls)
