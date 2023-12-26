@@ -122,3 +122,8 @@ custom request fingerprinter class to use for requests.
 This class is used to generate a base fingerprint for a request. If that
 request uses dependency injection, that fingerprint is then modified to account
 for requested dependencies. Otherwise, the fingerprint is used as is.
+
+.. note:: Annotations of :ref:`annotated dependencies <annotated>` are
+    serialized with :func:`repr` for fingerprinting purposes. If you find a
+    real-world scenario where this is a problem, please `open an issue
+    <https://github.com/scrapinghub/scrapy-poet/issues>`_.
