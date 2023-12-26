@@ -305,16 +305,6 @@ def test_fingerprinting_unannotated_page_input_combinations(input_cls_a, input_c
 
 
 def test_dep_resolution():
-    """Currently we do not resolve dependencies, so it is possible to get a
-    different fingerprint for callbacks that resolve to identical
-    dependencies.
-
-    The reason for not resolving dependencies is that it could be hard where
-    items are involved. This might be addressed in the future, in which case
-    we should consider to fingerprint based on leaf dependencies (those with a
-    provider) and not on the root dependencies present in the callback.
-    """
-
     class TestSpider(Spider):
         name = "test_spider"
 
@@ -330,7 +320,7 @@ def test_dep_resolution():
     fingerprint1 = fingerprinter.fingerprint(request1)
     request2 = Request("https://toscrape.com", callback=crawler.spider.parse_b)
     fingerprint2 = fingerprinter.fingerprint(request2)
-    assert fingerprint1 != fingerprint2
+    assert fingerprint1 == fingerprint2
 
 
 def test_page_params(caplog):

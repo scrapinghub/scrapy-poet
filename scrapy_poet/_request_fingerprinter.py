@@ -100,16 +100,10 @@ else:
             dependencies requested by the request, or None if dependency injection
             is not required."""
             plan = self._injector.build_plan(request)
-            root_deps = plan[-1][1]
-            if not root_deps:
+            deps = {dep for dep, params in plan[:-1]} - self.IGNORED_UNANNOTATED_DEPS
+            if not deps:
                 return None
-            return sorted(
-                [
-                    _serialize_dep(cls)
-                    for cls in root_deps.values()
-                    if cls not in self.IGNORED_UNANNOTATED_DEPS
-                ]
-            )
+            return sorted([_serialize_dep(cls) for cls in deps])
 
         def get_deps_key(self, request: Request) -> Optional[bytes]:
             """Return a JSON array as bytes that uniquely identifies the
