@@ -4,6 +4,8 @@ line-length = 88
 [tool.isort]
 profile = "black"
 multi_line_output = 3
+# scrapy_poet/__init__.py: Automatic sorting causes circular dependencies.
+skip = ["scrapy_poet/__init__.py"]
 
 [[tool.mypy.overrides]]
 module = [

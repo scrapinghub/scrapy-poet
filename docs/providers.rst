@@ -313,6 +313,9 @@ To have other settings respected, in addition to ``CONCURRENT_REQUESTS``, you'd
 need to use ``crawler.engine.download`` or something like that. Alternatively,
 you could implement those limits in the library itself.
 
+
+.. _annotated:
+
 Attaching metadata to dependencies
 ==================================
 
