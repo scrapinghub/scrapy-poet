@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.20.0 (YYYY-MM-DD)
+0.20.0 (2024-01-15)
 -------------------
 
 * Add :class:`~scrapy_poet.ScrapyPoetRequestFingerprinter`, a request
