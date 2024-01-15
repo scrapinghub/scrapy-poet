@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.20.0 (YYYY-MM-DD)
+-------------------
+
+* Add :class:`~scrapy_poet.ScrapyPoetRequestFingerprinter`, a request
+  fingerprinter that uses request dependencies in the fingerprint generation.
+
 0.19.0 (2023-12-26)
 -------------------
 
