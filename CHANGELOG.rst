@@ -6,7 +6,7 @@ Changelog
 -------------------
 
 * Add :class:`~scrapy_poet.ScrapyPoetRequestFingerprinter`, a request
-  fingerprinter that uses request dependencies in the fingerprint generatoion.
+  fingerprinter that uses request dependencies in the fingerprint generation.
 
 0.19.0 (2023-12-26)
 -------------------
