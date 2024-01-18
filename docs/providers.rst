@@ -127,6 +127,14 @@ which Scrapy has. Although they are quite similar in its intended purpose,
 could be anything that could stretch beyond Scrapy's ``Responses`` `(e.g. Network
 Database queries, API Calls, AWS S3 files, etc)`.
 
+.. note::
+
+   The :class:`scrapy_poet.injection.Injector` maintains a ``.weak_cache`` which
+   stores the instances created by the providers as long as the corresponding
+   :class:`scrapy.Request <scrapy.http.Request>` instance exists. This means that
+   the instances created by earlier providers can be accessed and reused by latter
+   providers. This is turned on by default and the instances are stored in memory.
+
 
 Configuring providers
 =====================

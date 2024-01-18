@@ -203,6 +203,7 @@ class TestInjector:
             ClsReqResponse: ClsReqResponse(),
             ClsNoProviderRequired: ClsNoProviderRequired(),
         }
+        assert injector.weak_cache.get(request).keys() == {ClsReqResponse, Cls1, Cls2}
 
         instances = yield from injector.build_instances_from_providers(
             request, response, plan
@@ -212,6 +213,7 @@ class TestInjector:
             Cls2: Cls2(),
             ClsReqResponse: ClsReqResponse(),
         }
+        assert injector.weak_cache.get(request).keys() == {ClsReqResponse, Cls1, Cls2}
 
     @inlineCallbacks
     def test_build_instances_from_providers_unexpected_return(self):
@@ -230,6 +232,7 @@ class TestInjector:
             yield from injector.build_instances_from_providers(
                 response.request, response, plan
             )
+        assert injector.weak_cache.get(response.request) is None
 
         assert "Provider" in str(exinf.value)
         assert "Cls2" in str(exinf.value)
@@ -256,6 +259,7 @@ class TestInjector:
         instances = yield from injector.build_instances_from_providers(
             response.request, response, plan
         )
+        assert injector.weak_cache.get(response.request).keys() == {str}
 
         assert instances[str] == min(str_list)
 
@@ -628,6 +632,7 @@ class TestInjectorStats:
             if name.startswith(prefix)
         }
         assert set(poet_stats) == expected
+        assert injector.weak_cache.get(response.request) is None
 
     @inlineCallbacks
     def test_po_provided_via_item(self):
@@ -642,6 +647,7 @@ class TestInjectorStats:
         _ = yield from injector.build_callback_dependencies(response.request, response)
         key = "poet/injector/tests.test_injection.TestItemPage"
         assert key in set(injector.crawler.stats.get_stats())
+        assert injector.weak_cache.get(response.request) is None
 
 
 class TestInjectorOverrides:
@@ -787,6 +793,7 @@ def test_cache(tmp_path, cache_errors):
         response.request, response, plan
     )
     assert cache.exists()
+    assert injector.weak_cache.get(response.request).keys() == {Price, Name}
 
     validate_instances(instances)
 
@@ -799,6 +806,7 @@ def test_cache(tmp_path, cache_errors):
         instances = yield from injector.build_instances_from_providers(
             response.request, response, plan
         )
+    assert injector.weak_cache.get(response.request) is None
 
     # Different providers. They return a different result, but the cache data should prevail.
     providers = {
@@ -812,6 +820,7 @@ def test_cache(tmp_path, cache_errors):
     instances = yield from injector.build_instances_from_providers(
         response.request, response, plan
     )
+    assert injector.weak_cache.get(response.request).keys() == {Price, Name}
 
     validate_instances(instances)
 
@@ -823,3 +832,4 @@ def test_cache(tmp_path, cache_errors):
         instances = yield from injector.build_instances_from_providers(
             response.request, response, plan
         )
+    assert injector.weak_cache.get(response.request) is None
