@@ -13,6 +13,7 @@ else:
     from typing import Callable, Dict, List, Optional, get_args, get_origin
     from weakref import WeakKeyDictionary
 
+    from andi import CustomBuilder
     from scrapy import Request
     from scrapy.crawler import Crawler
     from scrapy.settings.default_settings import REQUEST_FINGERPRINTER_CLASS
@@ -34,6 +35,8 @@ else:
     logger = getLogger(__name__)
 
     def _serialize_dep(cls):
+        if isinstance(cls, CustomBuilder):
+            cls = cls.result_class_or_fn
         try:
             from typing import Annotated
         except ImportError:
