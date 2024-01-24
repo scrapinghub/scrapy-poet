@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.20.1 (unreleased)
+-------------------
+
+* :class:`~scrapy_poet.ScrapyPoetRequestFingerprinter` now supports item
+  dependencies.
+
 0.20.0 (2024-01-15)
 -------------------
 
