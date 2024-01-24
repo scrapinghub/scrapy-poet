@@ -517,12 +517,14 @@ def test_request_cache():
 def test_item():
     """Test that fingerprinting works even for items."""
     from scrapy import Request, Spider
-    from web_poet import ItemPage, handle_urls
+    from web_poet import ItemPage, RulesRegistry
+
+    registry = RulesRegistry()
 
     class MyItem:
         pass
 
-    @handle_urls("example.com")
+    @registry.handle_urls("example.com")
     class MyPage(ItemPage[MyItem]):
         pass
 
@@ -535,7 +537,10 @@ def test_item():
         async def parse_page(self, response, a: MyItem):
             pass
 
-    crawler = get_crawler(spider_cls=TestSpider)
+    settings = {
+        "SCRAPY_POET_RULES": registry.get_rules(),
+    }
+    crawler = get_crawler(spider_cls=TestSpider, settings=settings)
     fingerprinter = crawler.request_fingerprinter
 
     fingerprint = fingerprinter.fingerprint(crawler.spider.request)
