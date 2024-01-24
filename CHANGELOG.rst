@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.20.1 (unreleased)
+0.20.1 (2024-01-24)
 -------------------
 
 * :class:`~scrapy_poet.ScrapyPoetRequestFingerprinter` now supports item
