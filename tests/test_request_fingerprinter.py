@@ -514,7 +514,7 @@ def test_request_cache():
         mock.assert_called_once_with(request)
 
 
-def test_item():
+def test_item(settings):
     """Test that fingerprinting works even for items."""
     from scrapy import Request, Spider
     from web_poet import ItemPage, RulesRegistry
@@ -537,9 +537,7 @@ def test_item():
         async def parse_page(self, response, a: MyItem):
             pass
 
-    settings = {
-        "SCRAPY_POET_RULES": registry.get_rules(),
-    }
+    settings["SCRAPY_POET_RULES"] = registry.get_rules()
     crawler = get_crawler(spider_cls=TestSpider, settings=settings)
     fingerprinter = crawler.request_fingerprinter
 

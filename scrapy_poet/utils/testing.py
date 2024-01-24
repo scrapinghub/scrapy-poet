@@ -15,6 +15,7 @@ from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
+from scrapy_poet import ScrapyPoetRequestFingerprinter
 from scrapy_poet.utils.mockserver import MockServer
 
 
@@ -231,6 +232,7 @@ def create_scrapy_settings(request):
             InjectedDependenciesCollectorMiddleware: 542,
             "scrapy_poet.InjectionMiddleware": 543,
         },
+        REQUEST_FINGERPRINTER_CLASS=ScrapyPoetRequestFingerprinter,
     )
     return Settings(s)
 
