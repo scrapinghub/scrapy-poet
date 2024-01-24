@@ -512,3 +512,32 @@ def test_request_cache():
         fingerprinter.fingerprint(request)
         fingerprinter.fingerprint(request)
         mock.assert_called_once_with(request)
+
+
+def test_item():
+    """Test that fingerprinting works even for items."""
+    from scrapy import Request, Spider
+    from web_poet import ItemPage, handle_urls
+
+    class MyItem:
+        pass
+
+    @handle_urls("example.com")
+    class MyPage(ItemPage[MyItem]):
+        pass
+
+    class TestSpider(Spider):
+        name = "test"
+
+        def __init__(self, *args, **kwargs):
+            self.request = Request("https://example.com", callback=self.parse_page)
+
+        async def parse_page(self, response, a: MyItem):
+            pass
+
+    crawler = get_crawler(spider_cls=TestSpider)
+    fingerprinter = crawler.request_fingerprinter
+
+    fingerprint = fingerprinter.fingerprint(crawler.spider.request)
+    assert fingerprint
+    assert isinstance(fingerprint, bytes)
