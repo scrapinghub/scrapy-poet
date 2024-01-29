@@ -48,7 +48,7 @@ URL = f"{DOMAIN}:{PORT}"
 
 
 def rules_settings() -> dict:
-    settings = create_scrapy_settings(None)
+    settings = create_scrapy_settings()
     settings["SCRAPY_POET_RULES"] = default_registry.get_rules()
     return settings
 

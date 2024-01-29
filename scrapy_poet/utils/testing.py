@@ -157,7 +157,10 @@ def get_download_handler(crawler, schema):
     return crawler.engine.downloader.handlers._get_handler(schema)
 
 
-def make_crawler(spider_cls, settings):
+def make_crawler(spider_cls, settings=None):
+    settings = settings or {}
+    settings = {**create_scrapy_settings(), **settings}
+
     if not getattr(spider_cls, "name", None):
 
         class Spider(spider_cls):
@@ -220,7 +223,7 @@ class InjectedDependenciesCollectorMiddleware:
         return response
 
 
-def create_scrapy_settings(request):
+def create_scrapy_settings():
     """Default scrapy-poet settings"""
     s = dict(
         # collect scraped items to crawler.spider.collected_items
@@ -231,8 +234,13 @@ def create_scrapy_settings(request):
             # collect injected dependencies to crawler.spider.collected_response_deps
             InjectedDependenciesCollectorMiddleware: 542,
             "scrapy_poet.InjectionMiddleware": 543,
+            "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
+            "scrapy_poet.DownloaderStatsMiddleware": 850,
         },
         REQUEST_FINGERPRINTER_CLASS=ScrapyPoetRequestFingerprinter,
+        SPIDER_MIDDLEWARES={
+            "scrapy_poet.RetryMiddleware": 275,
+        },
     )
     return Settings(s)
 

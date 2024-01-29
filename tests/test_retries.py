@@ -14,15 +14,6 @@ from scrapy_poet.utils.testing import EchoResource, make_crawler
 class BaseSpider(Spider):
     name = "test_spider"
 
-    custom_settings = {
-        "DOWNLOADER_MIDDLEWARES": {
-            "scrapy_poet.InjectionMiddleware": 543,
-        },
-        "SPIDER_MIDDLEWARES": {
-            "scrapy_poet.RetryMiddleware": 275,
-        },
-    }
-
 
 def _assert_all_unique_instances(instances: List[Any]):
     assert len({id(instance) for instance in instances}) == len(instances)
@@ -50,7 +41,7 @@ def test_retry_once():
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert items == [{"foo": "bar"}]
@@ -85,7 +76,7 @@ def test_retry_max():
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert items == [{"foo": "bar"}]
@@ -116,7 +107,7 @@ def test_retry_exceeded():
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert items == []
@@ -145,7 +136,6 @@ def test_retry_max_configuration():
 
         class TestSpider(BaseSpider):
             custom_settings = {
-                **BaseSpider.custom_settings,
                 "RETRY_TIMES": 3,
             }
 
@@ -155,7 +145,7 @@ def test_retry_max_configuration():
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert items == [{"foo": "bar"}]
@@ -197,7 +187,7 @@ def test_retry_cb_kwargs():
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert items == [{"foo": "bar"}]
@@ -228,7 +218,7 @@ def test_non_retry_exception():
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert items == []

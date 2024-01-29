@@ -323,7 +323,7 @@ def test_skip_downloads(settings):
     assert isinstance(item["response"], DummyResponse) is True
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 0
     assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 1
-    assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
+    assert crawler.stats.get_stats().get("downloader/response_count", 0) == 0
 
 
 class RequestUrlSpider(scrapy.Spider):
@@ -350,7 +350,7 @@ def test_skip_download_request_url(settings):
     assert str(item["url"]) == url
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 0
     assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 1
-    assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
+    assert crawler.stats.get_stats().get("downloader/response_count", 0) == 0
 
 
 class ResponseUrlSpider(scrapy.Spider):
@@ -440,7 +440,7 @@ def test_skip_download_request_url_page(settings):
     assert str(item["url"]) == url
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 0
     assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 1
-    assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
+    assert crawler.stats.get_stats().get("downloader/response_count", 0) == 0
 
 
 @inlineCallbacks
@@ -449,6 +449,8 @@ def test_scrapy_shell(tmp_path):
         """
 DOWNLOADER_MIDDLEWARES = {
     "scrapy_poet.InjectionMiddleware": 543,
+    "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
+    "scrapy_poet.DownloaderStatsMiddleware": 850,
 }
 """
     )
