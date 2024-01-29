@@ -33,21 +33,17 @@ from web_poet import (
     WebPage,
 )
 
-from scrapy_poet import DummyResponse, ScrapyPoetRequestFingerprinter
+from scrapy_poet import DummyResponse
 from scrapy_poet._request_fingerprinter import _serialize_dep
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
 from scrapy_poet.injection import Injector, is_class_provided_by_any_provider_fn
 from scrapy_poet.page_input_providers import PageObjectInputProvider
+from scrapy_poet.utils.testing import create_scrapy_settings
 from scrapy_poet.utils.testing import get_crawler as _get_crawler
 
 ANDI_VERSION = Version(package_version("andi"))
 
-SETTINGS = {
-    "DOWNLOADER_MIDDLEWARES": {
-        "scrapy_poet.InjectionMiddleware": 543,
-    },
-    "REQUEST_FINGERPRINTER_CLASS": ScrapyPoetRequestFingerprinter,
-}
+SETTINGS = create_scrapy_settings()
 
 
 def get_crawler(spider_cls=None, settings=None, ensure_providers_for=None):

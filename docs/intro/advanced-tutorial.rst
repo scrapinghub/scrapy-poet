@@ -80,6 +80,8 @@ It can be directly used inside the spider as:
         custom_settings = {
             "DOWNLOADER_MIDDLEWARES": {
                 "scrapy_poet.InjectionMiddleware": 543,
+                "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
+                "scrapy_poet.DownloaderStatsMiddleware": 850,
             }
         }
 
@@ -153,6 +155,8 @@ Let's see it in action:
         custom_settings = {
             "DOWNLOADER_MIDDLEWARES": {
                 "scrapy_poet.InjectionMiddleware": 543,
+                "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
+                "scrapy_poet.DownloaderStatsMiddleware": 850,
             }
         }
 

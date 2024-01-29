@@ -32,6 +32,7 @@ from scrapy_poet.utils.testing import (
     DelayedResource,
     EchoResource,
     StatusResource,
+    create_scrapy_settings,
     make_crawler,
 )
 
@@ -157,12 +158,6 @@ def test_additional_requests_success() -> None:
         class TestSpider(Spider):
             name = "test_spider"
 
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-            }
-
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
@@ -170,7 +165,7 @@ def test_additional_requests_success() -> None:
                 item = await page.to_item()
                 items.append(item)
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert items == [{"foo": "bar"}]
@@ -198,12 +193,6 @@ def test_additional_requests_bad_response() -> None:
         class TestSpider(Spider):
             name = "test_spider"
 
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-            }
-
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
@@ -211,7 +200,7 @@ def test_additional_requests_bad_response() -> None:
                 item = await page.to_item()
                 items.append(item)
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert items == [{"foo": "bar"}]
@@ -247,12 +236,6 @@ def test_additional_requests_connection_issue() -> None:
             class TestSpider(Spider):
                 name = "test_spider"
 
-                custom_settings = {
-                    "DOWNLOADER_MIDDLEWARES": {
-                        "scrapy_poet.InjectionMiddleware": 543,
-                    },
-                }
-
                 def start_requests(self):
                     yield Request(server.root_url, callback=self.parse)
 
@@ -260,7 +243,7 @@ def test_additional_requests_connection_issue() -> None:
                     item = await page.to_item()
                     items.append(item)
 
-            crawler = make_crawler(TestSpider, {})
+            crawler = make_crawler(TestSpider)
             yield crawler.crawl()
 
     assert items == [{"foo": "bar"}]
@@ -294,13 +277,6 @@ def test_additional_requests_ignored_request() -> None:
         class TestSpider(Spider):
             name = "test_spider"
 
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    TestDownloaderMiddleware: 1,
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-            }
-
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
@@ -308,7 +284,9 @@ def test_additional_requests_ignored_request() -> None:
                 item = await page.to_item()
                 items.append(item)
 
-        crawler = make_crawler(TestSpider, {})
+        settings = create_scrapy_settings()
+        settings["DOWNLOADER_MIDDLEWARES"][TestDownloaderMiddleware] = 1
+        crawler = make_crawler(TestSpider, settings)
         yield crawler.crawl()
 
     assert items == [{"exc": HttpError}]
@@ -353,13 +331,6 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
         class TestSpider(Spider):
             name = "test_spider"
 
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    TestDownloaderMiddleware: 1,
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-            }
-
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
@@ -367,7 +338,9 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
                 item = await page.to_item()
                 items.append(item)
 
-        crawler = make_crawler(TestSpider, {})
+        settings = create_scrapy_settings()
+        settings["DOWNLOADER_MIDDLEWARES"][TestDownloaderMiddleware] = 1
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert items == [{"exc": HttpError}]
@@ -405,12 +378,6 @@ def test_additional_requests_dont_filter() -> None:
         class TestSpider(Spider):
             name = "test_spider"
 
-            custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
-            }
-
             def start_requests(self):
                 yield Request(server.root_url, body=b"a", callback=self.parse)
                 yield Request(server.root_url, body=b"a", callback=self.parse)
@@ -419,7 +386,7 @@ def test_additional_requests_dont_filter() -> None:
                 item = await page.to_item()
                 items.append(item)
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert items == [{"a": "a"}]
@@ -476,9 +443,6 @@ def test_additional_requests_no_cb_deps() -> None:
             name = "test_spider"
 
             custom_settings = {
-                "DOWNLOADER_MIDDLEWARES": {
-                    "scrapy_poet.InjectionMiddleware": 543,
-                },
                 "SCRAPY_POET_PROVIDERS": {
                     BrowserResponseProvider: 1100,
                 },
@@ -491,7 +455,7 @@ def test_additional_requests_no_cb_deps() -> None:
                 item = await page.to_item()
                 items.append(item)
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
         yield crawler.crawl()
 
     assert provider_calls == 1
@@ -506,11 +470,6 @@ class BasicPage(WebPage):
 
 class BaseSpider(Spider):
     name = "test_spider"
-    custom_settings = {
-        "DOWNLOADER_MIDDLEWARES": {
-            "scrapy_poet.InjectionMiddleware": 543,
-        },
-    }
 
 
 # See: https://github.com/scrapinghub/scrapy-poet/issues/48
@@ -572,7 +531,7 @@ def test_parse_callback_none_dummy_response() -> None:
             def parse(self, response: DummyResponse):
                 collected["response"] = response
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
@@ -603,7 +562,7 @@ def test_parse_callback_none_response() -> None:
             def parse(self, response: scrapy.http.Response):
                 collected["response"] = response
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
@@ -634,7 +593,7 @@ def test_parse_callback_none_no_annotated_deps() -> None:
             def parse(self, response):
                 collected["response"] = response
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
 
         with warnings.catch_warnings(record=True) as warning_msg:
             yield crawler.crawl()
@@ -664,7 +623,7 @@ def test_parse_callback_none_with_deps(caplog) -> None:
             def parse(self, response: DummyResponse, page: BasicPage):
                 pass
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
@@ -707,7 +666,7 @@ def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
             def parse(self, response: DummyResponse, page: BasicPage):
                 collected["response"] = response
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
@@ -747,7 +706,7 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
             ):
                 pass
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
@@ -784,7 +743,7 @@ def test_parse_callback_NO_CALLBACK(caplog) -> None:
             def parse(self, response: DummyResponse):
                 collected["response"] = response
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
@@ -816,7 +775,7 @@ def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
             def parse(self, response: DummyResponse, page: BasicPage):
                 collected["response"] = response
 
-        crawler = make_crawler(TestSpider, {})
+        crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:
             yield crawler.crawl()
