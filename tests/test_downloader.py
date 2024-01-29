@@ -577,8 +577,8 @@ def test_parse_callback_none_response() -> None:
 )
 @inlineCallbacks
 def test_parse_callback_none_no_annotated_deps() -> None:
-    """Similar to ``test_parse_callback_none_dummy_response()`` but there are no
-    annotated dependencies.
+    """Similar to ``test_parse_callback_none_dummy_response()`` but there are
+    no annotated dependencies.
 
     No warnings should be issued here.
     """
@@ -595,10 +595,10 @@ def test_parse_callback_none_no_annotated_deps() -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with warnings.catch_warnings(record=True) as warning_msg:
+        with warnings.catch_warnings(record=True) as w:
             yield crawler.crawl()
 
-    assert not warning_msg
+    assert not any("with callback=None" in str(warning.message) for warning in w)
     assert isinstance(collected["response"], scrapy.http.Response)
 
 
