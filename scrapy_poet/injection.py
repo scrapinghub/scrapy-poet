@@ -5,6 +5,7 @@ import os
 import pprint
 import warnings
 from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Type, cast
+from weakref import WeakKeyDictionary
 
 import andi
 from andi.typeutils import issubclass_safe
@@ -94,6 +95,11 @@ class Injector:
             logger.info(
                 f"Cache enabled. Folder: {cache_path!r}. Caching errors: {self.caching_errors}"
             )
+
+        # This is different from the cache above as it only stores instances as long
+        # as the request exists. This is useful for latter providers to re-use the
+        # already built instances by earlier providers.
+        self.weak_cache: WeakKeyDictionary[Request, Dict] = WeakKeyDictionary()
 
     def available_dependencies_for_providers(
         self, request: Request, response: Response
@@ -293,6 +299,11 @@ class Injector:
                     f"provider: {provided_classes}"
                 )
             instances.update(objs_by_type)
+
+            if self.weak_cache.get(request):
+                self.weak_cache[request].update(objs_by_type)
+            else:
+                self.weak_cache[request] = objs_by_type
 
             if self.cache and not cache_hit:
                 # Save the results in the cache
