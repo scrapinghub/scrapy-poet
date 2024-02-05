@@ -157,10 +157,9 @@ class MySpider(scrapy.Spider):
     def parse12(self, response: TextResponse, book_page: DummyProductPage):
         pass
 
-        # Strings as type hints (which in addition to something users may do, is
-        # also functionally-equivalent to having from __future__ import annotations
-        # in your code, see https://peps.python.org/pep-0649/).
-        pass
+    # Strings as type hints (which in addition to something users may do, is
+    # also functionally-equivalent to having from __future__ import annotations
+    # in your code, see https://peps.python.org/pep-0649/).
 
     def parse13(self, response: "DummyResponse"):
         pass
