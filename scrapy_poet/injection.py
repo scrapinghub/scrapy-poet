@@ -405,9 +405,6 @@ def is_callback_requiring_scrapy_response(
     callback_type_hints = get_type_hints(callback)
     first_parameter_type_hint = callback_type_hints.get(first_parameter_key, _UNDEFINED)
     if first_parameter_type_hint is _UNDEFINED:
-        return True
-
-    if first_parameter_type_hint is first_parameter.empty:
         # There's no type annotation, so we're probably using response here.
         return True
 
