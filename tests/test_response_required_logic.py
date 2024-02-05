@@ -157,6 +157,41 @@ class MySpider(scrapy.Spider):
     def parse12(self, response: TextResponse, book_page: DummyProductPage):
         pass
 
+        # Strings as type hints (which in addition to something users may do, is
+        # also functionally-equivalent to having from __future__ import annotations
+        # in your code, see https://peps.python.org/pep-0649/).
+        pass
+
+    def parse13(self, response: "DummyResponse"):
+        pass
+
+    def parse14(self, res: "DummyResponse"):
+        pass
+
+    def parse15(self, response, book_page: "BookPage"):
+        pass
+
+    def parse16(self, response: "DummyResponse", book_page: "BookPage"):
+        pass
+
+    def parse17(self, response, book_page: "DummyProductPage"):
+        pass
+
+    def parse18(self, response: "DummyResponse", book_page: "DummyProductPage"):
+        pass
+
+    def parse19(self, response, book_page: "FakeProductPage"):
+        pass
+
+    def parse20(self, response: "DummyResponse", book_page: "FakeProductPage"):
+        pass
+
+    def parse21(self, response: "TextResponse"):
+        pass
+
+    def parse22(self, response: "TextResponse", book_page: "DummyProductPage"):
+        pass
+
 
 def test_get_callback():
     spider = MySpider()
@@ -226,6 +261,36 @@ def test_is_callback_using_response_for_scrapy28_below() -> None:
     assert (
         is_callback_requiring_scrapy_response(spider.parse12, request.callback) is True
     )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse13, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse14, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse15, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse16, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse17, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse18, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse19, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse20, request.callback) is False
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse21, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse22, request.callback) is True
+    )
     # Callbacks created with the callback_for function won't make use of
     # the response, but their providers might use them.
     assert (
@@ -262,6 +327,21 @@ def test_is_callback_using_response_for_scrapy28_below() -> None:
     )
     assert (
         is_callback_requiring_scrapy_response(spider.parse12, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse15, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse17, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse19, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse21, request.callback) is True
+    )
+    assert (
+        is_callback_requiring_scrapy_response(spider.parse22, request.callback) is True
     )
 
     for method in (
@@ -337,6 +417,46 @@ def test_is_callback_using_response_for_scrapy28_and_above() -> None:
                 is_callback_requiring_scrapy_response(spider.parse12, request.callback)
                 is True
             )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse13, request.callback)
+                is False
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse14, request.callback)
+                is False
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse15, request.callback)
+                is True
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse16, request.callback)
+                is False
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse17, request.callback)
+                is True
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse18, request.callback)
+                is False
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse19, request.callback)
+                is True
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse20, request.callback)
+                is False
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse21, request.callback)
+                is True
+            )
+            assert (
+                is_callback_requiring_scrapy_response(spider.parse22, request.callback)
+                is True
+            )
             # Callbacks created with the callback_for function won't make use of
             # the response, but their providers might use them.
             assert (
@@ -382,3 +502,13 @@ def test_is_response_going_to_be_used():
     yield from check_response_required(False, spider.parse10)
     yield from check_response_required(True, spider.parse11)
     yield from check_response_required(True, spider.parse12)
+    yield from check_response_required(False, spider.parse13)
+    yield from check_response_required(False, spider.parse14)
+    yield from check_response_required(True, spider.parse15)
+    yield from check_response_required(True, spider.parse16)
+    yield from check_response_required(True, spider.parse17)
+    yield from check_response_required(False, spider.parse18)
+    yield from check_response_required(True, spider.parse19)
+    yield from check_response_required(False, spider.parse20)
+    yield from check_response_required(True, spider.parse21)
+    yield from check_response_required(True, spider.parse22)

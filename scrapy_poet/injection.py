@@ -4,7 +4,18 @@ import logging
 import os
 import pprint
 import warnings
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Type, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Set,
+    Type,
+    cast,
+    get_type_hints,
+)
 from weakref import WeakKeyDictionary
 
 import andi
@@ -36,6 +47,10 @@ from scrapy_poet.utils import is_min_scrapy_version
 from .utils import create_registry_instance, get_scrapy_data_path
 
 logger = logging.getLogger(__name__)
+
+
+class _UNDEFINED:
+    pass
 
 
 class Injector:
@@ -387,11 +402,16 @@ def is_callback_requiring_scrapy_response(
         # Let's assume response is going to be used.
         return True
 
-    if first_parameter.annotation is first_parameter.empty:
+    callback_type_hints = get_type_hints(callback)
+    first_parameter_type_hint = callback_type_hints.get(first_parameter_key, _UNDEFINED)
+    if first_parameter_type_hint is _UNDEFINED:
+        return True
+
+    if first_parameter_type_hint is first_parameter.empty:
         # There's no type annotation, so we're probably using response here.
         return True
 
-    if issubclass_safe(first_parameter.annotation, DummyResponse):
+    if issubclass_safe(first_parameter_type_hint, DummyResponse):
         # See: https://github.com/scrapinghub/scrapy-poet/issues/48
         # See: https://github.com/scrapinghub/scrapy-poet/issues/118
         if raw_callback is None and not is_min_scrapy_version("2.8.0"):
