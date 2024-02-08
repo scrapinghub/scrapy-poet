@@ -2,6 +2,19 @@
 Changelog
 =========
 
+0.21.0 (YYYY-MM-DD)
+-------------------
+
+* Added a ``.weak_cache`` to :class:`scrapy_poet.injection.Injector` which
+  stores instances created by providers as long as the :class:`scrapy.Request
+  <scrapy.http.Request>` exists.
+
+* Fixed the incorrect value of ``downloader/response_count`` in the stats due
+  to additional counting of :class:`scrapy_poet.api.DummyResponse`.
+
+* Fixed the detection of :class:`scrapy_poet.api.DummyResponse` when some type
+  hints are annotated using strings.
+
 0.20.1 (2024-01-24)
 -------------------
 
