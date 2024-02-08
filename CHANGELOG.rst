@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.21.0 (YYYY-MM-DD)
+0.21.0 (2024-02-08)
 -------------------
 
 * Added a ``.weak_cache`` to :class:`scrapy_poet.injection.Injector` which
