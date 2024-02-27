@@ -5,6 +5,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
 from twisted.web.resource import Resource
 from web_poet.testing import Fixture
 
@@ -43,9 +44,8 @@ def test_savefixture(tmp_path) -> None:
     (cwd / project_name / "po.py").write_text(
         """
 import attrs
-from web_poet import HttpClient
+from web_poet import HttpClient, WebPage
 from web_poet.exceptions import HttpRequestError, HttpResponseError
-from web_poet.pages import WebPage
 
 
 @attrs.define
@@ -115,7 +115,7 @@ class MySpider(Spider):
     (cwd / project_name / "po.py").write_text(
         """
 import json
-from web_poet.pages import WebPage
+from web_poet import WebPage
 
 
 class HeadersPage(WebPage):
@@ -146,8 +146,8 @@ def test_savefixture_expected_exception(tmp_path) -> None:
     type_name = "foo.po.SamplePage"
     (cwd / project_name / "po.py").write_text(
         """
+from web_poet import WebPage
 from web_poet.exceptions import UseFallback
-from web_poet.pages import WebPage
 
 
 class SamplePage(WebPage):
@@ -222,3 +222,88 @@ SCRAPY_POET_TESTS_ADAPTER = CustomItemAdapter
     assert fixture.is_valid()
     item = json.loads(fixture.output_path.read_bytes())
     assert item == {"name": "chocolate"}
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+)
+def test_savefixture_annotated(tmp_path) -> None:
+    project_name = "foo"
+    cwd = Path(tmp_path)
+    call_scrapy_command(str(cwd), "startproject", project_name)
+    cwd /= project_name
+    type_name = "foo.po.BTSBookPage"
+    (cwd / project_name / "providers.py").write_text(
+        """
+from andi.typeutils import strip_annotated
+from scrapy.http import Response
+from scrapy_poet import HttpResponseProvider
+from web_poet import (
+    AnnotatedResult,
+    HttpResponse,
+    HttpResponseHeaders,
+)
+
+
+class AnnotatedHttpResponseProvider(HttpResponseProvider):
+    def is_provided(self, type_) -> bool:
+        return super().is_provided(strip_annotated(type_))
+
+    def __call__(self, to_provide, response: Response):
+        result = []
+        for cls in to_provide:
+            obj = HttpResponse(
+                url=response.url,
+                body=response.body,
+                status=response.status,
+                headers=HttpResponseHeaders.from_bytes_dict(response.headers),
+            )
+            if metadata := getattr(cls, "__metadata__", None):
+                obj = AnnotatedResult(obj, metadata)
+            result.append(obj)
+        return result
+"""
+    )
+    (cwd / project_name / "po.py").write_text(
+        """
+from typing import Annotated
+
+import attrs
+from web_poet import HttpResponse, WebPage
+
+
+@attrs.define
+class BTSBookPage(WebPage):
+
+    response: Annotated[HttpResponse, "foo", 42]
+
+    async def to_item(self):
+        return {
+            'url': self.url,
+            'name': self.css("h1.name::text").get(),
+        }
+"""
+    )
+    with (cwd / project_name / "settings.py").open("a") as f:
+        f.write(
+            f"""
+SCRAPY_POET_PROVIDERS = {{"{project_name}.providers.AnnotatedHttpResponseProvider": 500}}
+"""
+        )
+
+    with MockServer(CustomResource) as server:
+        call_scrapy_command(
+            str(cwd),
+            "savefixture",
+            type_name,
+            f"{server.root_url}",
+        )
+    fixtures_dir = cwd / "fixtures"
+    fixture_dir = fixtures_dir / type_name / "test-1"
+    fixture = Fixture(fixture_dir)
+    assert fixture.is_valid()
+    assert (fixture.input_path / "AnnotatedResult HttpResponse-metadata.json").exists()
+    assert (
+        fixture.input_path / "AnnotatedResult HttpResponse-result-body.html"
+    ).exists()
+    assert fixture.meta_path.exists()

@@ -13,7 +13,7 @@ from scrapy.exceptions import UsageError
 from scrapy.http import Response
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
-from web_poet import ItemPage
+from web_poet import AnnotatedResult, ItemPage
 from web_poet.exceptions import PageObjectAction
 from web_poet.testing import Fixture
 from web_poet.utils import ensure_awaitable
@@ -43,7 +43,11 @@ class SavingInjector(Injector):
             request, response, plan
         )
         if request.meta.get("savefixture", False):
-            saved_dependencies.extend(instances.values())
+            for cls, value in instances.items():
+                metadata = getattr(cls, "__metadata__", None)
+                if metadata:
+                    value = AnnotatedResult(value, metadata)
+                saved_dependencies.append(value)
         return instances
 
 

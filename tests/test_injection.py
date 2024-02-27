@@ -11,13 +11,12 @@ from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
-from web_poet import Injectable, ItemPage, RulesRegistry, field
+from web_poet import AnnotatedResult, Injectable, ItemPage, RulesRegistry, field
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
 from scrapy_poet import DummyResponse, HttpResponseProvider, PageObjectInputProvider
 from scrapy_poet.injection import (
-    AnnotatedResult,
     Injector,
     check_all_providers_are_callable,
     get_injector_for_testing,
