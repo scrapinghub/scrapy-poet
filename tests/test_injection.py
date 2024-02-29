@@ -11,7 +11,7 @@ from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
-from web_poet import AnnotatedResult, Injectable, ItemPage, RulesRegistry, field
+from web_poet import AnnotatedInstance, Injectable, ItemPage, RulesRegistry, field
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
@@ -49,7 +49,7 @@ def get_provider(classes, content=None):
             for cls in to_provide:
                 obj = cls(content) if content else cls()
                 if metadata := getattr(cls, "__metadata__", None):
-                    obj = AnnotatedResult(obj, metadata)
+                    obj = AnnotatedInstance(obj, metadata)
                 result.append(obj)
             return result
 
@@ -444,7 +444,7 @@ class TestInjector:
                     processed_classes.add(cls_stripped)
                     obj = cls()
                     if metadata := getattr(cls, "__metadata__", None):
-                        obj = AnnotatedResult(obj, metadata)
+                        obj = AnnotatedInstance(obj, metadata)
                     result.append(obj)
                 return result
 

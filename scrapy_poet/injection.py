@@ -29,7 +29,7 @@ from scrapy.utils.conf import build_component_list
 from scrapy.utils.defer import deferred_from_coro, maybeDeferred_coro
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
-from web_poet import AnnotatedResult, RulesRegistry
+from web_poet import AnnotatedInstance, RulesRegistry
 from web_poet.page_inputs.http import request_fingerprint
 from web_poet.pages import ItemPage, is_injectable
 from web_poet.serialization.api import deserialize_leaf, load_class, serialize
@@ -300,7 +300,7 @@ class Injector:
 
             objs_by_type: Dict[Callable, Any] = {}
             for obj in objs:
-                if isinstance(obj, AnnotatedResult):
+                if isinstance(obj, AnnotatedInstance):
                     cls = obj.get_annotated_cls()
                     obj = obj.result
                 else:

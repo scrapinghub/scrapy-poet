@@ -253,7 +253,7 @@ from andi.typeutils import strip_annotated
 from scrapy.http import Response
 from scrapy_poet import HttpResponseProvider
 from web_poet import (
-    AnnotatedResult,
+    AnnotatedInstance,
     HttpResponse,
     HttpResponseHeaders,
 )
@@ -273,7 +273,7 @@ class AnnotatedHttpResponseProvider(HttpResponseProvider):
                 headers=HttpResponseHeaders.from_bytes_dict(response.headers),
             )
             if metadata := getattr(cls, "__metadata__", None):
-                obj = AnnotatedResult(obj, metadata)
+                obj = AnnotatedInstance(obj, metadata)
             result.append(obj)
         return result
 """
@@ -316,9 +316,11 @@ SCRAPY_POET_PROVIDERS = {{"{project_name}.providers.AnnotatedHttpResponseProvide
     fixture_dir = fixtures_dir / type_name / "test-1"
     fixture = Fixture(fixture_dir)
     assert fixture.is_valid()
-    assert (fixture.input_path / "AnnotatedResult HttpResponse-metadata.json").exists()
     assert (
-        fixture.input_path / "AnnotatedResult HttpResponse-result-body.html"
+        fixture.input_path / "AnnotatedInstance HttpResponse-metadata.json"
+    ).exists()
+    assert (
+        fixture.input_path / "AnnotatedInstance HttpResponse-result-body.html"
     ).exists()
     assert fixture.meta_path.exists()
     os.chdir(cwd)
