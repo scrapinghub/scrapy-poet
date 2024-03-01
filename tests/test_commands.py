@@ -38,6 +38,11 @@ class CustomResource(Resource):
         self.putChild(b"drop", DropResource())
 
 
+def _get_pythonpath() -> str:
+    # needed for mockserver to find CustomResource as the pytester fixture changes the working directory
+    return str(Path(os.path.dirname(__file__)).parent)
+
+
 def test_savefixture(pytester) -> None:
     project_name = "foo"
     cwd = Path(pytester.path)
@@ -72,7 +77,7 @@ class BTSBookPage(WebPage):
         }
 """
     )
-    with MockServer(CustomResource) as server:
+    with MockServer(CustomResource, pythonpath=_get_pythonpath()) as server:
         call_scrapy_command(
             str(cwd),
             "savefixture",
@@ -305,7 +310,7 @@ SCRAPY_POET_PROVIDERS = {{"{project_name}.providers.AnnotatedHttpResponseProvide
 """
         )
 
-    with MockServer(CustomResource) as server:
+    with MockServer(CustomResource, pythonpath=_get_pythonpath()) as server:
         call_scrapy_command(
             str(cwd),
             "savefixture",
