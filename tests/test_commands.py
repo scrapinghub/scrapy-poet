@@ -257,11 +257,8 @@ def test_savefixture_annotated(pytester) -> None:
 from andi.typeutils import strip_annotated
 from scrapy.http import Response
 from scrapy_poet import HttpResponseProvider
-from web_poet import (
-    AnnotatedInstance,
-    HttpResponse,
-    HttpResponseHeaders,
-)
+from web_poet import HttpResponse, HttpResponseHeaders
+from web_poet.annotated import AnnotatedInstance
 
 
 class AnnotatedHttpResponseProvider(HttpResponseProvider):

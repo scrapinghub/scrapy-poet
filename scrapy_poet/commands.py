@@ -13,7 +13,8 @@ from scrapy.exceptions import UsageError
 from scrapy.http import Response
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
-from web_poet import AnnotatedInstance, ItemPage
+from web_poet import ItemPage
+from web_poet.annotated import AnnotatedInstance
 from web_poet.exceptions import PageObjectAction
 from web_poet.testing import Fixture
 from web_poet.utils import ensure_awaitable

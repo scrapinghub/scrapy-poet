@@ -11,7 +11,8 @@ from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
-from web_poet import AnnotatedInstance, Injectable, ItemPage, RulesRegistry, field
+from web_poet import Injectable, ItemPage, RulesRegistry, field
+from web_poet.annotated import AnnotatedInstance
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
