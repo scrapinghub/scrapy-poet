@@ -2,6 +2,19 @@
 Changelog
 =========
 
+0.22.0 (YYYY-MM-DD)
+-------------------
+
+* Now requires ``web-poet >= 0.17.0`` and ``time_machine >= 2.7.1``.
+
+* Removed ``scrapy_poet.AnnotatedResult``, use
+  :class:`web_poet.annotated.AnnotatedInstance` instead.
+
+* Added support for annotated dependencies to the ``scrapy savefixture``
+  command.
+
+* Test improvements.
+
 0.21.0 (2024-02-08)
 -------------------
 
@@ -33,8 +46,8 @@ Changelog
 * Now requires ``andi >= 0.6.0``.
 
 * Changed the implementation of resolving and building item dependencies from
-  page objects. Now ``andi`` custom builders are used to create a single plan 
-  that includes building page objects and items. This fixes problems such as 
+  page objects. Now ``andi`` custom builders are used to create a single plan
+  that includes building page objects and items. This fixes problems such as
   providers being called multiple times.
 
   * :class:`~scrapy_poet.page_input_providers.ItemProvider` is now no-op. It's
@@ -84,8 +97,8 @@ Changelog
 
 * Now requires ``time_machine >= 2.2.0``.
 
-* ``ItemProvider`` now supports page objects that declare a dependency on the 
-  same type of item that they return, as long as there is an earlier page 
+* ``ItemProvider`` now supports page objects that declare a dependency on the
+  same type of item that they return, as long as there is an earlier page
   object input provider that can provide such dependency.
 
 * Fix running tests with Scrapy 2.11.
