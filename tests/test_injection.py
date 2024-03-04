@@ -12,12 +12,12 @@ from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import Injectable, ItemPage, RulesRegistry, field
+from web_poet.annotated import AnnotatedInstance
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
 from scrapy_poet import DummyResponse, HttpResponseProvider, PageObjectInputProvider
 from scrapy_poet.injection import (
-    AnnotatedResult,
     Injector,
     check_all_providers_are_callable,
     get_injector_for_testing,
@@ -50,7 +50,7 @@ def get_provider(classes, content=None):
             for cls in to_provide:
                 obj = cls(content) if content else cls()
                 if metadata := getattr(cls, "__metadata__", None):
-                    obj = AnnotatedResult(obj, metadata)
+                    obj = AnnotatedInstance(obj, metadata)
                 result.append(obj)
             return result
 
@@ -445,7 +445,7 @@ class TestInjector:
                     processed_classes.add(cls_stripped)
                     obj = cls()
                     if metadata := getattr(cls, "__metadata__", None):
-                        obj = AnnotatedResult(obj, metadata)
+                        obj = AnnotatedInstance(obj, metadata)
                     result.append(obj)
                 return result
 

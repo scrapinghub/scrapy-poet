@@ -344,7 +344,8 @@ To handle this you need the following changes in your provider:
 .. code-block:: python
 
     from andi.typeutils import strip_annotated
-    from scrapy_poet import AnnotatedResult, PageObjectInputProvider
+    from scrapy_poet import PageObjectInputProvider
+    from web_poet.annotated import AnnotatedInstance
 
 
     class Provider(PageObjectInputProvider):
@@ -360,10 +361,7 @@ To handle this you need the following changes in your provider:
                 metadata = getattr(cls, "__metadata__", None)
                 obj = ...  # create the instance using cls and metadata
                 if metadata:
-                    # wrap the instance into a scrapy_poet.AnnotatedResult object
-                    obj = AnnotatedResult(obj, metadata)
+                    # wrap the instance into a web_poet.annotated.AnnotatedInstance object
+                    obj = AnnotatedInstance(obj, metadata)
                 result.append(obj)
             return result
-
-.. autoclass:: scrapy_poet.AnnotatedResult
-   :members:
