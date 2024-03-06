@@ -13,6 +13,7 @@ from scrapy.crawler import Crawler
 from scrapy.exceptions import UsageError
 from scrapy.http import Response
 from scrapy.utils.misc import load_object
+from scrapy.utils.project import inside_project
 from twisted.internet.defer import inlineCallbacks
 from web_poet import ItemPage
 from web_poet.annotated import AnnotatedInstance
@@ -110,7 +111,7 @@ class SaveFixtureCommand(ScrapyCommand):
         type_name = args[0]
         url = args[1]
 
-        if "" not in sys.path:
+        if not inside_project() and "" not in sys.path:
             # when running without a Scrapy project the current dir may not be in sys.path,
             # but the user may expect modules in the current dir to be available
             sys.path.insert(0, "")
