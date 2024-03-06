@@ -22,9 +22,12 @@ from scrapy_poet.utils.testing import (
 pytest_plugins = ["pytester"]
 
 
-def call_scrapy_command(cwd: str, *args: str) -> None:
+def call_scrapy_command(cwd: str, *args: str, run_module: bool = True) -> None:
     with tempfile.TemporaryFile() as out:
-        args = (sys.executable, "-m", "scrapy.cmdline") + args
+        if run_module:
+            args = (sys.executable, "-m", "scrapy.cmdline") + args
+        else:
+            args = ("scrapy",) + args
         status = subprocess.call(args, stdout=out, stderr=out, cwd=cwd)
         out.seek(0)
         assert status == 0, out.read().decode()
@@ -326,5 +329,41 @@ SCRAPY_POET_PROVIDERS = {{"{project_name}.providers.AnnotatedHttpResponseProvide
     ).exists()
     assert fixture.meta_path.exists()
     os.chdir(cwd)
+    result = pytester.runpytest_subprocess()
+    result.assert_outcomes(passed=4)
+
+
+def test_savefixture_without_project(pytester) -> None:
+    cwd = Path(pytester.path)
+    type_name = "po.BTSBookPage"
+    (cwd / "po.py").write_text(
+        """
+from web_poet import WebPage
+
+
+class BTSBookPage(WebPage):
+
+    async def to_item(self):
+        return {
+            'url': self.url,
+            'name': self.css("h1.name::text").get(),
+        }
+"""
+    )
+    with MockServer(CustomResource, pythonpath=_get_pythonpath()) as server:
+        call_scrapy_command(
+            str(cwd),
+            "savefixture",
+            type_name,
+            f"{server.root_url}",
+            run_module=False,  # python -m adds '' to sys.path, making the test always pass
+        )
+    fixtures_dir = cwd / "fixtures"
+    fixture_dir = fixtures_dir / type_name / "test-1"
+    fixture = Fixture(fixture_dir)
+    assert fixture.is_valid()
+    assert fixture.meta_path.exists()
+    item = json.loads(fixture.output_path.read_bytes())
+    assert item["name"] == "Chocolate"
     result = pytester.runpytest_subprocess()
     result.assert_outcomes(passed=4)
