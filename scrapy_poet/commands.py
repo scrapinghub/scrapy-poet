@@ -1,5 +1,6 @@
 import datetime
 import logging
+import sys
 from pathlib import Path
 from typing import Optional, Type
 
@@ -109,6 +110,10 @@ class SaveFixtureCommand(ScrapyCommand):
         type_name = args[0]
         url = args[1]
 
+        if "" not in sys.path:
+            # when running without a Scrapy project the current dir may not be in sys.path,
+            # but the user may expect modules in the current dir to be available
+            sys.path.insert(0, "")
         cls = load_object(type_name)
         if not issubclass(cls, ItemPage):
             raise UsageError(f"Error: {type_name} is not a descendant of ItemPage")
