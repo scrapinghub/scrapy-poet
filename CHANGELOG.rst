@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.22.1 (YYYY-MM-DD)
+-------------------
+
+* Fixed ``scrapy savefixture`` not finding page object modules when used
+  outside a Scrapy project.
+
 0.22.0 (2024-03-04)
 -------------------
 
