@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.22.1 (YYYY-MM-DD)
+0.22.1 (2024-03-07)
 -------------------
 
 * Fixed ``scrapy savefixture`` not finding page object modules when used
