@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.22.2 (2024-04-??)
+0.22.2 (2024-04-24)
 -------------------
 
 * :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`, added in
