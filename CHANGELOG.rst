@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.22.2 (2024-04-24)
+-------------------
+
+* :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`, added in
+  0.17.0, is now actually enabled by default.
+
 0.22.1 (2024-03-07)
 -------------------
 
