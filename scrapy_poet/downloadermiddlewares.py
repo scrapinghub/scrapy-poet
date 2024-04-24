@@ -18,6 +18,7 @@ from .api import DummyResponse
 from .injection import Injector
 from .page_input_providers import (
     HttpClientProvider,
+    HttpRequestProvider,
     HttpResponseProvider,
     PageParamsProvider,
     RequestUrlProvider,
@@ -39,6 +40,7 @@ class DownloaderStatsMiddleware(DownloaderStats):
 
 
 DEFAULT_PROVIDERS = {
+    HttpRequestProvider: 400,
     HttpResponseProvider: 500,
     HttpClientProvider: 600,
     PageParamsProvider: 700,
