@@ -2,6 +2,13 @@
 Changelog
 =========
 
+0.22.3 (2024-MM-DD)
+-------------------
+
+* :func:`scrapy_poet.utils.testing.make_crawler` now respects setting
+  priorities when it receives a :class:`~scrapy.settings.Settings` object
+  instead of a :class:`dict`.
+
 0.22.2 (2024-04-24)
 -------------------
 
