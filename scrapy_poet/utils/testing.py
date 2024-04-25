@@ -159,7 +159,14 @@ def get_download_handler(crawler, schema):
 
 def make_crawler(spider_cls, settings=None):
     settings = settings or {}
-    settings = {**create_scrapy_settings(), **settings}
+    if isinstance(settings, dict):
+        _settings = create_scrapy_settings()
+        _settings.update(settings)
+    else:
+        _settings = create_scrapy_settings()
+        for k, v in dict(settings).items():
+            _settings.set(k, v, priority=settings.getpriority(k))
+    settings = _settings
 
     if not getattr(spider_cls, "name", None):
 
