@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.22.3 (2024-MM-DD)
+0.22.3 (2024-04-25)
 -------------------
 
 * :func:`scrapy_poet.utils.testing.make_crawler` now respects setting
