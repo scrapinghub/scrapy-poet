@@ -1,7 +1,8 @@
 import datetime
 import logging
+import sys
 from pathlib import Path
-from typing import Dict, Optional, Type
+from typing import Optional, Type
 
 import andi
 import scrapy
@@ -12,8 +13,10 @@ from scrapy.crawler import Crawler
 from scrapy.exceptions import UsageError
 from scrapy.http import Response
 from scrapy.utils.misc import load_object
+from scrapy.utils.project import inside_project
 from twisted.internet.defer import inlineCallbacks
 from web_poet import ItemPage
+from web_poet.annotated import AnnotatedInstance
 from web_poet.exceptions import PageObjectAction
 from web_poet.testing import Fixture
 from web_poet.utils import ensure_awaitable
@@ -38,13 +41,16 @@ class SavingInjector(Injector):
         request: Request,
         response: Response,
         plan: andi.Plan,
-        prev_instances: Optional[Dict] = None,
     ):
         instances = yield super().build_instances_from_providers(
-            request, response, plan, prev_instances
+            request, response, plan
         )
         if request.meta.get("savefixture", False):
-            saved_dependencies.extend(instances.values())
+            for cls, value in instances.items():
+                metadata = getattr(cls, "__metadata__", None)
+                if metadata:
+                    value = AnnotatedInstance(value, metadata)
+                saved_dependencies.append(value)
         return instances
 
 
@@ -105,10 +111,17 @@ class SaveFixtureCommand(ScrapyCommand):
         type_name = args[0]
         url = args[1]
 
+        if not inside_project() and "" not in sys.path:
+            # when running without a Scrapy project the current dir may not be in sys.path,
+            # but the user may expect modules in the current dir to be available
+            sys.path.insert(0, "")
         cls = load_object(type_name)
         if not issubclass(cls, ItemPage):
             raise UsageError(f"Error: {type_name} is not a descendant of ItemPage")
 
+        self.settings["DOWNLOADER_MIDDLEWARES"][
+            "scrapy_poet.InjectionMiddleware"
+        ] = None
         self.settings["DOWNLOADER_MIDDLEWARES"][
             "scrapy_poet.downloadermiddlewares.InjectionMiddleware"
         ] = None

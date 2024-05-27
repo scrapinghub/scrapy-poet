@@ -5,7 +5,7 @@ from scrapy import Request, Spider
 from web_poet import WebPage, field
 
 from scrapy_poet.utils.mockserver import MockServer
-from scrapy_poet.utils.testing import EchoResource, make_crawler
+from scrapy_poet.utils.testing import EchoResource, create_scrapy_settings, make_crawler
 
 
 @inlineCallbacks
@@ -22,10 +22,7 @@ def test_cache_no_errors(caplog) -> None:
                 name = "cache"
 
                 custom_settings = {
-                    "DOWNLOADER_MIDDLEWARES": {
-                        "scrapy_poet.InjectionMiddleware": 543,
-                    },
-                    "REQUEST_FINGERPRINTER_IMPLEMENTATION": "2.7",
+                    **create_scrapy_settings(),
                     "SCRAPY_POET_CACHE": cache_dir,
                 }
 

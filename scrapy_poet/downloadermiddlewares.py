@@ -5,10 +5,11 @@ are executed.
 import inspect
 import logging
 import warnings
-from typing import Generator, Optional, Type, TypeVar
+from typing import Generator, Optional, Type, TypeVar, Union
 
 from scrapy import Spider
 from scrapy.crawler import Crawler
+from scrapy.downloadermiddlewares.stats import DownloaderStats
 from scrapy.http import Request, Response
 from twisted.internet.defer import Deferred, inlineCallbacks
 from web_poet import RulesRegistry
@@ -17,24 +18,35 @@ from .api import DummyResponse
 from .injection import Injector
 from .page_input_providers import (
     HttpClientProvider,
+    HttpRequestProvider,
     HttpResponseProvider,
-    ItemProvider,
     PageParamsProvider,
     RequestUrlProvider,
     ResponseUrlProvider,
+    StatsProvider,
 )
 from .utils import create_registry_instance, is_min_scrapy_version
 
 logger = logging.getLogger(__name__)
 
 
+class DownloaderStatsMiddleware(DownloaderStats):
+    def process_response(
+        self, request: Request, response: Response, spider: Spider
+    ) -> Union[Request, Response]:
+        if isinstance(response, DummyResponse):
+            return response
+        return super().process_response(request, response, spider)
+
+
 DEFAULT_PROVIDERS = {
+    HttpRequestProvider: 400,
     HttpResponseProvider: 500,
     HttpClientProvider: 600,
     PageParamsProvider: 700,
     RequestUrlProvider: 800,
     ResponseUrlProvider: 900,
-    ItemProvider: 2000,
+    StatsProvider: 1000,
 }
 
 InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")

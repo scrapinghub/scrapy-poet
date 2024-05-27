@@ -127,6 +127,14 @@ which Scrapy has. Although they are quite similar in its intended purpose,
 could be anything that could stretch beyond Scrapy's ``Responses`` `(e.g. Network
 Database queries, API Calls, AWS S3 files, etc)`.
 
+.. note::
+
+   The :class:`scrapy_poet.injection.Injector` maintains a ``.weak_cache`` which
+   stores the instances created by the providers as long as the corresponding
+   :class:`scrapy.Request <scrapy.http.Request>` instance exists. This means that
+   the instances created by earlier providers can be accessed and reused by latter
+   providers. This is turned on by default and the instances are stored in memory.
+
 
 Configuring providers
 =====================
@@ -312,3 +320,48 @@ but not the others.
 To have other settings respected, in addition to ``CONCURRENT_REQUESTS``, you'd
 need to use ``crawler.engine.download`` or something like that. Alternatively,
 you could implement those limits in the library itself.
+
+
+.. _annotated:
+
+Attaching metadata to dependencies
+==================================
+
+.. note:: This feature requires Python 3.9+.
+
+Providers can support dependencies with arbitrary metadata attached and use
+that metadata when creating them. Attaching the metadata is done by wrapping
+the dependency class in :data:`typing.Annotated`:
+
+.. code-block:: python
+
+    @attr.define
+    class MyPageObject(ItemPage):
+        response: Annotated[HtmlResponse, "foo", "bar"]
+
+To handle this you need the following changes in your provider:
+
+.. code-block:: python
+
+    from andi.typeutils import strip_annotated
+    from scrapy_poet import PageObjectInputProvider
+    from web_poet.annotated import AnnotatedInstance
+
+
+    class Provider(PageObjectInputProvider):
+        ...
+
+        def is_provided(self, type_: Callable) -> bool:
+            # needed so that you can list just the base type in provided_classes
+            return super().is_provided(strip_annotated(type_))
+
+        def __call__(self, to_provide):
+            result = []
+            for cls in to_provide:
+                metadata = getattr(cls, "__metadata__", None)
+                obj = ...  # create the instance using cls and metadata
+                if metadata:
+                    # wrap the instance into a web_poet.annotated.AnnotatedInstance object
+                    obj = AnnotatedInstance(obj, metadata)
+                result.append(obj)
+            return result

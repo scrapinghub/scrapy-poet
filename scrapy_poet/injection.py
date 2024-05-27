@@ -1,9 +1,22 @@
+import functools
 import inspect
 import logging
 import os
 import pprint
 import warnings
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Set,
+    Type,
+    cast,
+    get_type_hints,
+)
+from weakref import WeakKeyDictionary
 
 import andi
 from andi.typeutils import issubclass_safe
@@ -13,19 +26,19 @@ from scrapy.http import Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import MemoryStatsCollector, StatsCollector
 from scrapy.utils.conf import build_component_list
-from scrapy.utils.defer import maybeDeferred_coro
+from scrapy.utils.defer import deferred_from_coro, maybeDeferred_coro
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import RulesRegistry
+from web_poet.annotated import AnnotatedInstance
 from web_poet.page_inputs.http import request_fingerprint
-from web_poet.pages import is_injectable
+from web_poet.pages import ItemPage, is_injectable
 from web_poet.serialization.api import deserialize_leaf, load_class, serialize
 from web_poet.utils import get_fq_class_name
 
 from scrapy_poet.api import _CALLBACK_FOR_MARKER, DummyResponse
 from scrapy_poet.cache import SerializedDataCache
 from scrapy_poet.injection_errors import (
-    InjectionError,
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
@@ -35,6 +48,10 @@ from scrapy_poet.utils import is_min_scrapy_version
 from .utils import create_registry_instance, get_scrapy_data_path
 
 logger = logging.getLogger(__name__)
+
+
+class _UNDEFINED:
+    pass
 
 
 class Injector:
@@ -95,6 +112,11 @@ class Injector:
                 f"Cache enabled. Folder: {cache_path!r}. Caching errors: {self.caching_errors}"
             )
 
+        # This is different from the cache above as it only stores instances as long
+        # as the request exists. This is useful for latter providers to re-use the
+        # already built instances by earlier providers.
+        self.weak_cache: WeakKeyDictionary[Request, Dict] = WeakKeyDictionary()
+
     def available_dependencies_for_providers(
         self, request: Request, response: Response
     ):  # noqa: D102
@@ -148,7 +170,32 @@ class Injector:
             # Callable[[Callable], Optional[Callable]] but the registry
             # returns the typing for ``dict.get()`` method.
             overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
+            custom_builder_fn=self._get_item_builder(request),
         )
+
+    def _get_item_builder(
+        self, request: Request
+    ) -> Callable[[Callable], Optional[Callable]]:
+        """Return a function suitable for passing as ``custom_builder_fn`` to ``andi.plan``.
+
+        The returned function can map an item to a factory for that item based
+        on the registry.
+        """
+
+        @functools.lru_cache(maxsize=None)  # to minimize the registry queries
+        def mapping_fn(item_cls: Callable) -> Optional[Callable]:
+            page_object_cls: Optional[Type[ItemPage]] = self.registry.page_cls_for_item(
+                request.url, cast(type, item_cls)
+            )
+            if not page_object_cls:
+                return None
+
+            async def item_factory(page: page_object_cls) -> item_cls:  # type: ignore[valid-type]
+                return await page.to_item()  # type: ignore[attr-defined]
+
+            return item_factory
+
+        return mapping_fn
 
     @inlineCallbacks
     def build_instances(
@@ -156,7 +203,6 @@ class Injector:
         request: Request,
         response: Response,
         plan: andi.Plan,
-        prev_instances: Optional[Dict] = None,
     ):
         """Build the instances dict from a plan including external dependencies."""
         # First we build the external dependencies using the providers
@@ -164,15 +210,21 @@ class Injector:
             request,
             response,
             plan,
-            prev_instances,
         )
         # All the remaining dependencies are internal so they can be built just
         # following the andi plan.
         assert self.crawler.stats
         for cls, kwargs_spec in plan.dependencies:
             if cls not in instances.keys():
-                instances[cls] = cls(**kwargs_spec.kwargs(instances))
-                cls_fqn = get_fq_class_name(cast(type, cls))
+                result_cls: type = cast(type, cls)
+                if isinstance(cls, andi.CustomBuilder):
+                    result_cls = cls.result_class_or_fn
+                    instances[result_cls] = yield deferred_from_coro(
+                        cls.factory(**kwargs_spec.kwargs(instances))
+                    )
+                else:
+                    instances[result_cls] = cls(**kwargs_spec.kwargs(instances))
+                cls_fqn = get_fq_class_name(result_cls)
                 self.crawler.stats.inc_value(f"poet/injector/{cls_fqn}")
 
         return instances
@@ -183,11 +235,10 @@ class Injector:
         request: Request,
         response: Response,
         plan: andi.Plan,
-        prev_instances: Optional[Dict] = None,
     ):
         """Build dependencies handled by registered providers"""
         assert self.crawler.stats
-        instances: Dict[Callable, Any] = prev_instances or {}
+        instances: Dict[Callable, Any] = {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response
         )
@@ -197,20 +248,9 @@ class Injector:
             provided_classes = {
                 cls for cls in dependencies_set if provider.is_provided(cls)
             }
-
-            # ignore already provided types if provider doesn't need to use them
-            if not provider.allow_prev_instances:
-                provided_classes -= instances.keys()
+            provided_classes -= instances.keys()  # ignore already provided types
 
             if not provided_classes:
-                continue
-
-            # If dependency instances were already made by previously invoked
-            # providers, don't try to build them again since it may result in
-            # incorrect values (e.g. PO modifying an item > 2 times).
-            required_deps = set(plan.dependencies[-1][1].values())
-            built_deps = set(instances.keys())
-            if required_deps and required_deps == built_deps:
                 continue
 
             objs, fingerprint = [], None
@@ -248,8 +288,6 @@ class Injector:
                     externally_provided=scrapy_provided_dependencies,
                     full_final_kwargs=False,
                 ).final_kwargs(scrapy_provided_dependencies)
-                if provider.allow_prev_instances:
-                    kwargs.update({"prev_instances": instances})
                 try:
                     # Invoke the provider to get the data
                     objs = yield maybeDeferred_coro(
@@ -263,15 +301,27 @@ class Injector:
                         self.crawler.stats.inc_value("poet/cache/firsthand")
                     raise
 
-            objs_by_type: Dict[Callable, Any] = {type(obj): obj for obj in objs}
+            objs_by_type: Dict[Callable, Any] = {}
+            for obj in objs:
+                if isinstance(obj, AnnotatedInstance):
+                    cls = obj.get_annotated_cls()
+                    obj = obj.result
+                else:
+                    cls = type(obj)
+                objs_by_type[cls] = obj
             extra_classes = objs_by_type.keys() - provided_classes
             if extra_classes:
                 raise UndeclaredProvidedTypeError(
                     f"{provider} has returned instances of types {extra_classes} "
                     "that are not among the declared supported classes in the "
-                    f"provider: {provider.provided_classes}"
+                    f"provider: {provided_classes}"
                 )
             instances.update(objs_by_type)
+
+            if self.weak_cache.get(request):
+                self.weak_cache[request].update(objs_by_type)
+            else:
+                self.weak_cache[request] = objs_by_type
 
             if self.cache and not cache_hit:
                 # Save the results in the cache
@@ -308,31 +358,15 @@ def is_class_provided_by_any_provider_fn(
     Return a function of type ``Callable[[Type], bool]`` that return
     True if the given type is provided by any of the registered providers.
 
-    The attribute ``provided_classes`` from each provided is used.
-    This attribute can be a :class:`set` or a ``Callable``. All sets are
-    joined together for efficiency.
+    The ``is_provided`` method from each provider is used.
     """
-    sets_of_types: Set[Callable] = set()  # caching all sets found
-    individual_is_callable: List[Callable[[Callable], bool]] = [
-        sets_of_types.__contains__
-    ]
+    callables: List[Callable[[Callable], bool]] = []
     for provider in providers:
-        provided_classes = provider.provided_classes
+        callables.append(provider.is_provided)
 
-        if isinstance(provided_classes, (Set, frozenset)):
-            sets_of_types.update(provided_classes)
-        elif callable(provider.provided_classes):
-            individual_is_callable.append(provided_classes)
-        else:
-            raise InjectionError(
-                f"Unexpected type '{type(provided_classes)}' for "
-                f"'{type(provider)}.provided_classes'. Expected either 'set' "
-                f"or 'callable'"
-            )
-
-    def is_provided_fn(type: Callable) -> bool:
-        for is_provided in individual_is_callable:
-            if is_provided(type):
+    def is_provided_fn(type_: Callable) -> bool:
+        for is_provided in callables:
+            if is_provided(type_):
                 return True
         return False
 
@@ -371,11 +405,13 @@ def is_callback_requiring_scrapy_response(
         # Let's assume response is going to be used.
         return True
 
-    if first_parameter.annotation is first_parameter.empty:
+    callback_type_hints = get_type_hints(callback)
+    first_parameter_type_hint = callback_type_hints.get(first_parameter_key, _UNDEFINED)
+    if first_parameter_type_hint is _UNDEFINED:
         # There's no type annotation, so we're probably using response here.
         return True
 
-    if issubclass_safe(first_parameter.annotation, DummyResponse):
+    if issubclass_safe(first_parameter_type_hint, DummyResponse):
         # See: https://github.com/scrapinghub/scrapy-poet/issues/48
         # See: https://github.com/scrapinghub/scrapy-poet/issues/118
         if raw_callback is None and not is_min_scrapy_version("2.8.0"):

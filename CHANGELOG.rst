@@ -2,6 +2,106 @@
 Changelog
 =========
 
+0.22.3 (2024-04-25)
+-------------------
+
+* :func:`scrapy_poet.utils.testing.make_crawler` now respects setting
+  priorities when it receives a :class:`~scrapy.settings.Settings` object
+  instead of a :class:`dict`.
+
+0.22.2 (2024-04-24)
+-------------------
+
+* :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`, added in
+  0.17.0, is now actually enabled by default.
+
+0.22.1 (2024-03-07)
+-------------------
+
+* Fixed ``scrapy savefixture`` not finding page object modules when used
+  outside a Scrapy project.
+
+0.22.0 (2024-03-04)
+-------------------
+
+* Now requires ``web-poet >= 0.17.0`` and ``time_machine >= 2.7.1``.
+
+* Removed ``scrapy_poet.AnnotatedResult``, use
+  :class:`web_poet.annotated.AnnotatedInstance` instead.
+
+* Added support for annotated dependencies to the ``scrapy savefixture``
+  command.
+
+* Test improvements.
+
+0.21.0 (2024-02-08)
+-------------------
+
+* Added a ``.weak_cache`` to :class:`scrapy_poet.injection.Injector` which
+  stores instances created by providers as long as the :class:`scrapy.Request
+  <scrapy.http.Request>` exists.
+
+* Fixed the incorrect value of ``downloader/response_count`` in the stats due
+  to additional counting of :class:`scrapy_poet.api.DummyResponse`.
+
+* Fixed the detection of :class:`scrapy_poet.api.DummyResponse` when some type
+  hints are annotated using strings.
+
+0.20.1 (2024-01-24)
+-------------------
+
+* :class:`~scrapy_poet.ScrapyPoetRequestFingerprinter` now supports item
+  dependencies.
+
+0.20.0 (2024-01-15)
+-------------------
+
+* Add :class:`~scrapy_poet.ScrapyPoetRequestFingerprinter`, a request
+  fingerprinter that uses request dependencies in the fingerprint generation.
+
+0.19.0 (2023-12-26)
+-------------------
+
+* Now requires ``andi >= 0.6.0``.
+
+* Changed the implementation of resolving and building item dependencies from
+  page objects. Now ``andi`` custom builders are used to create a single plan
+  that includes building page objects and items. This fixes problems such as
+  providers being called multiple times.
+
+  * :class:`~scrapy_poet.page_input_providers.ItemProvider` is now no-op. It's
+    no longer enabled by default and users should also stop enabling it.
+  * ``PageObjectInputProvider.allow_prev_instances`` and code related to it
+    were removed so custom providers may need updating.
+
+* Fixed some tests.
+
+0.18.0 (2023-12-12)
+-------------------
+
+* Now requires ``andi >= 0.5.0``.
+
+* Add support for dependency metadata via ``typing.Annotated`` (requires
+  Python 3.9+).
+
+0.17.0 (2023-12-11)
+-------------------
+
+* Now requires ``web-poet >= 0.15.1``.
+
+* :class:`~web_poet.page_inputs.http.HttpRequest` dependencies are now
+  supported, via :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`
+  (enabled by default).
+
+* Enable :class:`~scrapy_poet.page_input_providers.StatsProvider`, which
+  provides :class:`~web_poet.page_inputs.stats.Stats` dependencies, by default.
+
+* More robust disabling of
+  :class:`~scrapy_poet.downloadermiddlewares.InjectionMiddleware` in the
+  ``scrapy savefixture`` command.
+
+* Official support for Python 3.12.
+
 0.16.1 (2023-11-02)
 -------------------
 
@@ -16,8 +116,8 @@ Changelog
 
 * Now requires ``time_machine >= 2.2.0``.
 
-* ``ItemProvider`` now supports page objects that declare a dependency on the 
-  same type of item that they return, as long as there is an earlier page 
+* ``ItemProvider`` now supports page objects that declare a dependency on the
+  same type of item that they return, as long as there is an earlier page
   object input provider that can provide such dependency.
 
 * Fix running tests with Scrapy 2.11.

@@ -1,10 +1,12 @@
 import datetime
 import json
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+import pytest
 from twisted.web.resource import Resource
 from web_poet.testing import Fixture
 
@@ -17,10 +19,15 @@ from scrapy_poet.utils.testing import (
     ProductHtml,
 )
 
+pytest_plugins = ["pytester"]
 
-def call_scrapy_command(cwd: str, *args: str) -> None:
+
+def call_scrapy_command(cwd: str, *args: str, run_module: bool = True) -> None:
     with tempfile.TemporaryFile() as out:
-        args = (sys.executable, "-m", "scrapy.cmdline") + args
+        if run_module:
+            args = (sys.executable, "-m", "scrapy.cmdline") + args
+        else:
+            args = ("scrapy",) + args
         status = subprocess.call(args, stdout=out, stderr=out, cwd=cwd)
         out.seek(0)
         assert status == 0, out.read().decode()
@@ -34,18 +41,22 @@ class CustomResource(Resource):
         self.putChild(b"drop", DropResource())
 
 
-def test_savefixture(tmp_path) -> None:
+def _get_pythonpath() -> str:
+    # needed for mockserver to find CustomResource as the pytester fixture changes the working directory
+    return str(Path(os.path.dirname(__file__)).parent)
+
+
+def test_savefixture(pytester) -> None:
     project_name = "foo"
-    cwd = Path(tmp_path)
+    cwd = Path(pytester.path)
     call_scrapy_command(str(cwd), "startproject", project_name)
     cwd /= project_name
     type_name = "foo.po.BTSBookPage"
     (cwd / project_name / "po.py").write_text(
         """
 import attrs
-from web_poet import HttpClient
+from web_poet import HttpClient, WebPage
 from web_poet.exceptions import HttpRequestError, HttpResponseError
-from web_poet.pages import WebPage
 
 
 @attrs.define
@@ -69,8 +80,7 @@ class BTSBookPage(WebPage):
         }
 """
     )
-
-    with MockServer(CustomResource) as server:
+    with MockServer(CustomResource, pythonpath=_get_pythonpath()) as server:
         call_scrapy_command(
             str(cwd),
             "savefixture",
@@ -91,11 +101,14 @@ class BTSBookPage(WebPage):
     frozen_time_str = json.loads(fixture.meta_path.read_bytes())["frozen_time"]
     frozen_time = datetime.datetime.fromisoformat(frozen_time_str)
     assert frozen_time.microsecond == 0
+    os.chdir(cwd)
+    result = pytester.runpytest_subprocess()
+    result.assert_outcomes(passed=4)
 
 
-def test_savefixture_spider(tmp_path) -> None:
+def test_savefixture_spider(pytester) -> None:
     project_name = "foo"
-    cwd = Path(tmp_path)
+    cwd = Path(pytester.path)
     call_scrapy_command(str(cwd), "startproject", project_name)
     cwd /= project_name
 
@@ -115,7 +128,7 @@ class MySpider(Spider):
     (cwd / project_name / "po.py").write_text(
         """
 import json
-from web_poet.pages import WebPage
+from web_poet import WebPage
 
 
 class HeadersPage(WebPage):
@@ -136,18 +149,21 @@ class HeadersPage(WebPage):
     assert fixture.is_valid()
     item = json.loads(fixture.output_path.read_bytes())
     assert item == {"ua": ["scrapy/savefixture"]}
+    os.chdir(cwd)
+    result = pytester.runpytest_subprocess()
+    result.assert_outcomes(passed=3)
 
 
-def test_savefixture_expected_exception(tmp_path) -> None:
+def test_savefixture_expected_exception(pytester) -> None:
     project_name = "foo"
-    cwd = Path(tmp_path)
+    cwd = Path(pytester.path)
     call_scrapy_command(str(cwd), "startproject", project_name)
     cwd /= project_name
     type_name = "foo.po.SamplePage"
     (cwd / project_name / "po.py").write_text(
         """
+from web_poet import WebPage
 from web_poet.exceptions import UseFallback
-from web_poet.pages import WebPage
 
 
 class SamplePage(WebPage):
@@ -166,11 +182,14 @@ class SamplePage(WebPage):
         json.loads(fixture.exception_path.read_bytes())["import_path"]
         == "web_poet.exceptions.core.UseFallback"
     )
+    os.chdir(cwd)
+    result = pytester.runpytest_subprocess()
+    result.assert_outcomes(passed=1)
 
 
-def test_savefixture_adapter(tmp_path) -> None:
+def test_savefixture_adapter(pytester) -> None:
     project_name = "foo"
-    cwd = Path(tmp_path)
+    cwd = Path(pytester.path)
     call_scrapy_command(str(cwd), "startproject", project_name)
     cwd /= project_name
     type_name = "foo.po.BTSBookPage"
@@ -222,3 +241,129 @@ SCRAPY_POET_TESTS_ADAPTER = CustomItemAdapter
     assert fixture.is_valid()
     item = json.loads(fixture.output_path.read_bytes())
     assert item == {"name": "chocolate"}
+    os.chdir(cwd)
+    result = pytester.runpytest_subprocess()
+    result.assert_outcomes(passed=3)
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+)
+def test_savefixture_annotated(pytester) -> None:
+    project_name = "foo"
+    cwd = Path(pytester.path)
+    call_scrapy_command(str(cwd), "startproject", project_name)
+    cwd /= project_name
+    type_name = "foo.po.BTSBookPage"
+    (cwd / project_name / "providers.py").write_text(
+        """
+from andi.typeutils import strip_annotated
+from scrapy.http import Response
+from scrapy_poet import HttpResponseProvider
+from web_poet import HttpResponse, HttpResponseHeaders
+from web_poet.annotated import AnnotatedInstance
+
+
+class AnnotatedHttpResponseProvider(HttpResponseProvider):
+    def is_provided(self, type_) -> bool:
+        return super().is_provided(strip_annotated(type_))
+
+    def __call__(self, to_provide, response: Response):
+        result = []
+        for cls in to_provide:
+            obj = HttpResponse(
+                url=response.url,
+                body=response.body,
+                status=response.status,
+                headers=HttpResponseHeaders.from_bytes_dict(response.headers),
+            )
+            if metadata := getattr(cls, "__metadata__", None):
+                obj = AnnotatedInstance(obj, metadata)
+            result.append(obj)
+        return result
+"""
+    )
+    (cwd / project_name / "po.py").write_text(
+        """
+from typing import Annotated
+
+import attrs
+from web_poet import HttpResponse, WebPage
+
+
+@attrs.define
+class BTSBookPage(WebPage):
+
+    response: Annotated[HttpResponse, "foo", 42]
+
+    async def to_item(self):
+        return {
+            'url': self.url,
+            'name': self.css("h1.name::text").get(),
+        }
+"""
+    )
+    with (cwd / project_name / "settings.py").open("a") as f:
+        f.write(
+            f"""
+SCRAPY_POET_PROVIDERS = {{"{project_name}.providers.AnnotatedHttpResponseProvider": 500}}
+"""
+        )
+
+    with MockServer(CustomResource, pythonpath=_get_pythonpath()) as server:
+        call_scrapy_command(
+            str(cwd),
+            "savefixture",
+            type_name,
+            f"{server.root_url}",
+        )
+    fixtures_dir = cwd / "fixtures"
+    fixture_dir = fixtures_dir / type_name / "test-1"
+    fixture = Fixture(fixture_dir)
+    assert fixture.is_valid()
+    assert (
+        fixture.input_path / "AnnotatedInstance HttpResponse-metadata.json"
+    ).exists()
+    assert (
+        fixture.input_path / "AnnotatedInstance HttpResponse-result-body.html"
+    ).exists()
+    assert fixture.meta_path.exists()
+    os.chdir(cwd)
+    result = pytester.runpytest_subprocess()
+    result.assert_outcomes(passed=4)
+
+
+def test_savefixture_without_project(pytester) -> None:
+    cwd = Path(pytester.path)
+    type_name = "po.BTSBookPage"
+    (cwd / "po.py").write_text(
+        """
+from web_poet import WebPage
+
+
+class BTSBookPage(WebPage):
+
+    async def to_item(self):
+        return {
+            'url': self.url,
+            'name': self.css("h1.name::text").get(),
+        }
+"""
+    )
+    with MockServer(CustomResource, pythonpath=_get_pythonpath()) as server:
+        call_scrapy_command(
+            str(cwd),
+            "savefixture",
+            type_name,
+            f"{server.root_url}",
+            run_module=False,  # python -m adds '' to sys.path, making the test always pass
+        )
+    fixtures_dir = cwd / "fixtures"
+    fixture_dir = fixtures_dir / type_name / "test-1"
+    fixture = Fixture(fixture_dir)
+    assert fixture.is_valid()
+    assert fixture.meta_path.exists()
+    item = json.loads(fixture.output_path.read_bytes())
+    assert item["name"] == "Chocolate"
+    result = pytester.runpytest_subprocess()
+    result.assert_outcomes(passed=4)

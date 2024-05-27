@@ -59,10 +59,13 @@ Add the following inside Scrapy's ``settings.py`` file:
 
     DOWNLOADER_MIDDLEWARES = {
         "scrapy_poet.InjectionMiddleware": 543,
+        "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
+        "scrapy_poet.DownloaderStatsMiddleware": 850,
     }
     SPIDER_MIDDLEWARES = {
         "scrapy_poet.RetryMiddleware": 275,
     }
+    REQUEST_FINGERPRINTER_CLASS = "scrapy_poet.ScrapyPoetRequestFingerprinter"
 
 Developing
 ==========
