@@ -70,7 +70,9 @@ class PriceHtmlDataProvider(PageObjectInputProvider):
         assert isinstance(spider, scrapy.Spider)
         ret: List[Any] = []
         if Price in to_provide:
-            ret.append(Price(response.css(".price::text").get()))
+            price = response.css(".price::text").get()
+            assert price is not None
+            ret.append(Price(price))
         if Html in to_provide:
             ret.append(Html("Price Html!"))
         return ret
@@ -84,7 +86,9 @@ class NameHtmlDataProvider(PageObjectInputProvider):
         assert isinstance(settings, Settings)
         ret: List[Any] = []
         if Name in to_provide:
-            ret.append(Name(response.css(".name::text").get()))
+            name = response.css(".name::text").get()
+            assert name is not None
+            ret.append(Name(name))
         if Html in to_provide:
             ret.append(Html("Name Html!"))
         return ret
