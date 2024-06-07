@@ -3,6 +3,7 @@ import warnings
 from functools import partial
 from typing import Any, Callable, List, Optional, Sequence, Set
 from unittest import mock
+from urllib.parse import urlparse
 
 import attr
 import pytest
@@ -347,7 +348,7 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
 
 
 @inlineCallbacks
-def test_additional_requests_dont_filter() -> None:
+def test_additional_requests_dont_filter_duplicate() -> None:
     """Verify that while duplicate regular requests are filtered out,
     additional requests are not (neither relative to the main requests not
     relative to each other).
@@ -390,6 +391,45 @@ def test_additional_requests_dont_filter() -> None:
         yield crawler.crawl()
 
     assert items == [{"a": "a"}]
+
+
+@inlineCallbacks
+def test_additional_requests_dont_filter_offsite() -> None:
+    items = []
+
+    with MockServer(EchoResource) as server:
+
+        @attr.define
+        class ItemPage(WebPage):
+            http: HttpClient
+
+            async def to_item(self):
+                response1 = await self.http.request(
+                    server.root_url,
+                    body=b"a",
+                )
+                # Not filtered out by the offsite middleware because it is an
+                # additional request.
+                response2 = await self.http.request("data:,b")
+                return {response1.body.decode(): response2.body.decode()}
+
+        class TestSpider(Spider):
+            name = "test_spider"
+            allowed_domains = [urlparse(server.root_url).hostname]
+
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
+                # Filtered out by the offsite middleware:
+                yield Request("data:,", callback=self.parse)
+
+            async def parse(self, response, page: ItemPage):
+                item = await page.to_item()
+                items.append(item)
+
+        crawler = make_crawler(TestSpider)
+        yield crawler.crawl()
+
+    assert items == [{"a": "b"}]
 
 
 @inlineCallbacks
