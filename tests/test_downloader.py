@@ -395,6 +395,8 @@ def test_additional_requests_dont_filter_duplicate() -> None:
 
 @inlineCallbacks
 def test_additional_requests_dont_filter_offsite() -> None:
+    pytest.importorskip("scrapy.downloadermiddlewares.offsite")
+
     items = []
 
     with MockServer(EchoResource) as server:
