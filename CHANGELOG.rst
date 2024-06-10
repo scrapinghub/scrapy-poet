@@ -2,6 +2,15 @@
 Changelog
 =========
 
+0.22.4 (2024-06-DD)
+-------------------
+
+* :ref:`Additional requests <additional-requests>`, when mapped to
+  :class:`scrapy.Request <scrapy.http.Request>` objects, now get their
+  ``dont_filter`` parameter set to ``True``, to ask downloader middlewares like
+  :class:`~scrapy.downloadermiddlewares.offsite.OffsiteMiddleware` not to drop
+  those requests.
+
 0.22.3 (2024-04-25)
 -------------------
 
