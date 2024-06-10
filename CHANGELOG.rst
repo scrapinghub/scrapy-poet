@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.22.4 (2024-06-DD)
+0.22.4 (2024-06-10)
 -------------------
 
 * :ref:`Additional requests <additional-requests>`, when mapped to
