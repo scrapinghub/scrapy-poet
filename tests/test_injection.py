@@ -1,6 +1,6 @@
 import shutil
 import sys
-from typing import Any, Callable, Dict, Generator
+from typing import Any, Callable, Dict, Generator, Optional
 
 import attr
 import parsel
@@ -16,7 +16,12 @@ from web_poet.annotated import AnnotatedInstance
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
-from scrapy_poet import DummyResponse, HttpResponseProvider, PageObjectInputProvider
+from scrapy_poet import (
+    DummyResponse,
+    DynamicDeps,
+    HttpResponseProvider,
+    PageObjectInputProvider,
+)
 from scrapy_poet.injection import (
     Injector,
     check_all_providers_are_callable,
@@ -293,8 +298,9 @@ class TestInjector:
         callback: Callable,
         expected_instances: Dict[type, Any],
         expected_kwargs: Dict[str, Any],
+        reqmeta: Optional[Dict[str, Any]] = None,
     ) -> Generator[Any, Any, None]:
-        response = get_response_for_testing(callback)
+        response = get_response_for_testing(callback, meta=reqmeta)
         request = response.request
 
         plan = injector.build_plan(response.request)
@@ -534,6 +540,30 @@ class TestInjector:
         # Make sure the test does not simply pass because some dependencies were
         # not injected at all.
         assert set(kwargs.keys()) == {"expensive", "item"}
+
+    @inlineCallbacks
+    def test_dynamic_deps(self):
+        def callback(dd: DynamicDeps):
+            pass
+
+        provider = get_provider({Cls1, Cls2})
+        injector = get_injector_for_testing({provider: 1})
+
+        expected_instances = {
+            DynamicDeps: DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+            Cls1: Cls1(),
+            Cls2: Cls2(),
+        }
+        expected_kwargs = {
+            "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+        }
+        yield self._assert_instances(
+            injector,
+            callback,
+            expected_instances,
+            expected_kwargs,
+            reqmeta={"inject": [Cls1, Cls2]},
+        )
 
 
 class Html(Injectable):

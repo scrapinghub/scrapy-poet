@@ -4,6 +4,7 @@ import logging
 import os
 import pprint
 import warnings
+from collections import UserDict
 from typing import (
     Any,
     Callable,
@@ -51,6 +52,10 @@ logger = logging.getLogger(__name__)
 
 
 class _UNDEFINED:
+    pass
+
+
+class DynamicDeps(UserDict):
     pass
 
 
@@ -170,20 +175,48 @@ class Injector:
             # Callable[[Callable], Optional[Callable]] but the registry
             # returns the typing for ``dict.get()`` method.
             overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
-            custom_builder_fn=self._get_item_builder(request),
+            custom_builder_fn=self._get_custom_builder(request),
         )
 
-    def _get_item_builder(
+    def _get_custom_builder(
         self, request: Request
     ) -> Callable[[Callable], Optional[Callable]]:
         """Return a function suitable for passing as ``custom_builder_fn`` to ``andi.plan``.
 
         The returned function can map an item to a factory for that item based
-        on the registry.
+        on the registry and also supports filling :class:`.DynamicDeps`.
         """
 
         @functools.lru_cache(maxsize=None)  # to minimize the registry queries
         def mapping_fn(item_cls: Callable) -> Optional[Callable]:
+            # building DynamicDeps
+            if item_cls is DynamicDeps:
+                dynamic_types = request.meta.get("inject", [])
+                if not dynamic_types:
+                    return lambda: {}
+
+                # inspired by dataclasses._create_fn()
+                args = [
+                    f"{type_.__name__}_arg: {type_.__name__}" for type_ in dynamic_types
+                ]
+                args_str = ", ".join(args)
+                result_args = [
+                    f"{type_.__name__}: {type_.__name__}_arg" for type_ in dynamic_types
+                ]
+                result_args_str = ", ".join(result_args)
+                ns = {type_.__name__: type_ for type_ in dynamic_types}
+                create_args = ns.keys()
+                create_args_str = ", ".join(create_args)
+                txt = (
+                    f"def __create_fn__({create_args_str}):\n"
+                    f" def dynamic_deps_factory({args_str}) -> DynamicDeps:\n"
+                    f"  return DynamicDeps({{{result_args_str}}})\n"
+                    f" return dynamic_deps_factory"
+                )
+                exec(txt, globals(), ns)
+                return ns["__create_fn__"](*dynamic_types)
+
+            # building items from pages
             page_object_cls: Optional[Type[ItemPage]] = self.registry.page_cls_for_item(
                 request.url, cast(type, item_cls)
             )
@@ -480,7 +513,9 @@ def get_injector_for_testing(
     return Injector(crawler, registry=registry)
 
 
-def get_response_for_testing(callback: Callable) -> Response:
+def get_response_for_testing(
+    callback: Callable, meta: Optional[Dict[str, Any]] = None
+) -> Response:
     """
     Return a :class:`scrapy.http.Response` with fake content with the configured
     callback. It is useful for testing providers.
@@ -501,6 +536,6 @@ def get_response_for_testing(callback: Callable) -> Response:
         """.encode(
         "utf-8"
     )
-    request = Request(url, callback=callback)
+    request = Request(url, callback=callback, meta=meta)
     response = Response(url, 200, None, html, request=request)
     return response
