@@ -295,6 +295,7 @@ class TestInjector:
         expected_kwargs: Dict[str, Any],
     ) -> Generator[Any, Any, None]:
         response = get_response_for_testing(callback)
+        assert response.request
         request = response.request
 
         plan = injector.build_plan(response.request)
