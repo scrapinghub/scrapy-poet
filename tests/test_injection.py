@@ -565,6 +565,52 @@ class TestInjector:
             reqmeta={"inject": [Cls1, Cls2]},
         )
 
+    @inlineCallbacks
+    def test_dynamic_deps_mix(self):
+        def callback(c1: Cls1, dd: DynamicDeps):
+            pass
+
+        provider = get_provider({Cls1, Cls2})
+        injector = get_injector_for_testing({provider: 1})
+
+        expected_instances = {
+            DynamicDeps: DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+            Cls1: Cls1(),
+            Cls2: Cls2(),
+        }
+        expected_kwargs = {
+            "c1": Cls1(),
+            "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+        }
+        yield self._assert_instances(
+            injector,
+            callback,
+            expected_instances,
+            expected_kwargs,
+            reqmeta={"inject": [Cls1, Cls2]},
+        )
+
+    @inlineCallbacks
+    def test_dynamic_deps_no_meta(self):
+        def callback(dd: DynamicDeps):
+            pass
+
+        provider = get_provider({Cls1, Cls2})
+        injector = get_injector_for_testing({provider: 1})
+
+        expected_instances = {
+            DynamicDeps: DynamicDeps(),
+        }
+        expected_kwargs = {
+            "dd": DynamicDeps(),
+        }
+        yield self._assert_instances(
+            injector,
+            callback,
+            expected_instances,
+            expected_kwargs,
+        )
+
 
 class Html(Injectable):
     url = "http://example.com"
