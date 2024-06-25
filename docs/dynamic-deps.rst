@@ -1,0 +1,54 @@
+.. _dynamic-deps:
+
+====================
+Dynamic dependencies
+====================
+
+Normally the dependencies for a callback are specified statically, as type
+hints for its arguments:
+
+.. code-block:: python
+
+    import scrapy
+
+
+    class BooksSpider(scrapy.Spider):
+        ...
+
+        def start_requests(self):
+            yield scrapy.Request("http://books.toscrape.com/", self.parse_book)
+
+
+        def parse_book(self, response, book_page: BookPage, other_dep: OtherDep):
+            ...
+
+In some cases some or all of the dependencies need to be specified dynamically
+instead, e.g. because they need to be different for different pages using the
+same callback. You can use :class:`scrapy_poet.DynamicDeps
+<scrapy_poet.injection.DynamicDeps>` for this. If you add a callback argument
+with this type you can pass a list of additional dependency types in the
+request meta dictionary using the "inject" key:
+
+.. code-block:: python
+
+    import scrapy
+
+
+    class BooksSpider(scrapy.Spider):
+        ...
+
+        def start_requests(self):
+            yield scrapy.Request(
+                "http://books.toscrape.com/",
+                self.parse_book,
+                meta={"inject": [OtherDep]},
+            )
+
+
+        def parse_book(self, response, book_page: BookPage, dynamic: DynamicDeps):
+            other_dep = dynamic[OtherDep]
+            ...
+
+The types passed this way will be used in the dependency resolution as usual,
+and the created instances will be available in the
+:class:`scrapy_poet.DynamicDeps <scrapy_poet.injection.DynamicDeps>` instance.

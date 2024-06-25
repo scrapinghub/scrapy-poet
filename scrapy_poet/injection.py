@@ -56,6 +56,12 @@ class _UNDEFINED:
 
 
 class DynamicDeps(UserDict):
+    """A container for dynamic dependencies provided via the ``"inject"`` request meta key.
+
+    The dynamic dependency instances are available at the run time as dict
+    values with keys being dependency types.
+    """
+
     pass
 
 
