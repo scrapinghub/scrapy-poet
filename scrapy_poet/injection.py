@@ -200,27 +200,7 @@ class Injector:
                 dynamic_types = request.meta.get("inject", [])
                 if not dynamic_types:
                     return lambda: {}
-
-                # inspired by dataclasses._create_fn()
-                args = [
-                    f"{type_.__name__}_arg: {type_.__name__}" for type_ in dynamic_types
-                ]
-                args_str = ", ".join(args)
-                result_args = [
-                    f"{type_.__name__}: {type_.__name__}_arg" for type_ in dynamic_types
-                ]
-                result_args_str = ", ".join(result_args)
-                ns = {type_.__name__: type_ for type_ in dynamic_types}
-                create_args = ns.keys()
-                create_args_str = ", ".join(create_args)
-                txt = (
-                    f"def __create_fn__({create_args_str}):\n"
-                    f" def dynamic_deps_factory({args_str}) -> DynamicDeps:\n"
-                    f"  return DynamicDeps({{{result_args_str}}})\n"
-                    f" return dynamic_deps_factory"
-                )
-                exec(txt, globals(), ns)
-                return ns["__create_fn__"](*dynamic_types)
+                return self._get_dynamic_deps_factory(dynamic_types)
 
             # building items from pages
             page_object_cls: Optional[Type[ItemPage]] = self.registry.page_cls_for_item(
@@ -235,6 +215,37 @@ class Injector:
             return item_factory
 
         return mapping_fn
+
+    @staticmethod
+    def _get_dynamic_deps_factory(
+        dynamic_types: List[type],
+    ) -> Callable[..., DynamicDeps]:
+        """Return a function that creates a :class:`.DynamicDeps` instance from its args.
+
+        It takes instances of types from ``dynamic_types`` as args and returns
+        a :class:`.DynamicDeps` instance where keys are types and values are
+        corresponding args. It has correct type hints so that it can be used as
+        an ``andi`` custom builder.
+        """
+
+        # inspired by dataclasses._create_fn()
+        args = [f"{type_.__name__}_arg: {type_.__name__}" for type_ in dynamic_types]
+        args_str = ", ".join(args)
+        result_args = [
+            f"{type_.__name__}: {type_.__name__}_arg" for type_ in dynamic_types
+        ]
+        result_args_str = ", ".join(result_args)
+        ns = {type_.__name__: type_ for type_ in dynamic_types}
+        create_args = ns.keys()
+        create_args_str = ", ".join(create_args)
+        txt = (
+            f"def __create_fn__({create_args_str}):\n"
+            f" def dynamic_deps_factory({args_str}) -> DynamicDeps:\n"
+            f"  return DynamicDeps({{{result_args_str}}})\n"
+            f" return dynamic_deps_factory"
+        )
+        exec(txt, globals(), ns)
+        return ns["__create_fn__"](*dynamic_types)
 
     @inlineCallbacks
     def build_instances(

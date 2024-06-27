@@ -2,6 +2,7 @@ import shutil
 import sys
 from typing import Any, Callable, Dict, Generator, Optional
 
+import andi
 import attr
 import parsel
 import pytest
@@ -909,3 +910,16 @@ def test_cache(tmp_path, cache_errors):
             response.request, response, plan
         )
     assert injector.weak_cache.get(response.request) is None
+
+
+def test_dynamic_deps_factory():
+    factory = Injector._get_dynamic_deps_factory
+    fn = factory([int, Cls1])
+    args = andi.inspect(fn)
+    assert args == {
+        "Cls1_arg": [Cls1],
+        "int_arg": [int],
+    }
+    c = Cls1()
+    dd = fn(int_arg=42, Cls1_arg=c)
+    assert dd == {int: 42, Cls1: c}
