@@ -2,6 +2,13 @@
 Changelog
 =========
 
+0.22.5 (2024-06-27)
+-------------------
+
+* When :class:`~web_poet.exceptions.core.Retry` is raised with a message, that
+  message now becomes the retry reason, replacing the default
+  (``page_object_retry``).
+
 0.22.4 (2024-06-10)
 -------------------
 
