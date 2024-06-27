@@ -54,6 +54,40 @@ def test_retry_once():
 
 
 @inlineCallbacks
+def test_retry_reason():
+    retries = deque([True, False])
+    items, page_instances, page_response_instances = [], [], []
+
+    with MockServer(EchoResource) as server:
+
+        class SamplePage(WebPage):
+            def to_item(self):
+                page_instances.append(self)
+                page_response_instances.append(self.response)
+                if retries.popleft():
+                    raise Retry("foo")
+                return {"foo": "bar"}
+
+        class TestSpider(BaseSpider):
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
+
+            def parse(self, response, page: SamplePage):
+                items.append(page.to_item())
+
+        crawler = make_crawler(TestSpider)
+        yield crawler.crawl()
+
+    assert items == [{"foo": "bar"}]
+    assert crawler.stats.get_value("downloader/request_count") == 2
+    assert crawler.stats.get_value("retry/count") == 1
+    assert crawler.stats.get_value("retry/reason_count/foo") == 1
+    assert crawler.stats.get_value("retry/max_reached") is None
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
+
+
+@inlineCallbacks
 def test_retry_max():
     # The default value of the RETRY_TIMES Scrapy setting is 2.
     retries = deque([True, True, False])
