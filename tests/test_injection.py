@@ -913,8 +913,7 @@ def test_cache(tmp_path, cache_errors):
 
 
 def test_dynamic_deps_factory():
-    factory = Injector._get_dynamic_deps_factory
-    fn = factory([int, Cls1])
+    fn = Injector._get_dynamic_deps_factory([int, Cls1])
     args = andi.inspect(fn)
     assert args == {
         "Cls1_arg": [Cls1],
