@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.22.5 (2024-06-DD)
+0.22.5 (2024-06-27)
 -------------------
 
 * When :class:`~web_poet.exceptions.core.Retry` is raised with a message, that
