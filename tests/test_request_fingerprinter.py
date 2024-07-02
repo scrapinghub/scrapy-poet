@@ -57,9 +57,7 @@ def get_crawler(spider_cls=None, settings=None, ensure_providers_for=None):
     if ensure_providers_for:
         dummy_providers = get_dummy_providers(*ensure_providers_for)
         if dummy_providers:
-            settings["SCRAPY_POET_PROVIDERS"] = {
-                provider: 0 for provider in dummy_providers
-            }
+            settings["SCRAPY_POET_PROVIDERS"] = dict.fromkeys(dummy_providers, 0)
 
     return _get_crawler(settings=settings, **kwargs)
 
