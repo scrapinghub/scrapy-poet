@@ -9,7 +9,6 @@ from typing import Generator, Optional, Type, TypeVar, Union
 
 from scrapy import Spider
 from scrapy.crawler import Crawler
-from scrapy.downloadermiddlewares.retry import get_retry_request
 from scrapy.downloadermiddlewares.stats import DownloaderStats
 from scrapy.http import Request, Response
 from twisted.internet.defer import Deferred, inlineCallbacks
@@ -161,6 +160,10 @@ class InjectionMiddleware:
                 response,
             )
         except Retry as exception:
+            # Needed for Twisted < 21.2.0. See the discussion thread linked below:
+            # https://github.com/scrapinghub/scrapy-poet/pull/129#discussion_r1102693967
+            from scrapy.downloadermiddlewares.retry import get_retry_request
+
             reason = str(exception) or "page_object_retry"
             new_request_or_none = get_retry_request(
                 request,
