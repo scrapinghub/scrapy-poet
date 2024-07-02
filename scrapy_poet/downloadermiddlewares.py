@@ -163,7 +163,7 @@ class InjectionMiddleware:
         except Retry as exception:
             reason = str(exception) or "page_object_retry"
             new_request_or_none = get_retry_request(
-                response.request,
+                request,
                 spider=spider,
                 reason=reason,
             )
