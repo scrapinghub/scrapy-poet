@@ -612,6 +612,56 @@ class TestInjector:
             expected_kwargs,
         )
 
+    @inlineCallbacks
+    def test_dynamic_deps_page(self):
+        def callback(dd: DynamicDeps):
+            pass
+
+        injector = get_injector_for_testing({})
+
+        response = get_response_for_testing(callback, meta={"inject": [PricePO]})
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        kwargs_types = {key: type(value) for key, value in kwargs.items()}
+        assert kwargs_types == {
+            "dd": DynamicDeps,
+        }
+        dd_types = {key: type(value) for key, value in kwargs["dd"].items()}
+        assert dd_types == {
+            PricePO: PricePO,
+        }
+
+        instances = yield from injector.build_instances(request, response, plan)
+        assert set(instances) == {Html, PricePO, DynamicDeps}
+
+    @inlineCallbacks
+    def test_dynamic_deps_item(self):
+        def callback(dd: DynamicDeps):
+            pass
+
+        rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
+        registry = RulesRegistry(rules=rules)
+        injector = get_injector_for_testing({}, registry=registry)
+
+        response = get_response_for_testing(callback, meta={"inject": [TestItem]})
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        kwargs_types = {key: type(value) for key, value in kwargs.items()}
+        assert kwargs_types == {
+            "dd": DynamicDeps,
+        }
+        dd_types = {key: type(value) for key, value in kwargs["dd"].items()}
+        assert dd_types == {
+            TestItem: TestItem,
+        }
+
+        instances = yield from injector.build_instances(request, response, plan)
+        assert set(instances) == {TestItemPage, TestItem, DynamicDeps}
+
 
 class Html(Injectable):
     url = "http://example.com"
