@@ -912,6 +912,17 @@ def test_cache(tmp_path, cache_errors):
     assert injector.weak_cache.get(response.request) is None
 
 
+def test_dynamic_deps_factory_text():
+    txt = Injector._get_dynamic_deps_factory_text(["int", "Cls1"])
+    assert (
+        txt
+        == """def __create_fn__(int, Cls1):
+ def dynamic_deps_factory(int_arg: int, Cls1_arg: Cls1) -> DynamicDeps:
+  return DynamicDeps({int: int_arg, Cls1: Cls1_arg})
+ return dynamic_deps_factory"""
+    )
+
+
 def test_dynamic_deps_factory():
     fn = Injector._get_dynamic_deps_factory([int, Cls1])
     args = andi.inspect(fn)

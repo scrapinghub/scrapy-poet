@@ -9,6 +9,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -217,6 +218,24 @@ class Injector:
         return mapping_fn
 
     @staticmethod
+    def _get_dynamic_deps_factory_text(
+        type_names: Iterable[str],
+    ) -> str:
+        # inspired by Python 3.11 dataclasses._create_fn()
+        # https://github.com/python/cpython/blob/v3.11.9/Lib/dataclasses.py#L413
+        args = [f"{name}_arg: {name}" for name in type_names]
+        args_str = ", ".join(args)
+        result_args = [f"{name}: {name}_arg" for name in type_names]
+        result_args_str = ", ".join(result_args)
+        create_args_str = ", ".join(type_names)
+        return (
+            f"def __create_fn__({create_args_str}):\n"
+            f" def dynamic_deps_factory({args_str}) -> DynamicDeps:\n"
+            f"  return DynamicDeps({{{result_args_str}}})\n"
+            f" return dynamic_deps_factory"
+        )
+
+    @staticmethod
     def _get_dynamic_deps_factory(
         dynamic_types: List[type],
     ) -> Callable[..., DynamicDeps]:
@@ -227,23 +246,8 @@ class Injector:
         corresponding args. It has correct type hints so that it can be used as
         an ``andi`` custom builder.
         """
-
-        # inspired by dataclasses._create_fn()
-        args = [f"{type_.__name__}_arg: {type_.__name__}" for type_ in dynamic_types]
-        args_str = ", ".join(args)
-        result_args = [
-            f"{type_.__name__}: {type_.__name__}_arg" for type_ in dynamic_types
-        ]
-        result_args_str = ", ".join(result_args)
         ns = {type_.__name__: type_ for type_ in dynamic_types}
-        create_args = ns.keys()
-        create_args_str = ", ".join(create_args)
-        txt = (
-            f"def __create_fn__({create_args_str}):\n"
-            f" def dynamic_deps_factory({args_str}) -> DynamicDeps:\n"
-            f"  return DynamicDeps({{{result_args_str}}})\n"
-            f" return dynamic_deps_factory"
-        )
+        txt = Injector._get_dynamic_deps_factory_text(ns.keys())
         exec(txt, globals(), ns)
         return ns["__create_fn__"](*dynamic_types)
 
