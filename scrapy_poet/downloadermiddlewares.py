@@ -9,10 +9,12 @@ from typing import Generator, Optional, Type, TypeVar, Union
 
 from scrapy import Spider
 from scrapy.crawler import Crawler
+from scrapy.downloadermiddlewares.retry import get_retry_request
 from scrapy.downloadermiddlewares.stats import DownloaderStats
 from scrapy.http import Request, Response
 from twisted.internet.defer import Deferred, inlineCallbacks
 from web_poet import RulesRegistry
+from web_poet.exceptions import Retry
 
 from .api import DummyResponse
 from .injection import Injector
@@ -153,10 +155,21 @@ class InjectionMiddleware:
             return response
 
         # Find out the dependencies
-        final_kwargs = yield from self.injector.build_callback_dependencies(
-            request,
-            response,
-        )
+        try:
+            final_kwargs = yield from self.injector.build_callback_dependencies(
+                request,
+                response,
+            )
+        except Retry as exception:
+            reason = str(exception) or "page_object_retry"
+            new_request_or_none = get_retry_request(
+                response.request,
+                spider=spider,
+                reason=reason,
+            )
+            if not new_request_or_none:
+                return response
+            return new_request_or_none
         # Fill the callback arguments with the created instances
         for arg, value in final_kwargs.items():
             # If scrapy-poet can't provided the dependency, allow the user to
