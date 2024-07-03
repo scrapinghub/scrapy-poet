@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.22.6 (2024-07-DD)
+0.22.6 (2024-07-03)
 -------------------
 
 * Raising :class:`~web_poet.exceptions.core.Retry` now also works as expected
