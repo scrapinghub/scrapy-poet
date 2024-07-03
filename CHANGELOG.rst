@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.22.6 (2024-07-03)
+-------------------
+
+* Raising :class:`~web_poet.exceptions.core.Retry` now also works as expected
+  when callbacks ask for an item instead of asking for its page object.
+
 0.22.5 (2024-06-27)
 -------------------
 
