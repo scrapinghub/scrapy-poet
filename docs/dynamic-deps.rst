@@ -23,8 +23,8 @@ hints for its arguments:
             ...
 
 In some cases some or all of the dependencies need to be specified dynamically
-instead, e.g. because they need to be different for different pages using the
-same callback. You can use :class:`scrapy_poet.DynamicDeps
+instead, e.g. because they need to be different for different requests using
+the same callback. You can use :class:`scrapy_poet.DynamicDeps
 <scrapy_poet.injection.DynamicDeps>` for this. If you add a callback argument
 with this type you can pass a list of additional dependency types in the
 request meta dictionary using the "inject" key:
@@ -49,6 +49,6 @@ request meta dictionary using the "inject" key:
             other_dep = dynamic[OtherDep]
             ...
 
-The types passed this way will be used in the dependency resolution as usual,
-and the created instances will be available in the
-:class:`scrapy_poet.DynamicDeps <scrapy_poet.injection.DynamicDeps>` instance.
+The types passed this way are used in the dependency resolution as usual, with
+the created instances available in the :class:`scrapy_poet.DynamicDeps
+<scrapy_poet.injection.DynamicDeps>` instance.

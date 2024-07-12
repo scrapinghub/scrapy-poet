@@ -4,7 +4,6 @@ import logging
 import os
 import pprint
 import warnings
-from collections import UserDict
 from typing import (
     Any,
     Callable,
@@ -56,7 +55,7 @@ class _UNDEFINED:
     pass
 
 
-class DynamicDeps(UserDict):
+class DynamicDeps(dict):
     """A container for dynamic dependencies provided via the ``"inject"`` request meta key.
 
     The dynamic dependency instances are available at the run time as dict
@@ -195,9 +194,9 @@ class Injector:
         """
 
         @functools.lru_cache(maxsize=None)  # to minimize the registry queries
-        def mapping_fn(item_cls: Callable) -> Optional[Callable]:
+        def mapping_fn(dep_cls: Callable) -> Optional[Callable]:
             # building DynamicDeps
-            if item_cls is DynamicDeps:
+            if dep_cls is DynamicDeps:
                 dynamic_types = request.meta.get("inject", [])
                 if not dynamic_types:
                     return lambda: {}
@@ -205,12 +204,12 @@ class Injector:
 
             # building items from pages
             page_object_cls: Optional[Type[ItemPage]] = self.registry.page_cls_for_item(
-                request.url, cast(type, item_cls)
+                request.url, cast(type, dep_cls)
             )
             if not page_object_cls:
                 return None
 
-            async def item_factory(page: page_object_cls) -> item_cls:  # type: ignore[valid-type]
+            async def item_factory(page: page_object_cls) -> dep_cls:  # type: ignore[valid-type]
                 return await page.to_item()  # type: ignore[attr-defined]
 
             return item_factory
