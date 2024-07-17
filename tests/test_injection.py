@@ -574,22 +574,25 @@ class TestInjector:
         provider = get_provider({Cls1, Cls2})
         injector = get_injector_for_testing({provider: 1})
 
-        expected_instances = {
+        response = get_response_for_testing(callback, meta={"inject": [Cls1, Cls2]})
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances(request, response, plan)
+        assert instances == {
             DynamicDeps: DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
             Cls1: Cls1(),
             Cls2: Cls2(),
         }
-        expected_kwargs = {
+        assert instances[Cls1] is instances[DynamicDeps][Cls1]
+        assert instances[Cls2] is instances[DynamicDeps][Cls2]
+
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        assert kwargs == {
             "c1": Cls1(),
             "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
         }
-        yield self._assert_instances(
-            injector,
-            callback,
-            expected_instances,
-            expected_kwargs,
-            reqmeta={"inject": [Cls1, Cls2]},
-        )
+        assert kwargs["c1"] is kwargs["dd"][Cls1]
 
     @inlineCallbacks
     def test_dynamic_deps_no_meta(self):
