@@ -18,7 +18,6 @@ hints for its arguments:
         def start_requests(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse_book)
 
-
         def parse_book(self, response, book_page: BookPage, other_dep: OtherDep):
             ...
 
@@ -43,7 +42,6 @@ request meta dictionary using the "inject" key:
                 self.parse_book,
                 meta={"inject": [OtherDep]},
             )
-
 
         def parse_book(self, response, book_page: BookPage, dynamic: DynamicDeps):
             # access the dynamic dependency values by their type:

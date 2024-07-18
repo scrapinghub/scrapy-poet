@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.23.0 (YYYY-MM-DD)
+-------------------
+
+* Added support for :ref:`specifying callback dependencies dynamically
+  <dynamic-deps>`.
+
 0.22.6 (2024-07-03)
 -------------------
 
