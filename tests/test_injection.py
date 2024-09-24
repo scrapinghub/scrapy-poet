@@ -1,3 +1,4 @@
+import re
 import shutil
 import sys
 from typing import Any, Callable, Dict, Generator, Optional
@@ -986,3 +987,11 @@ def test_dynamic_deps_factory():
     c = Cls1()
     dd = fn(int_arg=42, Cls1_arg=c)
     assert dd == {int: 42, Cls1: c}
+
+
+def test_dynamic_deps_factory_bad_input():
+    with pytest.raises(
+        TypeError,
+        match=re.escape(r"Expected a dynamic dependency type, got (<class 'int'>,)"),
+    ):
+        Injector._get_dynamic_deps_factory([(int,)])
