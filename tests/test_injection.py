@@ -989,6 +989,23 @@ def test_dynamic_deps_factory():
     assert dd == {int: 42, Cls1: c}
 
 
+@pytest.mark.skipif(
+    sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+)
+def test_dynamic_deps_factory_annotated():
+    from typing import Annotated
+
+    fn = Injector._get_dynamic_deps_factory([Annotated[Cls1, 42]])
+    args = andi.inspect(fn)
+    # the arg name needs to be fixed separately
+    assert args == {
+        "Annotated_arg": [Annotated[Cls1, 42]],
+    }
+    c1 = Cls1()
+    dd = fn(Annotated_arg=c1)
+    assert dd == {Annotated[Cls1, 42]: c1}
+
+
 def test_dynamic_deps_factory_bad_input():
     with pytest.raises(
         TypeError,

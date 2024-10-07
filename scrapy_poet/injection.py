@@ -20,7 +20,7 @@ from typing import (
 from weakref import WeakKeyDictionary
 
 import andi
-from andi.typeutils import issubclass_safe
+from andi.typeutils import issubclass_safe, strip_annotated
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Response
@@ -247,7 +247,7 @@ class Injector:
         """
         ns: Dict[str, type] = {}
         for type_ in dynamic_types:
-            if not isinstance(type_, type):
+            if not isinstance(strip_annotated(type_), type):
                 raise TypeError(f"Expected a dynamic dependency type, got {type_!r}")
             ns[type_.__name__] = type_
         txt = Injector._get_dynamic_deps_factory_text(ns.keys())
