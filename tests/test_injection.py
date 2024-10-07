@@ -995,15 +995,18 @@ def test_dynamic_deps_factory():
 def test_dynamic_deps_factory_annotated():
     from typing import Annotated
 
-    fn = Injector._get_dynamic_deps_factory([Annotated[Cls1, 42]])
+    fn = Injector._get_dynamic_deps_factory(
+        [Annotated[Cls1, 42], Annotated[Cls2, "foo"]]
+    )
     args = andi.inspect(fn)
-    # the arg name needs to be fixed separately
     assert args == {
-        "Annotated_arg": [Annotated[Cls1, 42]],
+        "Cls1_arg": [Annotated[Cls1, 42]],
+        "Cls2_arg": [Annotated[Cls2, "foo"]],
     }
     c1 = Cls1()
-    dd = fn(Annotated_arg=c1)
-    assert dd == {Annotated[Cls1, 42]: c1}
+    c2 = Cls2()
+    dd = fn(Cls1_arg=c1, Cls2_arg=c2)
+    assert dd == {Annotated[Cls1, 42]: c1, Annotated[Cls2, "foo"]: c2}
 
 
 def test_dynamic_deps_factory_bad_input():

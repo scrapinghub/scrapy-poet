@@ -247,7 +247,8 @@ class Injector:
         """
         ns: Dict[str, type] = {}
         for type_ in dynamic_types:
-            if not isinstance(strip_annotated(type_), type):
+            type_ = strip_annotated(type_)
+            if not isinstance(type_, type):
                 raise TypeError(f"Expected a dynamic dependency type, got {type_!r}")
             ns[type_.__name__] = type_
         txt = Injector._get_dynamic_deps_factory_text(ns.keys())
