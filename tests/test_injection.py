@@ -666,6 +666,39 @@ class TestInjector:
         instances = yield from injector.build_instances(request, response, plan)
         assert set(instances) == {TestItemPage, TestItem, DynamicDeps}
 
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_dynamic_deps_annotated(self):
+        from typing import Annotated
+
+        def callback(dd: DynamicDeps):
+            pass
+
+        provider = get_provider({Cls1, Cls2})
+        injector = get_injector_for_testing({provider: 1})
+
+        expected_instances = {
+            DynamicDeps: DynamicDeps(
+                {Annotated[Cls1, 42]: Cls1(), Annotated[Cls2, "foo"]: Cls2()}
+            ),
+            Annotated[Cls1, 42]: Cls1(),
+            Annotated[Cls2, "foo"]: Cls2(),
+        }
+        expected_kwargs = {
+            "dd": DynamicDeps(
+                {Annotated[Cls1, 42]: Cls1(), Annotated[Cls2, "foo"]: Cls2()}
+            ),
+        }
+        yield self._assert_instances(
+            injector,
+            callback,
+            expected_instances,
+            expected_kwargs,
+            reqmeta={"inject": [Annotated[Cls1, 42], Annotated[Cls2, "foo"]]},
+        )
+
 
 class Html(Injectable):
     url = "http://example.com"
