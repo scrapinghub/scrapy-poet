@@ -680,16 +680,12 @@ class TestInjector:
         injector = get_injector_for_testing({provider: 1})
 
         expected_instances = {
-            DynamicDeps: DynamicDeps(
-                {Annotated[Cls1, 42]: Cls1(), Annotated[Cls2, "foo"]: Cls2()}
-            ),
+            DynamicDeps: DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
             Annotated[Cls1, 42]: Cls1(),
             Annotated[Cls2, "foo"]: Cls2(),
         }
         expected_kwargs = {
-            "dd": DynamicDeps(
-                {Annotated[Cls1, 42]: Cls1(), Annotated[Cls2, "foo"]: Cls2()}
-            ),
+            "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
         }
         yield self._assert_instances(
             injector,

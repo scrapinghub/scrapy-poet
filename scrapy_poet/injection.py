@@ -224,7 +224,7 @@ class Injector:
         # https://github.com/python/cpython/blob/v3.11.9/Lib/dataclasses.py#L413
         args = [f"{name}_arg: {name}" for name in type_names]
         args_str = ", ".join(args)
-        result_args = [f"{name}: {name}_arg" for name in type_names]
+        result_args = [f"strip_annotated({name}): {name}_arg" for name in type_names]
         result_args_str = ", ".join(result_args)
         create_args_str = ", ".join(type_names)
         return (
