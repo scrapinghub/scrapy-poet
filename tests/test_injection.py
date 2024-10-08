@@ -1001,7 +1001,7 @@ def test_dynamic_deps_factory_text():
         txt
         == """def __create_fn__(int, Cls1):
  def dynamic_deps_factory(int_arg: int, Cls1_arg: Cls1) -> DynamicDeps:
-  return DynamicDeps({int: int_arg, Cls1: Cls1_arg})
+  return DynamicDeps({strip_annotated(int): int_arg, strip_annotated(Cls1): Cls1_arg})
  return dynamic_deps_factory"""
     )
 
@@ -1035,7 +1035,7 @@ def test_dynamic_deps_factory_annotated():
     c1 = Cls1()
     c2 = Cls2()
     dd = fn(Cls1_arg=c1, Cls2_arg=c2)
-    assert dd == {Annotated[Cls1, 42]: c1, Annotated[Cls2, "foo"]: c2}
+    assert dd == {Cls1: c1, Cls2: c2}
 
 
 def test_dynamic_deps_factory_bad_input():
