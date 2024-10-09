@@ -666,6 +666,35 @@ class TestInjector:
         instances = yield from injector.build_instances(request, response, plan)
         assert set(instances) == {TestItemPage, TestItem, DynamicDeps}
 
+    @pytest.mark.skipif(
+        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+    )
+    @inlineCallbacks
+    def test_dynamic_deps_annotated(self):
+        from typing import Annotated
+
+        def callback(dd: DynamicDeps):
+            pass
+
+        provider = get_provider({Cls1, Cls2})
+        injector = get_injector_for_testing({provider: 1})
+
+        expected_instances = {
+            DynamicDeps: DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+            Annotated[Cls1, 42]: Cls1(),
+            Annotated[Cls2, "foo"]: Cls2(),
+        }
+        expected_kwargs = {
+            "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+        }
+        yield self._assert_instances(
+            injector,
+            callback,
+            expected_instances,
+            expected_kwargs,
+            reqmeta={"inject": [Annotated[Cls1, 42], Annotated[Cls2, "foo"]]},
+        )
+
 
 class Html(Injectable):
     url = "http://example.com"
@@ -972,7 +1001,7 @@ def test_dynamic_deps_factory_text():
         txt
         == """def __create_fn__(int, Cls1):
  def dynamic_deps_factory(int_arg: int, Cls1_arg: Cls1) -> DynamicDeps:
-  return DynamicDeps({int: int_arg, Cls1: Cls1_arg})
+  return DynamicDeps({strip_annotated(int): int_arg, strip_annotated(Cls1): Cls1_arg})
  return dynamic_deps_factory"""
     )
 
@@ -987,6 +1016,26 @@ def test_dynamic_deps_factory():
     c = Cls1()
     dd = fn(int_arg=42, Cls1_arg=c)
     assert dd == {int: 42, Cls1: c}
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
+)
+def test_dynamic_deps_factory_annotated():
+    from typing import Annotated
+
+    fn = Injector._get_dynamic_deps_factory(
+        [Annotated[Cls1, 42], Annotated[Cls2, "foo"]]
+    )
+    args = andi.inspect(fn)
+    assert args == {
+        "Cls1_arg": [Annotated[Cls1, 42]],
+        "Cls2_arg": [Annotated[Cls2, "foo"]],
+    }
+    c1 = Cls1()
+    c2 = Cls2()
+    dd = fn(Cls1_arg=c1, Cls2_arg=c2)
+    assert dd == {Cls1: c1, Cls2: c2}
 
 
 def test_dynamic_deps_factory_bad_input():

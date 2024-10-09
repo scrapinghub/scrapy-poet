@@ -20,7 +20,7 @@ from typing import (
 from weakref import WeakKeyDictionary
 
 import andi
-from andi.typeutils import issubclass_safe
+from andi.typeutils import issubclass_safe, strip_annotated
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Response
@@ -224,7 +224,7 @@ class Injector:
         # https://github.com/python/cpython/blob/v3.11.9/Lib/dataclasses.py#L413
         args = [f"{name}_arg: {name}" for name in type_names]
         args_str = ", ".join(args)
-        result_args = [f"{name}: {name}_arg" for name in type_names]
+        result_args = [f"strip_annotated({name}): {name}_arg" for name in type_names]
         result_args_str = ", ".join(result_args)
         create_args_str = ", ".join(type_names)
         return (
@@ -245,12 +245,14 @@ class Injector:
         corresponding args. It has correct type hints so that it can be used as
         an ``andi`` custom builder.
         """
-        ns: Dict[str, type] = {}
+        type_names: List[str] = []
         for type_ in dynamic_types:
+            type_ = cast(type, strip_annotated(type_))
             if not isinstance(type_, type):
                 raise TypeError(f"Expected a dynamic dependency type, got {type_!r}")
-            ns[type_.__name__] = type_
-        txt = Injector._get_dynamic_deps_factory_text(ns.keys())
+            type_names.append(type_.__name__)
+        txt = Injector._get_dynamic_deps_factory_text(type_names)
+        ns: Dict[str, Any] = {}
         exec(txt, globals(), ns)
         return ns["__create_fn__"](*dynamic_types)
 
