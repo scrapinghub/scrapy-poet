@@ -2,6 +2,18 @@
 Changelog
 =========
 
+0.24.0 (YYYY-MM-DD)
+-------------------
+
+* When the :ref:`dynamic dependencies <dynamic-deps>` are annotated with
+  :data:`typing.Annotated`, the keys in the resulting :class:`~.DynamicDeps`
+  instance are now not annotated.
+
+* Improved the error message when passing incorrect values in the ``"inject"``
+  meta key.
+
+* Fixed documentation builds with ``sphinx-rtd-theme`` 3.0.0+.
+
 0.23.0 (2024-07-18)
 -------------------
 

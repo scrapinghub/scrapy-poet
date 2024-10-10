@@ -213,8 +213,8 @@ intersphinx_mapping = {
         "https://docs.scrapy.org/en/latest",
         None,
     ),
-    "web-poet": ("https://web-poet.readthedocs.io/en/latest/", None),
-    "url-matcher": ("https://url-matcher.readthedocs.io/en/stable/", None),
+    "web-poet": ("https://web-poet.readthedocs.io/en/latest", None),
+    "url-matcher": ("https://url-matcher.readthedocs.io/en/stable", None),
 }
 
 autodoc_default_options = {
