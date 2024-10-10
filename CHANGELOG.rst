@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.24.0 (YYYY-MM-DD)
+0.24.0 (2024-10-10)
 -------------------
 
 * When the :ref:`dynamic dependencies <dynamic-deps>` are annotated with
