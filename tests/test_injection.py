@@ -743,8 +743,9 @@ class TestInjectorStats:
     def test_stats(self, cb_args, expected, injector):
         def callback_factory():
             args = ", ".join([f"{k}: {v.__name__}" for k, v in cb_args.items()])
-            exec(f"def callback(response: DummyResponse, {args}): pass")
-            return locals().get("callback")
+            ns = {}
+            exec(f"def callback(response: DummyResponse, {args}): pass", None, ns)
+            return ns["callback"]
 
         callback = callback_factory()
         response = get_response_for_testing(callback)
