@@ -1,7 +1,6 @@
 import re
 import shutil
-import sys
-from typing import Any, Callable, Dict, Generator, Optional
+from typing import Annotated, Any, Callable, Dict, Generator, Optional
 
 import andi
 import attr
@@ -312,21 +311,11 @@ class TestInjector:
         kwargs = yield from injector.build_callback_dependencies(request, response)
         assert kwargs == expected_kwargs
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     def test_annotated_provide(self, injector):
-        from typing import Annotated
-
         assert injector.is_class_provided_by_any_provider(Annotated[Cls1, 42])
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_annotated_build(self, injector):
-        from typing import Annotated
-
         def callback(
             a: Cls1,
             b: Annotated[Cls2, 42],
@@ -345,13 +334,8 @@ class TestInjector:
             injector, callback, expected_instances, expected_kwargs
         )
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_annotated_build_only(self, injector):
-        from typing import Annotated
-
         def callback(
             a: Annotated[Cls1, 42],
         ):
@@ -367,13 +351,8 @@ class TestInjector:
             injector, callback, expected_instances, expected_kwargs
         )
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_annotated_build_duplicate(self, injector):
-        from typing import Annotated
-
         def callback(
             a: Cls1,
             b: Cls2,
@@ -398,13 +377,8 @@ class TestInjector:
             injector, callback, expected_instances, expected_kwargs
         )
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_annotated_build_no_support(self, injector):
-        from typing import Annotated
-
         # get_provider_requiring_response() returns a provider that doesn't support Annotated
         def callback(
             a: Cls1,
@@ -423,15 +397,10 @@ class TestInjector:
             Cls1: Cls1(),
         }
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_annotated_build_duplicate_forbidden(
         self,
     ):
-        from typing import Annotated
-
         class Provider(PageObjectInputProvider):
             provided_classes = {Cls1}
             require_response = False
@@ -666,13 +635,8 @@ class TestInjector:
         instances = yield from injector.build_instances(request, response, plan)
         assert set(instances) == {TestItemPage, TestItem, DynamicDeps}
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_dynamic_deps_annotated(self):
-        from typing import Annotated
-
         def callback(dd: DynamicDeps):
             pass
 
@@ -1018,12 +982,7 @@ def test_dynamic_deps_factory():
     assert dd == {int: 42, Cls1: c}
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-)
 def test_dynamic_deps_factory_annotated():
-    from typing import Annotated
-
     fn = Injector._get_dynamic_deps_factory(
         [Annotated[Cls1, 42], Annotated[Cls2, "foo"]]
     )

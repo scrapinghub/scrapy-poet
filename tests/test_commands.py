@@ -6,7 +6,6 @@ import sys
 import tempfile
 from pathlib import Path
 
-import pytest
 from twisted.web.resource import Resource
 from web_poet.testing import Fixture
 
@@ -246,9 +245,6 @@ SCRAPY_POET_TESTS_ADAPTER = CustomItemAdapter
     result.assert_outcomes(passed=3)
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-)
 def test_savefixture_annotated(pytester) -> None:
     project_name = "foo"
     cwd = Path(pytester.path)
