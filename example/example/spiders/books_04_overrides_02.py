@@ -6,6 +6,7 @@ the crawling logic (the spider is exactly the same)
 No configured default logic: if used for an unregistered domain, no logic
 at all is applied.
 """
+
 import scrapy
 from web_poet import WebPage
 from web_poet.rules import ApplyRule

@@ -5,6 +5,7 @@ the crawling logic (the spider is exactly the same).
 
 The default configured PO logic contains the logic for books.toscrape.com
 """
+
 import scrapy
 from web_poet import ApplyRule, WebPage
 

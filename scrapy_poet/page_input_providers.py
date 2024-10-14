@@ -8,6 +8,7 @@ is in charge of providing the response HTML from Scrapy. You could also implemen
 different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from an API for automatic extraction.
 """
+
 from typing import Any, Callable, ClassVar, FrozenSet, List, Set, Union
 from warnings import warn
 

@@ -10,6 +10,7 @@ This example is quite similar to books_04_overrides_02.py where the only
 difference is that this example is using the ``@handle_urls`` decorator to
 store the rules in web-poet's registry.
 """
+
 import scrapy
 from web_poet import WebPage, default_registry, handle_urls
 

@@ -7,6 +7,7 @@ BookPage is now independent of Scrapy.
 Page object is used instead of callback below. It doesn't work now,
 but it can be implemented, with Scrapy support.
 """
+
 import scrapy
 from web_poet import WebPage
 
