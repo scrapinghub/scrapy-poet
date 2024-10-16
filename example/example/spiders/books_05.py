@@ -2,6 +2,7 @@
 Scrapy spider which uses Page Objects both for crawling and extraction.
 You can mix various page types freely.
 """
+
 import scrapy
 from example.autoextract import ProductPage
 from web_poet import WebPage

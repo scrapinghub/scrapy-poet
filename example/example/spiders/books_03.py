@@ -1,6 +1,7 @@
 """
 Scrapy spider which uses AutoExtract API, to extract books as products.
 """
+
 import scrapy
 from example.autoextract import ProductPage
 

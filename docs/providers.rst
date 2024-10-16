@@ -327,8 +327,6 @@ you could implement those limits in the library itself.
 Attaching metadata to dependencies
 ==================================
 
-.. note:: This feature requires Python 3.9+.
-
 Providers can support dependencies with arbitrary metadata attached and use
 that metadata when creating them. Attaching the metadata is done by wrapping
 the dependency class in :data:`typing.Annotated`:

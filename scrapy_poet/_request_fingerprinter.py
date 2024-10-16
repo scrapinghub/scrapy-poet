@@ -10,7 +10,7 @@ else:
     import json
     from functools import cached_property
     from logging import getLogger
-    from typing import Callable, Dict, List, Optional, get_args, get_origin
+    from typing import Annotated, Callable, Dict, List, Optional, get_args, get_origin
     from weakref import WeakKeyDictionary
 
     from andi import CustomBuilder
@@ -37,10 +37,6 @@ else:
     def _serialize_dep(cls):
         if isinstance(cls, CustomBuilder):
             cls = cls.result_class_or_fn
-        try:
-            from typing import Annotated
-        except ImportError:
-            pass
         else:
             if get_origin(cls) is Annotated:
                 annotated, *annotations = get_args(cls)
