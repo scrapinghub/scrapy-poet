@@ -1,7 +1,6 @@
 import json
 from inspect import isasyncgenfunction
 from typing import Dict
-from unittest import mock
 
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
@@ -272,10 +271,3 @@ def capture_exceptions(callback):
     # Mimic type annotations
     parse.__annotations__ = callback.__annotations__
     return parse
-
-
-class AsyncMock(mock.MagicMock):
-    """workaround since python 3.7 doesn't ship with asyncmock."""
-
-    async def __call__(self, *args, **kwargs):
-        return super().__call__(*args, **kwargs)
