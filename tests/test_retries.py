@@ -1,8 +1,11 @@
 from collections import deque
 from typing import Any, List
+from urllib.parse import urlparse
 
+import attrs
 from pytest_twisted import inlineCallbacks
 from scrapy import Request, Spider
+from web_poet import RulesRegistry
 from web_poet.exceptions import Retry
 from web_poet.page_inputs.http import HttpResponse
 from web_poet.pages import WebPage
@@ -48,6 +51,86 @@ def test_retry_once():
     assert crawler.stats.get_value("downloader/request_count") == 2
     assert crawler.stats.get_value("retry/count") == 1
     assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 1
+    assert crawler.stats.get_value("retry/max_reached") is None
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
+
+
+@inlineCallbacks
+def test_retry_once_item():
+    """Retries should also work when asking for an item instead of a page
+    object."""
+    retries = deque([True, False])
+    items, page_instances, page_response_instances = [], [], []
+
+    registry = RulesRegistry()
+
+    @attrs.define
+    class TestItem:
+        foo: str
+
+    with MockServer(EchoResource) as server:
+
+        netloc = urlparse(server.root_url).netloc
+
+        @registry.handle_urls(netloc)
+        class SamplePage(WebPage[TestItem]):
+            async def to_item(self):
+                page_instances.append(self)
+                page_response_instances.append(self.response)
+                if retries.popleft():
+                    raise Retry
+                return TestItem(foo="bar")
+
+        class TestSpider(BaseSpider):
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
+
+            def parse(self, response, item: TestItem):
+                items.append(item)
+
+        settings = {"SCRAPY_POET_RULES": registry.get_rules()}
+        crawler = make_crawler(TestSpider, settings=settings)
+        yield crawler.crawl()
+
+    assert items == [TestItem(foo="bar")]
+    assert crawler.stats.get_value("downloader/request_count") == 2
+    assert crawler.stats.get_value("retry/count") == 1
+    assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 1
+    assert crawler.stats.get_value("retry/max_reached") is None
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
+
+
+@inlineCallbacks
+def test_retry_reason():
+    retries = deque([True, False])
+    items, page_instances, page_response_instances = [], [], []
+
+    with MockServer(EchoResource) as server:
+
+        class SamplePage(WebPage):
+            def to_item(self):
+                page_instances.append(self)
+                page_response_instances.append(self.response)
+                if retries.popleft():
+                    raise Retry("foo")
+                return {"foo": "bar"}
+
+        class TestSpider(BaseSpider):
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
+
+            def parse(self, response, page: SamplePage):
+                items.append(page.to_item())
+
+        crawler = make_crawler(TestSpider)
+        yield crawler.crawl()
+
+    assert items == [{"foo": "bar"}]
+    assert crawler.stats.get_value("downloader/request_count") == 2
+    assert crawler.stats.get_value("retry/count") == 1
+    assert crawler.stats.get_value("retry/reason_count/foo") == 1
     assert crawler.stats.get_value("retry/max_reached") is None
     _assert_all_unique_instances(page_instances)
     _assert_all_unique_instances(page_response_instances)

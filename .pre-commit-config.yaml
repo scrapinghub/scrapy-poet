@@ -3,12 +3,12 @@ repos:
       - id: black
         language_version: python3
     repo: https://github.com/ambv/black
-    rev: 22.12.0
+    rev: 24.10.0
   - hooks:
       - id: isort
         language_version: python3
     repo: https://github.com/PyCQA/isort
-    rev: 5.11.5
+    rev: 5.13.2
   - hooks:
       - id: flake8
         language_version: python3
@@ -19,4 +19,4 @@ repos:
           - flake8-docstrings
           - flake8-string-format
     repo: https://github.com/pycqa/flake8
-    rev: 6.1.0
+    rev: 7.1.1

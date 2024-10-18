@@ -2,6 +2,46 @@
 Changelog
 =========
 
+0.24.0 (2024-10-10)
+-------------------
+
+* When the :ref:`dynamic dependencies <dynamic-deps>` are annotated with
+  :data:`typing.Annotated`, the keys in the resulting :class:`~.DynamicDeps`
+  instance are now not annotated.
+
+* Improved the error message when passing incorrect values in the ``"inject"``
+  meta key.
+
+* Fixed documentation builds with ``sphinx-rtd-theme`` 3.0.0+.
+
+0.23.0 (2024-07-18)
+-------------------
+
+* Added support for :ref:`specifying callback dependencies dynamically
+  <dynamic-deps>`.
+
+0.22.6 (2024-07-03)
+-------------------
+
+* Raising :class:`~web_poet.exceptions.core.Retry` now also works as expected
+  when callbacks ask for an item instead of asking for its page object.
+
+0.22.5 (2024-06-27)
+-------------------
+
+* When :class:`~web_poet.exceptions.core.Retry` is raised with a message, that
+  message now becomes the retry reason, replacing the default
+  (``page_object_retry``).
+
+0.22.4 (2024-06-10)
+-------------------
+
+* :ref:`Additional requests <additional-requests>`, when mapped to
+  :class:`scrapy.Request <scrapy.http.Request>` objects, now get their
+  ``dont_filter`` parameter set to ``True``, to ask downloader middlewares like
+  :class:`~scrapy.downloadermiddlewares.offsite.OffsiteMiddleware` not to drop
+  those requests.
+
 0.22.3 (2024-04-25)
 -------------------
 

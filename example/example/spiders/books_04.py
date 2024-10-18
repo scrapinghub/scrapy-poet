@@ -1,6 +1,7 @@
 """
 Scrapy spider which uses Page Objects both for crawling and extraction.
 """
+
 import scrapy
 from web_poet import WebPage
 

@@ -48,7 +48,7 @@ Installation
 
     pip install scrapy-poet
 
-Requires **Python 3.8+** and **Scrapy >= 2.6.0**.
+Requires **Python 3.9+** and **Scrapy >= 2.6.0**.
 
 Usage in a Scrapy Project
 =========================

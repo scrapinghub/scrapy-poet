@@ -1,6 +1,5 @@
-import sys
 from itertools import combinations
-from typing import Callable, Set
+from typing import Annotated, Callable, Set
 from unittest.mock import patch
 
 import pytest
@@ -57,9 +56,7 @@ def get_crawler(spider_cls=None, settings=None, ensure_providers_for=None):
     if ensure_providers_for:
         dummy_providers = get_dummy_providers(*ensure_providers_for)
         if dummy_providers:
-            settings["SCRAPY_POET_PROVIDERS"] = {
-                provider: 0 for provider in dummy_providers
-            }
+            settings["SCRAPY_POET_PROVIDERS"] = dict.fromkeys(dummy_providers, 0)
 
     return _get_crawler(settings=settings, **kwargs)
 
@@ -376,15 +373,10 @@ def test_meta(meta):
 
 
 @pytest.mark.skipif(
-    sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-)
-@pytest.mark.skipif(
     ANDI_VERSION <= Version("0.4.1"),
     reason="https://github.com/scrapinghub/andi/pull/25",
 )
 def test_different_annotations():
-    from typing import Annotated
-
     class TestSpider(Spider):
         name = "test_spider"
 
@@ -407,12 +399,7 @@ def test_serialize_dep():
     assert _serialize_dep(HttpResponse) == "web_poet.page_inputs.http.HttpResponse"
 
 
-@pytest.mark.skipif(
-    sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-)
 def test_serialize_dep_annotated():
-    from typing import Annotated
-
     assert (
         _serialize_dep(Annotated[HttpResponse, "foo"])
         == "web_poet.page_inputs.http.HttpResponse['foo']"

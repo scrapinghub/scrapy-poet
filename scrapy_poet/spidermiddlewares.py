@@ -25,7 +25,7 @@ class RetryMiddleware:
         new_request_or_none = get_retry_request(
             response.request,
             spider=spider,
-            reason="page_object_retry",
+            reason=str(exception) or "page_object_retry",
         )
         if not new_request_or_none:
             return []

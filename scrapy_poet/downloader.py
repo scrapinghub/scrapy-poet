@@ -21,7 +21,7 @@ def create_scrapy_downloader(download_func):
                 f"one of type: {type(request)!r}."
             )
 
-        scrapy_request = http_request_to_scrapy_request(request)
+        scrapy_request = http_request_to_scrapy_request(request, dont_filter=True)
 
         if scrapy_request.method == "HEAD":
             scrapy_request.meta["dont_redirect"] = True

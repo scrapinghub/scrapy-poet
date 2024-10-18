@@ -8,6 +8,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Iterable,
     List,
     Mapping,
     Optional,
@@ -19,7 +20,7 @@ from typing import (
 from weakref import WeakKeyDictionary
 
 import andi
-from andi.typeutils import issubclass_safe
+from andi.typeutils import issubclass_safe, strip_annotated
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.http import Response
@@ -51,6 +52,16 @@ logger = logging.getLogger(__name__)
 
 
 class _UNDEFINED:
+    pass
+
+
+class DynamicDeps(dict):
+    """A container for dynamic dependencies provided via the ``"inject"`` request meta key.
+
+    The dynamic dependency instances are available at the run time as dict
+    values with keys being dependency types.
+    """
+
     pass
 
 
@@ -170,32 +181,80 @@ class Injector:
             # Callable[[Callable], Optional[Callable]] but the registry
             # returns the typing for ``dict.get()`` method.
             overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
-            custom_builder_fn=self._get_item_builder(request),
+            custom_builder_fn=self._get_custom_builder(request),
         )
 
-    def _get_item_builder(
+    def _get_custom_builder(
         self, request: Request
     ) -> Callable[[Callable], Optional[Callable]]:
         """Return a function suitable for passing as ``custom_builder_fn`` to ``andi.plan``.
 
         The returned function can map an item to a factory for that item based
-        on the registry.
+        on the registry and also supports filling :class:`.DynamicDeps`.
         """
 
         @functools.lru_cache(maxsize=None)  # to minimize the registry queries
-        def mapping_fn(item_cls: Callable) -> Optional[Callable]:
+        def mapping_fn(dep_cls: Callable) -> Optional[Callable]:
+            # building DynamicDeps
+            if dep_cls is DynamicDeps:
+                dynamic_types = request.meta.get("inject", [])
+                if not dynamic_types:
+                    return lambda: {}
+                return self._get_dynamic_deps_factory(dynamic_types)
+
+            # building items from pages
             page_object_cls: Optional[Type[ItemPage]] = self.registry.page_cls_for_item(
-                request.url, cast(type, item_cls)
+                request.url, cast(type, dep_cls)
             )
             if not page_object_cls:
                 return None
 
-            async def item_factory(page: page_object_cls) -> item_cls:  # type: ignore[valid-type]
+            async def item_factory(page: page_object_cls) -> dep_cls:  # type: ignore[valid-type]
                 return await page.to_item()  # type: ignore[attr-defined]
 
             return item_factory
 
         return mapping_fn
+
+    @staticmethod
+    def _get_dynamic_deps_factory_text(
+        type_names: Iterable[str],
+    ) -> str:
+        # inspired by Python 3.11 dataclasses._create_fn()
+        # https://github.com/python/cpython/blob/v3.11.9/Lib/dataclasses.py#L413
+        args = [f"{name}_arg: {name}" for name in type_names]
+        args_str = ", ".join(args)
+        result_args = [f"strip_annotated({name}): {name}_arg" for name in type_names]
+        result_args_str = ", ".join(result_args)
+        create_args_str = ", ".join(type_names)
+        return (
+            f"def __create_fn__({create_args_str}):\n"
+            f" def dynamic_deps_factory({args_str}) -> DynamicDeps:\n"
+            f"  return DynamicDeps({{{result_args_str}}})\n"
+            f" return dynamic_deps_factory"
+        )
+
+    @staticmethod
+    def _get_dynamic_deps_factory(
+        dynamic_types: List[type],
+    ) -> Callable[..., DynamicDeps]:
+        """Return a function that creates a :class:`.DynamicDeps` instance from its args.
+
+        It takes instances of types from ``dynamic_types`` as args and returns
+        a :class:`.DynamicDeps` instance where keys are types and values are
+        corresponding args. It has correct type hints so that it can be used as
+        an ``andi`` custom builder.
+        """
+        type_names: List[str] = []
+        for type_ in dynamic_types:
+            type_ = cast(type, strip_annotated(type_))
+            if not isinstance(type_, type):
+                raise TypeError(f"Expected a dynamic dependency type, got {type_!r}")
+            type_names.append(type_.__name__)
+        txt = Injector._get_dynamic_deps_factory_text(type_names)
+        ns: Dict[str, Any] = {}
+        exec(txt, globals(), ns)
+        return ns["__create_fn__"](*dynamic_types)
 
     @inlineCallbacks
     def build_instances(
@@ -482,7 +541,9 @@ def get_injector_for_testing(
     return Injector(crawler, registry=registry)
 
 
-def get_response_for_testing(callback: Callable) -> Response:
+def get_response_for_testing(
+    callback: Callable, meta: Optional[Dict[str, Any]] = None
+) -> Response:
     """
     Return a :class:`scrapy.http.Response` with fake content with the configured
     callback. It is useful for testing providers.
@@ -503,6 +564,6 @@ def get_response_for_testing(callback: Callable) -> Response:
         """.encode(
         "utf-8"
     )
-    request = Request(url, callback=callback)
+    request = Request(url, callback=callback, meta=meta)
     response = Response(url, 200, None, html, request=request)
     return response

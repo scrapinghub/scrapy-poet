@@ -99,13 +99,6 @@ pygments_style = None
 #
 html_theme = "sphinx_rtd_theme"
 
-# Add any paths that contain custom themes here, relative to this directory.
-# Add path to the RTD explicitly to robustify builds (otherwise might
-# fail in a clean Debian build env)
-import sphinx_rtd_theme  # noqa: E402
-
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
-
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
@@ -220,8 +213,8 @@ intersphinx_mapping = {
         "https://docs.scrapy.org/en/latest",
         None,
     ),
-    "web-poet": ("https://web-poet.readthedocs.io/en/latest/", None),
-    "url-matcher": ("https://url-matcher.readthedocs.io/en/stable/", None),
+    "web-poet": ("https://web-poet.readthedocs.io/en/latest", None),
+    "url-matcher": ("https://url-matcher.readthedocs.io/en/stable", None),
 }
 
 autodoc_default_options = {

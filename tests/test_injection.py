@@ -1,7 +1,8 @@
+import re
 import shutil
-import sys
-from typing import Any, Callable, Dict, Generator
+from typing import Annotated, Any, Callable, Dict, Generator, Optional
 
+import andi
 import attr
 import parsel
 import pytest
@@ -16,7 +17,12 @@ from web_poet.annotated import AnnotatedInstance
 from web_poet.mixins import ResponseShortcutsMixin
 from web_poet.rules import ApplyRule
 
-from scrapy_poet import DummyResponse, HttpResponseProvider, PageObjectInputProvider
+from scrapy_poet import (
+    DummyResponse,
+    DynamicDeps,
+    HttpResponseProvider,
+    PageObjectInputProvider,
+)
 from scrapy_poet.injection import (
     Injector,
     check_all_providers_are_callable,
@@ -293,8 +299,9 @@ class TestInjector:
         callback: Callable,
         expected_instances: Dict[type, Any],
         expected_kwargs: Dict[str, Any],
+        reqmeta: Optional[Dict[str, Any]] = None,
     ) -> Generator[Any, Any, None]:
-        response = get_response_for_testing(callback)
+        response = get_response_for_testing(callback, meta=reqmeta)
         assert response.request
         request = response.request
 
@@ -305,21 +312,11 @@ class TestInjector:
         kwargs = yield from injector.build_callback_dependencies(request, response)
         assert kwargs == expected_kwargs
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     def test_annotated_provide(self, injector):
-        from typing import Annotated
-
         assert injector.is_class_provided_by_any_provider(Annotated[Cls1, 42])
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_annotated_build(self, injector):
-        from typing import Annotated
-
         def callback(
             a: Cls1,
             b: Annotated[Cls2, 42],
@@ -338,13 +335,8 @@ class TestInjector:
             injector, callback, expected_instances, expected_kwargs
         )
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_annotated_build_only(self, injector):
-        from typing import Annotated
-
         def callback(
             a: Annotated[Cls1, 42],
         ):
@@ -360,13 +352,8 @@ class TestInjector:
             injector, callback, expected_instances, expected_kwargs
         )
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_annotated_build_duplicate(self, injector):
-        from typing import Annotated
-
         def callback(
             a: Cls1,
             b: Cls2,
@@ -391,13 +378,8 @@ class TestInjector:
             injector, callback, expected_instances, expected_kwargs
         )
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_annotated_build_no_support(self, injector):
-        from typing import Annotated
-
         # get_provider_requiring_response() returns a provider that doesn't support Annotated
         def callback(
             a: Cls1,
@@ -416,15 +398,10 @@ class TestInjector:
             Cls1: Cls1(),
         }
 
-    @pytest.mark.skipif(
-        sys.version_info < (3, 9), reason="No Annotated support in Python < 3.9"
-    )
     @inlineCallbacks
     def test_annotated_build_duplicate_forbidden(
         self,
     ):
-        from typing import Annotated
-
         class Provider(PageObjectInputProvider):
             provided_classes = {Cls1}
             require_response = False
@@ -536,6 +513,153 @@ class TestInjector:
         # not injected at all.
         assert set(kwargs.keys()) == {"expensive", "item"}
 
+    @inlineCallbacks
+    def test_dynamic_deps(self):
+        def callback(dd: DynamicDeps):
+            pass
+
+        provider = get_provider({Cls1, Cls2})
+        injector = get_injector_for_testing({provider: 1})
+
+        expected_instances = {
+            DynamicDeps: DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+            Cls1: Cls1(),
+            Cls2: Cls2(),
+        }
+        expected_kwargs = {
+            "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+        }
+        yield self._assert_instances(
+            injector,
+            callback,
+            expected_instances,
+            expected_kwargs,
+            reqmeta={"inject": [Cls1, Cls2]},
+        )
+
+    @inlineCallbacks
+    def test_dynamic_deps_mix(self):
+        def callback(c1: Cls1, dd: DynamicDeps):
+            pass
+
+        provider = get_provider({Cls1, Cls2})
+        injector = get_injector_for_testing({provider: 1})
+
+        response = get_response_for_testing(callback, meta={"inject": [Cls1, Cls2]})
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        instances = yield from injector.build_instances(request, response, plan)
+        assert instances == {
+            DynamicDeps: DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+            Cls1: Cls1(),
+            Cls2: Cls2(),
+        }
+        assert instances[Cls1] is instances[DynamicDeps][Cls1]
+        assert instances[Cls2] is instances[DynamicDeps][Cls2]
+
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        assert kwargs == {
+            "c1": Cls1(),
+            "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+        }
+        assert kwargs["c1"] is kwargs["dd"][Cls1]
+
+    @inlineCallbacks
+    def test_dynamic_deps_no_meta(self):
+        def callback(dd: DynamicDeps):
+            pass
+
+        provider = get_provider({Cls1, Cls2})
+        injector = get_injector_for_testing({provider: 1})
+
+        expected_instances = {
+            DynamicDeps: DynamicDeps(),
+        }
+        expected_kwargs = {
+            "dd": DynamicDeps(),
+        }
+        yield self._assert_instances(
+            injector,
+            callback,
+            expected_instances,
+            expected_kwargs,
+        )
+
+    @inlineCallbacks
+    def test_dynamic_deps_page(self):
+        def callback(dd: DynamicDeps):
+            pass
+
+        injector = get_injector_for_testing({})
+
+        response = get_response_for_testing(callback, meta={"inject": [PricePO]})
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        kwargs_types = {key: type(value) for key, value in kwargs.items()}
+        assert kwargs_types == {
+            "dd": DynamicDeps,
+        }
+        dd_types = {key: type(value) for key, value in kwargs["dd"].items()}
+        assert dd_types == {
+            PricePO: PricePO,
+        }
+
+        instances = yield from injector.build_instances(request, response, plan)
+        assert set(instances) == {Html, PricePO, DynamicDeps}
+
+    @inlineCallbacks
+    def test_dynamic_deps_item(self):
+        def callback(dd: DynamicDeps):
+            pass
+
+        rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
+        registry = RulesRegistry(rules=rules)
+        injector = get_injector_for_testing({}, registry=registry)
+
+        response = get_response_for_testing(callback, meta={"inject": [TestItem]})
+        request = response.request
+
+        plan = injector.build_plan(response.request)
+        kwargs = yield from injector.build_callback_dependencies(request, response)
+        kwargs_types = {key: type(value) for key, value in kwargs.items()}
+        assert kwargs_types == {
+            "dd": DynamicDeps,
+        }
+        dd_types = {key: type(value) for key, value in kwargs["dd"].items()}
+        assert dd_types == {
+            TestItem: TestItem,
+        }
+
+        instances = yield from injector.build_instances(request, response, plan)
+        assert set(instances) == {TestItemPage, TestItem, DynamicDeps}
+
+    @inlineCallbacks
+    def test_dynamic_deps_annotated(self):
+        def callback(dd: DynamicDeps):
+            pass
+
+        provider = get_provider({Cls1, Cls2})
+        injector = get_injector_for_testing({provider: 1})
+
+        expected_instances = {
+            DynamicDeps: DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+            Annotated[Cls1, 42]: Cls1(),
+            Annotated[Cls2, "foo"]: Cls2(),
+        }
+        expected_kwargs = {
+            "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
+        }
+        yield self._assert_instances(
+            injector,
+            callback,
+            expected_instances,
+            expected_kwargs,
+            reqmeta={"inject": [Annotated[Cls1, 42], Annotated[Cls2, "foo"]]},
+        )
+
 
 class Html(Injectable):
     url = "http://example.com"
@@ -620,8 +744,9 @@ class TestInjectorStats:
     def test_stats(self, cb_args, expected, injector):
         def callback_factory():
             args = ", ".join([f"{k}: {v.__name__}" for k, v in cb_args.items()])
-            exec(f"def callback(response: DummyResponse, {args}): pass")
-            return locals().get("callback")
+            ns = {}
+            exec(f"def callback(response: DummyResponse, {args}): pass", None, ns)
+            return ns["callback"]
 
         callback = callback_factory()
         response = get_response_for_testing(callback)
@@ -834,3 +959,49 @@ def test_cache(tmp_path, cache_errors):
             response.request, response, plan
         )
     assert injector.weak_cache.get(response.request) is None
+
+
+def test_dynamic_deps_factory_text():
+    txt = Injector._get_dynamic_deps_factory_text(["int", "Cls1"])
+    assert (
+        txt
+        == """def __create_fn__(int, Cls1):
+ def dynamic_deps_factory(int_arg: int, Cls1_arg: Cls1) -> DynamicDeps:
+  return DynamicDeps({strip_annotated(int): int_arg, strip_annotated(Cls1): Cls1_arg})
+ return dynamic_deps_factory"""
+    )
+
+
+def test_dynamic_deps_factory():
+    fn = Injector._get_dynamic_deps_factory([int, Cls1])
+    args = andi.inspect(fn)
+    assert args == {
+        "Cls1_arg": [Cls1],
+        "int_arg": [int],
+    }
+    c = Cls1()
+    dd = fn(int_arg=42, Cls1_arg=c)
+    assert dd == {int: 42, Cls1: c}
+
+
+def test_dynamic_deps_factory_annotated():
+    fn = Injector._get_dynamic_deps_factory(
+        [Annotated[Cls1, 42], Annotated[Cls2, "foo"]]
+    )
+    args = andi.inspect(fn)
+    assert args == {
+        "Cls1_arg": [Annotated[Cls1, 42]],
+        "Cls2_arg": [Annotated[Cls2, "foo"]],
+    }
+    c1 = Cls1()
+    c2 = Cls2()
+    dd = fn(Cls1_arg=c1, Cls2_arg=c2)
+    assert dd == {Cls1: c1, Cls2: c2}
+
+
+def test_dynamic_deps_factory_bad_input():
+    with pytest.raises(
+        TypeError,
+        match=re.escape(r"Expected a dynamic dependency type, got (<class 'int'>,)"),
+    ):
+        Injector._get_dynamic_deps_factory([(int,)])
