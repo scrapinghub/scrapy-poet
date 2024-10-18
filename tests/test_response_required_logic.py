@@ -218,8 +218,11 @@ def test_is_provider_using_response():
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
 def test_is_callback_using_response_for_scrapy28_below() -> None:
+    def cb(_: Any) -> Any:
+        return _
+
     spider = MySpider()
-    request = Request("https://example.com", callback=lambda _: _)
+    request = Request("https://example.com", callback=cb)
     assert is_callback_requiring_scrapy_response(spider.parse, request.callback) is True
     assert (
         is_callback_requiring_scrapy_response(spider.parse2, request.callback) is True
@@ -356,8 +359,11 @@ def test_is_callback_using_response_for_scrapy28_below() -> None:
     reason="NO_CALLBACK not available in Scrapy < 2.8",
 )
 def test_is_callback_using_response_for_scrapy28_and_above() -> None:
+    def cb(_: Any) -> Any:
+        return _
+
     spider = MySpider()
-    request_with_callback = Request("https://example.com", callback=lambda _: _)
+    request_with_callback = Request("https://example.com", callback=cb)
     request_no_callback = Request("https://example.com", callback=NO_CALLBACK)
 
     with warnings.catch_warnings(record=True) as caught_warnings:
