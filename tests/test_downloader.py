@@ -493,7 +493,7 @@ def test_additional_requests_no_cb_deps() -> None:
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
-            async def parse(self, response: DummyResponse, page: ItemPage):
+            async def parse(self, response: DummyResponse, page: ItemPage):  # type: ignore[override]
                 item = await page.to_item()
                 items.append(item)
 
@@ -570,7 +570,7 @@ def test_parse_callback_none_dummy_response() -> None:
         class TestSpider(BaseSpider):
             start_urls = [server.root_url]
 
-            def parse(self, response: DummyResponse):
+            def parse(self, response: DummyResponse):  # type: ignore[override]
                 collected["response"] = response
 
         crawler = make_crawler(TestSpider)
@@ -662,7 +662,7 @@ def test_parse_callback_none_with_deps(caplog) -> None:
         class TestSpider(BaseSpider):
             start_urls = [server.root_url]
 
-            def parse(self, response: DummyResponse, page: BasicPage):
+            def parse(self, response: DummyResponse, page: BasicPage):  # type: ignore[override]
                 pass
 
         crawler = make_crawler(TestSpider)
@@ -705,7 +705,7 @@ def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
                 page = BasicPage(web_poet.HttpResponse("https://example.com", b""))
                 yield Request(server.root_url, cb_kwargs={"page": page})
 
-            def parse(self, response: DummyResponse, page: BasicPage):
+            def parse(self, response: DummyResponse, page: BasicPage):  # type: ignore[override]
                 collected["response"] = response
 
         crawler = make_crawler(TestSpider)
@@ -740,7 +740,7 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
                 page = BasicPage(web_poet.HttpResponse("https://example.com", b""))
                 yield Request(server.root_url, cb_kwargs={"page": page})
 
-            def parse(
+            def parse(  # type: ignore[override]
                 self,
                 response: DummyResponse,
                 page: BasicPage,
@@ -782,7 +782,7 @@ def test_parse_callback_NO_CALLBACK(caplog) -> None:
         class TestSpider(BaseSpider):
             start_urls = [server.root_url]
 
-            def parse(self, response: DummyResponse):
+            def parse(self, response: DummyResponse):  # type: ignore[override]
                 collected["response"] = response
 
         crawler = make_crawler(TestSpider)
@@ -814,7 +814,7 @@ def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
         class TestSpider(BaseSpider):
             start_urls = [server.root_url]
 
-            def parse(self, response: DummyResponse, page: BasicPage):
+            def parse(self, response: DummyResponse, page: BasicPage):  # type: ignore[override]
                 collected["response"] = response
 
         crawler = make_crawler(TestSpider)
