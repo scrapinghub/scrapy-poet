@@ -301,7 +301,7 @@ class SkipDownloadSpider(scrapy.Spider):
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
 
-    def parse(self, response: DummyResponse):
+    def parse(self, response: DummyResponse):  # type: ignore[override]
         return {
             "response": response,
         }
@@ -332,7 +332,7 @@ class RequestUrlSpider(scrapy.Spider):
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
 
-    def parse(self, response: DummyResponse, url: RequestUrl):
+    def parse(self, response: DummyResponse, url: RequestUrl):  # type: ignore[override]
         return {
             "response": response,
             "url": url,
@@ -359,7 +359,7 @@ class ResponseUrlSpider(scrapy.Spider):
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
 
-    def parse(self, response: DummyResponse, url: ResponseUrl):
+    def parse(self, response: DummyResponse, url: ResponseUrl):  # type: ignore[override]
         return {
             "response": response,
             "url": url,
@@ -396,7 +396,7 @@ class ResponseUrlPageSpider(scrapy.Spider):
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
 
-    def parse(self, response: DummyResponse, page: ResponseUrlPage):
+    def parse(self, response: DummyResponse, page: ResponseUrlPage):  # type: ignore[override]
         return page.to_item()
 
 
@@ -427,7 +427,7 @@ class RequestUrlPageSpider(scrapy.Spider):
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
 
-    def parse(self, response: DummyResponse, page: RequestUrlPage):
+    def parse(self, response: DummyResponse, page: RequestUrlPage):  # type: ignore[override]
         return page.to_item()
 
 

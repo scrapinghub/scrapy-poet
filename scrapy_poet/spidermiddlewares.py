@@ -21,6 +21,7 @@ class RetryMiddleware:
 
         if not isinstance(exception, Retry):
             return None
+        assert response.request
         new_request_or_none = get_retry_request(
             response.request,
             spider=spider,

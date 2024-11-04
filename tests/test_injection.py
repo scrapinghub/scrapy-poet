@@ -302,6 +302,7 @@ class TestInjector:
         reqmeta: Optional[Dict[str, Any]] = None,
     ) -> Generator[Any, Any, None]:
         response = get_response_for_testing(callback, meta=reqmeta)
+        assert response.request
         request = response.request
 
         plan = injector.build_plan(response.request)

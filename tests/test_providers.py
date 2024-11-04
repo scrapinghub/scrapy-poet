@@ -30,12 +30,7 @@ from scrapy_poet.page_input_providers import (
     StatsProvider,
 )
 from scrapy_poet.utils.mockserver import get_ephemeral_port
-from scrapy_poet.utils.testing import (
-    AsyncMock,
-    HtmlResource,
-    ProductHtml,
-    crawl_single_item,
-)
+from scrapy_poet.utils.testing import HtmlResource, ProductHtml, crawl_single_item
 
 
 class NonProductHtml(HtmlResource):
@@ -75,7 +70,9 @@ class PriceHtmlDataProvider(PageObjectInputProvider):
         assert isinstance(spider, scrapy.Spider)
         ret: List[Any] = []
         if Price in to_provide:
-            ret.append(Price(response.css(".price::text").get()))
+            price = response.css(".price::text").get()
+            assert price is not None
+            ret.append(Price(price))
         if Html in to_provide:
             ret.append(Html("Price Html!"))
         return ret
@@ -89,7 +86,9 @@ class NameHtmlDataProvider(PageObjectInputProvider):
         assert isinstance(settings, Settings)
         ret: List[Any] = []
         if Name in to_provide:
-            ret.append(Name(response.css(".name::text").get()))
+            name = response.css(".name::text").get()
+            assert name is not None
+            ret.append(Name(name))
         if Html in to_provide:
             ret.append(Html("Name Html!"))
         return ret
@@ -200,7 +199,7 @@ def test_price_first_spider(settings):
 @ensureDeferred
 async def test_http_client_provider(settings):
     crawler = get_crawler(Spider, settings)
-    crawler.engine = AsyncMock()
+    crawler.engine = mock.AsyncMock()
     injector = Injector(crawler)
 
     with mock.patch(
