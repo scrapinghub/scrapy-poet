@@ -14,6 +14,7 @@ import os
 import pkgutil
 import sys
 from datetime import datetime
+from pathlib import Path
 
 sys.path.insert(0, os.path.abspath("../"))
 
@@ -56,7 +57,9 @@ version, release = get_version_and_release()
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
+sys.path.insert(0, str(Path(__file__).parent.absolute()))  # _ext
 extensions = [
+    "_ext",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.ifconfig",
