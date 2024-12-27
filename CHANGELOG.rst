@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.25.0 (YYYY-MM-DD)
+0.25.0 (2024-12-27)
 -------------------
 
 * Added Python 3.13 support, removed Python 3.8 support.
