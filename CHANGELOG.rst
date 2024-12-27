@@ -7,7 +7,7 @@ Changelog
 
 * Added Python 3.13 support, removed Python 3.8 support.
 
-* Improved Scrapy 2.12 support (removed a deprecation warning).
+* Improved Scrapy 2.12 support (typing, deprecations).
 
 0.24.0 (2024-10-10)
 -------------------
