@@ -2,6 +2,13 @@
 Changelog
 =========
 
+0.25.0 (YYYY-MM-DD)
+-------------------
+
+* Added Python 3.13 support, removed Python 3.8 support.
+
+* Improved Scrapy 2.12 support (removed a deprecation warning).
+
 0.24.0 (2024-10-10)
 -------------------
 
