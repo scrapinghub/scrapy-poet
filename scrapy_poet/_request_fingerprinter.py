@@ -17,7 +17,16 @@ else:
     from scrapy import Request
     from scrapy.crawler import Crawler
     from scrapy.settings.default_settings import REQUEST_FINGERPRINTER_CLASS
-    from scrapy.utils.misc import create_instance, load_object
+    from scrapy.utils.misc import load_object
+
+    try:
+        from scrapy.utils.misc import build_from_crawler
+    except ImportError:  # Scrapy < 2.12
+        from scrapy.utils.misc import create_instance
+
+        def build_from_crawler(objcls, crawler):
+            return create_instance(objcls, settings=crawler.settings, crawler=crawler)
+
     from web_poet import (
         HttpClient,
         HttpRequest,
@@ -65,16 +74,14 @@ else:
             return cls(crawler)
 
         def __init__(self, crawler: Crawler) -> None:
-            settings = crawler.settings
-            self._base_request_fingerprinter = create_instance(
+            self._base_request_fingerprinter = build_from_crawler(
                 load_object(
-                    settings.get(
+                    crawler.settings.get(
                         "SCRAPY_POET_REQUEST_FINGERPRINTER_BASE_CLASS",
                         REQUEST_FINGERPRINTER_CLASS,
                     )
                 ),
-                settings=crawler.settings,
-                crawler=crawler,
+                crawler,
             )
             self._callback_cache: Dict[Callable, Optional[bytes]] = {}
             self._request_cache: "WeakKeyDictionary[Request, bytes]" = (
