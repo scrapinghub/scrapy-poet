@@ -22,10 +22,16 @@ else:
     try:
         from scrapy.utils.misc import build_from_crawler
     except ImportError:  # Scrapy < 2.12
+        from typing import Any, TypeVar
+
         from scrapy.utils.misc import create_instance
 
-        def build_from_crawler(objcls, crawler):
-            return create_instance(objcls, settings=crawler.settings, crawler=crawler)
+        T = TypeVar("T")
+
+        def build_from_crawler(
+            objcls: type[T], crawler: Crawler, /, *args: Any, **kwargs: Any
+        ) -> T:
+            return create_instance(objcls, None, crawler, *args, **kwargs)
 
     from web_poet import (
         HttpClient,
