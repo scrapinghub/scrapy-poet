@@ -188,7 +188,10 @@ def setup_crawler_engine(crawler: Crawler):
     crawler.crawling = True
     crawler.spider = crawler._create_spider()
     crawler.settings.frozen = False
-    crawler._apply_settings()
+    try:
+        crawler._apply_settings()
+    except AttributeError:
+        pass  # Scrapy < 2.10
     crawler.engine = crawler._create_engine()
 
     handler = get_download_handler(crawler, "https")
