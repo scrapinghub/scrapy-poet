@@ -32,7 +32,7 @@ from scrapy_poet.utils.testing import (
     DelayedResource,
     EchoResource,
     StatusResource,
-    create_scrapy_settings,
+    _get_test_settings,
     make_crawler,
 )
 
@@ -284,7 +284,7 @@ def test_additional_requests_ignored_request() -> None:
                 item = await page.to_item()
                 items.append(item)
 
-        settings = create_scrapy_settings()
+        settings = _get_test_settings()
         settings["DOWNLOADER_MIDDLEWARES"][TestDownloaderMiddleware] = 1
         crawler = make_crawler(TestSpider, settings)
         yield crawler.crawl()
@@ -338,7 +338,7 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
                 item = await page.to_item()
                 items.append(item)
 
-        settings = create_scrapy_settings()
+        settings = _get_test_settings()
         settings["DOWNLOADER_MIDDLEWARES"][TestDownloaderMiddleware] = 1
         crawler = make_crawler(TestSpider)
         yield crawler.crawl()

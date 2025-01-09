@@ -158,7 +158,7 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
 def test_name_first_spider(settings, tmp_path):
     port = get_ephemeral_port()
     cache = tmp_path / "cache"
-    settings.set("SCRAPY_POET_CACHE", str(cache))
+    settings["SCRAPY_POET_CACHE"] = str(cache)
     item, _, _ = yield crawl_single_item(
         NameFirstMultiProviderSpider, ProductHtml, settings, port=port
     )

@@ -37,12 +37,19 @@ from scrapy_poet._request_fingerprinter import _serialize_dep
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
 from scrapy_poet.injection import Injector, is_class_provided_by_any_provider_fn
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from scrapy_poet.utils.testing import create_scrapy_settings
+from scrapy_poet.utils.testing import _get_test_settings
 from scrapy_poet.utils.testing import get_crawler as _get_crawler
 
 ANDI_VERSION = Version(package_version("andi"))
 
-SETTINGS = create_scrapy_settings()
+SETTINGS = _get_test_settings()
+
+try:
+    import scrapy.addons  # noqa: F401
+except ImportError:
+    ADDON_SUPPORT = False
+else:
+    ADDON_SUPPORT = True
 
 
 def get_crawler(spider_cls=None, settings=None, ensure_providers_for=None):
@@ -452,6 +459,7 @@ def test_base_custom():
     assert fingerprinter.fingerprint(request) != b"foo"
 
 
+@pytest.mark.skipif(ADDON_SUPPORT, reason="Using the add-on")
 def test_missing_middleware():
     settings = {**SETTINGS, "DOWNLOADER_MIDDLEWARES": {}}
     crawler = get_crawler(settings=settings)

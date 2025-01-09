@@ -1,6 +1,7 @@
 import json
 from inspect import isasyncgenfunction
 from typing import Dict
+from warnings import warn
 
 from scrapy import Spider, signals
 from scrapy.crawler import Crawler
@@ -159,10 +160,10 @@ def get_download_handler(crawler, schema):
 def make_crawler(spider_cls, settings=None):
     settings = settings or {}
     if isinstance(settings, dict):
-        _settings = create_scrapy_settings()
+        _settings = _get_test_settings()
         _settings.update(settings)
     else:
-        _settings = create_scrapy_settings()
+        _settings = _get_test_settings()
         for k, v in dict(settings).items():
             _settings.set(k, v, priority=settings.getpriority(k))
     settings = _settings
@@ -186,6 +187,11 @@ def setup_crawler_engine(crawler: Crawler):
 
     crawler.crawling = True
     crawler.spider = crawler._create_spider()
+    crawler.settings.frozen = False
+    try:
+        crawler._apply_settings()
+    except AttributeError:
+        pass  # Scrapy < 2.10
     crawler.engine = crawler._create_engine()
 
     handler = get_download_handler(crawler, "https")
@@ -229,26 +235,46 @@ class InjectedDependenciesCollectorMiddleware:
         return response
 
 
-def create_scrapy_settings():
-    """Default scrapy-poet settings"""
-    s = dict(
+def _get_test_settings():
+    settings = {
         # collect scraped items to crawler.spider.collected_items
-        ITEM_PIPELINES={
+        "ITEM_PIPELINES": {
             CollectorPipeline: 100,
         },
-        DOWNLOADER_MIDDLEWARES={
+        "DOWNLOADER_MIDDLEWARES": {
             # collect injected dependencies to crawler.spider.collected_response_deps
             InjectedDependenciesCollectorMiddleware: 542,
-            "scrapy_poet.InjectionMiddleware": 543,
-            "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
-            "scrapy_poet.DownloaderStatsMiddleware": 850,
         },
-        REQUEST_FINGERPRINTER_CLASS=ScrapyPoetRequestFingerprinter,
-        SPIDER_MIDDLEWARES={
+    }
+    try:
+        import scrapy.addons  # noqa: F401
+    except ImportError:
+        settings["DOWNLOADER_MIDDLEWARES"]["scrapy_poet.InjectionMiddleware"] = 543
+        settings["DOWNLOADER_MIDDLEWARES"][
+            "scrapy.downloadermiddlewares.stats.DownloaderStats"
+        ] = None
+        settings["DOWNLOADER_MIDDLEWARES"][
+            "scrapy_poet.DownloaderStatsMiddleware"
+        ] = 850
+        settings["REQUEST_FINGERPRINTER_CLASS"] = ScrapyPoetRequestFingerprinter
+        settings["SPIDER_MIDDLEWARES"] = {
             "scrapy_poet.RetryMiddleware": 275,
-        },
+        }
+    else:
+        settings["ADDONS"] = {
+            "scrapy_poet.Addon": 300,
+        }
+    return settings
+
+
+def create_scrapy_settings():
+    """Return the default scrapy-poet settings."""
+    warn(
+        "The scrapy_poet.utils.create_scrapy_settings() function is deprecated.",
+        DeprecationWarning,
+        stacklevel=2,
     )
-    return Settings(s)
+    return Settings(_get_test_settings())
 
 
 def capture_exceptions(callback):

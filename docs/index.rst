@@ -21,7 +21,7 @@ testability and reusability.
 Concrete integrations are not provided by ``web-poet``, but
 ``scrapy-poet`` makes them possbile.
 
-To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
+To get started, see :ref:`setup` and :ref:`intro-tutorial`.
 
 :ref:`license` is BSD 3-clause.
 
@@ -34,7 +34,7 @@ To get started, see :ref:`intro-install` and :ref:`intro-tutorial`.
    :caption: Getting started
    :maxdepth: 1
 
-   intro/install
+   intro/setup
    intro/basic-tutorial
    intro/advanced-tutorial
    intro/pitfalls

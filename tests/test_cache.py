@@ -5,7 +5,7 @@ from scrapy import Request, Spider
 from web_poet import WebPage, field
 
 from scrapy_poet.utils.mockserver import MockServer
-from scrapy_poet.utils.testing import EchoResource, create_scrapy_settings, make_crawler
+from scrapy_poet.utils.testing import EchoResource, _get_test_settings, make_crawler
 
 
 @inlineCallbacks
@@ -22,7 +22,7 @@ def test_cache_no_errors(caplog) -> None:
                 name = "cache"
 
                 custom_settings = {
-                    **create_scrapy_settings(),
+                    **_get_test_settings(),
                     "SCRAPY_POET_CACHE": cache_dir,
                 }
 

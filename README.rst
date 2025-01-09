@@ -27,6 +27,8 @@ scrapy-poet
 With ``scrapy-poet`` is possible to make a single spider that supports many sites with
 different layouts.
 
+Requires **Python 3.9+** and **Scrapy >= 2.6.0**.
+
 Read the `documentation <https://scrapy-poet.readthedocs.io>`_  for more information.
 
 License is BSD 3-clause.
@@ -48,24 +50,32 @@ Installation
 
     pip install scrapy-poet
 
-Requires **Python 3.9+** and **Scrapy >= 2.6.0**.
-
 Usage in a Scrapy Project
 =========================
 
 Add the following inside Scrapy's ``settings.py`` file:
 
-.. code-block:: python
+-   Scrapy ≥ 2.10:
 
-    DOWNLOADER_MIDDLEWARES = {
-        "scrapy_poet.InjectionMiddleware": 543,
-        "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
-        "scrapy_poet.DownloaderStatsMiddleware": 850,
-    }
-    SPIDER_MIDDLEWARES = {
-        "scrapy_poet.RetryMiddleware": 275,
-    }
-    REQUEST_FINGERPRINTER_CLASS = "scrapy_poet.ScrapyPoetRequestFingerprinter"
+    .. code-block:: python
+
+        ADDONS = {
+            "scrapy_poet.Addon": 300,
+        }
+
+-   Scrapy < 2.10:
+
+    .. code-block:: python
+
+        DOWNLOADER_MIDDLEWARES = {
+            "scrapy_poet.InjectionMiddleware": 543,
+            "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
+            "scrapy_poet.DownloaderStatsMiddleware": 850,
+        }
+        REQUEST_FINGERPRINTER_CLASS = "scrapy_poet.ScrapyPoetRequestFingerprinter"
+        SPIDER_MIDDLEWARES = {
+            "scrapy_poet.RetryMiddleware": 275,
+        }
 
 Developing
 ==========

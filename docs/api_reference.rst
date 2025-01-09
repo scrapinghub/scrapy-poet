@@ -11,13 +11,22 @@ API
    :members:
    :no-special-members:
 
-Injection Middleware
-====================
+Scrapy components
+=================
 
-.. automodule:: scrapy_poet.downloadermiddlewares
+.. autoclass:: scrapy_poet.DownloaderStatsMiddleware
    :members:
 
-Page Input Providers
+.. autoclass:: scrapy_poet.InjectionMiddleware
+   :members:
+
+.. autoclass:: scrapy_poet.RetryMiddleware
+   :members:
+
+.. autoclass:: scrapy_poet.ScrapyPoetRequestFingerprinter
+   :members:
+
+Page input providers
 ====================
 
 .. automodule:: scrapy_poet.page_input_providers

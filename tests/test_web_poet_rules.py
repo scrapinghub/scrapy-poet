@@ -36,9 +36,9 @@ from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils import is_min_scrapy_version
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
+    _get_test_settings,
     capture_exceptions,
     crawl_single_item,
-    create_scrapy_settings,
 )
 from tests.test_middleware import ProductHtml
 
@@ -48,7 +48,7 @@ URL = f"{DOMAIN}:{PORT}"
 
 
 def rules_settings() -> dict:
-    settings = create_scrapy_settings()
+    settings = _get_test_settings()
     settings["SCRAPY_POET_RULES"] = default_registry.get_rules()
     return settings
 
