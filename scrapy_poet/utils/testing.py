@@ -267,7 +267,7 @@ def _get_test_settings():
 def create_scrapy_settings():
     """Return the default scrapy-poet settings."""
     warn(
-        "The scrapy_poet.utils.create_scrapy_settings() function is " "deprecated.",
+        "The scrapy_poet.utils.create_scrapy_settings() function is deprecated.",
         DeprecationWarning,
         stacklevel=2,
     )
