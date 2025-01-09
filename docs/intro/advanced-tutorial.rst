@@ -77,14 +77,6 @@ It can be directly used inside the spider as:
 
     class ProductSpider(scrapy.Spider):
 
-        custom_settings = {
-            "DOWNLOADER_MIDDLEWARES": {
-                "scrapy_poet.InjectionMiddleware": 543,
-                "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
-                "scrapy_poet.DownloaderStatsMiddleware": 850,
-            }
-        }
-
         def start_requests(self):
             for url in [
                 "https://example.com/category/product/item?id=123",
@@ -151,14 +143,6 @@ Let's see it in action:
 
 
     class ProductSpider(scrapy.Spider):
-
-        custom_settings = {
-            "DOWNLOADER_MIDDLEWARES": {
-                "scrapy_poet.InjectionMiddleware": 543,
-                "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
-                "scrapy_poet.DownloaderStatsMiddleware": 850,
-            }
-        }
 
         start_urls = [
             "https://example.com/category/product/item?id=123",
