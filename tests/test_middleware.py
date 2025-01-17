@@ -1,5 +1,6 @@
 import socket
 from pathlib import Path
+from textwrap import dedent
 from typing import Optional, Type, Union
 
 import attr
@@ -445,15 +446,28 @@ def test_skip_download_request_url_page(settings):
 
 @inlineCallbacks
 def test_scrapy_shell(tmp_path):
-    Path(tmp_path, "settings.py").write_text(
+    try:
+        import scrapy.addons  # noqa: F401
+    except ImportError:
+        settings = """
+            DOWNLOADER_MIDDLEWARES = {
+                "scrapy_poet.InjectionMiddleware": 543,
+                "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
+                "scrapy_poet.DownloaderStatsMiddleware": 850,
+            }
+            REQUEST_FINGERPRINTER_CLASS = "scrapy_poet.ScrapyPoetRequestFingerprinter"
+            SPIDER_MIDDLEWARES = {
+                "scrapy_poet.RetryMiddleware": 275,
+            }
         """
-DOWNLOADER_MIDDLEWARES = {
-    "scrapy_poet.InjectionMiddleware": 543,
-    "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
-    "scrapy_poet.DownloaderStatsMiddleware": 850,
-}
-"""
-    )
+    else:
+        settings = """
+            ADDONS = {
+                "scrapy_poet.Addon": 300,
+            }
+        """
+    settings = dedent(settings)
+    Path(tmp_path, "settings.py").write_text(settings)
     pt = ProcessTest()
     pt.command = "shell"
     pt.cwd = tmp_path

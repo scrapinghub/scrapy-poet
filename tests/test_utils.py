@@ -259,7 +259,7 @@ def test_http_response_to_scrapy_response(scrapy_response, http_response):
 
 @mock.patch("scrapy_poet.utils.consume_modules")
 def test_create_registry_instance_SCRAPY_POET_DISCOVER(mock_consume_modules, settings):
-    settings.set("SCRAPY_POET_RULES", [])
+    settings["SCRAPY_POET_RULES"] = []
 
     mock_cls = mock.Mock()
     fake_crawler = get_crawler(Spider, settings)
@@ -268,7 +268,7 @@ def test_create_registry_instance_SCRAPY_POET_DISCOVER(mock_consume_modules, set
     mock_cls.assert_called_once_with(rules=[])
 
     mock_cls = mock.Mock()
-    settings.set("SCRAPY_POET_DISCOVER", ["a.b.c", "x.y"])
+    settings["SCRAPY_POET_DISCOVER"] = ["a.b.c", "x.y"]
     fake_crawler = get_crawler(Spider, settings)
     create_registry_instance(mock_cls, fake_crawler)
     assert mock_consume_modules.call_args_list == [mock.call("a.b.c"), mock.call("x.y")]
