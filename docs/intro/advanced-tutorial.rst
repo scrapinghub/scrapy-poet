@@ -62,7 +62,7 @@ Suppose we have the following Page Object:
 
             # Simulates clicking on a button that says "View All Images"
             response: web_poet.HttpResponse = await self.http.get(
-                f"https://api.example.com/v2/images?id={item['product_id']}"
+                f"https://api.toscrape.com/v2/images?id={item['product_id']}"
             )
             item["images"] = response.css(".product-images img::attr(src)").getall()
             return item
@@ -79,8 +79,8 @@ It can be directly used inside the spider as:
 
         def start_requests(self):
             for url in [
-                "https://example.com/category/product/item?id=123",
-                "https://example.com/category/product/item?id=989",
+                "https://toscrape.com/category/product/item?id=123",
+                "https://toscrape.com/category/product/item?id=989",
             ]:
                 yield scrapy.Request(url, callback=self.parse)
 
@@ -122,7 +122,7 @@ This basically acts as a switch to update the behavior of the Page Object:
             # Simulates clicking on a button that says "View All Images"
             if self.page_params.get("enable_extracting_all_images")
                 response: web_poet.HttpResponse = await self.http.get(
-                    f"https://api.example.com/v2/images?id={item['product_id']}"
+                    f"https://api.toscrape.com/v2/images?id={item['product_id']}"
                 )
                 item["images"] = response.css(".product-images img::attr(src)").getall()
 
@@ -145,8 +145,8 @@ Let's see it in action:
     class ProductSpider(scrapy.Spider):
 
         start_urls = [
-            "https://example.com/category/product/item?id=123",
-            "https://example.com/category/product/item?id=989",
+            "https://toscrape.com/category/product/item?id=123",
+            "https://toscrape.com/category/product/item?id=989",
         ]
 
         def start_requests(self):
