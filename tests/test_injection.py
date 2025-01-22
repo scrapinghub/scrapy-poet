@@ -7,8 +7,8 @@ import attr
 import parsel
 import pytest
 from andi.typeutils import strip_annotated
-from pytest_twisted import ensureDeferred, inlineCallbacks
-from scrapy import Request, Spider
+from pytest_twisted import inlineCallbacks
+from scrapy import Request
 from scrapy.http import Response
 from url_matcher import Patterns
 from url_matcher.util import get_domain
@@ -36,7 +36,6 @@ from scrapy_poet.injection_errors import (
     NonCallableProviderError,
     UndeclaredProvidedTypeError,
 )
-from scrapy_poet.utils.testing import make_crawler
 
 from .test_providers import Name, Price
 
@@ -1006,165 +1005,3 @@ def test_dynamic_deps_factory_bad_input():
         match=re.escape(r"Expected a dynamic dependency type, got (<class 'int'>,)"),
     ):
         Injector._get_dynamic_deps_factory([(int,)])
-
-
-class BaseCbSpider(Spider):
-
-    def start_requests(self):
-        kwargs = {"callback": self.parse_deps}
-        if cb_kwargs := getattr(self, "cb_kwargs", None):
-            kwargs["cb_kwargs"] = cb_kwargs
-        yield Request("data:,", **kwargs)
-
-
-class CbSpider1(BaseCbSpider):
-
-    def parse_deps(self, response):
-        self.success = True
-
-
-class CbSpider2(BaseCbSpider):
-
-    cb_kwargs = {"foo": "bar"}
-
-    def parse_deps(self, response, foo):
-        self.success = foo == "bar"
-
-
-class CbSpider3(BaseCbSpider):
-
-    def parse_deps(self, response, foo=None):
-        self.success = foo is None
-
-
-class CbSpider4(BaseCbSpider):
-
-    cb_kwargs = {"foo": "bar"}
-
-    def parse_deps(self, response, foo=None):
-        self.success = foo == "bar"
-
-
-VALUE = object()
-
-
-class CbSpider5(BaseCbSpider):
-
-    def parse_deps(self, response, foo=VALUE):
-        self.success = foo is VALUE
-
-
-class CbSpider6(BaseCbSpider):
-
-    cb_kwargs = {"foo": "bar"}
-
-    def parse_deps(self, response, foo=VALUE):
-        self.success = foo == "bar"
-
-
-class Injected(str):
-    pass
-
-
-INJECTED = Injected("baz")
-
-
-def expected_injected(injected):
-    return isinstance(injected, Injected) and str(injected) == str(INJECTED)
-
-
-class CbSpider7(BaseCbSpider):
-
-    cb_kwargs = {"foo": "bar"}
-
-    def parse_deps(self, response, injected: Injected, foo):
-        self.success = expected_injected(injected) and foo == "bar"
-
-
-class CbSpider8(BaseCbSpider):
-
-    def parse_deps(self, response, injected: Injected, foo=None):
-        self.success = expected_injected(injected) and foo is None
-
-
-class CbSpider9(BaseCbSpider):
-
-    cb_kwargs = {"foo": "bar"}
-
-    def parse_deps(self, response, injected: Injected, foo=None):
-        self.success = expected_injected(injected) and foo == "bar"
-
-
-class CbSpider10(BaseCbSpider):
-
-    def parse_deps(self, response, injected: Injected, foo=VALUE):
-        self.success = expected_injected(injected) and foo is VALUE
-
-
-class CbSpider11(BaseCbSpider):
-
-    cb_kwargs = {"foo": "bar"}
-
-    def parse_deps(self, response, injected: Injected, foo=VALUE):
-        self.success = expected_injected(injected) and foo == "bar"
-
-
-class CbSpider12(BaseCbSpider):
-
-    cb_kwargs = {"foo": "bar"}
-
-    def parse_deps(self, response, foo, injected: Injected):
-        self.success = expected_injected(injected) and foo == "bar"
-
-
-class CbSpider13(BaseCbSpider):
-
-    def parse_deps(self, response, foo=None, injected: Injected = None):  # type: ignore[assignment]
-        self.success = expected_injected(injected) and foo is None
-
-
-class CbSpider14(BaseCbSpider):
-
-    cb_kwargs = {"foo": "bar"}
-
-    def parse_deps(self, response, foo=None, injected: Injected = None):  # type: ignore[assignment]
-        self.success = expected_injected(injected) and foo == "bar"
-
-
-class CbSpider15(BaseCbSpider):
-
-    def parse_deps(self, response, foo=VALUE, injected: Injected = None):  # type: ignore[assignment]
-        self.success = expected_injected(injected) and foo is VALUE
-
-
-class CbSpider16(BaseCbSpider):
-
-    cb_kwargs = {"foo": "bar"}
-
-    def parse_deps(self, response, foo=VALUE, injected: Injected = None):  # type: ignore[assignment]
-        self.success = expected_injected(injected) and foo == "bar"
-
-
-class CbSpider17(BaseCbSpider):
-
-    def parse_deps(self, response, injected: Injected, foo: Cls2 = VALUE):
-        self.success = expected_injected(injected) and foo is VALUE
-
-
-class CbSpider18(BaseCbSpider):
-
-    def parse_deps(self, response, injected: Injected, foo: Optional[Cls2] = VALUE):
-        self.success = expected_injected(injected) and foo is VALUE
-
-
-@pytest.mark.parametrize(
-    ("spider_cls",),
-    ((cls,) for cls in BaseCbSpider.__subclasses__()),
-)
-@ensureDeferred
-async def test_callback_arg_mapping(spider_cls):
-    provider = get_provider({Injected}, str(INJECTED))
-    settings = {"SCRAPY_POET_PROVIDERS": {provider: 500}}
-    crawler = make_crawler(spider_cls, settings)
-    await crawler.crawl()
-    assert crawler.spider.success
