@@ -15,6 +15,7 @@ from scrapy.utils.testproc import ProcessTest
 from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
 from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
+from web_poet.pages import is_injectable
 
 from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
 from scrapy_poet.page_input_providers import PageObjectInputProvider
@@ -124,7 +125,39 @@ def test_deprecation_setting_SCRAPY_POET_OVERRIDES(settings) -> None:
 
 
 @attr.s(auto_attribs=True)
-class OptionalAndUnionPage(WebPage):
+class OptionalAndUnionPageNew(WebPage):
+    breadcrumbs: BreadcrumbsExtraction
+    opt_check_1: Optional[BreadcrumbsExtraction]
+    union_check_1: Union[BreadcrumbsExtraction, HttpResponse]  # Breadcrumbs is injected
+    union_check_2: Union[str, HttpResponse]  # HttpResponse is injected
+    union_check_3: Union[Optional[str], HttpResponse]  # HttpResponse is injected
+    union_check_4: Union[None, str, HttpResponse]  # HttpResponse is injected
+    union_check_5: Union[BreadcrumbsExtraction, None, str]  # Breadcrumbs is injected
+
+    def to_item(self):
+        return attr.asdict(self, recurse=False)
+
+
+@pytest.mark.skipif(
+    is_injectable(type(None)),
+    reason="This version of web-poet considers type(None) injectable",
+)
+@inlineCallbacks
+def test_optional_and_unions_new(settings):
+    item, _, _ = yield crawl_single_item(
+        spider_for(OptionalAndUnionPageNew), ProductHtml, settings
+    )
+    assert item["breadcrumbs"].response is item["response"]
+    assert item["opt_check_1"] is item["breadcrumbs"]
+    assert item["union_check_1"] is item["breadcrumbs"]
+    assert item["union_check_2"] is item["breadcrumbs"].response
+    assert item["union_check_3"] is item["breadcrumbs"].response
+    assert item["union_check_4"] is item["breadcrumbs"].response
+    assert item["union_check_5"] is item["breadcrumbs"]
+
+
+@attr.s(auto_attribs=True)
+class OptionalAndUnionPageOld(WebPage):
     breadcrumbs: BreadcrumbsExtraction
     opt_check_1: Optional[BreadcrumbsExtraction]
     opt_check_2: Optional[str]  # str is not Injectable, so None expected here
@@ -138,10 +171,14 @@ class OptionalAndUnionPage(WebPage):
         return attr.asdict(self, recurse=False)
 
 
+@pytest.mark.skipif(
+    not is_injectable(type(None)),
+    reason="This version of web-poet does not consider type(None) injectable",
+)
 @inlineCallbacks
-def test_optional_and_unions(settings):
+def test_optional_and_unions_old(settings):
     item, _, _ = yield crawl_single_item(
-        spider_for(OptionalAndUnionPage), ProductHtml, settings
+        spider_for(OptionalAndUnionPageOld), ProductHtml, settings
     )
     assert item["breadcrumbs"].response is item["response"]
     assert item["opt_check_1"] is item["breadcrumbs"]
@@ -149,6 +186,7 @@ def test_optional_and_unions(settings):
     assert item["union_check_1"] is item["breadcrumbs"]
     assert item["union_check_2"] is item["breadcrumbs"].response
     assert item["union_check_3"] is None
+    assert item["union_check_4"] is None
     assert item["union_check_5"] is item["breadcrumbs"]
 
 
@@ -233,7 +271,50 @@ def test_providers_returning_wrong_classes(settings, caplog):
     assert "UndeclaredProvidedTypeError:" in caplog.text
 
 
-class MultiArgsCallbackSpider(scrapy.Spider):
+class MultiArgsCallbackSpiderNew(scrapy.Spider):
+    url = None
+    custom_settings = {"SCRAPY_POET_PROVIDERS": {WithDeferredProvider: 1}}
+
+    def start_requests(self):
+        yield Request(
+            self.url, self.parse, cb_kwargs={"cb_arg": "arg!", "cb_arg2": False}
+        )
+
+    def parse(
+        self,
+        response,
+        product: ProductPage,
+        provided: ProvidedWithDeferred,
+        cb_arg: Optional[str],
+        cb_arg2: Optional[bool],
+        non_cb_arg: Optional[str] = "default",
+    ):
+        yield {
+            "product": product,
+            "provided": provided,
+            "cb_arg": cb_arg,
+            "cb_arg2": cb_arg2,
+            "non_cb_arg": non_cb_arg,
+        }
+
+
+@pytest.mark.skipif(
+    is_injectable(type(None)),
+    reason="This version of web-poet considers type(None) injectable",
+)
+@inlineCallbacks
+def test_multi_args_callbacks_new(settings):
+    item, _, _ = yield crawl_single_item(
+        MultiArgsCallbackSpiderNew, ProductHtml, settings
+    )
+    assert type(item["product"]) is ProductPage
+    assert type(item["provided"]) is ProvidedWithDeferred
+    assert item["cb_arg"] == "arg!"
+    assert item["cb_arg2"] is False
+    assert item["non_cb_arg"] == "default"
+
+
+class MultiArgsCallbackSpiderOld(scrapy.Spider):
     url = None
     custom_settings = {"SCRAPY_POET_PROVIDERS": {WithDeferredProvider: 1}}
 
@@ -260,9 +341,15 @@ class MultiArgsCallbackSpider(scrapy.Spider):
         }
 
 
+@pytest.mark.skipif(
+    not is_injectable(type(None)),
+    reason="This version of web-poet does not consider type(None) injectable",
+)
 @inlineCallbacks
-def test_multi_args_callbacks(settings):
-    item, _, _ = yield crawl_single_item(MultiArgsCallbackSpider, ProductHtml, settings)
+def test_multi_args_callbacks_old(settings):
+    item, _, _ = yield crawl_single_item(
+        MultiArgsCallbackSpiderOld, ProductHtml, settings
+    )
     assert type(item["product"]) is ProductPage
     assert type(item["provided"]) is ProvidedWithDeferred
     assert item["cb_arg"] == "arg!"
