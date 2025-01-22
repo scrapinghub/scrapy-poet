@@ -1145,6 +1145,18 @@ class CbSpider16(BaseCbSpider):
         self.success = expected_injected(injected) and foo == "bar"
 
 
+class CbSpider17(BaseCbSpider):
+
+    def parse_deps(self, response, injected: Injected, foo: Cls2 = VALUE):
+        self.success = expected_injected(injected) and foo is VALUE
+
+
+class CbSpider18(BaseCbSpider):
+
+    def parse_deps(self, response, injected: Injected, foo: Optional[Cls2] = VALUE):
+        self.success = expected_injected(injected) and foo is VALUE
+
+
 @pytest.mark.parametrize(
     ("spider_cls",),
     ((cls,) for cls in BaseCbSpider.__subclasses__()),
