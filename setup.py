@@ -29,9 +29,7 @@ setup(
         "time_machine >= 2.7.1",
         "twisted >= 18.9.0",
         "url-matcher >= 0.2.0",
-        # TODO:
-        # "web-poet >= 0.17.0",
-        "web-poet @ git+https://github.com/Gallaecio/web-poet.git@none-is-injectable",
+        "web-poet >= 0.17.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",

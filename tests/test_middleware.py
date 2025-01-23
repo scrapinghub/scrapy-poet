@@ -3,6 +3,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Optional, Type, Union
 
+import andi
 import attr
 import pytest
 import scrapy
@@ -133,8 +134,6 @@ class OptionalAndUnionPageNew(WebPage):
     union_check_3: Union[Optional[str], HttpResponse]  # HttpResponse is injected
     union_check_4: Union[None, str, HttpResponse]  # HttpResponse is injected
     union_check_5: Union[BreadcrumbsExtraction, None, str]  # Breadcrumbs is injected
-    opt_check_2: Optional[str] = None
-    non_injectable_check_1: str = "foo"
 
     def to_item(self):
         return attr.asdict(self, recurse=False)
@@ -151,13 +150,11 @@ def test_optional_and_unions_new(settings):
     )
     assert item["breadcrumbs"].response is item["response"]
     assert item["opt_check_1"] is item["breadcrumbs"]
-    assert item["opt_check_2"] is None
     assert item["union_check_1"] is item["breadcrumbs"]
     assert item["union_check_2"] is item["breadcrumbs"].response
     assert item["union_check_3"] is item["breadcrumbs"].response
     assert item["union_check_4"] is item["breadcrumbs"].response
     assert item["union_check_5"] is item["breadcrumbs"]
-    assert item["non_injectable_check_1"] == "foo"
 
 
 @attr.s(auto_attribs=True)
@@ -192,6 +189,28 @@ def test_optional_and_unions_old(settings):
     assert item["union_check_3"] is None
     assert item["union_check_4"] is None
     assert item["union_check_5"] is item["breadcrumbs"]
+
+
+@attr.s(auto_attribs=True)
+class NonInjectablePage(WebPage):
+    a: Optional[str] = None
+    b: str = "foo"
+
+    def to_item(self):
+        return attr.asdict(self, recurse=False)
+
+
+@pytest.mark.skipif(
+    not hasattr(andi.andi, "_inspect"),
+    reason="Before merging https://github.com/scrapinghub/andi/pull/33",
+)
+@inlineCallbacks
+def test_non_injectable(settings):
+    item, _, _ = yield crawl_single_item(
+        spider_for(NonInjectablePage), ProductHtml, settings
+    )
+    assert item["a"] is None
+    assert item["b"] == "foo"
 
 
 @attr.s(auto_attribs=True)
