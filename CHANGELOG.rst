@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.26.0 (2025-01-DD)
+0.26.0 (unreleased)
 -------------------
 
 * Added an :ref:`add-on <addon>`.
