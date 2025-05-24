@@ -47,11 +47,7 @@ def test_default_providers():
         for obj_name, obj in page_input_providers.__dict__.items()
         if (
             obj_name.endswith("Provider")
-            and obj_name
-            not in {
-                "ItemProvider",  # Deprecated
-                "PageObjectInputProvider",  # Base class
-            }
+            and obj_name != "PageObjectInputProvider"  # Base class
         )
     }
     assert providers == set(DEFAULT_PROVIDERS)

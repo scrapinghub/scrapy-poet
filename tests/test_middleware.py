@@ -8,17 +8,16 @@ import attr
 import pytest
 import scrapy
 from pytest_twisted import inlineCallbacks
-from scrapy import Request, Spider
+from scrapy import Request
 from scrapy.http import Response
 from scrapy.utils.log import configure_logging
-from scrapy.utils.test import get_crawler
 from scrapy.utils.testproc import ProcessTest
 from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
 from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
 from web_poet.pages import is_injectable
 
-from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
+from scrapy_poet import DummyResponse, callback_for
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils.mockserver import MockServer, get_ephemeral_port
 from scrapy_poet.utils.testing import (
@@ -111,18 +110,6 @@ def test_overrides(settings):
         "description": "The best chocolate ever",
         "category": "overriden_breadcrumb",
     }
-
-
-def test_deprecation_setting_SCRAPY_POET_OVERRIDES(settings) -> None:
-    settings["SCRAPY_POET_OVERRIDES"] = []
-    crawler = get_crawler(Spider, settings)
-
-    msg = (
-        "The SCRAPY_POET_OVERRIDES setting is deprecated. "
-        "Use SCRAPY_POET_RULES instead."
-    )
-    with pytest.warns(DeprecationWarning, match=msg):
-        InjectionMiddleware(crawler)
 
 
 @attr.s(auto_attribs=True)
