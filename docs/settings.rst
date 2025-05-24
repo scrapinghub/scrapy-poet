@@ -62,14 +62,6 @@ Scrapy project). However, it's recommended to still use ``SCRAPY_POET_DISCOVER``
 to ensure all the intended rules are properly loaded.
 
 
-.. setting:: SCRAPY_POET_OVERRIDES
-
-SCRAPY_POET_OVERRIDES
----------------------
-
-Deprecated. Use ``SCRAPY_POET_RULES`` instead.
-
-
 .. setting:: SCRAPY_POET_PROVIDERS
 
 SCRAPY_POET_PROVIDERS

@@ -9,8 +9,7 @@ different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from an API for automatic extraction.
 """
 
-from typing import Any, Callable, ClassVar, FrozenSet, List, Set, Union
-from warnings import warn
+from typing import Any, Callable, ClassVar, FrozenSet, Set, Union
 
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -237,24 +236,6 @@ class ResponseUrlProvider(PageObjectInputProvider):
         instance using a :class:`scrapy.http.Response` instance.
         """
         return [ResponseUrl(url=response.url)]
-
-
-class ItemProvider(PageObjectInputProvider):
-    provided_classes = set()
-    name = "item"
-
-    def __init__(self, injector):
-        super().__init__(injector)
-        msg = "The ItemProvider now does nothing and you should disable it."
-        warn(msg, DeprecationWarning, stacklevel=2)
-
-    async def __call__(
-        self,
-        to_provide: Set[Callable],
-        request: Request,
-        response: Response,
-    ) -> List[Any]:
-        return []
 
 
 class ScrapyPoetStatCollector(StatCollector):
