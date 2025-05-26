@@ -1,7 +1,6 @@
 import os
 from functools import lru_cache
 from typing import Type
-from warnings import warn
 
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
@@ -88,16 +87,7 @@ def http_response_to_scrapy_response(response: HttpResponse) -> HtmlResponse:
 def create_registry_instance(cls: Type, crawler: Crawler):
     for module in crawler.settings.getlist("SCRAPY_POET_DISCOVER", []):
         consume_modules(module)
-    if "SCRAPY_POET_OVERRIDES" in crawler.settings:
-        msg = (
-            "The SCRAPY_POET_OVERRIDES setting is deprecated. "
-            "Use SCRAPY_POET_RULES instead."
-        )
-        warn(msg, DeprecationWarning, stacklevel=2)
-    rules = crawler.settings.getlist(
-        "SCRAPY_POET_RULES",
-        crawler.settings.getlist("SCRAPY_POET_OVERRIDES", default_registry.get_rules()),
-    )
+    rules = crawler.settings.getlist("SCRAPY_POET_RULES", default_registry.get_rules())
     return cls(rules=rules)
 
 

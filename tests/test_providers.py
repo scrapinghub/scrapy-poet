@@ -2,7 +2,6 @@ from typing import Any, Callable, List, Set, Type
 from unittest import mock
 
 import attr
-import pytest
 import scrapy
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
@@ -24,7 +23,6 @@ from scrapy_poet.injection import Injector
 from scrapy_poet.page_input_providers import (
     HttpClientProvider,
     HttpRequestProvider,
-    ItemProvider,
     PageObjectInputProvider,
     PageParamsProvider,
     StatsProvider,
@@ -265,15 +263,6 @@ def test_page_params_provider(settings):
     results = provider(set(), request)
 
     assert results[0] == expected_data
-
-
-def test_item_provider_deprecated(settings):
-    crawler = get_crawler(Spider, settings)
-    injector = Injector(crawler)
-    msg = "The ItemProvider now does nothing and you should disable it."
-    with pytest.warns(DeprecationWarning, match=msg):
-        provider = ItemProvider(injector)
-    assert len(provider.provided_classes) == 0
 
 
 def test_stats_provider(settings):
