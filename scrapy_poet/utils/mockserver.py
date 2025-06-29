@@ -5,7 +5,6 @@ import time
 from importlib import import_module
 from subprocess import PIPE, Popen
 
-from twisted.internet import reactor
 from twisted.web.server import Site
 
 
@@ -48,6 +47,8 @@ class MockServer:
 
 
 def main():
+    from twisted.internet import reactor
+
     parser = argparse.ArgumentParser()
     parser.add_argument("resource")
     parser.add_argument("--port", type=int)

@@ -9,7 +9,6 @@ from scrapy.exceptions import CloseSpider
 from scrapy.settings import Settings
 from scrapy.utils.python import to_bytes
 from scrapy.utils.test import get_crawler as _get_crawler
-from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
@@ -38,6 +37,8 @@ class LeafResource(Resource):
     isLeaf = True
 
     def deferRequest(self, request, delay, f, *a, **kw):
+        from twisted.internet import reactor
+
         def _cancelrequest(_):
             # silence CancelledError
             d.addErrback(lambda _: None)
@@ -264,6 +265,13 @@ def _get_test_settings():
         settings["ADDONS"] = {
             "scrapy_poet.Addon": 300,
         }
+    try:
+        from scrapy.utils.test import get_reactor_settings
+
+        settings.update(get_reactor_settings())
+    except ImportError:
+        # Scrapy < 2.13.0, no need to change the reactor settings
+        pass
     return settings
 
 
