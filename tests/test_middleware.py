@@ -1,5 +1,7 @@
+import os
 import socket
-from pathlib import Path
+import subprocess
+import sys
 from textwrap import dedent
 from typing import Optional, Type, Union
 
@@ -11,7 +13,6 @@ from pytest_twisted import inlineCallbacks
 from scrapy import Request
 from scrapy.http import Response
 from scrapy.utils.log import configure_logging
-from scrapy.utils.testproc import ProcessTest
 from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
 from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
@@ -541,7 +542,6 @@ def test_skip_download_request_url_page(settings):
     assert crawler.stats.get_stats().get("downloader/response_count", 0) == 0
 
 
-@inlineCallbacks
 def test_scrapy_shell(tmp_path):
     try:
         import scrapy.addons  # noqa: F401
@@ -564,13 +564,33 @@ def test_scrapy_shell(tmp_path):
             }
         """
     settings = dedent(settings)
-    Path(tmp_path, "settings.py").write_text(settings)
-    pt = ProcessTest()
-    pt.command = "shell"
-    pt.cwd = tmp_path
+    (tmp_path / "settings.py").write_text(settings)
+
+    env = os.environ.copy()
+    env["SCRAPY_SETTINGS_MODULE"] = "settings"
     with MockServer(EchoResource) as server:
-        _, out, err = yield pt.execute(
-            [server.root_url, "-c", "item"], settings="settings"
+        args = (
+            sys.executable,
+            "-m",
+            "scrapy.cmdline",
+            "shell",
+            server.root_url,
+            "-c",
+            "item",
         )
+        p = subprocess.Popen(
+            args,
+            cwd=tmp_path,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            out, err = p.communicate(timeout=15)
+        except subprocess.TimeoutExpired:
+            p.kill()
+            p.communicate()
+            pytest.fail("Command took too much time to complete")
+
     assert b"Using DummyResponse instead of downloading" not in err
     assert b"{}" in out  # noqa: P103
