@@ -30,7 +30,7 @@ jobs:
         - python-version: "3.12"
         - python-version: "3.13"
         - python-version: "3.13"
-          toxenv: "asyncio"
+          toxenv: "default-reactor"
 
     steps:
     - uses: actions/checkout@v4

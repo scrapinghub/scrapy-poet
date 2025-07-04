@@ -15,7 +15,9 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type
 import attrs
 import pytest
 import scrapy
+from packaging.version import Version
 from pytest_twisted import inlineCallbacks
+from scrapy import __version__ as SCRAPY_VERSION
 from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import (
@@ -916,10 +918,15 @@ def test_item_return_from_injectable() -> None:
     assert item == ProductFromInjectable(name="product from injectable")
     assert_deps(deps, {"item": ProductFromInjectable})
 
-    # calling the actual page object should not work since it's not inheriting
-    # from ``web_poet.ItemPage``.
+    # calling the actual page object should not work in the same way since it's
+    # not inheriting from ``web_poet.ItemPage``.
     item, deps = yield crawl_item_and_deps(ProductFromInjectablePage)
-    assert item is None
+    if Version(SCRAPY_VERSION) < Version("2.13"):
+        # older Scrapy refuses to return a ProductFromInjectablePage instance
+        assert item is None
+    else:
+        # newer Scrapy returns it
+        assert isinstance(item, ProductFromInjectablePage)
 
     # However, the page object should still be injected into the callback method.
     assert_deps(deps, {"item": ProductFromInjectablePage})
