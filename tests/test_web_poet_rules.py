@@ -909,7 +909,7 @@ class ProductFromInjectablePage(Injectable):
 
 
 @inlineCallbacks
-def test_item_return_from_injectable(caplog) -> None:
+def test_item_return_from_injectable() -> None:
     """The case wherein a PageObject inherits directly from ``web_poet.Injectable``
     should also work, provided that the ``to_item`` method is similar with
     ``web_poet.ItemPage``:
