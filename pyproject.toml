@@ -16,6 +16,21 @@ regex = true
 [[tool.bumpversion.files]]
 filename = "scrapy_poet/VERSION"
 
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.paths]
+source = [
+    "scrapy_poet",
+    ".tox/**/site-packages/scrapy_poet"
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "@(abc\\.)?abstractmethod",
+]
+
 [tool.isort]
 profile = "black"
 multi_line_output = 3
