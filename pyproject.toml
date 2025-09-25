@@ -18,6 +18,10 @@ filename = "scrapy_poet/VERSION"
 
 [tool.coverage.run]
 branch = true
+patch = [
+    "subprocess",
+]
+source_pkgs = ["scrapy_poet"]
 
 [tool.coverage.paths]
 source = [
@@ -27,7 +31,6 @@ source = [
 
 [tool.coverage.report]
 exclude_also = [
-    "if TYPE_CHECKING:",
     "@(abc\\.)?abstractmethod",
 ]
 
