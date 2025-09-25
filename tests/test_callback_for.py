@@ -22,14 +22,12 @@ class FakeWebPage(WebPage):
 
 
 class MySpider(scrapy.Spider):
-
     name = "my_spider"
     parse_item = callback_for(FakeItemPage)
     parse_web = callback_for(FakeWebPage)
 
 
 class MySpiderAsync(scrapy.Spider):
-
     name = "my_spider_async"
     parse_item = callback_for(FakeItemPageAsync)
 
@@ -110,7 +108,7 @@ def test_inline_callback():
     spider = MySpider()
     cb = callback_for(FakeItemPage)
     request = scrapy.Request("http://example.com/", callback=cb)
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match="is not an instance method in:") as exc:
         request.to_dict(spider=spider)
 
     msg = f"Function {cb} is not an instance method in: {spider}"
@@ -122,7 +120,7 @@ def test_inline_callback_async():
     spider = MySpiderAsync()
     cb = callback_for(FakeItemPageAsync)
     request = scrapy.Request("http://example.com/", callback=cb)
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match="is not an instance method in:") as exc:
         request.to_dict(spider=spider)
 
     msg = f"Function {cb} is not an instance method in: {spider}"

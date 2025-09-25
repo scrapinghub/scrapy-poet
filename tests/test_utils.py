@@ -1,5 +1,6 @@
-from pathlib import PosixPath
+from pathlib import Path
 from unittest import mock
+from unittest.mock import MagicMock
 
 import pytest
 from scrapy import Spider
@@ -17,26 +18,29 @@ from scrapy_poet.utils import (
 )
 
 
-@mock.patch("scrapy_poet.utils.os.makedirs")
+@mock.patch("scrapy_poet.utils.Path", autospec=True)
 @mock.patch("scrapy_poet.utils.inside_project")
-def test_get_scrapy_data_path(mock_inside_project, mock_makedirs, tmp_path):
+def test_get_scrapy_data_path(
+    mock_inside_project: MagicMock, mock_path: MagicMock, tmp_path: Path
+) -> None:
     mock_inside_project.return_value = False
 
     path = tmp_path / "test_dir"
-    result = get_scrapy_data_path(createdir=True, default_dir=path)
+    result = get_scrapy_data_path(createdir=True, default_dir=str(path))
 
-    assert isinstance(result, PosixPath)
-    assert str(result)  # should be non-empty
+    assert isinstance(result, str)
+    assert result  # should be non-empty
 
     mock_inside_project.assert_called_once()
 
-    mock_makedirs.assert_called_once()
-    mock_makedirs.assert_called_with(path, exist_ok=True)
+    mock_path.assert_called_once_with(str(path))
+    mock_path_obj = mock_path.return_value
+    mock_path_obj.mkdir.assert_called_once_with(exist_ok=True, parents=True)
 
 
 @pytest.mark.parametrize(
-    "http_request,kwargs,scrapy_request",
-    (
+    ("http_request", "kwargs", "scrapy_request"),
+    [
         (
             HttpRequest("https://example.com"),
             {},
@@ -84,7 +88,7 @@ def test_get_scrapy_data_path(mock_inside_project, mock_makedirs, tmp_path):
             {},
             Request("https://example.com", callback=NO_CALLBACK, body=b"a"),
         ),
-    ),
+    ],
 )
 def test_http_request_to_scrapy_request(http_request, kwargs, scrapy_request):
     result = http_request_to_scrapy_request(http_request, **kwargs)
@@ -104,8 +108,8 @@ def test_http_request_to_scrapy_request(http_request, kwargs, scrapy_request):
 
 
 @pytest.mark.parametrize(
-    "scrapy_response,http_response",
-    (
+    ("scrapy_response", "http_response"),
+    [
         (
             Response("https://example.com"),
             HttpResponse("https://example.com", body=b"", status=200),
@@ -169,7 +173,7 @@ def test_http_request_to_scrapy_request(http_request, kwargs, scrapy_request):
                 "https://example.com", body=b"a", status=200, encoding="utf-8"
             ),
         ),
-    ),
+    ],
 )
 def test_scrapy_response_to_http_response(scrapy_response, http_response):
     result = scrapy_response_to_http_response(scrapy_response)
@@ -181,8 +185,8 @@ def test_scrapy_response_to_http_response(scrapy_response, http_response):
 
 
 @pytest.mark.parametrize(
-    "scrapy_response,http_response",
-    (
+    ("scrapy_response", "http_response"),
+    [
         (
             Response("https://example.com"),
             HttpResponse("https://example.com", body=b"", status=200),
@@ -246,7 +250,7 @@ def test_scrapy_response_to_http_response(scrapy_response, http_response):
                 "https://example.com", body=b"a", status=200, encoding="utf-8"
             ),
         ),
-    ),
+    ],
 )
 def test_http_response_to_scrapy_response(scrapy_response, http_response):
     result = http_response_to_scrapy_response(http_response)

@@ -1,6 +1,7 @@
 import re
 import shutil
-from typing import Annotated, Any, Callable, Dict, Generator, Optional
+from collections.abc import Generator
+from typing import Annotated, Any, Callable, Optional
 
 import andi
 import attr
@@ -225,7 +226,7 @@ class TestInjector:
     def test_build_instances_from_providers_unexpected_return(self):
         class WrongProvider(get_provider({Cls1})):
             def __call__(self, to_provide):
-                return super().__call__(to_provide) + [Cls2()]
+                return [*super().__call__(to_provide), Cls2()]
 
         injector = get_injector_for_testing({WrongProvider: 0})
 
@@ -297,9 +298,9 @@ class TestInjector:
     def _assert_instances(
         injector: Injector,
         callback: Callable,
-        expected_instances: Dict[type, Any],
-        expected_kwargs: Dict[str, Any],
-        reqmeta: Optional[Dict[str, Any]] = None,
+        expected_instances: dict[type, Any],
+        expected_kwargs: dict[str, Any],
+        reqmeta: Optional[dict[str, Any]] = None,
     ) -> Generator[Any, Any, None]:
         response = get_response_for_testing(callback, meta=reqmeta)
         assert response.request
@@ -683,7 +684,7 @@ class PricePO(ItemPage, ResponseShortcutsMixin):
     response: Html  # type: ignore[assignment]
 
     def to_item(self):
-        return dict(price=float(self.css(".price::text").get()), currency="€")
+        return {"price": float(self.css(".price::text").get()), "currency": "€"}
 
 
 @attr.s(auto_attribs=True)
@@ -711,8 +712,8 @@ class TestItemPage(ItemPage[TestItem]):
 
 class TestInjectorStats:
     @pytest.mark.parametrize(
-        "cb_args, expected",
-        (
+        ("cb_args", "expected"),
+        [
             (
                 {"price_po": PricePO, "rate_po": EurDollarRate},
                 {
@@ -738,7 +739,7 @@ class TestInjectorStats:
                 {"item": TestItem},
                 set(),  # there must be no stats as TestItem is not in the registry
             ),
-        ),
+        ],
     )
     @inlineCallbacks
     def test_stats(self, cb_args, expected, injector):
@@ -927,9 +928,11 @@ def test_cache(tmp_path, cache_errors):
     #   <twisted.python.failure.Failure builtins.ValueError: The URL is not from
     #   example.com>>
     response.request = Request.replace(response.request, url="http://willfail.page")
-    with pytest.raises(ValueError):
-        plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances_from_providers(
+    plan = injector.build_plan(response.request)
+    with pytest.raises(
+        ValueError, match=r"\(http://willfail.page\) is not example.com"
+    ):
+        yield from injector.build_instances_from_providers(
             response.request, response, plan
         )
     assert injector.weak_cache.get(response.request) is None
@@ -953,9 +956,9 @@ def test_cache(tmp_path, cache_errors):
     # If caching errors is disabled, then KeyError should be raised.
     Error = ValueError if cache_errors else KeyError
     response.request = Request.replace(response.request, url="http://willfail.page")
+    plan = injector.build_plan(response.request)
     with pytest.raises(Error):
-        plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances_from_providers(
+        yield from injector.build_instances_from_providers(
             response.request, response, plan
         )
     assert injector.weak_cache.get(response.request) is None

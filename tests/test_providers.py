@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Set, Type
+from typing import Any, Callable, Set
 from unittest import mock
 
 import attr
@@ -66,7 +66,7 @@ class PriceHtmlDataProvider(PageObjectInputProvider):
         self, to_provide, response: scrapy.http.Response, spider: scrapy.Spider
     ):
         assert isinstance(spider, scrapy.Spider)
-        ret: List[Any] = []
+        ret: list[Any] = []
         if Price in to_provide:
             price = response.css(".price::text").get()
             assert price is not None
@@ -82,7 +82,7 @@ class NameHtmlDataProvider(PageObjectInputProvider):
 
     def __call__(self, to_provide, response: scrapy.http.Response, settings: Settings):
         assert isinstance(settings, Settings)
-        ret: List[Any] = []
+        ret: list[Any] = []
         if Name in to_provide:
             name = response.css(".name::text").get()
             assert name is not None
@@ -104,7 +104,7 @@ for dep_cls in [Price, Name, Html]:
     def _serialize(o: dep_cls) -> SerializedLeafData:  # type: ignore[valid-type]
         return {"txt": attr.astuple(o)[0].encode()}
 
-    def _deserialize(cls: Type[dep_cls], data: SerializedLeafData) -> dep_cls:  # type: ignore[valid-type]
+    def _deserialize(cls: type[dep_cls], data: SerializedLeafData) -> dep_cls:  # type: ignore[valid-type]
         return cls(data["txt"].decode())  # type: ignore[misc]
 
     register_serialization(_serialize, _deserialize)
