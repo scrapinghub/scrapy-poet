@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Dict
+from typing import Any
 
 import attr
 import pytest
@@ -27,12 +27,12 @@ from scrapy_poet.utils import NO_CALLBACK, is_min_scrapy_version
 
 @attr.s(auto_attribs=True)
 class DummyProductResponse:
-    data: Dict[str, Any]
+    data: dict[str, Any]
 
 
 @attr.s(auto_attribs=True)
 class FakeProductResponse:
-    data: Dict[str, Any]
+    data: dict[str, Any]
 
 
 class DummyProductProvider(PageObjectInputProvider):
@@ -82,8 +82,7 @@ class DummyProductPage(ItemPage):
         return self.response.data["product"]["url"]
 
     def to_item(self):
-        product = self.response.data["product"]
-        return product
+        return self.response.data["product"]
 
 
 @attr.s(auto_attribs=True)
@@ -95,8 +94,7 @@ class FakeProductPage(ItemPage):
         return self.response.data["product"]["url"]
 
     def to_item(self):
-        product = self.response.data["product"]
-        return product
+        return self.response.data["product"]
 
 
 class BookPage(WebPage):
@@ -296,14 +294,6 @@ def test_is_callback_using_response_for_scrapy28_below() -> None:
 
     # See: https://github.com/scrapinghub/scrapy-poet/issues/48
     request.callback = None
-    expected_warning = (
-        "A request has been encountered with callback=None which "
-        "defaults to the parse() method. If the parse() method is "
-        "annotated with scrapy_poet.DummyResponse (or its subclasses), "
-        "we're assuming this isn't intended and would simply ignore "
-        "this annotation.\n\n"
-        "See the Pitfalls doc for more info."
-    )
 
     assert is_callback_requiring_scrapy_response(spider.parse, request.callback) is True
     assert (
@@ -347,11 +337,13 @@ def test_is_callback_using_response_for_scrapy28_below() -> None:
         spider.parse8,
         spider.parse10,
     ):
-        with pytest.warns(UserWarning) as record:
+        with pytest.warns(
+            UserWarning,
+            match=r"encountered with callback=None which defaults to the parse\(\) method",
+        ):
             assert (
                 is_callback_requiring_scrapy_response(method, request.callback) is True  # type: ignore[arg-type]
             )
-            assert expected_warning in str(record.list[0].message)
 
 
 @pytest.mark.skipif(

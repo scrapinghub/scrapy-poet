@@ -1,22 +1,11 @@
 import functools
 import inspect
 import logging
-import os
 import pprint
 import warnings
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Type,
-    cast,
-    get_type_hints,
-)
+from collections.abc import Iterable, Mapping
+from pathlib import Path
+from typing import Any, Callable, Optional, cast, get_type_hints
 from weakref import WeakKeyDictionary
 
 import andi
@@ -62,8 +51,6 @@ class DynamicDeps(dict):
     values with keys being dependency types.
     """
 
-    pass
-
 
 class Injector:
     """
@@ -84,7 +71,7 @@ class Injector:
         self.load_providers(default_providers)
         self.init_cache()
 
-    def load_providers(self, default_providers: Optional[Mapping] = None):  # noqa: D102
+    def load_providers(self, default_providers: Optional[Mapping] = None):
         providers_dict = {
             **(default_providers or {}),
             **self.crawler.settings.getdict("SCRAPY_POET_PROVIDERS"),
@@ -103,14 +90,14 @@ class Injector:
             self.providers
         )
 
-    def init_cache(self):  # noqa: D102
+    def init_cache(self):
         self.cache = {}
         cache_path = self.crawler.settings.get("SCRAPY_POET_CACHE")
 
         # SCRAPY_POET_CACHE: True
         if cache_path and isinstance(cache_path, bool):
-            cache_path = os.path.join(
-                get_scrapy_data_path(createdir=True), "scrapy-poet-cache"
+            cache_path = str(
+                Path(get_scrapy_data_path(createdir=True), "scrapy-poet-cache")
             )
 
         # SCRAPY_POET_CACHE: <cache_path>
@@ -126,11 +113,11 @@ class Injector:
         # This is different from the cache above as it only stores instances as long
         # as the request exists. This is useful for latter providers to re-use the
         # already built instances by earlier providers.
-        self.weak_cache: WeakKeyDictionary[Request, Dict] = WeakKeyDictionary()
+        self.weak_cache: WeakKeyDictionary[Request, dict] = WeakKeyDictionary()
 
     def available_dependencies_for_providers(
         self, request: Request, response: Response
-    ):  # noqa: D102
+    ):
         deps = {
             Crawler: self.crawler,
             Spider: self.spider,
@@ -144,7 +131,7 @@ class Injector:
 
     def discover_callback_providers(
         self, request: Request
-    ) -> Set[PageObjectInputProvider]:
+    ) -> set[PageObjectInputProvider]:
         """Discover the providers that are required to fulfil the callback dependencies"""
         plan = self.build_plan(request)
         result = set()
@@ -193,18 +180,18 @@ class Injector:
         on the registry and also supports filling :class:`.DynamicDeps`.
         """
 
-        @functools.lru_cache(maxsize=None)  # to minimize the registry queries
+        @functools.cache  # to minimize the registry queries
         def mapping_fn(dep_cls: Callable) -> Optional[Callable]:
             # building DynamicDeps
             if dep_cls is DynamicDeps:
                 dynamic_types = request.meta.get("inject", [])
                 if not dynamic_types:
-                    return lambda: {}
+                    return dict
                 return self._get_dynamic_deps_factory(dynamic_types)
 
             # building items from pages
-            page_object_cls: Optional[Type[ItemPage]] = self.registry.page_cls_for_item(
-                request.url, cast(type, dep_cls)
+            page_object_cls: Optional[type[ItemPage]] = self.registry.page_cls_for_item(
+                request.url, cast("type", dep_cls)
             )
             if not page_object_cls:
                 return None
@@ -236,7 +223,7 @@ class Injector:
 
     @staticmethod
     def _get_dynamic_deps_factory(
-        dynamic_types: List[type],
+        dynamic_types: list[type],
     ) -> Callable[..., DynamicDeps]:
         """Return a function that creates a :class:`.DynamicDeps` instance from its args.
 
@@ -245,15 +232,15 @@ class Injector:
         corresponding args. It has correct type hints so that it can be used as
         an ``andi`` custom builder.
         """
-        type_names: List[str] = []
+        type_names: list[str] = []
         for type_ in dynamic_types:
-            type_ = cast(type, strip_annotated(type_))
-            if not isinstance(type_, type):
+            type_stripped = cast("type", strip_annotated(type_))
+            if not isinstance(type_stripped, type):
                 raise TypeError(f"Expected a dynamic dependency type, got {type_!r}")
-            type_names.append(type_.__name__)
+            type_names.append(type_stripped.__name__)
         txt = Injector._get_dynamic_deps_factory_text(type_names)
-        ns: Dict[str, Any] = {}
-        exec(txt, globals(), ns)
+        ns: dict[str, Any] = {}
+        exec(txt, globals(), ns)  # noqa: S102
         return ns["__create_fn__"](*dynamic_types)
 
     @inlineCallbacks
@@ -274,8 +261,8 @@ class Injector:
         # following the andi plan.
         assert self.crawler.stats
         for cls, kwargs_spec in plan.dependencies:
-            if cls not in instances.keys():
-                result_cls: type = cast(type, cls)
+            if cls not in instances:
+                result_cls: type = cast("type", cls)
                 if isinstance(cls, andi.CustomBuilder):
                     result_cls = cls.result_class_or_fn
                     instances[result_cls] = yield deferred_from_coro(
@@ -297,12 +284,12 @@ class Injector:
     ):
         """Build dependencies handled by registered providers"""
         assert self.crawler.stats
-        instances: Dict[Callable, Any] = {}
+        instances: dict[Callable, Any] = {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response
         )
         dependencies_set = {cls for cls, _ in plan.dependencies}
-        objs: List[Any]
+        objs: list[Any]
         for provider in self.providers:
             provided_classes = {
                 cls for cls in dependencies_set if provider.is_provided(cls)
@@ -360,11 +347,11 @@ class Injector:
                         self.crawler.stats.inc_value("poet/cache/firsthand")
                     raise
 
-            objs_by_type: Dict[Callable, Any] = {}
+            objs_by_type: dict[Callable, Any] = {}
             for obj in objs:
                 if isinstance(obj, AnnotatedInstance):
                     cls = obj.get_annotated_cls()
-                    obj = obj.result
+                    obj = obj.result  # noqa: PLW2901
                 else:
                     cls = type(obj)
                 objs_by_type[cls] = obj
@@ -411,7 +398,7 @@ def check_all_providers_are_callable(providers):
 
 
 def is_class_provided_by_any_provider_fn(
-    providers: List[PageObjectInputProvider],
+    providers: list[PageObjectInputProvider],
 ) -> Callable[[Callable], bool]:
     """
     Return a function of type ``Callable[[Type], bool]`` that return
@@ -419,15 +406,12 @@ def is_class_provided_by_any_provider_fn(
 
     The ``is_provided`` method from each provider is used.
     """
-    callables: List[Callable[[Callable], bool]] = []
-    for provider in providers:
-        callables.append(provider.is_provided)
+    callables: list[Callable[[Callable], bool]] = [
+        provider.is_provided for provider in providers
+    ]
 
     def is_provided_fn(type_: Callable) -> bool:
-        for is_provided in callables:
-            if is_provided(type_):
-                return True
-        return False
+        return any(is_provided(type_) for is_provided in callables)
 
     return is_provided_fn
 
@@ -480,7 +464,8 @@ def is_callback_requiring_scrapy_response(
                 "annotated with scrapy_poet.DummyResponse (or its subclasses), "
                 "we're assuming this isn't intended and would simply ignore "
                 "this annotation.\n\n"
-                "See the Pitfalls doc for more info."
+                "See the Pitfalls doc for more info.",
+                stacklevel=1,
             )
             return True
 
@@ -519,7 +504,7 @@ def is_provider_requiring_scrapy_response(provider):
 
 def get_injector_for_testing(
     providers: Mapping,
-    additional_settings: Optional[Dict] = None,
+    additional_settings: Optional[dict] = None,
     registry: Optional[RulesRegistry] = None,
 ) -> Injector:
     """
@@ -542,7 +527,7 @@ def get_injector_for_testing(
 
 
 def get_response_for_testing(
-    callback: Callable, meta: Optional[Dict[str, Any]] = None
+    callback: Callable, meta: Optional[dict[str, Any]] = None
 ) -> Response:
     """
     Return a :class:`scrapy.http.Response` with fake content with the configured
@@ -561,9 +546,6 @@ def get_response_for_testing(
                 <p class="description">The best chocolate ever</p>
             </body>
         </html>
-        """.encode(
-        "utf-8"
-    )
+        """.encode()
     request = Request(url, callback=callback, meta=meta)
-    response = Response(url, 200, None, html, request=request)
-    return response
+    return Response(url, 200, None, html, request=request)

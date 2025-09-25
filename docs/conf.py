@@ -10,13 +10,12 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 import pkgutil
 import sys
 from datetime import datetime
 from pathlib import Path
 
-sys.path.insert(0, os.path.abspath("../"))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def get_copyright(attribution, *, first_year):
@@ -29,7 +28,7 @@ def get_copyright(attribution, *, first_year):
 
 def get_version_and_release():
     try:
-        import scrapy_poet  # noqa: F401
+        import scrapy_poet  # noqa: F401,PLC0415
     except ImportError:
         return "", ""
     version_bytes = pkgutil.get_data("scrapy_poet", "VERSION") or b""
@@ -42,7 +41,7 @@ def get_version_and_release():
 # -- Project information -----------------------------------------------------
 
 project = "scrapy-poet"
-copyright = get_copyright("Zyte Group Ltd", first_year=2019)
+project_copyright = get_copyright("Zyte Group Ltd", first_year=2019)
 author = "Zyte"
 
 version, release = get_version_and_release()

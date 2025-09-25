@@ -1,6 +1,5 @@
-import os
 from functools import lru_cache
-from typing import Type
+from pathlib import Path
 
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
@@ -31,7 +30,7 @@ def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -
     # which does too many things.
     path = project_data_dir() if inside_project() else default_dir
     if createdir:
-        os.makedirs(path, exist_ok=True)
+        Path(path).mkdir(exist_ok=True, parents=True)
     return path
 
 
@@ -84,13 +83,13 @@ def http_response_to_scrapy_response(response: HttpResponse) -> HtmlResponse:
     )
 
 
-def create_registry_instance(cls: Type, crawler: Crawler):
+def create_registry_instance(cls: type, crawler: Crawler):
     for module in crawler.settings.getlist("SCRAPY_POET_DISCOVER", []):
         consume_modules(module)
     rules = crawler.settings.getlist("SCRAPY_POET_RULES", default_registry.get_rules())
     return cls(rules=rules)
 
 
-@lru_cache()
+@lru_cache
 def is_min_scrapy_version(version: str) -> bool:
     return Version(SCRAPY_VERSION) >= Version(version)

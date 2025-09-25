@@ -3,8 +3,8 @@ Scrapy spider which uses AutoExtract API, to extract books as products.
 """
 
 import scrapy
-from example.autoextract import ProductPage
 
+from example.autoextract import ProductPage
 from scrapy_poet import callback_for
 
 

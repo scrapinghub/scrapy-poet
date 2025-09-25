@@ -1,8 +1,10 @@
-try:
-    from scrapy.utils.request import RequestFingerprinter  # NOQA
-except ImportError:
-    from typing import TYPE_CHECKING
+from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+try:
+    from scrapy.utils.request import RequestFingerprinter  # noqa: F401
+except ImportError:
     if not TYPE_CHECKING:
         ScrapyPoetRequestFingerprinter = None
 else:
@@ -10,14 +12,16 @@ else:
     import json
     from functools import cached_property
     from logging import getLogger
-    from typing import Annotated, Callable, Dict, List, Optional, get_args, get_origin
+    from typing import Annotated, Callable, get_args, get_origin
     from weakref import WeakKeyDictionary
 
     from andi import CustomBuilder
-    from scrapy import Request
-    from scrapy.crawler import Crawler
     from scrapy.settings.default_settings import REQUEST_FINGERPRINTER_CLASS
     from scrapy.utils.misc import load_object
+
+    if TYPE_CHECKING:
+        from scrapy import Request
+        from scrapy.crawler import Crawler
 
     try:
         from scrapy.utils.misc import build_from_crawler
@@ -52,14 +56,12 @@ else:
     def _serialize_dep(cls):
         if isinstance(cls, CustomBuilder):
             cls = cls.result_class_or_fn
-        else:
-            if get_origin(cls) is Annotated:
-                annotated, *annotations = get_args(cls)
-                return f"{_serialize_dep(annotated)}{repr(annotations)}"
+        elif get_origin(cls) is Annotated:
+            annotated, *annotations = get_args(cls)
+            return f"{_serialize_dep(annotated)}{annotations!r}"
         return get_fq_class_name(cls)
 
     class ScrapyPoetRequestFingerprinter:
-
         IGNORED_UNANNOTATED_DEPS = {
             # These dependencies are tools for page objects that should have no
             # bearing on the request itself.
@@ -89,10 +91,8 @@ else:
                 ),
                 crawler,
             )
-            self._callback_cache: Dict[Callable, Optional[bytes]] = {}
-            self._request_cache: "WeakKeyDictionary[Request, bytes]" = (
-                WeakKeyDictionary()
-            )
+            self._callback_cache: dict[Callable, bytes | None] = {}
+            self._request_cache: WeakKeyDictionary[Request, bytes] = WeakKeyDictionary()
             self._crawler: Crawler = crawler
             self._saw_unserializable_page_params = False
 
@@ -107,7 +107,7 @@ else:
                 "been configured in the DOWNLOADER_MIDDLEWARES setting?"
             )
 
-        def _get_deps(self, request: Request) -> Optional[List[str]]:
+        def _get_deps(self, request: Request) -> list[str] | None:
             """Return a JSON-serializable structure that uniquely identifies the
             dependencies requested by the request, or None if dependency injection
             is not required."""
@@ -117,7 +117,7 @@ else:
                 return None
             return sorted([_serialize_dep(cls) for cls in deps])
 
-        def get_deps_key(self, request: Request) -> Optional[bytes]:
+        def get_deps_key(self, request: Request) -> bytes | None:
             """Return a JSON array as bytes that uniquely identifies the
             dependencies requested through scrapy-poet injection that could
             impact the request, or None if there are no such dependencies."""
@@ -134,7 +134,7 @@ else:
             self._callback_cache[callback] = deps_key
             return self._callback_cache[callback]
 
-        def serialize_page_params(self, request: Request) -> Optional[bytes]:
+        def serialize_page_params(self, request: Request) -> bytes | None:
             """Return a JSON object as bytes that represents the page params,
             or None if there are no page params or they are not
             JSON-serializable."""
@@ -175,5 +175,5 @@ else:
             if serialized_page_params is not None:
                 fingerprint += serialized_page_params
 
-            self._request_cache[request] = hashlib.sha1(fingerprint).digest()
+            self._request_cache[request] = hashlib.sha1(fingerprint).digest()  # noqa: S324
             return self._request_cache[request]
