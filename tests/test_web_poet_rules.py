@@ -10,7 +10,7 @@ import os
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type
+from typing import Any, Callable, Optional, Set
 
 import attrs
 import pytest
@@ -55,7 +55,7 @@ def rules_settings() -> dict:
     return settings
 
 
-def spider_for(injectable: Type):
+def spider_for(injectable: type):
     class InjectableSpider(scrapy.Spider):
         url = None
 
@@ -77,7 +77,7 @@ class PageObjectCounterMixin:
     additional requests used to produce the item.
     """
 
-    instances: Dict[Type, Any] = defaultdict(list)
+    instances: dict[type, Any] = defaultdict(list)
     to_item_call_count = 0
 
     def __attrs_pre_init__(self):
@@ -89,7 +89,7 @@ class PageObjectCounterMixin:
 
     @classmethod
     def clear(cls):
-        for po_cls in cls.instances.keys():
+        for po_cls in cls.instances:
             po_cls.to_item_call_count = 0
         cls.instances = defaultdict(list)
 
@@ -100,15 +100,15 @@ class PageObjectCounterMixin:
 
 @inlineCallbacks
 def crawl_item_and_deps(
-    page_object, override_settings: Optional[Dict] = None
-) -> Tuple[Any, Any]:
+    page_object, override_settings: Optional[dict] = None
+) -> tuple[Any, Any]:
     """Helper function to easily return the item and injected dependencies from
     a simulated Scrapy callback which asks for either of these dependencies:
         - page object
         - item class
     """
 
-    settings = {**rules_settings(), **{"SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS}}
+    settings = {**rules_settings(), "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS}
     if override_settings:
         settings.update(override_settings)
 
@@ -118,7 +118,7 @@ def crawl_item_and_deps(
     return item, crawler.spider.collected_response_deps
 
 
-def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int = 1):
+def assert_deps(deps: list[dict[str, Any]], expected: dict[str, Any], size: int = 1):
     """Helper for easily checking the instances of the ``deps`` returned by
     ``crawl_item_and_deps()``.
 
@@ -137,12 +137,10 @@ def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int 
 
 
 def assert_warning_tokens(caught_warnings, expected_warning_tokens):
-    results = []
-    for expected in expected_warning_tokens:
-        results.append(
-            any(expected in str(warning.message) for warning in caught_warnings)
-        )
-    assert all(results)
+    assert all(
+        any(expected in str(warning.message) for warning in caught_warnings)
+        for expected in expected_warning_tokens
+    )
 
 
 @inlineCallbacks
@@ -1483,9 +1481,7 @@ def test_page_object_returning_item_which_is_also_a_dep() -> None:
     by the corresponding PO.
     """
 
-    settings = {
-        "SCRAPY_POET_PROVIDERS": {**DEFAULT_PROVIDERS, **{MobiusProvider: 1000}}
-    }
+    settings = {"SCRAPY_POET_PROVIDERS": {**DEFAULT_PROVIDERS, MobiusProvider: 1000}}
     # item from 'to_return'
     item, deps = yield crawl_item_and_deps(Mobius, override_settings=settings)
     assert item == Mobius(name="(modified) mobius from MobiusProvider")
@@ -1557,9 +1553,7 @@ def test_page_object_returning_item_which_is_also_a_dep_2() -> None:
     The PO with the higher priority should be the one returning the item.
     """
 
-    settings = {
-        "SCRAPY_POET_PROVIDERS": {**DEFAULT_PROVIDERS, **{KangarooProvider: 1000}}
-    }
+    settings = {"SCRAPY_POET_PROVIDERS": {**DEFAULT_PROVIDERS, KangarooProvider: 1000}}
     # item from 'to_return'
     item, deps = yield crawl_item_and_deps(Kangaroo, override_settings=settings)
     assert item == Kangaroo(name="(modified by Joey) data from KangarooProvider")

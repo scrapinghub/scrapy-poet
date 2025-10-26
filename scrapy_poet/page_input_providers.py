@@ -9,7 +9,7 @@ different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from an API for automatic extraction.
 """
 
-from typing import Any, Callable, ClassVar, FrozenSet, Set, Union
+from typing import Any, Callable, ClassVar, Set, Union
 
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -95,7 +95,7 @@ class PageObjectInputProvider:
     is provided by this provider.
     """
 
-    provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
+    provided_classes: Union[set[Callable], Callable[[Callable], bool]]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
     def is_provided(self, type_: Callable) -> bool:
@@ -103,15 +103,14 @@ class PageObjectInputProvider:
         Return ``True`` if the given type is provided by this provider based
         on the value of the attribute ``provided_classes``
         """
-        if isinstance(self.provided_classes, (Set, FrozenSet)):
+        if isinstance(self.provided_classes, (set, frozenset)):
             return type_ in self.provided_classes
-        elif callable(self.provided_classes):
+        if callable(self.provided_classes):
             return self.provided_classes(type_)
-        else:
-            raise MalformedProvidedClassesError(
-                f"Unexpected type {type_!r} for 'provided_classes' attribute of"
-                f"{self!r}. Expected either 'set' or 'callable'"
-            )
+        raise MalformedProvidedClassesError(
+            f"Unexpected type {type_!r} for 'provided_classes' attribute of"
+            f"{self!r}. Expected either 'set' or 'callable'"
+        )
 
     # FIXME: Can't import the Injector as class annotation due to circular dep.
     def __init__(self, injector):
@@ -243,10 +242,10 @@ class ScrapyPoetStatCollector(StatCollector):
         self._stats = stats
         self._prefix = "poet/stats/"
 
-    def set(self, key: str, value: Any) -> None:  # noqa: D102
+    def set(self, key: str, value: Any) -> None:
         self._stats.set_value(f"{self._prefix}{key}", value)
 
-    def inc(self, key: str, value: StatNum = 1) -> None:  # noqa: D102
+    def inc(self, key: str, value: StatNum = 1) -> None:
         self._stats.inc_value(f"{self._prefix}{key}", value)
 
 

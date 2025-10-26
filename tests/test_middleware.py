@@ -3,7 +3,7 @@ import socket
 import subprocess
 import sys
 from textwrap import dedent
-from typing import Optional, Type, Union
+from typing import Optional, Union
 
 import andi
 import attr
@@ -30,7 +30,7 @@ from scrapy_poet.utils.testing import (
 )
 
 
-def spider_for(injectable: Type):
+def spider_for(injectable: type):
     class InjectableSpider(scrapy.Spider):
         url = None
         custom_settings = {
@@ -376,7 +376,7 @@ class UnressolvableProductPage(ProductPage):
 @inlineCallbacks
 def test_injection_failure(settings):
     configure_logging(settings)
-    items, url, crawler = yield crawl_items(
+    items, *_ = yield crawl_items(
         spider_for(UnressolvableProductPage), ProductHtml, settings
     )
     assert items == []
@@ -408,14 +408,14 @@ class SkipDownloadSpider(scrapy.Spider):
 
 @inlineCallbacks
 def test_skip_downloads(settings):
-    item, url, crawler = yield crawl_single_item(MySpider, ProductHtml, settings)
+    item, _, crawler = yield crawl_single_item(MySpider, ProductHtml, settings)
     assert isinstance(item["response"], Response) is True
     assert isinstance(item["response"], DummyResponse) is False
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 1
     assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 0
     assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
 
-    item, url, crawler = yield crawl_single_item(
+    item, _, crawler = yield crawl_single_item(
         SkipDownloadSpider, ProductHtml, settings
     )
     assert isinstance(item["response"], Response) is True
@@ -544,7 +544,7 @@ def test_skip_download_request_url_page(settings):
 
 def test_scrapy_shell(tmp_path):
     try:
-        import scrapy.addons  # noqa: F401
+        import scrapy.addons  # noqa: F401,PLC0415
     except ImportError:
         settings = """
             DOWNLOADER_MIDDLEWARES = {
@@ -593,4 +593,4 @@ def test_scrapy_shell(tmp_path):
             pytest.fail("Command took too much time to complete")
 
     assert b"Using DummyResponse instead of downloading" not in err
-    assert b"{}" in out  # noqa: P103
+    assert b"{}" in out

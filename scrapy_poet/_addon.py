@@ -22,15 +22,15 @@ def _replace_builtin(
             f"{builtin_cls} entry with {new_cls}. Add {new_cls} manually to "
             f"silence this warning."
         )
-        return None
+        return
 
     if new_cls in setting_value:
-        return None
+        return
     for cls_or_path in setting_value:
         if isinstance(cls_or_path, str):
             _cls = load_object(cls_or_path)
             if _cls == new_cls:
-                return None
+                return
 
     builtin_entry: object = None
     for _setting_value in (setting_value, settings[f"{setting}_BASE"]):
@@ -54,7 +54,7 @@ def _replace_builtin(
             f"missing built-in entry {builtin_cls}. Cannot replace it with {new_cls}. "
             f"Add {new_cls} manually to silence this warning."
         )
-        return None
+        return
 
     if pos is None:
         logger.warning(
