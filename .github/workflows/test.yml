@@ -31,6 +31,9 @@ jobs:
         - python-version: "3.13"
         - python-version: "3.13"
           toxenv: "default-reactor"
+        - python-version: "3.14.0-rc.2"
+        - python-version: "3.14.0-rc.2"
+          toxenv: "default-reactor"
 
     steps:
     - uses: actions/checkout@v4
