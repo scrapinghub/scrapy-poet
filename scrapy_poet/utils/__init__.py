@@ -110,7 +110,7 @@ def is_min_scrapy_version(version: str) -> bool:
 
 def maybeDeferred_coro(
     f: Callable["_P", Any], *args: "_P.args", **kw: "_P.kwargs"
-) -> Deferred[Any]:
+) -> Deferred:
     """Copy of defer.maybeDeferred that also converts coroutines to Deferreds."""
     try:
         result = f(*args, **kw)
