@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 class DownloaderStatsMiddleware(DownloaderStats):
     def process_response(
-        self, request: Request, response: Response, spider: Spider
+        self, request: Request, response: Response, spider: Spider | None = None
     ) -> Union[Request, Response]:
         if isinstance(response, DummyResponse):
             return response
