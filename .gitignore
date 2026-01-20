@@ -16,7 +16,7 @@
 .cache/
 .tox/
 .pytest_cache/
-.coverage
+.coverage*
 _build/
 _static/
 _templates/

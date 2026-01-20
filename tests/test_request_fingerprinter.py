@@ -28,6 +28,7 @@ from web_poet import (
     PageParams,
     RequestUrl,
     ResponseUrl,
+    RulesRegistry,
     Stats,
     WebPage,
 )
@@ -59,7 +60,7 @@ def get_crawler(spider_cls=None, settings=None, ensure_providers_for=None):
     if spider_cls is not None:
         kwargs["spider_cls"] = spider_cls
 
-    ensure_providers_for = ensure_providers_for or tuple()
+    ensure_providers_for = ensure_providers_for or ()
     if ensure_providers_for:
         dummy_providers = get_dummy_providers(*ensure_providers_for)
         if dummy_providers:
@@ -204,7 +205,7 @@ def test_response_typing():
 
 @pytest.mark.parametrize(
     "input_cls",
-    (
+    [
         HttpClient,
         HttpRequest,
         HttpRequestBody,
@@ -212,7 +213,7 @@ def test_response_typing():
         PageParams,
         RequestUrl,
         Stats,
-    ),
+    ],
 )
 def test_ignored_unannotated_page_inputs(input_cls):
     """These web-poet page input classes, unless annotated, cannot have any
@@ -270,7 +271,7 @@ def test_fingerprinting_unannotated_page_inputs(input_cls):
 
 
 @pytest.mark.parametrize(
-    "input_cls_a, input_cls_b",
+    ("input_cls_a", "input_cls_b"),
     (tuple(combination) for combination in combinations(FINGERPRINTING_INPUTS, 2)),
 )
 def test_fingerprinting_unannotated_page_input_combinations(input_cls_a, input_cls_b):
@@ -360,14 +361,14 @@ def test_page_params(caplog):
 
 @pytest.mark.parametrize(
     "meta",
-    (
+    [
         {},
         {"page_params": None},
         {"page_params": {}},
         {"foo": "bar"},
         {"foo": "bar", "page_params": None},
         {"foo": "bar", "page_params": {}},
-    ),
+    ],
 )
 def test_meta(meta):
     crawler = get_crawler()
@@ -507,9 +508,6 @@ def test_request_cache():
 
 def test_item(settings):
     """Test that fingerprinting works even for items."""
-    from scrapy import Request, Spider
-    from web_poet import ItemPage, RulesRegistry
-
     registry = RulesRegistry()
 
     class MyItem:

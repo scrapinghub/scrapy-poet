@@ -1,10 +1,14 @@
+from __future__ import annotations
+
 import abc
-import os
 import pickle
 from pathlib import Path
-from typing import Any, Union
+from typing import TYPE_CHECKING, Any
 
 from web_poet.serialization.api import SerializedData, SerializedDataFileStorage
+
+if TYPE_CHECKING:
+    import os
 
 
 class _Cache(abc.ABC):
@@ -26,20 +30,18 @@ class SerializedDataCache(_Cache):
     `web_poet.serialization.SerializedDataFileStorage`
     """
 
-    def __init__(self, directory: Union[str, os.PathLike]) -> None:
+    def __init__(self, directory: str | os.PathLike) -> None:
         self.directory = Path(directory)
 
     def __getitem__(self, fingerprint: str) -> SerializedData:
         storage = SerializedDataFileStorage(self._get_directory_path(fingerprint))
         try:
             serialized_data = storage.read()
-        except FileNotFoundError:
-            raise KeyError(f"Fingerprint '{fingerprint}' not found in cache")
+        except FileNotFoundError as ex:
+            raise KeyError(f"Fingerprint '{fingerprint}' not found in cache") from ex
         return serialized_data
 
-    def __setitem__(
-        self, fingerprint: str, value: Union[SerializedData, Exception]
-    ) -> None:
+    def __setitem__(self, fingerprint: str, value: SerializedData | Exception) -> None:
         if isinstance(value, Exception):
             self.write_exception(fingerprint, value)
         else:

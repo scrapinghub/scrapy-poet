@@ -1,12 +1,13 @@
+from __future__ import annotations
+
 import asyncio
 import inspect
-import os
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Callable, Type
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
-from scrapy.crawler import Crawler
 from scrapy.http import HtmlResponse, Request, Response
 from scrapy.utils.defer import deferred_from_coro
 from scrapy.utils.project import inside_project, project_data_dir
@@ -28,6 +29,10 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from scrapy.crawler import Crawler
+
     # typing.ParamSpec requires Python 3.10
     from typing_extensions import ParamSpec
 
@@ -43,7 +48,7 @@ def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -
     # which does too many things.
     path = project_data_dir() if inside_project() else default_dir
     if createdir:
-        os.makedirs(path, exist_ok=True)
+        Path(path).mkdir(exist_ok=True, parents=True)
     return path
 
 
@@ -96,25 +101,25 @@ def http_response_to_scrapy_response(response: HttpResponse) -> HtmlResponse:
     )
 
 
-def create_registry_instance(cls: Type, crawler: Crawler):
+def create_registry_instance(cls: type, crawler: Crawler):
     for module in crawler.settings.getlist("SCRAPY_POET_DISCOVER", []):
         consume_modules(module)
     rules = crawler.settings.getlist("SCRAPY_POET_RULES", default_registry.get_rules())
     return cls(rules=rules)
 
 
-@lru_cache()
+@lru_cache
 def is_min_scrapy_version(version: str) -> bool:
     return Version(SCRAPY_VERSION) >= Version(version)
 
 
 def maybeDeferred_coro(
-    f: Callable["_P", Any], *args: "_P.args", **kw: "_P.kwargs"
+    f: Callable[_P, Any], *args: _P.args, **kw: _P.kwargs
 ) -> Deferred:
     """Copy of defer.maybeDeferred that also converts coroutines to Deferreds."""
     try:
         result = f(*args, **kw)
-    except:  # noqa: B001,E722  # pylint: disable=bare-except
+    except:  # noqa: E722
         return fail(failure.Failure(captureVars=Deferred.debug))
 
     if isinstance(result, Deferred):

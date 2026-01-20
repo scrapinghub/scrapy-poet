@@ -10,29 +10,28 @@ from scrapy_poet.utils.testing import EchoResource, _get_test_settings, make_cra
 
 @inlineCallbacks
 def test_cache_no_errors(caplog) -> None:
-    with TemporaryDirectory() as cache_dir:
-        with MockServer(EchoResource) as server:
+    with TemporaryDirectory() as cache_dir, MockServer(EchoResource) as server:
 
-            class Page(WebPage):
-                @field
-                async def url(self):
-                    return self.response.url
+        class Page(WebPage):
+            @field
+            async def url(self):
+                return self.response.url
 
-            class CacheSpider(Spider):
-                name = "cache"
+        class CacheSpider(Spider):
+            name = "cache"
 
-                custom_settings = {
-                    **_get_test_settings(),
-                    "SCRAPY_POET_CACHE": cache_dir,
-                }
+            custom_settings = {
+                **_get_test_settings(),
+                "SCRAPY_POET_CACHE": cache_dir,
+            }
 
-                def start_requests(self):
-                    yield Request(server.root_url, callback=self.parse_url)
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse_url)
 
-                async def parse_url(self, response, page: Page):
-                    await page.to_item()
+            async def parse_url(self, response, page: Page):
+                await page.to_item()
 
-            crawler = make_crawler(CacheSpider, {})
-            yield crawler.crawl()
+        crawler = make_crawler(CacheSpider, {})
+        yield crawler.crawl()
 
     assert all(record.levelname != "ERROR" for record in caplog.records)

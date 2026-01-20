@@ -3,7 +3,7 @@ Example of how to create a PageObject with a very different input data,
 which even requires an API request.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 import attr
 from scrapy import Request
@@ -18,7 +18,7 @@ from scrapy_poet.page_input_providers import PageObjectInputProvider
 class AutoextractProductResponse:
     """Input data"""
 
-    data: Dict[str, Any]
+    data: dict[str, Any]
 
 
 class AutoextractProductProvider(PageObjectInputProvider):
@@ -51,5 +51,4 @@ class ProductPage(ItemPage):
         return self.autoextract_resp.data["product"]["url"]
 
     def to_item(self):
-        product = self.autoextract_resp.data["product"]
-        return product
+        return self.autoextract_resp.data["product"]

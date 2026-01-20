@@ -1,5 +1,5 @@
 from collections import deque
-from typing import Any, List
+from typing import Any
 from urllib.parse import urlparse
 
 import attrs
@@ -18,7 +18,7 @@ class BaseSpider(Spider):
     name = "test_spider"
 
 
-def _assert_all_unique_instances(instances: List[Any]):
+def _assert_all_unique_instances(instances: list[Any]):
     assert len({id(instance) for instance in instances}) == len(instances)
 
 
@@ -70,7 +70,6 @@ def test_retry_once_item():
         foo: str
 
     with MockServer(EchoResource) as server:
-
         netloc = urlparse(server.root_url).netloc
 
         @registry.handle_urls(netloc)

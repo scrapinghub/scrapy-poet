@@ -1,5 +1,5 @@
 from inspect import iscoroutinefunction
-from typing import Callable, Optional, Type
+from typing import Callable, Optional
 
 from scrapy.http import Request, Response
 from web_poet.pages import ItemPage
@@ -31,7 +31,7 @@ class DummyResponse(Response):
         super().__init__(url=url, request=request)
 
 
-def callback_for(page_or_item_cls: Type) -> Callable:
+def callback_for(page_or_item_cls: type) -> Callable:
     """Create a callback for an :class:`web_poet.ItemPage <web_poet.pages.ItemPage>`
     subclass or an item class.
 
@@ -116,11 +116,11 @@ def callback_for(page_or_item_cls: Type) -> Callable:
     # a dict of named arguments after our injectable.
     if issubclass(page_or_item_cls, ItemPage):
 
-        def parse(*args, page: page_or_item_cls, **kwargs):  # type: ignore
-            yield page.to_item()  # type: ignore
+        def parse(*args, page: page_or_item_cls, **kwargs):  # type: ignore[valid-type]
+            yield page.to_item()  # type: ignore[attr-defined]
 
-        async def async_parse(*args, page: page_or_item_cls, **kwargs):  # type: ignore
-            yield await page.to_item()  # type: ignore
+        async def async_parse(*args, page: page_or_item_cls, **kwargs):  # type: ignore[valid-type]
+            yield await page.to_item()  # type: ignore[attr-defined]
 
         if iscoroutinefunction(page_or_item_cls.to_item):
             setattr(async_parse, _CALLBACK_FOR_MARKER, True)
@@ -128,7 +128,7 @@ def callback_for(page_or_item_cls: Type) -> Callable:
 
     else:
 
-        def parse(*args, item: page_or_item_cls, **kwargs):  # type:ignore
+        def parse(*args, item: page_or_item_cls, **kwargs):  # type:ignore[valid-type,misc]
             yield item
 
     setattr(parse, _CALLBACK_FOR_MARKER, True)

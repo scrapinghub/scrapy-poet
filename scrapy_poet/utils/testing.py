@@ -1,6 +1,6 @@
+import contextlib
 import json
 from inspect import isasyncgenfunction
-from typing import Dict
 from warnings import warn
 
 from scrapy import Spider, signals
@@ -22,7 +22,7 @@ class HtmlResource(Resource):
     isLeaf = True
     content_type = "text/html"
     html = ""
-    extra_headers: Dict[str, str] = {}
+    extra_headers: dict[str, str] = {}
     status_code = 200
 
     def render_GET(self, request):
@@ -106,7 +106,6 @@ class DropResource(LeafResource):
 
 
 class ProductHtml(HtmlResource):
-
     html = """
     <html>
         <div class="breadcrumbs">
@@ -189,10 +188,8 @@ def setup_crawler_engine(crawler: Crawler):
     crawler.crawling = True
     crawler.spider = crawler._create_spider()
     crawler.settings.frozen = False
-    try:
+    with contextlib.suppress(AttributeError):  # Scrapy < 2.10
         crawler._apply_settings()
-    except AttributeError:
-        pass  # Scrapy < 2.10
     crawler.engine = crawler._create_engine()
 
     handler = get_download_handler(crawler, "https")
@@ -248,15 +245,15 @@ def _get_test_settings():
         },
     }
     try:
-        import scrapy.addons  # noqa: F401
+        import scrapy.addons  # noqa: F401,PLC0415
     except ImportError:
         settings["DOWNLOADER_MIDDLEWARES"]["scrapy_poet.InjectionMiddleware"] = 543
         settings["DOWNLOADER_MIDDLEWARES"][
             "scrapy.downloadermiddlewares.stats.DownloaderStats"
         ] = None
-        settings["DOWNLOADER_MIDDLEWARES"][
-            "scrapy_poet.DownloaderStatsMiddleware"
-        ] = 850
+        settings["DOWNLOADER_MIDDLEWARES"]["scrapy_poet.DownloaderStatsMiddleware"] = (
+            850
+        )
         settings["REQUEST_FINGERPRINTER_CLASS"] = ScrapyPoetRequestFingerprinter
         settings["SPIDER_MIDDLEWARES"] = {
             "scrapy_poet.RetryMiddleware": 275,
@@ -266,7 +263,7 @@ def _get_test_settings():
             "scrapy_poet.Addon": 300,
         }
     try:
-        from scrapy.utils.test import get_reactor_settings
+        from scrapy.utils.test import get_reactor_settings  # noqa: PLC0415
 
         settings.update(get_reactor_settings())
     except ImportError:
@@ -300,7 +297,7 @@ def capture_exceptions(callback):
                     yield x
         except Exception as e:
             yield {"exception": e}
-            raise CloseSpider("Exception in callback detected")
+            raise CloseSpider("Exception in callback detected") from e
 
     # Mimic type annotations
     parse.__annotations__ = callback.__annotations__

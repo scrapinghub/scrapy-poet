@@ -1,7 +1,8 @@
 import sys
 import warnings
+from collections.abc import Sequence
 from functools import partial
-from typing import Any, Callable, List, Optional, Sequence, Set
+from typing import TYPE_CHECKING, Any, Callable, Optional, Set
 from unittest import mock
 from urllib.parse import urlparse
 
@@ -14,7 +15,6 @@ from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler
 from scrapy.exceptions import IgnoreRequest
-from scrapy.http import Response
 from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import BrowserResponse, HttpClient
 from web_poet.exceptions import HttpError, HttpRequestError, HttpResponseError
@@ -35,6 +35,9 @@ from scrapy_poet.utils.testing import (
     _get_test_settings,
     make_crawler,
 )
+
+if TYPE_CHECKING:
+    from scrapy.http import Response
 
 
 @pytest.fixture
@@ -70,7 +73,6 @@ async def test_scrapy_poet_downloader(fake_http_response) -> None:
     with mock.patch(
         "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
     ) as mock_dtf:
-
         mock_dtf.return_value = fake_http_response
 
         mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
@@ -133,7 +135,7 @@ async def test_scrapy_poet_downloader_head_redirect(fake_http_response) -> None:
 
         await scrapy_downloader(req)
 
-        args, kwargs = mock_downloader.call_args
+        args, _ = mock_downloader.call_args
         scrapy_request = args[0]
         assert scrapy_request.meta.get("dont_redirect") is True
 
@@ -516,7 +518,7 @@ class BaseSpider(Spider):
 
 # See: https://github.com/scrapinghub/scrapy-poet/issues/48
 def _assert_warning_messages(
-    record, index: Optional[List] = None, not_existing: bool = False
+    record, index: Optional[list] = None, not_existing: bool = False
 ):
     index = index or [0, 1]
 
@@ -575,7 +577,7 @@ def test_parse_callback_none_dummy_response() -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:
+        with pytest.warns(UserWarning) as record:  # noqa: PT030
             yield crawler.crawl()
 
     _assert_warning_messages(record, index=[0])
@@ -606,7 +608,7 @@ def test_parse_callback_none_response() -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:
+        with pytest.warns(UserWarning) as record:  # noqa: PT030
             yield crawler.crawl()
 
     _assert_warning_messages(record, not_existing=True)
@@ -667,7 +669,7 @@ def test_parse_callback_none_with_deps(caplog) -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:
+        with pytest.warns(UserWarning) as record:  # noqa: PT030
             yield crawler.crawl()
 
     _assert_warning_messages(record)
@@ -710,7 +712,7 @@ def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:
+        with pytest.warns(UserWarning) as record:  # noqa: PT030
             yield crawler.crawl()
 
     _assert_warning_messages(record, index=[0])
@@ -750,7 +752,7 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:
+        with pytest.warns(UserWarning) as record:  # noqa: PT030
             yield crawler.crawl()
 
     _assert_warning_messages(record)
@@ -787,7 +789,7 @@ def test_parse_callback_NO_CALLBACK(caplog) -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:
+        with pytest.warns(UserWarning) as record:  # noqa: PT030
             yield crawler.crawl()
 
     _assert_warning_messages(record, not_existing=True)
@@ -819,7 +821,7 @@ def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:
+        with pytest.warns(UserWarning) as record:  # noqa: PT030
             yield crawler.crawl()
 
     _assert_warning_messages(record, not_existing=True)

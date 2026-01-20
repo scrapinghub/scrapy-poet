@@ -1,6 +1,3 @@
-[tool.black]
-line-length = 88
-
 [tool.bumpversion]
 current_version = "0.26.0"
 commit = true
@@ -34,12 +31,6 @@ exclude_also = [
     "@(abc\\.)?abstractmethod",
 ]
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-# scrapy_poet/__init__.py: Automatic sorting causes circular dependencies.
-skip = ["scrapy_poet/__init__.py"]
-
 [[tool.mypy.overrides]]
 module = [
     "tests.test_cache.*",
@@ -51,3 +42,154 @@ module = [
 # when test cases are decorated with @inlineCallbacks. However, the
 # tests doesn't return anything at all.
 disable_error_code = "misc"
+
+[tool.ruff.lint]
+extend-select = [
+    # flake8-builtins
+    "A",
+    # flake8-async
+    "ASYNC",
+    # flake8-bugbear
+    "B",
+    # flake8-comprehensions
+    "C4",
+    # flake8-commas
+    "COM",
+    # pydocstyle
+    "D",
+    # flake8-future-annotations
+    "FA",
+    # flynt
+    "FLY",
+    # refurb
+    "FURB",
+    # isort
+    "I",
+    # flake8-implicit-str-concat
+    "ISC",
+    # flake8-logging
+    "LOG",
+    # Perflint
+    "PERF",
+    # pygrep-hooks
+    "PGH",
+    # flake8-pie
+    "PIE",
+    # pylint
+    "PL",
+    # flake8-pytest-style
+    "PT",
+    # flake8-use-pathlib
+    "PTH",
+    # flake8-pyi
+    "PYI",
+    # flake8-quotes
+    "Q",
+    # flake8-return
+    "RET",
+    # flake8-raise
+    "RSE",
+    # Ruff-specific rules
+    "RUF",
+    # flake8-bandit
+    "S",
+    # flake8-simplify
+    "SIM",
+    # flake8-slots
+    "SLOT",
+    # flake8-debugger
+    "T10",
+    # flake8-type-checking
+    "TC",
+    # flake8-tidy-imports
+    "TID",
+    # pyupgrade
+    "UP",
+    # pycodestyle warnings
+    "W",
+    # flake8-2020
+    "YTT",
+]
+ignore = [
+    # Trailing comma missing
+    "COM812",
+    # Missing docstring in public module
+    "D100",
+    # Missing docstring in public class
+    "D101",
+    # Missing docstring in public method
+    "D102",
+    # Missing docstring in public function
+    "D103",
+    # Missing docstring in public package
+    "D104",
+    # Missing docstring in magic method
+    "D105",
+    # Missing docstring in __init__
+    "D107",
+    # One-line docstring should fit on one line with quotes
+    "D200",
+    # No blank lines allowed after function docstring
+    "D202",
+    # 1 blank line required between summary line and description
+    "D205",
+    # Multi-line docstring closing quotes should be on a separate line
+    "D209",
+    # First line should end with a period
+    "D400",
+    # First line should be in imperative mood; try rephrasing
+    "D401",
+    # First line should not be the function's "signature"
+    "D402",
+    # Too many return statements
+    "PLR0911",
+    # Too many branches
+    "PLR0912",
+    # Too many arguments in function definition
+    "PLR0913",
+    # Too many statements
+    "PLR0915",
+    # Magic value used in comparison
+    "PLR2004",
+    # String contains ambiguous {}.
+    "RUF001",
+    # Docstring contains ambiguous {}.
+    "RUF002",
+    # Comment contains ambiguous {}.
+    "RUF003",
+    # Mutable class attributes should be annotated with `typing.ClassVar`
+    "RUF012",
+    # Use of `assert` detected
+    "S101",
+    # Yoda condition detected
+    "SIM300",
+    # Add `from __future__ import annotations` to simplify
+    # (It's harder to keep annotations resolvable at the runtime with it.)
+    "FA100",
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+banned-module-level-imports = [
+    "twisted.internet.reactor",
+]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
+
+[tool.ruff.lint.per-file-ignores]
+"example/*" = ["PLC0415"]
+# scrapy_poet/__init__.py: Automatic import sorting causes circular dependencies.
+"scrapy_poet/__init__.py" = ["F401", "I"]
+"scrapy_poet/page_inputs/__init__.py" = ["F401"]
+"tests/*" = ["SLOT000", "S"]
+
+# we need to use typing.Set[] over modern alternatives with web-poet<0.19.0 && Python<3.11
+# see https://github.com/scrapinghub/web-poet/pull/219
+"scrapy_poet/page_input_providers.py" = ["UP006", "UP035"]
+"tests/test_downloader.py" =["UP006", "UP035"]
+"tests/test_providers.py" =["UP006", "UP035"]
+"tests/test_request_fingerprinter.py" =["UP006", "UP035"]
+"tests/test_web_poet_rules.py" =["UP006", "UP035"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"

@@ -3,15 +3,14 @@ responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
 
+from __future__ import annotations
+
 import inspect
 import logging
 import warnings
-from typing import Generator, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING
 
-from scrapy import Spider
-from scrapy.crawler import Crawler
 from scrapy.downloadermiddlewares.stats import DownloaderStats
-from scrapy.http import Request, Response
 from twisted.internet.defer import Deferred, inlineCallbacks
 from web_poet import RulesRegistry
 from web_poet.exceptions import Retry
@@ -29,13 +28,23 @@ from .page_input_providers import (
 )
 from .utils import create_registry_instance, is_min_scrapy_version
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from scrapy import Spider
+    from scrapy.crawler import Crawler
+    from scrapy.http import Request, Response
+
+    # typing.Self requires Python 3.11
+    from typing_extensions import Self
+
 logger = logging.getLogger(__name__)
 
 
 class DownloaderStatsMiddleware(DownloaderStats):
     def process_response(
-        self, request: Request, response: Response, spider: Optional[Spider] = None
-    ) -> Union[Request, Response]:
+        self, request: Request, response: Response, spider: Spider | None = None
+    ) -> Request | Response:
         if isinstance(response, DummyResponse):
             return response
         return super().process_response(request, response, spider)
@@ -50,8 +59,6 @@ DEFAULT_PROVIDERS = {
     ResponseUrlProvider: 900,
     StatsProvider: 1000,
 }
-
-InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")
 
 
 class InjectionMiddleware:
@@ -72,15 +79,10 @@ class InjectionMiddleware:
         )
 
     @classmethod
-    def from_crawler(
-        cls: Type[InjectionMiddlewareTV], crawler: Crawler
-    ) -> InjectionMiddlewareTV:
-        o = cls(crawler)
-        return o
+    def from_crawler(cls, crawler: Crawler) -> Self:
+        return cls(crawler)
 
-    def process_request(
-        self, request: Request, spider: Spider
-    ) -> Optional[DummyResponse]:
+    def process_request(self, request: Request, spider: Spider) -> DummyResponse | None:
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a :class:`scrapy.http.Response`
         is going to be used by the callback or a Page Input.
@@ -125,15 +127,12 @@ class InjectionMiddleware:
             return False
 
         # Skip if providers are needed.
-        if self.injector.discover_callback_providers(request):
-            return True
-
-        return False
+        return bool(self.injector.discover_callback_providers(request))
 
     @inlineCallbacks
     def process_response(
         self, request: Request, response: Response, spider: Spider
-    ) -> Generator[Deferred, object, Union[Response, Request]]:
+    ) -> Generator[Deferred, object, Response | Request]:
         """This method fills :attr:`scrapy.Request.cb_kwargs
         <scrapy.http.Request.cb_kwargs>` with instances for the required Page
         Objects found in the callback signature.
@@ -164,7 +163,9 @@ class InjectionMiddleware:
         except Retry as exception:
             # Needed for Twisted < 21.2.0. See the discussion thread linked below:
             # https://github.com/scrapinghub/scrapy-poet/pull/129#discussion_r1102693967
-            from scrapy.downloadermiddlewares.retry import get_retry_request
+            from scrapy.downloadermiddlewares.retry import (  # noqa: PLC0415
+                get_retry_request,
+            )
 
             reason = str(exception) or "page_object_retry"
             new_request_or_none = get_retry_request(

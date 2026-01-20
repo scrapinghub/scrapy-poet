@@ -23,7 +23,6 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
         scrapy_class: str
 
     class PageDataProvider(PageObjectInputProvider):
-
         provided_classes = {PageData}
 
         def __call__(self, to_provide, obj: scrapy_class):  # type: ignore[valid-type]
@@ -31,7 +30,6 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
 
     @attr.s(auto_attribs=True)
     class Page(WebPage):
-
         page_data: PageData
 
         def to_item(self):
@@ -40,7 +38,6 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
             }
 
     class MySpider(Spider):
-
         name = "my_spider"
         url = None
         custom_settings = {
@@ -56,7 +53,7 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
         def parse(self, response, page: Page):
             return page.to_item()
 
-    item, url, crawler = yield crawl_single_item(MySpider, ProductHtml, settings)
+    item, *_ = yield crawl_single_item(MySpider, ProductHtml, settings)
     assert item["scrapy_class"] == scrapy_class.__name__
 
 
@@ -67,7 +64,6 @@ def test_scrapy_dependencies_on_page_objects(scrapy_class, settings) -> None:
 
     @attr.s(auto_attribs=True)
     class Page(WebPage):
-
         scrapy_obj: scrapy_class  # type: ignore[valid-type]
 
         def to_item(self):
@@ -76,7 +72,6 @@ def test_scrapy_dependencies_on_page_objects(scrapy_class, settings) -> None:
             }
 
     class MySpider(Spider):
-
         name = "my_spider"
         url = None
 
@@ -86,5 +81,5 @@ def test_scrapy_dependencies_on_page_objects(scrapy_class, settings) -> None:
         def parse(self, response, page: Page):
             return page.to_item()
 
-    items, url, crawler = yield crawl_items(MySpider, ProductHtml, settings)
+    items, *_ = yield crawl_items(MySpider, ProductHtml, settings)
     assert not items
