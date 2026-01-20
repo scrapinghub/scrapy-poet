@@ -43,6 +43,11 @@ module = [
 # tests doesn't return anything at all.
 disable_error_code = "misc"
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    'ignore:The registry contains .*conflicting rules with:UserWarning',
+]
+
 [tool.ruff.lint]
 extend-select = [
     # flake8-builtins
