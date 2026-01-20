@@ -16,7 +16,7 @@ from scrapy.http import Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import MemoryStatsCollector, StatsCollector
 from scrapy.utils.conf import build_component_list
-from scrapy.utils.defer import deferred_from_coro, maybeDeferred_coro
+from scrapy.utils.defer import deferred_from_coro
 from scrapy.utils.misc import load_object
 from twisted.internet.defer import inlineCallbacks
 from web_poet import RulesRegistry
@@ -33,7 +33,7 @@ from scrapy_poet.injection_errors import (
     UndeclaredProvidedTypeError,
 )
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from scrapy_poet.utils import is_min_scrapy_version
+from scrapy_poet.utils import is_min_scrapy_version, maybeDeferred_coro
 
 from .utils import create_registry_instance, get_scrapy_data_path
 

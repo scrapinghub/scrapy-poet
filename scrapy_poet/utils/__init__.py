@@ -1,12 +1,19 @@
+import asyncio
+import inspect
+from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
 from scrapy.crawler import Crawler
 from scrapy.http import HtmlResponse, Request, Response
+from scrapy.utils.defer import deferred_from_coro
 from scrapy.utils.project import inside_project, project_data_dir
 from scrapy.utils.response import open_in_browser as scrapy_open_in_browser
+from twisted.internet.defer import Deferred, fail, succeed
+from twisted.python import failure
 from web_poet import (
     HttpRequest,
     HttpResponse,
@@ -19,6 +26,13 @@ try:
     from scrapy.http.request import NO_CALLBACK  # available on Scrapy >= 2.8
 except ImportError:
     NO_CALLBACK = None  # type: ignore[assignment]
+
+
+if TYPE_CHECKING:
+    # typing.ParamSpec requires Python 3.10
+    from typing_extensions import ParamSpec
+
+    _P = ParamSpec("_P")
 
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
@@ -93,3 +107,21 @@ def create_registry_instance(cls: type, crawler: Crawler):
 @lru_cache
 def is_min_scrapy_version(version: str) -> bool:
     return Version(SCRAPY_VERSION) >= Version(version)
+
+
+def maybeDeferred_coro(
+    f: Callable["_P", Any], *args: "_P.args", **kw: "_P.kwargs"
+) -> Deferred:
+    """Copy of defer.maybeDeferred that also converts coroutines to Deferreds."""
+    try:
+        result = f(*args, **kw)
+    except:  # noqa: E722
+        return fail(failure.Failure(captureVars=Deferred.debug))
+
+    if isinstance(result, Deferred):
+        return result
+    if asyncio.isfuture(result) or inspect.isawaitable(result):
+        return deferred_from_coro(result)
+    if isinstance(result, failure.Failure):
+        return fail(result)
+    return succeed(result)

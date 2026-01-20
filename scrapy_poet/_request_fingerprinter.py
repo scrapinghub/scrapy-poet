@@ -28,7 +28,7 @@ else:
     except ImportError:  # Scrapy < 2.12
         from typing import Any, TypeVar
 
-        from scrapy.utils.misc import create_instance
+        from scrapy.utils.misc import create_instance  # type: ignore[attr-defined]
 
         T = TypeVar("T")
 
