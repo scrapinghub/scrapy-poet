@@ -701,6 +701,7 @@ class PriceInDollarsPO(ItemPage):
 
 @attr.s(auto_attribs=True)
 class TestItem:
+    __test__ = False
     foo: int
     bar: str
 

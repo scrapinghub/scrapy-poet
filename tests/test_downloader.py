@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import sys
 import warnings
-from collections.abc import Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Optional, Set
+from typing import TYPE_CHECKING, Any, Callable, Set
 from unittest import mock
 from urllib.parse import urlparse
 
@@ -13,7 +14,6 @@ import twisted
 import web_poet
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
-from scrapy.crawler import Crawler
 from scrapy.exceptions import IgnoreRequest
 from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import BrowserResponse, HttpClient
@@ -37,6 +37,9 @@ from scrapy_poet.utils.testing import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from scrapy.crawler import Crawler
     from scrapy.http import Response
 
 
@@ -271,7 +274,9 @@ def test_additional_requests_ignored_request() -> None:
                     return {"exc": e.__class__}
 
         class TestDownloaderMiddleware:
-            def process_response(self, request, response, spider):
+            def process_response(
+                self, request: Request, response: Response, spider: Spider | None = None
+            ):
                 if b"ignore" in response.body:
                     raise IgnoreRequest
                 return response
@@ -325,7 +330,9 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
                     return {"exc": e.__class__}
 
         class TestDownloaderMiddleware:
-            def process_response(self, request, response, spider):
+            def process_response(
+                self, request: Request, response: Response, spider: Spider | None = None
+            ):
                 if b"raise" in response.body:
                     raise RuntimeError
                 return response
@@ -518,7 +525,7 @@ class BaseSpider(Spider):
 
 # See: https://github.com/scrapinghub/scrapy-poet/issues/48
 def _assert_warning_messages(
-    record, index: Optional[list] = None, not_existing: bool = False
+    record, index: list | None = None, not_existing: bool = False
 ):
     index = index or [0, 1]
 

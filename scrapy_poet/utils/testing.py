@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import json
 from inspect import isasyncgenfunction
@@ -210,11 +212,17 @@ def get_crawler(settings=None, spider_cls=DummySpider, setup_engine=True):
 
 
 class CollectorPipeline:
-    def open_spider(self, spider):
-        spider.collected_items = []
+    @classmethod
+    def from_crawler(cls, crawler):
+        obj = cls()
+        obj.crawler = crawler
+        return obj
 
-    def process_item(self, item, spider):
-        spider.collected_items.append(item)
+    def open_spider(self, spider: Spider | None = None):
+        self.crawler.spider.collected_items = []
+
+    def process_item(self, item, spider: Spider | None = None):
+        self.crawler.spider.collected_items.append(item)
         return item
 
 
@@ -222,14 +230,15 @@ class InjectedDependenciesCollectorMiddleware:
     @classmethod
     def from_crawler(cls, crawler):
         obj = cls()
+        obj.crawler = crawler
         crawler.signals.connect(obj.spider_opened, signal=signals.spider_opened)
         return obj
 
-    def spider_opened(self, spider):
-        spider.collected_response_deps = []
+    def spider_opened(self, spider: Spider | None = None):
+        self.crawler.spider.collected_response_deps = []
 
-    def process_response(self, request, response, spider):
-        spider.collected_response_deps.append(request.cb_kwargs)
+    def process_response(self, request, response, spider: Spider | None = None):
+        self.crawler.spider.collected_response_deps.append(request.cb_kwargs)
         return response
 
 
