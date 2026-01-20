@@ -28,6 +28,10 @@ def test_cache_no_errors(caplog) -> None:
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse_url)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             async def parse_url(self, response, page: Page):
                 await page.to_item()
 

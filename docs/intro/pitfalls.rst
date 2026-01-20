@@ -44,9 +44,9 @@ Let's take a look at the following code:
         def parse(self, response):
             ...
 
-Under the hood, the inherited ``start_requests()`` method from
-:class:`scrapy.Spider <scrapy.spiders.Spider>` doesn't declare any callback
-value to :class:`scrapy.Request <scrapy.http.Request>`:
+Under the hood, the inherited :meth:`~scrapy.Spider.start` method from
+:class:`scrapy.Spider` doesn't declare any callback value to
+:class:`scrapy.Request <scrapy.http.Request>`:
 
 .. code-block:: python
 
@@ -168,7 +168,7 @@ is **not** ``None``:
     class MySpider(scrapy.Spider):
         name = "my_spider"
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("https://books.toscrape.com", callback=self.parse)
 
         def parse(self, response: scrapy.http.Response, page: MyPage):

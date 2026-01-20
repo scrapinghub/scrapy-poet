@@ -166,6 +166,10 @@ def test_additional_requests_success() -> None:
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
                 items.append(item)
@@ -200,6 +204,10 @@ def test_additional_requests_bad_response() -> None:
 
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -244,6 +252,10 @@ def test_additional_requests_connection_issue() -> None:
                 def start_requests(self):
                     yield Request(server.root_url, callback=self.parse)
 
+                async def start(self):
+                    for item_or_request in self.start_requests():
+                        yield item_or_request
+
                 async def parse(self, response, page: ItemPage):
                     item = await page.to_item()
                     items.append(item)
@@ -286,6 +298,10 @@ def test_additional_requests_ignored_request() -> None:
 
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -343,6 +359,10 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
                 items.append(item)
@@ -391,6 +411,10 @@ def test_additional_requests_dont_filter_duplicate() -> None:
                 yield Request(server.root_url, body=b"a", callback=self.parse)
                 yield Request(server.root_url, body=b"a", callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
                 items.append(item)
@@ -431,6 +455,10 @@ def test_additional_requests_dont_filter_offsite() -> None:
                 yield Request(server.root_url, callback=self.parse)
                 # Filtered out by the offsite middleware:
                 yield Request("data:,", callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
 
             async def parse(self, response, page: ItemPage):
                 item = await page.to_item()
@@ -501,6 +529,10 @@ def test_additional_requests_no_cb_deps() -> None:
 
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
 
             async def parse(self, response: DummyResponse, page: ItemPage):  # type: ignore[override]
                 item = await page.to_item()
@@ -714,6 +746,10 @@ def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
                 page = BasicPage(web_poet.HttpResponse("https://example.com", b""))
                 yield Request(server.root_url, cb_kwargs={"page": page})
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response: DummyResponse, page: BasicPage):  # type: ignore[override]
                 collected["response"] = response
 
@@ -748,6 +784,10 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
             def start_requests(self):
                 page = BasicPage(web_poet.HttpResponse("https://example.com", b""))
                 yield Request(server.root_url, cb_kwargs={"page": page})
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
 
             def parse(  # type: ignore[override]
                 self,

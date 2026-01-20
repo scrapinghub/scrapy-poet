@@ -50,6 +50,10 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
         def start_requests(self):
             yield Request(url=self.url, callback=self.parse)
 
+        async def start(self):
+            for item_or_request in self.start_requests():
+                yield item_or_request
+
         def parse(self, response, page: Page):
             return page.to_item()
 
@@ -77,6 +81,10 @@ def test_scrapy_dependencies_on_page_objects(scrapy_class, settings) -> None:
 
         def start_requests(self):
             yield Request(url=self.url, callback=self.parse)
+
+        async def start(self):
+            for item_or_request in self.start_requests():
+                yield item_or_request
 
         def parse(self, response, page: Page):
             return page.to_item()

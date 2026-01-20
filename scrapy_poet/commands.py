@@ -2,6 +2,7 @@ import datetime
 import logging
 import sys
 from pathlib import Path
+from types import MethodType
 from typing import Optional
 
 import andi
@@ -79,6 +80,12 @@ def spider_for(
             super().__init__(name, **kwargs)
             meta = {"savefixture": True}
             self.start_requests = lambda: [scrapy.Request(url, self.cb, meta=meta)]
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            self.start = MethodType(start, self)
 
         async def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
             global frozen_time  # noqa: PLW0603

@@ -123,6 +123,10 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
     def start_requests(self):
         yield Request(self.url, self.parse, errback=self.errback)
 
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
+
     def errback(self, failure: Failure):
         yield {"exception": failure.value}
 

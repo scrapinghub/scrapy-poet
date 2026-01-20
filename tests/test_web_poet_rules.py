@@ -62,6 +62,10 @@ def spider_for(injectable: type):
         def start_requests(self):
             yield scrapy.Request(self.url, capture_exceptions(callback_for(injectable)))
 
+        async def start(self):
+            for item_or_request in self.start_requests():
+                yield item_or_request
+
     return InjectableSpider
 
 

@@ -56,7 +56,7 @@ class BooksSpider(scrapy.Spider):
         ]
     }
 
-    def start_requests(self):
+    async def start(self):
         for url in ["http://books.toscrape.com/", "https://bookpage.com/reviews"]:
             yield scrapy.Request(url, callback=self.parse)
 

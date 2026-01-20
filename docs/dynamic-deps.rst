@@ -15,7 +15,7 @@ hints for its arguments:
     class BooksSpider(scrapy.Spider):
         ...
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse_book)
 
         def parse_book(self, response, book_page: BookPage, other_dep: OtherDep):
@@ -36,7 +36,7 @@ request meta dictionary using the "inject" key:
     class BooksSpider(scrapy.Spider):
         ...
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request(
                 "http://books.toscrape.com/",
                 self.parse_book,

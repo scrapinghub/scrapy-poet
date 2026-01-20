@@ -44,6 +44,10 @@ def spider_for(injectable: type):
         def start_requests(self):
             yield Request(self.url, capture_exceptions(callback_for(injectable)))
 
+        async def start(self):
+            for item_or_request in self.start_requests():
+                yield item_or_request
+
     return InjectableSpider
 
 
@@ -291,6 +295,10 @@ class MultiArgsCallbackSpiderNew(scrapy.Spider):
             self.url, self.parse, cb_kwargs={"cb_arg": "arg!", "cb_arg2": False}
         )
 
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
+
     def parse(
         self,
         response,
@@ -333,6 +341,10 @@ class MultiArgsCallbackSpiderOld(scrapy.Spider):
         yield Request(
             self.url, self.parse, cb_kwargs={"cb_arg": "arg!", "cb_arg2": False}
         )
+
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
 
     def parse(
         self,
@@ -388,6 +400,10 @@ class MySpider(scrapy.Spider):
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
 
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
+
     def parse(self, response):
         return {
             "response": response,
@@ -399,6 +415,10 @@ class SkipDownloadSpider(scrapy.Spider):
 
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
+
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
 
     def parse(self, response: DummyResponse):  # type: ignore[override]
         return {
@@ -431,6 +451,10 @@ class RequestUrlSpider(scrapy.Spider):
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
 
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
+
     def parse(self, response: DummyResponse, url: RequestUrl):  # type: ignore[override]
         return {
             "response": response,
@@ -457,6 +481,10 @@ class ResponseUrlSpider(scrapy.Spider):
 
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
+
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
 
     def parse(self, response: DummyResponse, url: ResponseUrl):  # type: ignore[override]
         return {
@@ -495,6 +523,10 @@ class ResponseUrlPageSpider(scrapy.Spider):
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
 
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
+
     def parse(self, response: DummyResponse, page: ResponseUrlPage):  # type: ignore[override]
         return page.to_item()
 
@@ -525,6 +557,10 @@ class RequestUrlPageSpider(scrapy.Spider):
 
     def start_requests(self):
         yield Request(url=self.url, callback=self.parse)
+
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
 
     def parse(self, response: DummyResponse, page: RequestUrlPage):  # type: ignore[override]
         return page.to_item()

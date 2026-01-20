@@ -41,6 +41,10 @@ def test_retry_once():
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
@@ -85,6 +89,10 @@ def test_retry_once_item():
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, item: TestItem):
                 items.append(item)
 
@@ -119,6 +127,10 @@ def test_retry_reason():
         class TestSpider(BaseSpider):
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
 
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
@@ -155,6 +167,10 @@ def test_retry_max():
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
@@ -185,6 +201,10 @@ def test_retry_exceeded():
         class TestSpider(BaseSpider):
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
 
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
@@ -223,6 +243,10 @@ def test_retry_max_configuration():
 
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
 
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
@@ -266,6 +290,10 @@ def test_retry_cb_kwargs():
                     cb_kwargs={"page": page_from_cb_kwargs},
                 )
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
@@ -296,6 +324,10 @@ def test_non_retry_exception():
         class TestSpider(BaseSpider):
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
 
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
