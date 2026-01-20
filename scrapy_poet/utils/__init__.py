@@ -2,14 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
-from scrapy.crawler import Crawler
 from scrapy.http import HtmlResponse, Request, Response
 from scrapy.utils.defer import deferred_from_coro
 from scrapy.utils.project import inside_project, project_data_dir
@@ -31,6 +29,10 @@ except ImportError:
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from scrapy.crawler import Crawler
+
     # typing.ParamSpec requires Python 3.10
     from typing_extensions import ParamSpec
 
@@ -112,7 +114,7 @@ def is_min_scrapy_version(version: str) -> bool:
 
 
 def maybeDeferred_coro(
-    f: Callable["_P", Any], *args: "_P.args", **kw: "_P.kwargs"
+    f: Callable[_P, Any], *args: _P.args, **kw: _P.kwargs
 ) -> Deferred:
     """Copy of defer.maybeDeferred that also converts coroutines to Deferreds."""
     try:
