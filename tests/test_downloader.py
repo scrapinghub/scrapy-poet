@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import warnings
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Set
@@ -713,15 +712,10 @@ def test_parse_callback_none_with_deps(caplog) -> None:
 
     _assert_warning_messages(record)
 
-    if sys.version_info < (3, 10):
-        expected_msg = (
-            "TypeError: parse() missing 1 required positional argument: 'page'"
-        )
-    else:
-        expected_msg = (
-            "TypeError: test_parse_callback_none_with_deps.<locals>.TestSpider"
-            ".parse() missing 1 required positional argument: 'page'"
-        )
+    expected_msg = (
+        "TypeError: test_parse_callback_none_with_deps.<locals>.TestSpider"
+        ".parse() missing 1 required positional argument: 'page'"
+    )
     assert expected_msg in caplog.text
 
 
@@ -804,15 +798,10 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
 
     _assert_warning_messages(record)
 
-    if sys.version_info < (3, 10):
-        expected_msg = (
-            "TypeError: parse() missing 1 required positional argument: 'page2'"
-        )
-    else:
-        expected_msg = (
-            "TypeError: test_parse_callback_none_with_deps_cb_kwargs_incomplete."
-            "<locals>.TestSpider.parse() missing 1 required positional argument: 'page2'"
-        )
+    expected_msg = (
+        "TypeError: test_parse_callback_none_with_deps_cb_kwargs_incomplete."
+        "<locals>.TestSpider.parse() missing 1 required positional argument: 'page2'"
+    )
     assert expected_msg in caplog.text
 
 

@@ -30,11 +30,9 @@ except ImportError:
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import ParamSpec
 
     from scrapy.crawler import Crawler
-
-    # typing.ParamSpec requires Python 3.10
-    from typing_extensions import ParamSpec
 
     _P = ParamSpec("_P")
 
