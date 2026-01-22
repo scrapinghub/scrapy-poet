@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Sequence  # noqa: TC003
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Set
 from unittest import mock
@@ -13,6 +14,7 @@ import twisted
 import web_poet
 from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
+from scrapy.crawler import Crawler  # noqa: TC002
 from scrapy.exceptions import IgnoreRequest
 from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import BrowserResponse, HttpClient
@@ -36,9 +38,6 @@ from scrapy_poet.utils.testing import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from scrapy.crawler import Crawler
     from scrapy.http import Response
 
 
@@ -142,22 +141,112 @@ async def test_scrapy_poet_downloader_head_redirect(fake_http_response) -> None:
         assert scrapy_request.meta.get("dont_redirect") is True
 
 
+@attr.define
+class TestAdditionalRequestsSuccessPage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        response = await self.http.request(
+            self.response.url,
+            body=b"bar",
+        )
+        return {"foo": response.body.decode()}
+
+
+@attr.define
+class TestAdditionalRequestsBadResponsePage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        try:
+            await self.http.request(
+                self.response.url,
+                body=b"400",
+            )
+        except HttpResponseError:
+            return {"foo": "bar"}
+
+
+@attr.define
+class TestAdditionalRequestsConnectionIssuePage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        try:
+            await self.http.request(
+                self.response.url,
+                body=b"0.002",
+            )
+        except HttpRequestError:
+            return {"foo": "bar"}
+
+
+@attr.define
+class TestAdditionalRequestsIgnoredRequestPage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        try:
+            await self.http.request(
+                self.response.url,
+                body=b"ignore",
+            )
+        except HttpError as e:
+            return {"exc": e.__class__}
+
+
+@attr.define
+class TestAdditionalRequestsDontFilterDuplicatePage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        response1 = await self.http.request(
+            self.response.url,
+            body=b"a",
+        )
+        response2 = await self.http.request(
+            self.response.url,
+            body=b"a",
+        )
+        return {response1.body.decode(): response2.body.decode()}
+
+
+@attr.define
+class TestAdditionalRequestsDontFilterOffsitePage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        response1 = await self.http.request(
+            self.response.url,
+            body=b"a",
+        )
+        # Not filtered out by the offsite middleware because it is an
+        # additional request.
+        response2 = await self.http.request("data:,b")
+        return {response1.body.decode(): response2.body.decode()}
+
+
+@attr.define
+class TestAdditionalRequestsNoCbDepsPage(WebPage):
+    browser_response: BrowserResponse
+    http: HttpClient
+
+    async def to_item(self):
+        additional_response = await self.http.request(
+            self.response.url,
+            body=b"a",
+        )
+        return {
+            "main": str(self.browser_response.html),
+            "additional": additional_response.body.decode(),
+        }
+
+
 @inlineCallbacks
 def test_additional_requests_success() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
-
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                response = await self.http.request(
-                    server.root_url,
-                    body=b"bar",
-                )
-                return {"foo": response.body.decode()}
 
         class TestSpider(Spider):
             name = "test_spider"
@@ -169,7 +258,7 @@ def test_additional_requests_success() -> None:
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(self, response, page: ItemPage):
+            async def parse(self, response, page: TestAdditionalRequestsSuccessPage):
                 item = await page.to_item()
                 items.append(item)
 
@@ -185,19 +274,6 @@ def test_additional_requests_bad_response() -> None:
 
     with MockServer(StatusResource) as server:
 
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                try:
-                    await self.http.request(
-                        server.root_url,
-                        body=b"400",
-                    )
-                except HttpResponseError:
-                    return {"foo": "bar"}
-
         class TestSpider(Spider):
             name = "test_spider"
 
@@ -208,7 +284,9 @@ def test_additional_requests_bad_response() -> None:
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(self, response, page: ItemPage):
+            async def parse(
+                self, response, page: TestAdditionalRequestsBadResponsePage
+            ):
                 item = await page.to_item()
                 items.append(item)
 
@@ -232,19 +310,6 @@ def test_additional_requests_connection_issue() -> None:
 
         with MockServer(DelayedResource) as server:
 
-            @attr.define
-            class ItemPage(WebPage):
-                http: HttpClient
-
-                async def to_item(self):
-                    try:
-                        await self.http.request(
-                            server.root_url,
-                            body=b"0.002",
-                        )
-                    except HttpRequestError:
-                        return {"foo": "bar"}
-
             class TestSpider(Spider):
                 name = "test_spider"
 
@@ -255,7 +320,9 @@ def test_additional_requests_connection_issue() -> None:
                     for item_or_request in self.start_requests():
                         yield item_or_request
 
-                async def parse(self, response, page: ItemPage):
+                async def parse(
+                    self, response, page: TestAdditionalRequestsConnectionIssuePage
+                ):
                     item = await page.to_item()
                     items.append(item)
 
@@ -270,19 +337,6 @@ def test_additional_requests_ignored_request() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
-
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                try:
-                    await self.http.request(
-                        server.root_url,
-                        body=b"ignore",
-                    )
-                except HttpError as e:
-                    return {"exc": e.__class__}
 
         class TestDownloaderMiddleware:
             def process_response(
@@ -302,7 +356,9 @@ def test_additional_requests_ignored_request() -> None:
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(self, response, page: ItemPage):
+            async def parse(
+                self, response, page: TestAdditionalRequestsIgnoredRequestPage
+            ):
                 item = await page.to_item()
                 items.append(item)
 
@@ -388,21 +444,6 @@ def test_additional_requests_dont_filter_duplicate() -> None:
 
     with MockServer(EchoResource) as server:
 
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                response1 = await self.http.request(
-                    server.root_url,
-                    body=b"a",
-                )
-                response2 = await self.http.request(
-                    server.root_url,
-                    body=b"a",
-                )
-                return {response1.body.decode(): response2.body.decode()}
-
         class TestSpider(Spider):
             name = "test_spider"
 
@@ -414,7 +455,9 @@ def test_additional_requests_dont_filter_duplicate() -> None:
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(self, response, page: ItemPage):
+            async def parse(
+                self, response, page: TestAdditionalRequestsDontFilterDuplicatePage
+            ):
                 item = await page.to_item()
                 items.append(item)
 
@@ -432,20 +475,6 @@ def test_additional_requests_dont_filter_offsite() -> None:
 
     with MockServer(EchoResource) as server:
 
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                response1 = await self.http.request(
-                    server.root_url,
-                    body=b"a",
-                )
-                # Not filtered out by the offsite middleware because it is an
-                # additional request.
-                response2 = await self.http.request("data:,b")
-                return {response1.body.decode(): response2.body.decode()}
-
         class TestSpider(Spider):
             name = "test_spider"
             allowed_domains = [urlparse(server.root_url).hostname]
@@ -459,7 +488,9 @@ def test_additional_requests_dont_filter_offsite() -> None:
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(self, response, page: ItemPage):
+            async def parse(
+                self, response, page: TestAdditionalRequestsDontFilterOffsitePage
+            ):
                 item = await page.to_item()
                 items.append(item)
 
@@ -502,21 +533,6 @@ def test_additional_requests_no_cb_deps() -> None:
 
     with MockServer(EchoResource) as server:
 
-        @attr.define
-        class ItemPage(WebPage):
-            browser_response: BrowserResponse
-            http: HttpClient
-
-            async def to_item(self):
-                additional_response = await self.http.request(
-                    server.root_url,
-                    body=b"a",
-                )
-                return {
-                    "main": str(self.browser_response.html),
-                    "additional": additional_response.body.decode(),
-                }
-
         class TestSpider(Spider):
             name = "test_spider"
 
@@ -533,7 +549,9 @@ def test_additional_requests_no_cb_deps() -> None:
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(self, response: DummyResponse, page: ItemPage):  # type: ignore[override]
+            async def parse(
+                self, response: DummyResponse, page: TestAdditionalRequestsNoCbDepsPage
+            ):  # type: ignore[override]
                 item = await page.to_item()
                 items.append(item)
 
@@ -548,6 +566,11 @@ def test_additional_requests_no_cb_deps() -> None:
 class BasicPage(WebPage):
     def to_item(self):
         return {"key": "value"}
+
+
+@attr.define
+class TestAnotherPage(WebPage):
+    pass
 
 
 class BaseSpider(Spider):
@@ -770,10 +793,6 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
 
     with MockServer(EchoResource) as server:
 
-        @attr.define
-        class AnotherPage(WebPage):
-            pass
-
         class TestSpider(BaseSpider):
             def start_requests(self):
                 page = BasicPage(web_poet.HttpResponse("https://example.com", b""))
@@ -787,7 +806,7 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
                 self,
                 response: DummyResponse,
                 page: BasicPage,
-                page2: AnotherPage,
+                page2: TestAnotherPage,
             ):
                 pass
 
