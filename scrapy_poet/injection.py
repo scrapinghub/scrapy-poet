@@ -16,9 +16,7 @@ from scrapy.http import Response
 from scrapy.settings import Settings
 from scrapy.statscollectors import MemoryStatsCollector, StatsCollector
 from scrapy.utils.conf import build_component_list
-from scrapy.utils.defer import deferred_from_coro
 from scrapy.utils.misc import load_object
-from twisted.internet.defer import inlineCallbacks
 from web_poet import RulesRegistry
 from web_poet.annotated import AnnotatedInstance
 from web_poet.page_inputs.http import request_fingerprint
@@ -33,7 +31,7 @@ from scrapy_poet.injection_errors import (
     UndeclaredProvidedTypeError,
 )
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from scrapy_poet.utils import is_min_scrapy_version, maybeDeferred_coro
+from scrapy_poet.utils import is_min_scrapy_version
 
 from .utils import create_registry_instance, get_scrapy_data_path
 
@@ -243,8 +241,7 @@ class Injector:
         exec(txt, globals(), ns)  # noqa: S102
         return ns["__create_fn__"](*dynamic_types)
 
-    @inlineCallbacks
-    def build_instances(
+    async def build_instances(
         self,
         request: Request,
         response: Response,
@@ -252,7 +249,7 @@ class Injector:
     ):
         """Build the instances dict from a plan including external dependencies."""
         # First we build the external dependencies using the providers
-        instances = yield from self.build_instances_from_providers(
+        instances = await self.build_instances_from_providers(
             request,
             response,
             plan,
@@ -265,9 +262,10 @@ class Injector:
                 result_cls: type = cast("type", cls)
                 if isinstance(cls, andi.CustomBuilder):
                     result_cls = cls.result_class_or_fn
-                    instances[result_cls] = yield deferred_from_coro(
-                        cls.factory(**kwargs_spec.kwargs(instances))
-                    )
+                    result = cls.factory(**kwargs_spec.kwargs(instances))
+                    if inspect.isawaitable(result):
+                        result = await result
+                    instances[result_cls] = result
                 else:
                     instances[result_cls] = cls(**kwargs_spec.kwargs(instances))
                 cls_fqn = get_fq_class_name(result_cls)
@@ -275,8 +273,7 @@ class Injector:
 
         return instances
 
-    @inlineCallbacks
-    def build_instances_from_providers(
+    async def build_instances_from_providers(
         self,
         request: Request,
         response: Response,
@@ -336,9 +333,9 @@ class Injector:
                 ).final_kwargs(scrapy_provided_dependencies)
                 try:
                     # Invoke the provider to get the data
-                    objs = yield maybeDeferred_coro(
-                        provider, set(provided_classes), **kwargs
-                    )
+                    objs = provider(set(provided_classes), **kwargs)
+                    if inspect.isawaitable(objs):
+                        objs = await objs
 
                 except Exception as e:
                     if self.cache and self.caching_errors:
@@ -376,15 +373,14 @@ class Injector:
 
         return instances
 
-    @inlineCallbacks
-    def build_callback_dependencies(self, request: Request, response: Response):
+    async def build_callback_dependencies(self, request: Request, response: Response):
         """
         Scan the configured callback for this request looking for the
         dependencies and build the corresponding instances. Return a kwargs
         dictionary with the built instances.
         """
         plan = self.build_plan(request)
-        provider_instances = yield from self.build_instances(request, response, plan)
+        provider_instances = await self.build_instances(request, response, plan)
         return plan.final_kwargs(provider_instances)
 
 

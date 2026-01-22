@@ -39,24 +39,25 @@ class PageObjectInputProvider:
     instances of some types to Scrapy callbacks. The types a POIP provides must
     be declared in the class attribute ``provided_classes``.
 
-    POIPs are initialized when the spider starts by invoking the ``__init__`` method,
-    which receives the ``scrapy_poet.injection.Injector`` instance as argument.
+    POIPs are initialized when the spider starts by invoking the ``__init__``
+    method, which receives the ``scrapy_poet.injection.Injector`` instance as
+    argument.
 
     The ``__call__`` method must be overridden, and it is inside this method
-    where the actual instances must be build. The default ``__call__`` signature
-    is as follows:
+    where the actual instances must be build. The default ``__call__``
+    signature is as follows:
 
     .. code-block:: python
 
         def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]:
 
     Therefore, it receives a list of types to be provided and return a list
-    with the instances created (don't get confused by the
-    ``Callable`` annotation. Think on it as a synonym of ``Type``).
+    with the instances created (don't get confused by the ``Callable``
+    annotation. Think on it as a synonym of ``Type``).
 
-    Additional dependencies can be declared in the ``__call__`` signature
-    that will be automatically injected. Currently, scrapy-poet is able
-    to inject instances of the following classes:
+    Additional dependencies can be declared in the ``__call__`` signature that
+    will be automatically injected. Currently, scrapy-poet is able to inject
+    instances of the following classes:
 
     - :class:`~scrapy.http.Request`
     - :class:`~scrapy.http.Response`
@@ -64,17 +65,13 @@ class PageObjectInputProvider:
     - :class:`~scrapy.settings.Settings`
     - :class:`~scrapy.statscollectors.StatsCollector`
 
-    Finally, ``__call__`` function can execute asynchronous code. Just
-    either prepend the declaration with ``async`` to use futures or annotate it with
-    ``@inlineCallbacks`` for deferred execution. Additionally, you
-    might want to configure Scrapy ``TWISTED_REACTOR`` to support ``asyncio``
-    libraries.
+    Finally, ``__call__`` function can execute asynchronous code. Just prepend
+    the declaration with ``async``.
 
     The available POIPs should be declared in the spider setting using the key
     ``SCRAPY_POET_PROVIDERS``. It must be a dictionary that follows same
-    structure than the
-    :ref:`Scrapy Middlewares <scrapy:topics-downloader-middleware-ref>`
-    configuration dictionaries.
+    structure than the :ref:`Scrapy Middlewares
+    <scrapy:topics-downloader-middleware-ref>` configuration dictionaries.
 
     A simple example of a provider:
 
@@ -88,11 +85,10 @@ class PageObjectInputProvider:
             def __call__(self, to_provide, response: Response):
                 return [BodyHtml(response.css("html body").get())]
 
-    The **provided_classes** class attribute is the ``set`` of classes
-    that this provider provides.
-    Alternatively, it can be a function with type ``Callable[[Callable], bool]`` that
-    returns ``True`` if and only if the given type, which must be callable,
-    is provided by this provider.
+    The **provided_classes** class attribute is the ``set`` of classes that
+    this provider provides. Alternatively, it can be a function with type
+    ``Callable[[Callable], bool]`` that returns ``True`` if and only if the
+    given type, which must be callable, is provided by this provider.
     """
 
     provided_classes: Union[set[Callable], Callable[[Callable], bool]]

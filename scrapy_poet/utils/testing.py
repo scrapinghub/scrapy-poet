@@ -9,9 +9,9 @@ from scrapy import Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider
 from scrapy.settings import Settings
+from scrapy.utils.defer import maybe_deferred_to_future
 from scrapy.utils.python import to_bytes
 from scrapy.utils.test import get_crawler as _get_crawler
-from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
@@ -121,8 +121,9 @@ class ProductHtml(HtmlResource):
     """
 
 
-@inlineCallbacks
-def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None, port=None):
+async def crawl_items(
+    spider_cls, resource_cls, settings, spider_kwargs=None, port=None
+):
     """Use spider_cls to crawl resource_cls. URL of the resource is passed
     to the spider as ``url`` argument.
     Return ``(items, resource_url, crawler)`` tuple.
@@ -131,18 +132,17 @@ def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None, port=Non
     crawler = make_crawler(spider_cls, settings)
     with MockServer(resource_cls, port=port) as s:
         root_url = s.root_url
-        yield crawler.crawl(url=root_url, **spider_kwargs)
+        await maybe_deferred_to_future(crawler.crawl(url=root_url, **spider_kwargs))
     return crawler.spider.collected_items, s.root_url, crawler
 
 
-@inlineCallbacks
-def crawl_single_item(
+async def crawl_single_item(
     spider_cls, resource_cls, settings, spider_kwargs=None, port=None
 ):
     """Run a spider where a single item is expected. Use in combination with
     ``capture_exceptions`` and ``CollectorPipeline``
     """
-    items, url, crawler = yield crawl_items(
+    items, url, crawler = await crawl_items(
         spider_cls, resource_cls, settings, spider_kwargs=spider_kwargs, port=port
     )
     try:

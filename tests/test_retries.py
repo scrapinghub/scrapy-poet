@@ -3,7 +3,6 @@ from typing import Any
 from urllib.parse import urlparse
 
 import attrs
-from pytest_twisted import inlineCallbacks
 from scrapy import Request, Spider
 from web_poet import RulesRegistry
 from web_poet.exceptions import Retry
@@ -22,8 +21,7 @@ def _assert_all_unique_instances(instances: list[Any]):
     assert len({id(instance) for instance in instances}) == len(instances)
 
 
-@inlineCallbacks
-def test_retry_once():
+async def test_retry_once():
     retries = deque([True, False])
     items, page_instances, page_response_instances = [], [], []
 
@@ -49,7 +47,7 @@ def test_retry_once():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 2
@@ -60,8 +58,7 @@ def test_retry_once():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_once_item():
+async def test_retry_once_item():
     """Retries should also work when asking for an item instead of a page
     object."""
     retries = deque([True, False])
@@ -98,7 +95,7 @@ def test_retry_once_item():
 
         settings = {"SCRAPY_POET_RULES": registry.get_rules()}
         crawler = make_crawler(TestSpider, settings=settings)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [TestItem(foo="bar")]
     assert crawler.stats.get_value("downloader/request_count") == 2
@@ -109,8 +106,7 @@ def test_retry_once_item():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_reason():
+async def test_retry_reason():
     retries = deque([True, False])
     items, page_instances, page_response_instances = [], [], []
 
@@ -136,7 +132,7 @@ def test_retry_reason():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 2
@@ -147,8 +143,7 @@ def test_retry_reason():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_max():
+async def test_retry_max():
     # The default value of the RETRY_TIMES Scrapy setting is 2.
     retries = deque([True, True, False])
     items, page_instances, page_response_instances = [], [], []
@@ -175,7 +170,7 @@ def test_retry_max():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 3
@@ -186,8 +181,7 @@ def test_retry_max():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_exceeded():
+async def test_retry_exceeded():
     items, page_instances, page_response_instances = [], [], []
 
     with MockServer(EchoResource) as server:
@@ -210,7 +204,7 @@ def test_retry_exceeded():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == []
     assert crawler.stats.get_value("downloader/request_count") == 3
@@ -221,8 +215,7 @@ def test_retry_exceeded():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_max_configuration():
+async def test_retry_max_configuration():
     retries = deque([True, True, True, False])
     items, page_instances, page_response_instances = [], [], []
 
@@ -252,7 +245,7 @@ def test_retry_max_configuration():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 4
@@ -263,8 +256,7 @@ def test_retry_max_configuration():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_cb_kwargs():
+async def test_retry_cb_kwargs():
     retries = deque([True, True, False])
     items, page_instances, page_response_instances = [], [], []
 
@@ -298,7 +290,7 @@ def test_retry_cb_kwargs():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 3
@@ -311,8 +303,7 @@ def test_retry_cb_kwargs():
     assert page_response_instances[0] is not page_from_cb_kwargs.response
 
 
-@inlineCallbacks
-def test_non_retry_exception():
+async def test_non_retry_exception():
     items = []
 
     with MockServer(EchoResource) as server:
@@ -333,7 +324,7 @@ def test_non_retry_exception():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == []
     assert crawler.stats.get_value("downloader/request_count") == 1

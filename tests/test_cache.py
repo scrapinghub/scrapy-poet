@@ -1,6 +1,5 @@
 from tempfile import TemporaryDirectory
 
-from pytest_twisted import inlineCallbacks
 from scrapy import Request, Spider
 from web_poet import WebPage, field
 
@@ -8,8 +7,7 @@ from scrapy_poet.utils.mockserver import MockServer
 from scrapy_poet.utils.testing import EchoResource, _get_test_settings, make_crawler
 
 
-@inlineCallbacks
-def test_cache_no_errors(caplog) -> None:
+async def test_cache_no_errors(caplog) -> None:
     with TemporaryDirectory() as cache_dir, MockServer(EchoResource) as server:
 
         class Page(WebPage):
@@ -36,6 +34,6 @@ def test_cache_no_errors(caplog) -> None:
                 await page.to_item()
 
         crawler = make_crawler(CacheSpider, {})
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert all(record.levelname != "ERROR" for record in caplog.records)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from collections.abc import Sequence  # noqa: TC003
 from functools import partial
+from importlib.metadata import version
 from typing import TYPE_CHECKING, Any, Callable, Set
 from unittest import mock
 from urllib.parse import urlparse
@@ -12,7 +13,8 @@ import pytest
 import scrapy
 import twisted
 import web_poet
-from pytest_twisted import ensureDeferred, inlineCallbacks
+from packaging.version import parse as parse_version
+from pytest_twisted import ensureDeferred
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler  # noqa: TC002
 from scrapy.exceptions import IgnoreRequest
@@ -39,106 +41,6 @@ from scrapy_poet.utils.testing import (
 
 if TYPE_CHECKING:
     from scrapy.http import Response
-
-
-@pytest.fixture
-def scrapy_downloader() -> Callable:
-    mock_downloader = mock.AsyncMock()
-    return create_scrapy_downloader(mock_downloader)
-
-
-@ensureDeferred
-async def test_incompatible_scrapy_request(scrapy_downloader) -> None:
-    """The Request must be web_poet.HttpRequest and not anything else."""
-
-    req = scrapy.Request("https://example.com")
-
-    with pytest.raises(TypeError):
-        await scrapy_downloader(req)
-
-
-@pytest.fixture
-def fake_http_response() -> web_poet.HttpResponse:
-    return web_poet.HttpResponse(
-        "https://example.com",
-        b"some content",
-        status=200,
-        headers={"Content-Type": "text/html; charset=utf-8"},
-    )
-
-
-@ensureDeferred
-async def test_scrapy_poet_downloader(fake_http_response) -> None:
-    req = web_poet.HttpRequest("https://example.com")
-
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.return_value = fake_http_response
-
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
-
-        response = await scrapy_downloader(req)
-
-        mock_downloader.assert_called_once()
-        assert isinstance(response, web_poet.HttpResponse)
-
-        assert str(response.url) == "https://example.com"
-        assert response.text == "some content"
-        assert response.status == 200
-        assert response.headers.get("Content-Type") == "text/html; charset=utf-8"
-        assert len(response.headers) == 1
-
-
-@ensureDeferred
-async def test_scrapy_poet_downloader_ignored_request() -> None:
-    """It should handle IgnoreRequest from Scrapy according to the web poet
-    standard on additional request error handling."""
-    req = web_poet.HttpRequest("https://example.com")
-
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.side_effect = scrapy.exceptions.IgnoreRequest
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
-
-        with pytest.raises(web_poet.exceptions.HttpError):
-            await scrapy_downloader(req)
-
-
-@ensureDeferred
-async def test_scrapy_poet_downloader_twisted_error() -> None:
-    req = web_poet.HttpRequest("https://example.com")
-
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.side_effect = twisted.internet.error.TimeoutError
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
-
-        with pytest.raises(web_poet.exceptions.HttpRequestError):
-            await scrapy_downloader(req)
-
-
-@ensureDeferred
-async def test_scrapy_poet_downloader_head_redirect(fake_http_response) -> None:
-    req = web_poet.HttpRequest("https://example.com", method="HEAD")
-
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.return_value = fake_http_response
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
-
-        await scrapy_downloader(req)
-
-        args, _ = mock_downloader.call_args
-        scrapy_request = args[0]
-        assert scrapy_request.meta.get("dont_redirect") is True
 
 
 @attr.define
@@ -242,8 +144,121 @@ class TestAdditionalRequestsNoCbDepsPage(WebPage):
         }
 
 
-@inlineCallbacks
-def test_additional_requests_success() -> None:
+@attr.define
+class TestAdditionalRequestsUnhandledDownloaderMiddlewareExceptionPage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        try:
+            await self.http.request(
+                self.response.url,
+                body=b"raise",
+            )
+        except HttpError as e:
+            return {"exc": e.__class__}
+
+
+@pytest.fixture
+def scrapy_downloader() -> Callable:
+    mock_downloader = mock.AsyncMock()
+    return create_scrapy_downloader(mock_downloader)
+
+
+@ensureDeferred
+async def test_incompatible_scrapy_request(scrapy_downloader) -> None:
+    """The Request must be web_poet.HttpRequest and not anything else."""
+
+    req = scrapy.Request("https://example.com")
+
+    with pytest.raises(TypeError):
+        await scrapy_downloader(req)
+
+
+@pytest.fixture
+def fake_http_response() -> web_poet.HttpResponse:
+    return web_poet.HttpResponse(
+        "https://example.com",
+        b"some content",
+        status=200,
+        headers={"Content-Type": "text/html; charset=utf-8"},
+    )
+
+
+@ensureDeferred
+async def test_scrapy_poet_downloader(fake_http_response) -> None:
+    req = web_poet.HttpRequest("https://example.com")
+
+    with mock.patch(
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
+    ) as mock_dtf:
+        mock_dtf.return_value = fake_http_response
+
+        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
+        scrapy_downloader = create_scrapy_downloader(mock_downloader)
+
+        response = await scrapy_downloader(req)
+
+        mock_downloader.assert_called_once()
+        assert isinstance(response, web_poet.HttpResponse)
+
+        assert str(response.url) == "https://example.com"
+        assert response.text == "some content"
+        assert response.status == 200
+        assert response.headers.get("Content-Type") == "text/html; charset=utf-8"
+        assert len(response.headers) == 1
+
+
+@ensureDeferred
+async def test_scrapy_poet_downloader_ignored_request() -> None:
+    """It should handle IgnoreRequest from Scrapy according to the web poet
+    standard on additional request error handling."""
+    req = web_poet.HttpRequest("https://example.com")
+
+    with mock.patch(
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
+    ) as mock_dtf:
+        mock_dtf.side_effect = scrapy.exceptions.IgnoreRequest
+        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
+        scrapy_downloader = create_scrapy_downloader(mock_downloader)
+
+        with pytest.raises(web_poet.exceptions.HttpError):
+            await scrapy_downloader(req)
+
+
+@ensureDeferred
+async def test_scrapy_poet_downloader_twisted_error() -> None:
+    req = web_poet.HttpRequest("https://example.com")
+
+    with mock.patch(
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
+    ) as mock_dtf:
+        mock_dtf.side_effect = twisted.internet.error.TimeoutError
+        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
+        scrapy_downloader = create_scrapy_downloader(mock_downloader)
+
+        with pytest.raises(web_poet.exceptions.HttpRequestError):
+            await scrapy_downloader(req)
+
+
+@ensureDeferred
+async def test_scrapy_poet_downloader_head_redirect(fake_http_response) -> None:
+    req = web_poet.HttpRequest("https://example.com", method="HEAD")
+
+    with mock.patch(
+        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
+    ) as mock_dtf:
+        mock_dtf.return_value = fake_http_response
+        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
+        scrapy_downloader = create_scrapy_downloader(mock_downloader)
+
+        await scrapy_downloader(req)
+
+        args, _ = mock_downloader.call_args
+        scrapy_request = args[0]
+        assert scrapy_request.meta.get("dont_redirect") is True
+
+
+async def test_additional_requests_success() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
@@ -263,13 +278,12 @@ def test_additional_requests_success() -> None:
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [{"foo": "bar"}]
 
 
-@inlineCallbacks
-def test_additional_requests_bad_response() -> None:
+async def test_additional_requests_bad_response() -> None:
     items = []
 
     with MockServer(StatusResource) as server:
@@ -291,13 +305,12 @@ def test_additional_requests_bad_response() -> None:
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [{"foo": "bar"}]
 
 
-@inlineCallbacks
-def test_additional_requests_connection_issue() -> None:
+async def test_additional_requests_connection_issue() -> None:
     items = []
 
     with mock.patch(
@@ -327,13 +340,12 @@ def test_additional_requests_connection_issue() -> None:
                     items.append(item)
 
             crawler = make_crawler(TestSpider)
-            yield crawler.crawl()
+            await crawler.crawl()
 
     assert items == [{"foo": "bar"}]
 
 
-@inlineCallbacks
-def test_additional_requests_ignored_request() -> None:
+async def test_additional_requests_ignored_request() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
@@ -365,40 +377,34 @@ def test_additional_requests_ignored_request() -> None:
         settings = _get_test_settings()
         settings["DOWNLOADER_MIDDLEWARES"][TestDownloaderMiddleware] = 1
         crawler = make_crawler(TestSpider, settings)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [{"exc": HttpError}]
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Currently, we do not make a distinction between exceptions raised "
-        "from the downloader or from a downloader middleware, except for "
-        "IgnoreRequest. In the future, we might want to inspect the stack to "
-        "determine the source of an exception and raise HttpError instead of "
-        "HttpRequestError when the exception originates in a downloader "
-        "middleware."
-    ),
-    strict=True,
-)
-@inlineCallbacks
-def test_additional_requests_unhandled_downloader_middleware_exception() -> None:
+if parse_version(version("Twisted")) >= parse_version("24.7.0"):
+    _twisted_24_7_0_plus_xfail = pytest.mark.xfail(
+        reason=(
+            "Currently, we do not make a distinction between exceptions "
+            "raised from the downloader or from a downloader middleware, "
+            "except for IgnoreRequest. In the future, we might want to "
+            "inspect the stack to determine the source of an exception and "
+            "raise HttpError instead of HttpRequestError when the exception "
+            "originates in a downloader middleware."
+        ),
+        strict=True,
+    )
+else:
+
+    def _twisted_24_7_0_plus_xfail(f):
+        return f
+
+
+@_twisted_24_7_0_plus_xfail
+async def test_additional_requests_unhandled_downloader_middleware_exception() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
-
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                try:
-                    await self.http.request(
-                        server.root_url,
-                        body=b"raise",
-                    )
-                except HttpError as e:
-                    return {"exc": e.__class__}
 
         class TestDownloaderMiddleware:
             def process_response(
@@ -418,20 +424,23 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(self, response, page: ItemPage):
+            async def parse(
+                self,
+                response,
+                page: TestAdditionalRequestsUnhandledDownloaderMiddlewareExceptionPage,
+            ):
                 item = await page.to_item()
                 items.append(item)
 
         settings = _get_test_settings()
         settings["DOWNLOADER_MIDDLEWARES"][TestDownloaderMiddleware] = 1
-        crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        crawler = make_crawler(TestSpider, settings=settings)
+        await crawler.crawl()
 
     assert items == [{"exc": HttpError}]
 
 
-@inlineCallbacks
-def test_additional_requests_dont_filter_duplicate() -> None:
+async def test_additional_requests_dont_filter_duplicate() -> None:
     """Verify that while duplicate regular requests are filtered out,
     additional requests are not (neither relative to the main requests not
     relative to each other).
@@ -462,13 +471,12 @@ def test_additional_requests_dont_filter_duplicate() -> None:
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [{"a": "a"}]
 
 
-@inlineCallbacks
-def test_additional_requests_dont_filter_offsite() -> None:
+async def test_additional_requests_dont_filter_offsite() -> None:
     pytest.importorskip("scrapy.downloadermiddlewares.offsite")
 
     items = []
@@ -495,13 +503,12 @@ def test_additional_requests_dont_filter_offsite() -> None:
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert items == [{"a": "b"}]
 
 
-@inlineCallbacks
-def test_additional_requests_no_cb_deps() -> None:
+async def test_additional_requests_no_cb_deps() -> None:
     # https://github.com/scrapy-plugins/scrapy-zyte-api/issues/135
     # This tests that the additional request doesn't go through dep resolving
     # like if it used self.parse as a callback.
@@ -556,7 +563,7 @@ def test_additional_requests_no_cb_deps() -> None:
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await crawler.crawl()
 
     assert provider_calls == 1
     assert items == [{"main": "", "additional": "a"}]
@@ -617,8 +624,7 @@ def _assert_warning_messages(
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_dummy_response() -> None:
+async def test_parse_callback_none_dummy_response() -> None:
     """If request.callback == None and the parse() method only has a single
     parameter of ``response: DummyResponse``, then a warning should be issued.
 
@@ -639,7 +645,7 @@ def test_parse_callback_none_dummy_response() -> None:
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+            await crawler.crawl()
 
     _assert_warning_messages(record, index=[0])
     assert not isinstance(collected["response"], DummyResponse)
@@ -649,8 +655,7 @@ def test_parse_callback_none_dummy_response() -> None:
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_response() -> None:
+async def test_parse_callback_none_response() -> None:
     """Similar to ``test_parse_callback_none_dummy_response()`` but instead of
     ``response: DummyResponse``, it's ``response: scrapy.http.Response``.
 
@@ -670,7 +675,7 @@ def test_parse_callback_none_response() -> None:
         crawler = make_crawler(TestSpider)
 
         with warnings.catch_warnings(record=True) as w:
-            yield crawler.crawl()
+            await crawler.crawl()
 
     assert not w
 
@@ -679,8 +684,7 @@ def test_parse_callback_none_response() -> None:
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_no_annotated_deps() -> None:
+async def test_parse_callback_none_no_annotated_deps() -> None:
     """Similar to ``test_parse_callback_none_dummy_response()`` but there are
     no annotated dependencies.
 
@@ -700,7 +704,7 @@ def test_parse_callback_none_no_annotated_deps() -> None:
         crawler = make_crawler(TestSpider)
 
         with warnings.catch_warnings(record=True) as w:
-            yield crawler.crawl()
+            await crawler.crawl()
 
     assert not any("with callback=None" in str(warning.message) for warning in w)
     assert isinstance(collected["response"], scrapy.http.Response)
@@ -710,8 +714,7 @@ def test_parse_callback_none_no_annotated_deps() -> None:
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_with_deps(caplog) -> None:
+async def test_parse_callback_none_with_deps(caplog) -> None:
     """Same with the ``test_parse_callback_none_dummy_response`` test but it
     confirms that the other dependencies requested by the parse() method isn't
     injected.
@@ -730,7 +733,7 @@ def test_parse_callback_none_with_deps(caplog) -> None:
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+            await crawler.crawl()
 
     _assert_warning_messages(record)
 
@@ -745,8 +748,7 @@ def test_parse_callback_none_with_deps(caplog) -> None:
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
+async def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
     """Same with the ``test_parse_callback_none_with_deps`` but the dep is passed
     via the ``cb_kwargs`` Request parameter.
 
@@ -772,7 +774,7 @@ def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+            await crawler.crawl()
 
     _assert_warning_messages(record, index=[0])
     assert not caplog.text  # no TypeError caused by missing ``page`` arg.
@@ -783,8 +785,7 @@ def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
+async def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
     """Same with the ``test_parse_callback_none_with_deps_cb_kwargs`` but not
     all of the callback dependencies are available in the ``cb_kwargs`` Request
     parameter.
@@ -812,7 +813,7 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+            await crawler.crawl()
 
     _assert_warning_messages(record)
 
@@ -827,8 +828,7 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
     not is_min_scrapy_version("2.8.0"),
     reason="NO_CALLBACK not available in Scrapy < 2.8",
 )
-@inlineCallbacks
-def test_parse_callback_NO_CALLBACK(caplog) -> None:
+async def test_parse_callback_NO_CALLBACK(caplog) -> None:
     """See: https://github.com/scrapinghub/scrapy-poet/issues/118"""
 
     collected = {}
@@ -843,10 +843,10 @@ def test_parse_callback_NO_CALLBACK(caplog) -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+        with warnings.catch_warnings(record=True) as w:
+            await crawler.crawl()
 
-    _assert_warning_messages(record, not_existing=True)
+    assert not w
     assert not caplog.text
     assert isinstance(collected["response"], DummyResponse)
 
@@ -855,8 +855,7 @@ def test_parse_callback_NO_CALLBACK(caplog) -> None:
     not is_min_scrapy_version("2.8.0"),
     reason="NO_CALLBACK not available in Scrapy < 2.8",
 )
-@inlineCallbacks
-def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
+async def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
     """See: https://github.com/scrapinghub/scrapy-poet/issues/118
 
     Similar to ``test_parse_callback_NO_CALLBACK()`` but with a page object
@@ -875,9 +874,9 @@ def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+        with warnings.catch_warnings(record=True) as w:
+            await crawler.crawl()
 
-    _assert_warning_messages(record, not_existing=True)
+    assert not w
     assert not caplog.text
     assert not isinstance(collected["response"], DummyResponse)

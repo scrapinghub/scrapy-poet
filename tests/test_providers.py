@@ -3,7 +3,7 @@ from unittest import mock
 
 import attr
 import scrapy
-from pytest_twisted import ensureDeferred, inlineCallbacks
+from pytest_twisted import ensureDeferred
 from scrapy import Request, Spider
 from scrapy.settings import Settings
 from scrapy.utils.test import get_crawler
@@ -156,12 +156,11 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
     }
 
 
-@inlineCallbacks
-def test_name_first_spider(settings, tmp_path):
+async def test_name_first_spider(settings, tmp_path):
     port = get_ephemeral_port()
     cache = tmp_path / "cache"
     settings["SCRAPY_POET_CACHE"] = str(cache)
-    item, _, _ = yield crawl_single_item(
+    item, _, _ = await crawl_single_item(
         NameFirstMultiProviderSpider, ProductHtml, settings, port=port
     )
     assert cache.exists()
@@ -174,7 +173,7 @@ def test_name_first_spider(settings, tmp_path):
 
     # Let's see that the cache is working. We use a different and wrong resource,
     # but it should be ignored by the cached version used
-    item, _, _ = yield crawl_single_item(
+    item, _, _ = await crawl_single_item(
         NameFirstMultiProviderSpider, NonProductHtml, settings, port=port
     )
     assert item == {
@@ -185,9 +184,8 @@ def test_name_first_spider(settings, tmp_path):
     }
 
 
-@inlineCallbacks
-def test_price_first_spider(settings):
-    item, _, _ = yield crawl_single_item(
+async def test_price_first_spider(settings):
+    item, _, _ = await crawl_single_item(
         PriceFirstMultiProviderSpider, ProductHtml, settings
     )
     assert item == {

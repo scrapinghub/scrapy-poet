@@ -9,7 +9,6 @@ import andi
 import attr
 import pytest
 import scrapy
-from pytest_twisted import inlineCallbacks
 from scrapy import Request
 from scrapy.http import Response
 from scrapy.utils.log import configure_logging
@@ -79,9 +78,8 @@ class OverridenBreadcrumbsExtraction(WebPage):
         return {"overriden_breadcrumb": "http://example.com"}
 
 
-@inlineCallbacks
-def test_basic_case(settings):
-    item, url, _ = yield crawl_single_item(
+async def test_basic_case(settings):
+    item, url, _ = await crawl_single_item(
         spider_for(ProductPage), ProductHtml, settings
     )
     assert item == {
@@ -93,8 +91,7 @@ def test_basic_case(settings):
     }
 
 
-@inlineCallbacks
-def test_overrides(settings):
+async def test_overrides(settings):
     host = socket.gethostbyname(socket.gethostname())
     domain = get_domain(host)
     port = get_ephemeral_port()
@@ -105,7 +102,7 @@ def test_overrides(settings):
             instead_of=BreadcrumbsExtraction,
         )
     ]
-    item, url, _ = yield crawl_single_item(
+    item, url, _ = await crawl_single_item(
         spider_for(ProductPage), ProductHtml, settings, port=port
     )
     assert item == {
@@ -135,9 +132,8 @@ class OptionalAndUnionPageNew(WebPage):
     is_injectable(type(None)),
     reason="This version of web-poet considers type(None) injectable",
 )
-@inlineCallbacks
-def test_optional_and_unions_new(settings):
-    item, _, _ = yield crawl_single_item(
+async def test_optional_and_unions_new(settings):
+    item, _, _ = await crawl_single_item(
         spider_for(OptionalAndUnionPageNew), ProductHtml, settings
     )
     assert item["breadcrumbs"].response is item["response"]
@@ -168,9 +164,8 @@ class OptionalAndUnionPageOld(WebPage):
     not is_injectable(type(None)),
     reason="This version of web-poet does not consider type(None) injectable",
 )
-@inlineCallbacks
-def test_optional_and_unions_old(settings):
-    item, _, _ = yield crawl_single_item(
+async def test_optional_and_unions_old(settings):
+    item, _, _ = await crawl_single_item(
         spider_for(OptionalAndUnionPageOld), ProductHtml, settings
     )
     assert item["breadcrumbs"].response is item["response"]
@@ -196,8 +191,7 @@ class NonInjectablePage(WebPage):
     not hasattr(andi.andi, "_inspect"),
     reason="Before merging https://github.com/scrapinghub/andi/pull/33",
 )
-@inlineCallbacks
-def test_non_injectable(settings):
+async def test_non_injectable(settings):
     item, _, _ = yield crawl_single_item(
         spider_for(NonInjectablePage), ProductHtml, settings
     )
@@ -219,9 +213,8 @@ class ProvidedWithFutures(ProvidedWithDeferred):
 class WithDeferredProvider(PageObjectInputProvider):
     provided_classes = {ProvidedWithDeferred}
 
-    @inlineCallbacks
-    def __call__(self, to_provide, response: scrapy.http.Response):
-        five = yield deferToThread(lambda: 5)
+    async def __call__(self, to_provide, response: scrapy.http.Response):
+        five = await deferToThread(lambda: 5)
         return [ProvidedWithDeferred(f"Provided {five}!", None)]
 
 
@@ -270,19 +263,17 @@ class ProvidedWithFuturesPage(ProvidedWithDeferredPage):
 
 
 @pytest.mark.parametrize("type_", [ProvidedWithDeferredPage, ProvidedWithFuturesPage])
-@inlineCallbacks
-def test_providers(settings, type_):
-    item, _, _ = yield crawl_single_item(spider_for(type_), ProductHtml, settings)
+async def test_providers(settings, type_):
+    item, _, _ = await crawl_single_item(spider_for(type_), ProductHtml, settings)
     assert item["provided"].msg == "Provided 5!"
     assert item["provided"].response is None
 
 
-@inlineCallbacks
-def test_providers_returning_wrong_classes(settings, caplog):
+async def test_providers_returning_wrong_classes(settings, caplog):
     """Injection Middleware should raise a runtime error whenever a provider
     returns instances of classes that they're not supposed to provide.
     """
-    yield crawl_single_item(spider_for(ExtraClassData), ProductHtml, settings)
+    await crawl_single_item(spider_for(ExtraClassData), ProductHtml, settings)
     assert "UndeclaredProvidedTypeError:" in caplog.text
 
 
@@ -321,9 +312,8 @@ class MultiArgsCallbackSpiderNew(scrapy.Spider):
     is_injectable(type(None)),
     reason="This version of web-poet considers type(None) injectable",
 )
-@inlineCallbacks
-def test_multi_args_callbacks_new(settings):
-    item, _, _ = yield crawl_single_item(
+async def test_multi_args_callbacks_new(settings):
+    item, _, _ = await crawl_single_item(
         MultiArgsCallbackSpiderNew, ProductHtml, settings
     )
     assert type(item["product"]) is ProductPage
@@ -368,9 +358,8 @@ class MultiArgsCallbackSpiderOld(scrapy.Spider):
     not is_injectable(type(None)),
     reason="This version of web-poet does not consider type(None) injectable",
 )
-@inlineCallbacks
-def test_multi_args_callbacks_old(settings):
-    item, _, _ = yield crawl_single_item(
+async def test_multi_args_callbacks_old(settings):
+    item, _, _ = await crawl_single_item(
         MultiArgsCallbackSpiderOld, ProductHtml, settings
     )
     assert type(item["product"]) is ProductPage
@@ -385,10 +374,9 @@ class UnressolvableProductPage(ProductPage):
     this_is_unresolvable: str
 
 
-@inlineCallbacks
-def test_injection_failure(settings):
+async def test_injection_failure(settings):
     configure_logging(settings)
-    items, *_ = yield crawl_items(
+    items, *_ = await crawl_items(
         spider_for(UnressolvableProductPage), ProductHtml, settings
     )
     assert items == []
@@ -426,16 +414,15 @@ class SkipDownloadSpider(scrapy.Spider):
         }
 
 
-@inlineCallbacks
-def test_skip_downloads(settings):
-    item, _, crawler = yield crawl_single_item(MySpider, ProductHtml, settings)
+async def test_skip_downloads(settings):
+    item, _, crawler = await crawl_single_item(MySpider, ProductHtml, settings)
     assert isinstance(item["response"], Response) is True
     assert isinstance(item["response"], DummyResponse) is False
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 1
     assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 0
     assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
 
-    item, _, crawler = yield crawl_single_item(
+    item, _, crawler = await crawl_single_item(
         SkipDownloadSpider, ProductHtml, settings
     )
     assert isinstance(item["response"], Response) is True
@@ -462,9 +449,8 @@ class RequestUrlSpider(scrapy.Spider):
         }
 
 
-@inlineCallbacks
-def test_skip_download_request_url(settings):
-    item, url, crawler = yield crawl_single_item(
+async def test_skip_download_request_url(settings):
+    item, url, crawler = await crawl_single_item(
         RequestUrlSpider, ProductHtml, settings
     )
     assert isinstance(item["response"], Response) is True
@@ -493,9 +479,8 @@ class ResponseUrlSpider(scrapy.Spider):
         }
 
 
-@inlineCallbacks
-def test_skip_download_response_url(settings):
-    item, url, crawler = yield crawl_single_item(
+async def test_skip_download_response_url(settings):
+    item, url, crawler = await crawl_single_item(
         ResponseUrlSpider, ProductHtml, settings
     )
     assert isinstance(item["response"], Response) is True
@@ -531,9 +516,8 @@ class ResponseUrlPageSpider(scrapy.Spider):
         return page.to_item()
 
 
-@inlineCallbacks
-def test_skip_download_response_url_page(settings):
-    item, url, crawler = yield crawl_single_item(
+async def test_skip_download_response_url_page(settings):
+    item, url, crawler = await crawl_single_item(
         ResponseUrlPageSpider, ProductHtml, settings
     )
     assert tuple(item.keys()) == ("response_url",)
@@ -566,9 +550,8 @@ class RequestUrlPageSpider(scrapy.Spider):
         return page.to_item()
 
 
-@inlineCallbacks
-def test_skip_download_request_url_page(settings):
-    item, url, crawler = yield crawl_single_item(
+async def test_skip_download_request_url_page(settings):
+    item, url, crawler = await crawl_single_item(
         RequestUrlPageSpider, ProductHtml, settings
     )
     assert tuple(item.keys()) == ("url",)

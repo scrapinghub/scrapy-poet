@@ -11,7 +11,6 @@ import warnings
 from typing import TYPE_CHECKING
 
 from scrapy.downloadermiddlewares.stats import DownloaderStats
-from twisted.internet.defer import Deferred, inlineCallbacks
 from web_poet import RulesRegistry
 from web_poet.exceptions import Retry
 
@@ -29,8 +28,6 @@ from .page_input_providers import (
 from .utils import create_registry_instance, is_min_scrapy_version
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
     from scrapy import Spider
     from scrapy.crawler import Crawler
     from scrapy.http import Request, Response
@@ -132,10 +129,9 @@ class InjectionMiddleware:
         # Skip if providers are needed.
         return bool(self.injector.discover_callback_providers(request))
 
-    @inlineCallbacks
-    def process_response(
+    async def process_response(
         self, request: Request, response: Response, spider: Spider | None = None
-    ) -> Generator[Deferred, object, Response | Request]:
+    ) -> Response | Request:
         """This method fills :attr:`scrapy.Request.cb_kwargs
         <scrapy.http.Request.cb_kwargs>` with instances for the required Page
         Objects found in the callback signature.
@@ -159,7 +155,7 @@ class InjectionMiddleware:
 
         # Find out the dependencies
         try:
-            final_kwargs = yield from self.injector.build_callback_dependencies(
+            final_kwargs = await self.injector.build_callback_dependencies(
                 request,
                 response,
             )

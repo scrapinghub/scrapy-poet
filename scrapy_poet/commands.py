@@ -15,7 +15,6 @@ from scrapy.exceptions import UsageError
 from scrapy.http import Response
 from scrapy.utils.misc import load_object
 from scrapy.utils.project import inside_project
-from twisted.internet.defer import inlineCallbacks
 from web_poet import ItemPage
 from web_poet.annotated import AnnotatedInstance
 from web_poet.exceptions import PageObjectAction
@@ -36,14 +35,13 @@ frozen_time = None
 
 
 class SavingInjector(Injector):
-    @inlineCallbacks
-    def build_instances_from_providers(
+    async def build_instances_from_providers(
         self,
         request: Request,
         response: Response,
         plan: andi.Plan,
     ):
-        instances = yield super().build_instances_from_providers(
+        instances = await super().build_instances_from_providers(
             request, response, plan
         )
         if request.meta.get("savefixture", False):

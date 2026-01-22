@@ -38,10 +38,6 @@ module = [
     "tests.test_web_poet_rules.*",
     "tests.test_scrapy_dependencies.*",
 ]
-# Ignore this type of error since mypy expects an Iterable return
-# when test cases are decorated with @inlineCallbacks. However, the
-# tests doesn't return anything at all.
-disable_error_code = "misc"
 
 [tool.pytest.ini_options]
 filterwarnings = [
