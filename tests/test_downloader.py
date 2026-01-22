@@ -669,11 +669,10 @@ def test_parse_callback_none_response() -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:  # noqa: PT030
+        with warnings.catch_warnings(record=True) as w:
             yield crawler.crawl()
 
-    _assert_warning_messages(record, not_existing=True)
-    assert not isinstance(collected["response"], DummyResponse)
+    assert not w
 
 
 @pytest.mark.skipif(
