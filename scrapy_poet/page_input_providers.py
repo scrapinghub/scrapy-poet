@@ -14,6 +14,7 @@ from typing import Any, Callable, ClassVar, Set, Union
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.http import Response
+from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import (
     HttpClient,
     HttpRequest,
@@ -27,7 +28,7 @@ from web_poet import (
 )
 from web_poet.page_inputs.stats import StatCollector, StatNum
 
-from scrapy_poet.downloader import create_scrapy_downloader
+from scrapy_poet.downloader import _create_scrapy_downloader
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
 
 
@@ -183,8 +184,16 @@ class HttpClientProvider(PageObjectInputProvider):
         <web_poet.page_inputs.client.HttpClient>` instance using Scrapy's
         downloader.
         """
-        assert crawler.engine
-        downloader = create_scrapy_downloader(crawler.engine.download)
+        if hasattr(crawler.engine, "download_async"):  # Scrapy 2.14+
+            assert crawler.engine
+            download_func = crawler.engine.download_async
+        else:
+
+            async def download_func(request: Request):
+                assert crawler.engine
+                return await maybe_deferred_to_future(crawler.engine.download(request))
+
+        downloader = _create_scrapy_downloader(download_func)
         save_responses = crawler.settings.getbool("_SCRAPY_POET_SAVEFIXTURE")
         return [
             HttpClient(request_downloader=downloader, save_responses=save_responses)

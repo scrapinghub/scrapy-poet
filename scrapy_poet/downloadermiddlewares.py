@@ -120,6 +120,7 @@ class InjectionMiddleware:
 
         # If the Request.cb_kwargs possess all of the cb dependencies, then no
         # warning message should be issued.
+        assert self.crawler.spider
         signature_iter = iter(inspect.signature(self.crawler.spider.parse).parameters)
         next(signature_iter)  # skip the first arg: response
         cb_param_names = set(signature_iter)
@@ -167,6 +168,7 @@ class InjectionMiddleware:
             )
 
             reason = str(exception) or "page_object_retry"
+            assert self.crawler.spider
             new_request_or_none = get_retry_request(
                 request,
                 spider=self.crawler.spider,

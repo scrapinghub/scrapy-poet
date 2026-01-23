@@ -99,7 +99,7 @@ class PageObjectCounterMixin:
 
     async def to_item(self) -> ItemT:
         type(self).to_item_call_count += 1
-        return await super().to_item()
+        return await super().to_item()  # type: ignore[misc]
 
 
 async def crawl_item_and_deps(

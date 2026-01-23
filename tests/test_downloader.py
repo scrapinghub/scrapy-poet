@@ -23,7 +23,7 @@ from web_poet.exceptions import HttpError, HttpRequestError, HttpResponseError
 from web_poet.pages import WebPage
 
 from scrapy_poet import DummyResponse, PageObjectInputProvider
-from scrapy_poet.downloader import create_scrapy_downloader
+from scrapy_poet.downloader import _create_scrapy_downloader
 from scrapy_poet.utils import (
     NO_CALLBACK,
     http_request_to_scrapy_request,
@@ -43,7 +43,7 @@ if TYPE_CHECKING:
 
 
 @attr.define
-class TestAdditionalRequestsSuccessPage(WebPage):
+class AdditionalRequestsSuccessPage(WebPage):
     http: HttpClient
 
     async def to_item(self):
@@ -55,7 +55,7 @@ class TestAdditionalRequestsSuccessPage(WebPage):
 
 
 @attr.define
-class TestAdditionalRequestsBadResponsePage(WebPage):
+class AdditionalRequestsBadResponsePage(WebPage):
     http: HttpClient
 
     async def to_item(self):
@@ -69,7 +69,7 @@ class TestAdditionalRequestsBadResponsePage(WebPage):
 
 
 @attr.define
-class TestAdditionalRequestsConnectionIssuePage(WebPage):
+class AdditionalRequestsConnectionIssuePage(WebPage):
     http: HttpClient
 
     async def to_item(self):
@@ -83,7 +83,7 @@ class TestAdditionalRequestsConnectionIssuePage(WebPage):
 
 
 @attr.define
-class TestAdditionalRequestsIgnoredRequestPage(WebPage):
+class AdditionalRequestsIgnoredRequestPage(WebPage):
     http: HttpClient
 
     async def to_item(self):
@@ -97,7 +97,7 @@ class TestAdditionalRequestsIgnoredRequestPage(WebPage):
 
 
 @attr.define
-class TestAdditionalRequestsDontFilterDuplicatePage(WebPage):
+class AdditionalRequestsDontFilterDuplicatePage(WebPage):
     http: HttpClient
 
     async def to_item(self):
@@ -113,7 +113,7 @@ class TestAdditionalRequestsDontFilterDuplicatePage(WebPage):
 
 
 @attr.define
-class TestAdditionalRequestsDontFilterOffsitePage(WebPage):
+class AdditionalRequestsDontFilterOffsitePage(WebPage):
     http: HttpClient
 
     async def to_item(self):
@@ -128,7 +128,7 @@ class TestAdditionalRequestsDontFilterOffsitePage(WebPage):
 
 
 @attr.define
-class TestAdditionalRequestsNoCbDepsPage(WebPage):
+class AdditionalRequestsNoCbDepsPage(WebPage):
     browser_response: BrowserResponse
     http: HttpClient
 
@@ -144,7 +144,7 @@ class TestAdditionalRequestsNoCbDepsPage(WebPage):
 
 
 @attr.define
-class TestAdditionalRequestsUnhandledDownloaderMiddlewareExceptionPage(WebPage):
+class AdditionalRequestsUnhandledDownloaderMiddlewareExceptionPage(WebPage):
     http: HttpClient
 
     async def to_item(self):
@@ -160,7 +160,7 @@ class TestAdditionalRequestsUnhandledDownloaderMiddlewareExceptionPage(WebPage):
 @pytest.fixture
 def scrapy_downloader() -> Callable:
     mock_downloader = mock.AsyncMock()
-    return create_scrapy_downloader(mock_downloader)
+    return _create_scrapy_downloader(mock_downloader)
 
 
 @deferred_f_from_coro_f
@@ -187,24 +187,16 @@ def fake_http_response() -> web_poet.HttpResponse:
 async def test_scrapy_poet_downloader(fake_http_response) -> None:
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.return_value = fake_http_response
+    mock_downloader = mock.AsyncMock(return_value=fake_http_response)
+    scrapy_downloader = _create_scrapy_downloader(mock_downloader)
+    response = await scrapy_downloader(req)
+    assert isinstance(response, web_poet.HttpResponse)
 
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
-
-        response = await scrapy_downloader(req)
-
-        mock_downloader.assert_called_once()
-        assert isinstance(response, web_poet.HttpResponse)
-
-        assert str(response.url) == "https://example.com"
-        assert response.text == "some content"
-        assert response.status == 200
-        assert response.headers.get("Content-Type") == "text/html; charset=utf-8"
-        assert len(response.headers) == 1
+    assert str(response.url) == "https://example.com"
+    assert response.text == "some content"
+    assert response.status == 200
+    assert response.headers.get("Content-Type") == "text/html; charset=utf-8"
+    assert len(response.headers) == 1
 
 
 @deferred_f_from_coro_f
@@ -213,48 +205,36 @@ async def test_scrapy_poet_downloader_ignored_request() -> None:
     standard on additional request error handling."""
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.side_effect = scrapy.exceptions.IgnoreRequest
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
+    mock_downloader = mock.AsyncMock(side_effect=scrapy.exceptions.IgnoreRequest)
+    scrapy_downloader = _create_scrapy_downloader(mock_downloader)
 
-        with pytest.raises(web_poet.exceptions.HttpError):
-            await scrapy_downloader(req)
+    with pytest.raises(web_poet.exceptions.HttpError):
+        await scrapy_downloader(req)
 
 
 @deferred_f_from_coro_f
 async def test_scrapy_poet_downloader_twisted_error() -> None:
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.side_effect = twisted.internet.error.TimeoutError
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
+    mock_downloader = mock.AsyncMock(side_effect=twisted.internet.error.TimeoutError)
+    scrapy_downloader = _create_scrapy_downloader(mock_downloader)
 
-        with pytest.raises(web_poet.exceptions.HttpRequestError):
-            await scrapy_downloader(req)
+    with pytest.raises(web_poet.exceptions.HttpRequestError):
+        await scrapy_downloader(req)
 
 
 @deferred_f_from_coro_f
 async def test_scrapy_poet_downloader_head_redirect(fake_http_response) -> None:
     req = web_poet.HttpRequest("https://example.com", method="HEAD")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.return_value = fake_http_response
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
+    mock_downloader = mock.AsyncMock(return_value=fake_http_response)
+    scrapy_downloader = _create_scrapy_downloader(mock_downloader)
 
-        await scrapy_downloader(req)
+    await scrapy_downloader(req)
 
-        args, _ = mock_downloader.call_args
-        scrapy_request = args[0]
-        assert scrapy_request.meta.get("dont_redirect") is True
+    args, _ = mock_downloader.call_args
+    scrapy_request = args[0]
+    assert scrapy_request.meta.get("dont_redirect") is True
 
 
 @deferred_f_from_coro_f
@@ -273,7 +253,7 @@ async def test_additional_requests_success() -> None:
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(self, response, page: TestAdditionalRequestsSuccessPage):
+            async def parse(self, response, page: AdditionalRequestsSuccessPage):
                 item = await page.to_item()
                 items.append(item)
 
@@ -299,9 +279,7 @@ async def test_additional_requests_bad_response() -> None:
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(
-                self, response, page: TestAdditionalRequestsBadResponsePage
-            ):
+            async def parse(self, response, page: AdditionalRequestsBadResponsePage):
                 item = await page.to_item()
                 items.append(item)
 
@@ -336,7 +314,7 @@ async def test_additional_requests_connection_issue() -> None:
                         yield item_or_request
 
                 async def parse(
-                    self, response, page: TestAdditionalRequestsConnectionIssuePage
+                    self, response, page: AdditionalRequestsConnectionIssuePage
                 ):
                     item = await page.to_item()
                     items.append(item)
@@ -371,9 +349,7 @@ async def test_additional_requests_ignored_request() -> None:
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(
-                self, response, page: TestAdditionalRequestsIgnoredRequestPage
-            ):
+            async def parse(self, response, page: AdditionalRequestsIgnoredRequestPage):
                 item = await page.to_item()
                 items.append(item)
 
@@ -399,7 +375,7 @@ if parse_version(version("Twisted")) >= parse_version("24.7.0"):
     )
 else:
 
-    def _twisted_24_7_0_plus_xfail(f):
+    def _twisted_24_7_0_plus_xfail(f):  # type: ignore[misc]
         return f
 
 
@@ -430,7 +406,7 @@ async def test_additional_requests_unhandled_downloader_middleware_exception() -
             async def parse(
                 self,
                 response,
-                page: TestAdditionalRequestsUnhandledDownloaderMiddlewareExceptionPage,
+                page: AdditionalRequestsUnhandledDownloaderMiddlewareExceptionPage,
             ):
                 item = await page.to_item()
                 items.append(item)
@@ -470,7 +446,7 @@ async def test_additional_requests_dont_filter_duplicate() -> None:
                     yield item_or_request
 
             async def parse(
-                self, response, page: TestAdditionalRequestsDontFilterDuplicatePage
+                self, response, page: AdditionalRequestsDontFilterDuplicatePage
             ):
                 item = await page.to_item()
                 items.append(item)
@@ -503,7 +479,7 @@ async def test_additional_requests_dont_filter_offsite() -> None:
                     yield item_or_request
 
             async def parse(
-                self, response, page: TestAdditionalRequestsDontFilterOffsitePage
+                self, response, page: AdditionalRequestsDontFilterOffsitePage
             ):
                 item = await page.to_item()
                 items.append(item)
@@ -535,9 +511,14 @@ async def test_additional_requests_no_cb_deps() -> None:
                 request.url, body=request.body, callback=NO_CALLBACK
             )
             assert crawler.engine
-            scrapy_response: Response = await maybe_deferred_to_future(
-                crawler.engine.download(custom_request)
-            )
+            scrapy_response: Response
+            if hasattr(crawler.engine, "download_async"):
+                # Scrapy 2.14+
+                scrapy_response = await crawler.engine.download_async(custom_request)
+            else:
+                scrapy_response = await maybe_deferred_to_future(
+                    crawler.engine.download(custom_request)
+                )
             result = BrowserResponse(
                 url=scrapy_response.url,
                 html=scrapy_response.text,
@@ -563,8 +544,8 @@ async def test_additional_requests_no_cb_deps() -> None:
                 for item_or_request in self.start_requests():
                     yield item_or_request
 
-            async def parse(
-                self, response: DummyResponse, page: TestAdditionalRequestsNoCbDepsPage
+            async def parse(  # type: ignore[override]
+                self, response: DummyResponse, page: AdditionalRequestsNoCbDepsPage
             ):  # type: ignore[override]
                 item = await page.to_item()
                 items.append(item)
@@ -583,7 +564,7 @@ class BasicPage(WebPage):
 
 
 @attr.define
-class TestAnotherPage(WebPage):
+class AnotherPage(WebPage):
     pass
 
 
@@ -813,7 +794,7 @@ async def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> Non
                 self,
                 response: DummyResponse,
                 page: BasicPage,
-                page2: TestAnotherPage,
+                page2: AnotherPage,
             ):
                 pass
 

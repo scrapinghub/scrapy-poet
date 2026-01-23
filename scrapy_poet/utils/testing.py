@@ -219,10 +219,10 @@ class CollectorPipeline:
         return obj
 
     def open_spider(self, spider: Spider | None = None):
-        self.crawler.spider.collected_items = []
+        self.crawler.spider.collected_items = []  # type: ignore[attr-defined]
 
     def process_item(self, item, spider: Spider | None = None):
-        self.crawler.spider.collected_items.append(item)
+        self.crawler.spider.collected_items.append(item)  # type: ignore[attr-defined]
         return item
 
 
@@ -235,10 +235,10 @@ class InjectedDependenciesCollectorMiddleware:
         return obj
 
     def spider_opened(self, spider: Spider | None = None):
-        self.crawler.spider.collected_response_deps = []
+        self.crawler.spider.collected_response_deps = []  # type: ignore[attr-defined]
 
     def process_response(self, request, response, spider: Spider | None = None):
-        self.crawler.spider.collected_response_deps.append(request.cb_kwargs)
+        self.crawler.spider.collected_response_deps.append(request.cb_kwargs)  # type: ignore[attr-defined]
         return response
 
 

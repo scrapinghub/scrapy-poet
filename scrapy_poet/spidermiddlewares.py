@@ -36,7 +36,7 @@ class RetryMiddleware:
         assert response.request
         new_request_or_none = get_retry_request(
             response.request,
-            spider=self.crawler.spider,
+            spider=self.crawler.spider,  # type: ignore[attr-defined]
             reason=str(exception) or "page_object_retry",
         )
         if not new_request_or_none:

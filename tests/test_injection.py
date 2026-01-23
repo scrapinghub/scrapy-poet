@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import re
 import shutil
-from collections.abc import Generator
-from typing import Annotated, Any, Callable, Optional
+from typing import Annotated, Any, Callable
 
 import andi
 import attr
@@ -9,7 +10,7 @@ import parsel
 import pytest
 from andi.typeutils import strip_annotated
 from scrapy import Request
-from scrapy.http import Response
+from scrapy.http import Response  # noqa: TC002
 from scrapy.utils.defer import deferred_f_from_coro_f
 from url_matcher import Patterns
 from url_matcher.util import get_domain
@@ -297,8 +298,8 @@ class TestInjector:
         callback: Callable,
         expected_instances: dict[type, Any],
         expected_kwargs: dict[str, Any],
-        reqmeta: Optional[dict[str, Any]] = None,
-    ) -> Generator[Any, Any, None]:
+        reqmeta: dict[str, Any] | None = None,
+    ) -> None:
         response = get_response_for_testing(callback, meta=reqmeta)
         assert response.request
         request = response.request
