@@ -5,6 +5,10 @@ Changelog
 0.27.0 (unreleased)
 -------------------
 
+* Dropped Python 3.9 support.
+
+* Added Scrapy 2.14 support.
+
 * ``scrapy_poet.downloader.create_scrapy_downloader`` has been removed
   (technically, renamed to ``_create_scrapy_downloader``). It was never meant
   to be a public function.
