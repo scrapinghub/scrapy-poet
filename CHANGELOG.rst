@@ -9,9 +9,24 @@ Changelog
 
 * Added Scrapy 2.14 support.
 
-* ``scrapy_poet.downloader.create_scrapy_downloader`` has been removed
-  (technically, renamed to ``_create_scrapy_downloader``). It was never meant
-  to be a public function.
+* The following backward-incompatible changes have been implemented:
+
+  * ``scrapy_poet.commands.SavingInjector.build_instances_from_providers()`` is
+    now an ``async`` method.
+
+  * ``scrapy_poet.downloader.create_scrapy_downloader()`` has been removed
+    (technically, renamed to ``_create_scrapy_downloader()``). It was never
+    meant to be a public function.
+
+  * In ``scrapy_poet.utils.testing``, ``crawl_items()`` and
+    ``crawl_single_item()`` are now defined as ``async`` functions.
+
+  * ``scrapy_poet.downloadermiddlewares.InjectionMiddleware.process_response()``
+    is now an ``async`` method.
+
+  * In ``scrapy_poet.injection.Injector``, ``build_callback_dependencies()``,
+    ``build_instances()`` and ``build_instances_from_providers()`` are now
+    ``async`` methods.
 
 0.26.0 (2025-01-28)
 -------------------
