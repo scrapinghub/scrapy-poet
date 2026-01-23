@@ -7,6 +7,7 @@ from typing import Any
 
 import attr
 from scrapy import Request
+from scrapy.utils.defer import maybe_deferred_to_future
 from twisted.internet.threads import deferToThread
 from web_poet import ItemPage
 
@@ -33,7 +34,9 @@ async def get_autoextract_product(url):
     # fixme: rate limits?
     from autoextract.sync import request_batch
 
-    resp = await deferToThread(request_batch, urls=[url], page_type="product")
+    resp = await maybe_deferred_to_future(
+        deferToThread(request_batch, urls=[url], page_type="product")
+    )
     return resp[0]
 
 
