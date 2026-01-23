@@ -99,6 +99,33 @@ class ClsNoProviderRequired(Injectable, str):
     pass
 
 
+class ExpensiveDependency1:
+    pass
+
+
+class ExpensiveDependency2:
+    pass
+
+
+@attr.define
+class MyItem(Injectable):
+    exp: ExpensiveDependency2
+    i: int
+
+
+@attr.define
+class MyPage(ItemPage[MyItem]):
+    expensive: ExpensiveDependency2
+
+    @field
+    def i(self):
+        return 42
+
+    @field
+    def exp(self):
+        return self.expensive
+
+
 def get_providers_for_testing():
     prov1 = get_provider_requiring_response({ClsReqResponse})
     prov2 = get_provider({Cls1, Cls2})
@@ -451,12 +478,6 @@ class TestInjector:
         directly while another is a page object dependency requested through
         an item."""
 
-        class ExpensiveDependency1:
-            pass
-
-        class ExpensiveDependency2:
-            pass
-
         class ExpensiveProvider(PageObjectInputProvider):
             provided_classes = {ExpensiveDependency1, ExpensiveDependency2}
 
@@ -472,23 +493,6 @@ class TestInjector:
                         "more than once."
                     )
                 return [cls() for cls in to_provide]
-
-        @attr.define
-        class MyItem(Injectable):
-            exp: ExpensiveDependency2
-            i: int
-
-        @attr.define
-        class MyPage(ItemPage[MyItem]):
-            expensive: ExpensiveDependency2
-
-            @field
-            def i(self):
-                return 42
-
-            @field
-            def exp(self):
-                return self.expensive
 
         def callback(
             expensive: ExpensiveDependency1,
