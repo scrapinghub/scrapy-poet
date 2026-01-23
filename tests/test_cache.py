@@ -1,12 +1,14 @@
 from tempfile import TemporaryDirectory
 
 from scrapy import Request, Spider
+from scrapy.utils.defer import deferred_f_from_coro_f, maybe_deferred_to_future
 from web_poet import WebPage, field
 
 from scrapy_poet.utils.mockserver import MockServer
 from scrapy_poet.utils.testing import EchoResource, _get_test_settings, make_crawler
 
 
+@deferred_f_from_coro_f
 async def test_cache_no_errors(caplog) -> None:
     with TemporaryDirectory() as cache_dir, MockServer(EchoResource) as server:
 
@@ -34,6 +36,6 @@ async def test_cache_no_errors(caplog) -> None:
                 await page.to_item()
 
         crawler = make_crawler(CacheSpider, {})
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert all(record.levelname != "ERROR" for record in caplog.records)

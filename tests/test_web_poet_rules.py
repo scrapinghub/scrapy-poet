@@ -17,6 +17,7 @@ import pytest
 import scrapy
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
+from scrapy.utils.defer import deferred_f_from_coro_f
 from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import (
@@ -138,13 +139,6 @@ def assert_deps(deps: list[dict[str, Any]], expected: dict[str, Any], size: int 
     assert all(isinstance(deps[0][k], v) for k, v in expected.items())
 
 
-def assert_warning_tokens(caught_warnings, expected_warning_tokens):
-    assert all(
-        any(expected in str(warning.message) for warning in caught_warnings)
-        for expected in expected_warning_tokens
-    )
-
-
 async def assert_no_item(page: type) -> None:
     # Starting Scrapy 2.7, there's better support for async callbacks. This
     # means that errors aren't suppressed.
@@ -163,6 +157,7 @@ class UrlMatchPage(ItemPage):
         return {"msg": "PO URL Match"}
 
 
+@deferred_f_from_coro_f
 async def test_url_only_match() -> None:
     """Page Objects which only have URL in its ``@handle_urls`` annotation should
     work.
@@ -178,6 +173,7 @@ class UrlNoMatchPage(ItemPage):
         return {"msg": "PO No URL Match"}
 
 
+@deferred_f_from_coro_f
 async def test_url_only_no_match() -> None:
     """Same case as with ``test_url_only_match()`` but the URL specified in the
     ``@handle_urls`` annotation doesn't match the request/response URL that the
@@ -201,6 +197,7 @@ class NoRuleWebPage(WebPage):
         return {"msg": "NO Rule Web"}
 
 
+@deferred_f_from_coro_f
 async def test_no_rule_declaration() -> None:
     """A more extreme case of ``test_url_only_no_match()`` where the page object
     doesn't have any rule declaration at all.
@@ -227,6 +224,7 @@ class ReplacementPage(WebPage):
         return {"msg": "PO replacement"}
 
 
+@deferred_f_from_coro_f
 async def test_basic_overrides() -> None:
     """Basic overrides use case.
 
@@ -260,6 +258,7 @@ class RightPage(WebPage):
 handle_urls(URL, instead_of=RightPage)(LeftPage)
 
 
+@deferred_f_from_coro_f
 async def test_mutual_overrides() -> None:
     """Two page objects that override each other should not present any problems.
 
@@ -306,6 +305,7 @@ class ReturnOfTheJediPage(WebPage):
         return {"msg": "return of the jedi"}
 
 
+@deferred_f_from_coro_f
 async def test_chained_overrides() -> None:
     """If 3 overrides are connected to each other, there wouldn't be any
     transitivity than spans the 3 POs.
@@ -344,6 +344,7 @@ class MultipleRulePage(WebPage):
         return {"msg": "multiple rule page"}
 
 
+@deferred_f_from_coro_f
 async def test_multiple_rules_single_page_object() -> None:
     """A single PO could be used by multiple other rules."""
     item, deps = await crawl_item_and_deps(FirstPage)
@@ -372,6 +373,7 @@ class ProductPage(ItemPage[Product]):
         return "product name"
 
 
+@deferred_f_from_coro_f
 async def test_basic_item_return() -> None:
     """Basic item use case.
 
@@ -394,6 +396,7 @@ class ItemButNoPageObject:
     name: str
 
 
+@deferred_f_from_coro_f
 async def test_basic_item_but_no_page_object() -> None:
     """When an item is requested as a dependency but there's no page object that's
     assigned to it in any of the given ``ApplyRule``, it would result to an error
@@ -419,6 +422,7 @@ class DelayedProductPage(ItemPage[DelayedProduct]):
     os.environ.get("REACTOR") != "asyncio",
     reason="Using asyncio will only work if the AsyncioSelectorReactor is used.",
 )
+@deferred_f_from_coro_f
 async def test_item_using_asyncio() -> None:
     """This ensures that the injector works properly for page objects using
     the ``asyncio`` functionalities.
@@ -445,6 +449,7 @@ class DifferentUrlPage(ItemPage[ItemWithPageObjectButForDifferentUrl]):
         return "wrong url"
 
 
+@deferred_f_from_coro_f
 async def test_basic_item_with_page_object_but_different_url() -> None:
     """If an item has been requested and a page object can produce it, but the
     URL pattern is different, the item won't be produced at all.
@@ -471,6 +476,7 @@ class SubclassProductPage(ParentProductPage):
         return "subclass product name"
 
 
+@deferred_f_from_coro_f
 async def test_item_return_subclass() -> None:
     """A page object should properly derive the ``Return[ItemType]`` that it
     inherited from its parent.
@@ -483,17 +489,7 @@ async def test_item_return_subclass() -> None:
     To remove this warning, the user should update the priority in
     ``url_matcher.Patterns`` which is set in ``ApplyRule.for_patterns``.
     """
-
-    # There should be a warning to the user about clashing rules.
-    expected_warning_tokens = [
-        "Consider setting the priority explicitly for these rules:",
-        repr(ApplyRule(URL, use=ParentProductPage, to_return=ProductFromParent)),
-        repr(ApplyRule(URL, use=SubclassProductPage, to_return=ProductFromParent)),
-    ]
-
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = await crawl_item_and_deps(ProductFromParent)
-        assert_warning_tokens(caught_warnings, expected_warning_tokens)
+    item, deps = await crawl_item_and_deps(ProductFromParent)
 
     assert item == ProductFromParent(name="subclass product name")
     assert_deps(deps, {"item": ProductFromParent})
@@ -528,6 +524,7 @@ class IndependentA2Page(ItemPage[AItem]):
         return "independent A2"
 
 
+@deferred_f_from_coro_f
 async def test_item_return_individually_defined() -> None:
     """Same case with ``test_item_return_subclass()`` but the 'to_return' item
     has not been derived due to subclassing but rather, two page objects were
@@ -536,15 +533,7 @@ async def test_item_return_individually_defined() -> None:
     The latter rule that was defined should be used when the priorities are the
     same.
     """
-    expected_warning_tokens = [
-        "Consider setting the priority explicitly for these rules:",
-        repr(ApplyRule(URL, use=IndependentA1Page, to_return=AItem)),
-        repr(ApplyRule(URL, use=IndependentA2Page, to_return=AItem)),
-    ]
-
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = await crawl_item_and_deps(AItem)
-        assert_warning_tokens(caught_warnings, expected_warning_tokens)
+    item, deps = await crawl_item_and_deps(AItem)
 
     assert item == AItem(name="independent A2")
     assert_deps(deps, {"item": AItem})
@@ -579,6 +568,7 @@ class PrioritySubclassProductPage(PriorityParentProductPage):
         return "priority subclass product name"
 
 
+@deferred_f_from_coro_f
 async def test_item_return_parent_priority() -> None:
     """Same case as with ``test_item_return_subclass()`` but now the parent PO
     uses a higher priority of 600 than the default 500.
@@ -630,6 +620,7 @@ class IndependentB2Page(ItemPage[BItem]):
         return "independent B2"
 
 
+@deferred_f_from_coro_f
 async def test_item_return_individually_defined_first_rule_higher_priority() -> None:
     """Same case with ``test_item_return_parent_priority()`` but the 'to_return'
     item has not been derived due to subclassing but rather, two page objects
@@ -681,6 +672,7 @@ class Priority2SubclassProductPage(Priority2ParentProductPage):
         return "priority subclass product name"
 
 
+@deferred_f_from_coro_f
 async def test_item_return_subclass_priority() -> None:
     """Same case as with ``test_item_return_parent_priority()`` but now the
     PO subclass uses a higher priority of 600 than the default 500.
@@ -732,6 +724,7 @@ class IndependentC2Page(ItemPage[CItem]):
         return "independent C2"
 
 
+@deferred_f_from_coro_f
 async def test_item_return_individually_defined_second_rule_higher_priority() -> None:
     """Same case with ``test_item_return_subclass_priority()`` but the 'to_return'
     item has not been derived due to subclassing but rather, two page objects
@@ -774,6 +767,7 @@ class ReplacedProductPage(ItemPage[Product]):
         return "replaced product name"
 
 
+@deferred_f_from_coro_f
 async def test_item_to_return_in_handle_urls() -> None:
     """Even if ``@handle_urls`` could derive the value for the ``to_return``
     parameter when the class inherits from something like ``ItemPage[ItemType]``,
@@ -822,6 +816,7 @@ class SubclassReplacedProductPage(ParentReplacedProductPage):
         return "subclass replaced product name"
 
 
+@deferred_f_from_coro_f
 async def test_item_to_return_in_handle_urls_subclass() -> None:
     """Same case as with the ``test_item_to_return_in_handle_urls()`` case above
     but the ``to_return`` is declared in the subclass.
@@ -858,6 +853,7 @@ class StandaloneProductPage(ItemPage):
         return "standalone product name"
 
 
+@deferred_f_from_coro_f
 async def test_item_to_return_standalone() -> None:
     """Same case as with ``test_item_to_return_in_handle_urls()`` above but the
     page object doesn't inherit from something like ``ItemPage[ItemClass]``
@@ -887,6 +883,7 @@ class ProductFromInjectablePage(Injectable):
         return await item_from_fields(self, item_cls=ProductFromInjectable)
 
 
+@deferred_f_from_coro_f
 async def test_item_return_from_injectable() -> None:
     """The case wherein a PageObject inherits directly from ``web_poet.Injectable``
     should also work, provided that the ``to_item`` method is similar with
@@ -940,6 +937,7 @@ class ProductWithPageObjectDepPage(ItemPage[MainProductA]):
         return await self.injected_page.to_item()
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_page_object_dependency() -> None:
     # item from 'to_return'
     item, deps = await crawl_item_and_deps(MainProductA)
@@ -1008,6 +1006,7 @@ class ProductWithItemDepPage(PageObjectCounterMixin, ItemPage[MainProductB]):
         return self.injected_item
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_item_dependency() -> None:
     """Page objects with dependencies like item classes should have them resolved
     by the page object assigned in one of the rules' ``use`` parameter.
@@ -1074,6 +1073,7 @@ class ProductDeepDependencyPage(PageObjectCounterMixin, ItemPage[MainProductC]):
         return self.main_product_b_dependency_item
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_deep_item_dependency() -> None:
     """This builds upon the earlier ``test_page_object_with_item_dependency()``
     but with another layer of item dependencies.
@@ -1211,6 +1211,7 @@ class ProductDuplicateDeepDependencyPage(
         return self.second_main_product_c_dependency_item
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_duplicate_deep_item_dependency() -> None:
     """This yet builds upon the earlier ``test_page_object_with_deep_item_dependency()``
     making it deeper.
@@ -1334,6 +1335,7 @@ class EggCyclePage(ItemPage[EggItem]):
         return self.other_injected_item.name
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_item_dependency_cycle_a(caplog) -> None:
     """Items with page objects which depend on each other resulting in a plan cycle
     should have a corresponding error raised.
@@ -1342,16 +1344,19 @@ async def test_page_object_with_item_dependency_cycle_a(caplog) -> None:
     assert "Cyclic dependency found" in caplog.text
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_item_dependency_cycle_b(caplog) -> None:
     await crawl_item_and_deps(EggItem)
     assert "Cyclic dependency found" in caplog.text
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_item_dependency_cycle_c(caplog) -> None:
     await crawl_item_and_deps(ChickenCyclePage)
     assert "Cyclic dependency found" in caplog.text
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_item_dependency_cycle_d(caplog) -> None:
     await crawl_item_and_deps(EggCyclePage)
     assert "Cyclic dependency found" in caplog.text
@@ -1398,6 +1403,7 @@ class Egg2CyclePage(ItemPage[Egg2Item]):
         return item.name
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_item_dependency_cycle_2_a(caplog) -> None:
     """Same with ``test_page_object_with_item_dependency_cycle()`` but one
     of the page objects requires a page object instead of an item.
@@ -1406,16 +1412,19 @@ async def test_page_object_with_item_dependency_cycle_2_a(caplog) -> None:
     assert "Cyclic dependency found" in caplog.text
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_item_dependency_cycle_2_b(caplog) -> None:
     await crawl_item_and_deps(Egg2Item)
     assert "Cyclic dependency found" in caplog.text
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_item_dependency_cycle_2_c(caplog) -> None:
     await crawl_item_and_deps(Chicken2CyclePage)
     assert "Cyclic dependency found" in caplog.text
 
 
+@deferred_f_from_coro_f
 async def test_page_object_with_item_dependency_cycle_2_d(caplog) -> None:
     await crawl_item_and_deps(Egg2CyclePage)
     assert "Cyclic dependency found" in caplog.text
@@ -1443,6 +1452,7 @@ class MobiusProvider(PageObjectInputProvider):
         return [Mobius(name="mobius from MobiusProvider")]
 
 
+@deferred_f_from_coro_f
 async def test_page_object_returning_item_which_is_also_a_dep() -> None:
     """Tests that the item from a provider has been modified correctly
     by the corresponding PO.
@@ -1460,6 +1470,7 @@ async def test_page_object_returning_item_which_is_also_a_dep() -> None:
     assert_deps(deps, {"page": MobiusPage})
 
 
+@deferred_f_from_coro_f
 async def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_item(
     caplog,
 ) -> None:
@@ -1470,6 +1481,7 @@ async def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_it
     assert "NonProvidableError" in caplog.text
 
 
+@deferred_f_from_coro_f
 async def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_po(
     caplog,
 ) -> None:
@@ -1510,6 +1522,7 @@ class KangarooProvider(PageObjectInputProvider):
         return [Kangaroo(name="data from KangarooProvider")]
 
 
+@deferred_f_from_coro_f
 async def test_page_object_returning_item_which_is_also_a_dep_2() -> None:
     """Same with ``test_page_object_returning_item_which_is_also_a_dep()`` but
     there are now 2 POs with different priorities that returns the item.

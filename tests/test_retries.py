@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 
 import attrs
 from scrapy import Request, Spider
+from scrapy.utils.defer import deferred_f_from_coro_f, maybe_deferred_to_future
 from web_poet import RulesRegistry
 from web_poet.exceptions import Retry
 from web_poet.page_inputs.http import HttpResponse
@@ -21,6 +22,7 @@ def _assert_all_unique_instances(instances: list[Any]):
     assert len({id(instance) for instance in instances}) == len(instances)
 
 
+@deferred_f_from_coro_f
 async def test_retry_once():
     retries = deque([True, False])
     items, page_instances, page_response_instances = [], [], []
@@ -47,7 +49,7 @@ async def test_retry_once():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 2
@@ -58,6 +60,7 @@ async def test_retry_once():
     _assert_all_unique_instances(page_response_instances)
 
 
+@deferred_f_from_coro_f
 async def test_retry_once_item():
     """Retries should also work when asking for an item instead of a page
     object."""
@@ -95,7 +98,7 @@ async def test_retry_once_item():
 
         settings = {"SCRAPY_POET_RULES": registry.get_rules()}
         crawler = make_crawler(TestSpider, settings=settings)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [TestItem(foo="bar")]
     assert crawler.stats.get_value("downloader/request_count") == 2
@@ -106,6 +109,7 @@ async def test_retry_once_item():
     _assert_all_unique_instances(page_response_instances)
 
 
+@deferred_f_from_coro_f
 async def test_retry_reason():
     retries = deque([True, False])
     items, page_instances, page_response_instances = [], [], []
@@ -132,7 +136,7 @@ async def test_retry_reason():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 2
@@ -143,6 +147,7 @@ async def test_retry_reason():
     _assert_all_unique_instances(page_response_instances)
 
 
+@deferred_f_from_coro_f
 async def test_retry_max():
     # The default value of the RETRY_TIMES Scrapy setting is 2.
     retries = deque([True, True, False])
@@ -170,7 +175,7 @@ async def test_retry_max():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 3
@@ -181,6 +186,7 @@ async def test_retry_max():
     _assert_all_unique_instances(page_response_instances)
 
 
+@deferred_f_from_coro_f
 async def test_retry_exceeded():
     items, page_instances, page_response_instances = [], [], []
 
@@ -204,7 +210,7 @@ async def test_retry_exceeded():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == []
     assert crawler.stats.get_value("downloader/request_count") == 3
@@ -215,6 +221,7 @@ async def test_retry_exceeded():
     _assert_all_unique_instances(page_response_instances)
 
 
+@deferred_f_from_coro_f
 async def test_retry_max_configuration():
     retries = deque([True, True, True, False])
     items, page_instances, page_response_instances = [], [], []
@@ -245,7 +252,7 @@ async def test_retry_max_configuration():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 4
@@ -256,6 +263,7 @@ async def test_retry_max_configuration():
     _assert_all_unique_instances(page_response_instances)
 
 
+@deferred_f_from_coro_f
 async def test_retry_cb_kwargs():
     retries = deque([True, True, False])
     items, page_instances, page_response_instances = [], [], []
@@ -290,7 +298,7 @@ async def test_retry_cb_kwargs():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 3
@@ -303,6 +311,7 @@ async def test_retry_cb_kwargs():
     assert page_response_instances[0] is not page_from_cb_kwargs.response
 
 
+@deferred_f_from_coro_f
 async def test_non_retry_exception():
     items = []
 
@@ -324,7 +333,7 @@ async def test_non_retry_exception():
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == []
     assert crawler.stats.get_value("downloader/request_count") == 1

@@ -10,6 +10,7 @@ import pytest
 from andi.typeutils import strip_annotated
 from scrapy import Request
 from scrapy.http import Response
+from scrapy.utils.defer import deferred_f_from_coro_f
 from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import Injectable, ItemPage, RulesRegistry, field
@@ -187,6 +188,7 @@ class TestInjector:
         response = get_response_for_testing(callback_yes_2)
         assert injector.is_scrapy_response_required(response.request)
 
+    @deferred_f_from_coro_f
     async def test_build_instances_methods(self, injector):
         def callback(
             response: DummyResponse,
@@ -220,6 +222,7 @@ class TestInjector:
         }
         assert injector.weak_cache.get(request).keys() == {ClsReqResponse, Cls1, Cls2}
 
+    @deferred_f_from_coro_f
     async def test_build_instances_from_providers_unexpected_return(self):
         class WrongProvider(get_provider({Cls1})):
             def __call__(self, to_provide):
@@ -250,6 +253,7 @@ class TestInjector:
             ["1", "3", "2"],
         ],
     )
+    @deferred_f_from_coro_f
     async def test_build_instances_from_providers_respect_priorities(self, str_list):
         providers = {get_provider({str}, text): int(text) for text in str_list}
         injector = get_injector_for_testing(providers)
@@ -266,6 +270,7 @@ class TestInjector:
 
         assert instances[str] == min(str_list)
 
+    @deferred_f_from_coro_f
     async def test_build_callback_dependencies(self, injector):
         def callback(
             response: DummyResponse,
@@ -308,6 +313,7 @@ class TestInjector:
     def test_annotated_provide(self, injector):
         assert injector.is_class_provided_by_any_provider(Annotated[Cls1, 42])
 
+    @deferred_f_from_coro_f
     async def test_annotated_build(self, injector):
         def callback(
             a: Cls1,
@@ -327,6 +333,7 @@ class TestInjector:
             injector, callback, expected_instances, expected_kwargs
         )
 
+    @deferred_f_from_coro_f
     async def test_annotated_build_only(self, injector):
         def callback(
             a: Annotated[Cls1, 42],
@@ -343,6 +350,7 @@ class TestInjector:
             injector, callback, expected_instances, expected_kwargs
         )
 
+    @deferred_f_from_coro_f
     async def test_annotated_build_duplicate(self, injector):
         def callback(
             a: Cls1,
@@ -368,6 +376,7 @@ class TestInjector:
             injector, callback, expected_instances, expected_kwargs
         )
 
+    @deferred_f_from_coro_f
     async def test_annotated_build_no_support(self, injector):
         # get_provider_requiring_response() returns a provider that doesn't support Annotated
         def callback(
@@ -387,6 +396,7 @@ class TestInjector:
             Cls1: Cls1(),
         }
 
+    @deferred_f_from_coro_f
     async def test_annotated_build_duplicate_forbidden(
         self,
     ):
@@ -433,6 +443,7 @@ class TestInjector:
         with pytest.raises(ValueError, match="Different instances of Cls1 requested"):
             await injector.build_instances(request, response, plan)
 
+    @deferred_f_from_coro_f
     async def test_build_callback_dependencies_minimize_provider_calls(self):
         """Test that build_callback_dependencies does not call any given
         provider more times than it needs when one provided class is requested
@@ -498,6 +509,7 @@ class TestInjector:
         # not injected at all.
         assert set(kwargs.keys()) == {"expensive", "item"}
 
+    @deferred_f_from_coro_f
     async def test_dynamic_deps(self):
         def callback(dd: DynamicDeps):
             pass
@@ -521,6 +533,7 @@ class TestInjector:
             reqmeta={"inject": [Cls1, Cls2]},
         )
 
+    @deferred_f_from_coro_f
     async def test_dynamic_deps_mix(self):
         def callback(c1: Cls1, dd: DynamicDeps):
             pass
@@ -548,6 +561,7 @@ class TestInjector:
         }
         assert kwargs["c1"] is kwargs["dd"][Cls1]
 
+    @deferred_f_from_coro_f
     async def test_dynamic_deps_no_meta(self):
         def callback(dd: DynamicDeps):
             pass
@@ -568,6 +582,7 @@ class TestInjector:
             expected_kwargs,
         )
 
+    @deferred_f_from_coro_f
     async def test_dynamic_deps_page(self):
         def callback(dd: DynamicDeps):
             pass
@@ -591,6 +606,7 @@ class TestInjector:
         instances = await injector.build_instances(request, response, plan)
         assert set(instances) == {Html, PricePO, DynamicDeps}
 
+    @deferred_f_from_coro_f
     async def test_dynamic_deps_item(self):
         def callback(dd: DynamicDeps):
             pass
@@ -616,6 +632,7 @@ class TestInjector:
         instances = await injector.build_instances(request, response, plan)
         assert set(instances) == {TestItemPage, TestItem, DynamicDeps}
 
+    @deferred_f_from_coro_f
     async def test_dynamic_deps_annotated(self):
         def callback(dd: DynamicDeps):
             pass
@@ -720,6 +737,7 @@ class TestInjectorStats:
             ),
         ],
     )
+    @deferred_f_from_coro_f
     async def test_stats(self, cb_args, expected, injector):
         def callback_factory():
             args = ", ".join([f"{k}: {v.__name__}" for k, v in cb_args.items()])
@@ -739,6 +757,7 @@ class TestInjectorStats:
         assert set(poet_stats) == expected
         assert injector.weak_cache.get(response.request) is None
 
+    @deferred_f_from_coro_f
     async def test_po_provided_via_item(self):
         rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
         registry = RulesRegistry(rules=rules)
@@ -756,6 +775,7 @@ class TestInjectorStats:
 
 class TestInjectorOverrides:
     @pytest.mark.parametrize("override_should_happen", [True, False])
+    @deferred_f_from_coro_f
     async def test_overrides(self, providers, override_should_happen):
         domain = "example.com" if override_should_happen else "other-example.com"
         # The request domain is example.com, so overrides shouldn't be applied
@@ -861,6 +881,7 @@ def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
 
 
 @pytest.mark.parametrize("cache_errors", [True, False])
+@deferred_f_from_coro_f
 async def test_cache(tmp_path, cache_errors):
     """
     In a first run, the cache is empty, and two requests are done, one with exception.

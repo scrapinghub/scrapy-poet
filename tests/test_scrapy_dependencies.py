@@ -2,6 +2,7 @@ import attr
 import pytest
 from scrapy import Spider
 from scrapy.http import Request
+from scrapy.utils.defer import deferred_f_from_coro_f
 from web_poet.pages import WebPage
 
 from scrapy_poet.injection import SCRAPY_PROVIDED_CLASSES
@@ -13,6 +14,7 @@ from scrapy_poet.utils.testing import ProductHtml, crawl_items, crawl_single_ite
 
 
 @pytest.mark.parametrize("scrapy_class", SCRAPY_PROVIDED_CLASSES)
+@deferred_f_from_coro_f
 async def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
     """Scrapy dependencies should be injected into Providers."""
 
@@ -60,6 +62,7 @@ async def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
 
 
 @pytest.mark.parametrize("scrapy_class", SCRAPY_PROVIDED_CLASSES)
+@deferred_f_from_coro_f
 async def test_scrapy_dependencies_on_page_objects(scrapy_class, settings) -> None:
     """Scrapy dependencies should not be injected into Page Objects."""
 

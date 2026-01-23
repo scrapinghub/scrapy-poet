@@ -14,11 +14,10 @@ import scrapy
 import twisted
 import web_poet
 from packaging.version import parse as parse_version
-from pytest_twisted import ensureDeferred
 from scrapy import Request, Spider
 from scrapy.crawler import Crawler  # noqa: TC002
 from scrapy.exceptions import IgnoreRequest
-from scrapy.utils.defer import maybe_deferred_to_future
+from scrapy.utils.defer import deferred_f_from_coro_f, maybe_deferred_to_future
 from web_poet import BrowserResponse, HttpClient
 from web_poet.exceptions import HttpError, HttpRequestError, HttpResponseError
 from web_poet.pages import WebPage
@@ -164,7 +163,7 @@ def scrapy_downloader() -> Callable:
     return create_scrapy_downloader(mock_downloader)
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_incompatible_scrapy_request(scrapy_downloader) -> None:
     """The Request must be web_poet.HttpRequest and not anything else."""
 
@@ -184,7 +183,7 @@ def fake_http_response() -> web_poet.HttpResponse:
     )
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_scrapy_poet_downloader(fake_http_response) -> None:
     req = web_poet.HttpRequest("https://example.com")
 
@@ -208,7 +207,7 @@ async def test_scrapy_poet_downloader(fake_http_response) -> None:
         assert len(response.headers) == 1
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_scrapy_poet_downloader_ignored_request() -> None:
     """It should handle IgnoreRequest from Scrapy according to the web poet
     standard on additional request error handling."""
@@ -225,7 +224,7 @@ async def test_scrapy_poet_downloader_ignored_request() -> None:
             await scrapy_downloader(req)
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_scrapy_poet_downloader_twisted_error() -> None:
     req = web_poet.HttpRequest("https://example.com")
 
@@ -240,7 +239,7 @@ async def test_scrapy_poet_downloader_twisted_error() -> None:
             await scrapy_downloader(req)
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_scrapy_poet_downloader_head_redirect(fake_http_response) -> None:
     req = web_poet.HttpRequest("https://example.com", method="HEAD")
 
@@ -258,6 +257,7 @@ async def test_scrapy_poet_downloader_head_redirect(fake_http_response) -> None:
         assert scrapy_request.meta.get("dont_redirect") is True
 
 
+@deferred_f_from_coro_f
 async def test_additional_requests_success() -> None:
     items = []
 
@@ -278,11 +278,12 @@ async def test_additional_requests_success() -> None:
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
 
 
+@deferred_f_from_coro_f
 async def test_additional_requests_bad_response() -> None:
     items = []
 
@@ -305,11 +306,12 @@ async def test_additional_requests_bad_response() -> None:
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
 
 
+@deferred_f_from_coro_f
 async def test_additional_requests_connection_issue() -> None:
     items = []
 
@@ -340,11 +342,12 @@ async def test_additional_requests_connection_issue() -> None:
                     items.append(item)
 
             crawler = make_crawler(TestSpider)
-            await crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
 
 
+@deferred_f_from_coro_f
 async def test_additional_requests_ignored_request() -> None:
     items = []
 
@@ -377,7 +380,7 @@ async def test_additional_requests_ignored_request() -> None:
         settings = _get_test_settings()
         settings["DOWNLOADER_MIDDLEWARES"][TestDownloaderMiddleware] = 1
         crawler = make_crawler(TestSpider, settings)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"exc": HttpError}]
 
@@ -434,12 +437,14 @@ async def test_additional_requests_unhandled_downloader_middleware_exception() -
 
         settings = _get_test_settings()
         settings["DOWNLOADER_MIDDLEWARES"][TestDownloaderMiddleware] = 1
+        settings["RETRY_ENABLED"] = False
         crawler = make_crawler(TestSpider, settings=settings)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"exc": HttpError}]
 
 
+@deferred_f_from_coro_f
 async def test_additional_requests_dont_filter_duplicate() -> None:
     """Verify that while duplicate regular requests are filtered out,
     additional requests are not (neither relative to the main requests not
@@ -471,11 +476,12 @@ async def test_additional_requests_dont_filter_duplicate() -> None:
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"a": "a"}]
 
 
+@deferred_f_from_coro_f
 async def test_additional_requests_dont_filter_offsite() -> None:
     pytest.importorskip("scrapy.downloadermiddlewares.offsite")
 
@@ -503,11 +509,12 @@ async def test_additional_requests_dont_filter_offsite() -> None:
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"a": "b"}]
 
 
+@deferred_f_from_coro_f
 async def test_additional_requests_no_cb_deps() -> None:
     # https://github.com/scrapy-plugins/scrapy-zyte-api/issues/135
     # This tests that the additional request doesn't go through dep resolving
@@ -563,7 +570,7 @@ async def test_additional_requests_no_cb_deps() -> None:
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        await crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert provider_calls == 1
     assert items == [{"main": "", "additional": "a"}]
@@ -645,7 +652,7 @@ async def test_parse_callback_none_dummy_response() -> None:
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            await crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     _assert_warning_messages(record, index=[0])
     assert not isinstance(collected["response"], DummyResponse)
@@ -675,7 +682,7 @@ async def test_parse_callback_none_response() -> None:
         crawler = make_crawler(TestSpider)
 
         with warnings.catch_warnings(record=True) as w:
-            await crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     assert not w
 
@@ -704,7 +711,7 @@ async def test_parse_callback_none_no_annotated_deps() -> None:
         crawler = make_crawler(TestSpider)
 
         with warnings.catch_warnings(record=True) as w:
-            await crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     assert not any("with callback=None" in str(warning.message) for warning in w)
     assert isinstance(collected["response"], scrapy.http.Response)
@@ -733,7 +740,7 @@ async def test_parse_callback_none_with_deps(caplog) -> None:
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            await crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     _assert_warning_messages(record)
 
@@ -774,7 +781,7 @@ async def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            await crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     _assert_warning_messages(record, index=[0])
     assert not caplog.text  # no TypeError caused by missing ``page`` arg.
@@ -813,7 +820,7 @@ async def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> Non
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            await crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     _assert_warning_messages(record)
 
@@ -828,6 +835,7 @@ async def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> Non
     not is_min_scrapy_version("2.8.0"),
     reason="NO_CALLBACK not available in Scrapy < 2.8",
 )
+@deferred_f_from_coro_f
 async def test_parse_callback_NO_CALLBACK(caplog) -> None:
     """See: https://github.com/scrapinghub/scrapy-poet/issues/118"""
 
@@ -844,7 +852,7 @@ async def test_parse_callback_NO_CALLBACK(caplog) -> None:
         crawler = make_crawler(TestSpider)
 
         with warnings.catch_warnings(record=True) as w:
-            await crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     assert not w
     assert not caplog.text
@@ -855,6 +863,7 @@ async def test_parse_callback_NO_CALLBACK(caplog) -> None:
     not is_min_scrapy_version("2.8.0"),
     reason="NO_CALLBACK not available in Scrapy < 2.8",
 )
+@deferred_f_from_coro_f
 async def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
     """See: https://github.com/scrapinghub/scrapy-poet/issues/118
 
@@ -875,7 +884,7 @@ async def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
         crawler = make_crawler(TestSpider)
 
         with warnings.catch_warnings(record=True) as w:
-            await crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     assert not w
     assert not caplog.text

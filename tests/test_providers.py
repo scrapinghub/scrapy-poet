@@ -3,9 +3,9 @@ from unittest import mock
 
 import attr
 import scrapy
-from pytest_twisted import ensureDeferred
 from scrapy import Request, Spider
 from scrapy.settings import Settings
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy.utils.test import get_crawler
 from twisted.python.failure import Failure
 from web_poet import (
@@ -156,6 +156,7 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
     }
 
 
+@deferred_f_from_coro_f
 async def test_name_first_spider(settings, tmp_path):
     port = get_ephemeral_port()
     cache = tmp_path / "cache"
@@ -184,6 +185,7 @@ async def test_name_first_spider(settings, tmp_path):
     }
 
 
+@deferred_f_from_coro_f
 async def test_price_first_spider(settings):
     item, _, _ = await crawl_single_item(
         PriceFirstMultiProviderSpider, ProductHtml, settings
@@ -196,7 +198,7 @@ async def test_price_first_spider(settings):
     }
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_http_client_provider(settings):
     crawler = get_crawler(Spider, settings)
     crawler.engine = mock.AsyncMock()
@@ -212,7 +214,7 @@ async def test_http_client_provider(settings):
     assert results[0]._request_downloader == mock_factory.return_value
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_http_request_provider(settings):
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)

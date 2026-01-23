@@ -8,6 +8,7 @@ from scrapy.crawler import Crawler
 from scrapy.http import HtmlResponse, Request, TextResponse
 from scrapy.settings import Settings
 from scrapy.statscollectors import MemoryStatsCollector
+from scrapy.utils.defer import deferred_f_from_coro_f
 from web_poet import ItemPage, WebPage
 
 from scrapy_poet import DummyResponse, callback_for
@@ -458,6 +459,7 @@ def test_is_callback_using_response_for_scrapy28_and_above() -> None:
     assert not caught_warnings
 
 
+@deferred_f_from_coro_f
 async def test_is_response_going_to_be_used():
     crawler = Crawler(MySpider)
     spider = MySpider()
