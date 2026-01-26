@@ -28,7 +28,7 @@ from scrapy_poet.page_input_providers import (
     StatsProvider,
 )
 from scrapy_poet.utils.mockserver import get_ephemeral_port
-from scrapy_poet.utils.testing import HtmlResource, ProductHtml, crawl_single_item
+from scrapy_poet.utils.testing import HtmlResource, ProductHtml, crawl_single_item_async
 
 
 class NonProductHtml(HtmlResource):
@@ -161,7 +161,7 @@ async def test_name_first_spider(settings, tmp_path):
     port = get_ephemeral_port()
     cache = tmp_path / "cache"
     settings["SCRAPY_POET_CACHE"] = str(cache)
-    item, _, _ = await crawl_single_item(
+    item, _, _ = await crawl_single_item_async(
         NameFirstMultiProviderSpider, ProductHtml, settings, port=port
     )
     assert cache.exists()
@@ -174,7 +174,7 @@ async def test_name_first_spider(settings, tmp_path):
 
     # Let's see that the cache is working. We use a different and wrong resource,
     # but it should be ignored by the cached version used
-    item, _, _ = await crawl_single_item(
+    item, _, _ = await crawl_single_item_async(
         NameFirstMultiProviderSpider, NonProductHtml, settings, port=port
     )
     assert item == {
@@ -187,7 +187,7 @@ async def test_name_first_spider(settings, tmp_path):
 
 @deferred_f_from_coro_f
 async def test_price_first_spider(settings):
-    item, _, _ = await crawl_single_item(
+    item, _, _ = await crawl_single_item_async(
         PriceFirstMultiProviderSpider, ProductHtml, settings
     )
     assert item == {

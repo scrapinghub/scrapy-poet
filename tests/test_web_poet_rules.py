@@ -40,7 +40,7 @@ from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
     _get_test_settings,
     capture_exceptions,
-    crawl_single_item,
+    crawl_single_item_async,
 )
 from tests.test_middleware import ProductHtml
 
@@ -115,7 +115,7 @@ async def crawl_item_and_deps(
     if override_settings:
         settings.update(override_settings)
 
-    item, _, crawler = await crawl_single_item(
+    item, _, crawler = await crawl_single_item_async(
         spider_for(page_object), ProductHtml, settings, port=PORT
     )
     return item, crawler.spider.collected_response_deps

@@ -25,8 +25,8 @@ from scrapy_poet.utils.testing import (
     EchoResource,
     ProductHtml,
     capture_exceptions,
-    crawl_items,
-    crawl_single_item,
+    crawl_items_async,
+    crawl_single_item_async,
 )
 
 
@@ -81,7 +81,7 @@ class OverridenBreadcrumbsExtraction(WebPage):
 
 @deferred_f_from_coro_f
 async def test_basic_case(settings):
-    item, url, _ = await crawl_single_item(
+    item, url, _ = await crawl_single_item_async(
         spider_for(ProductPage), ProductHtml, settings
     )
     assert item == {
@@ -105,7 +105,7 @@ async def test_overrides(settings):
             instead_of=BreadcrumbsExtraction,
         )
     ]
-    item, url, _ = await crawl_single_item(
+    item, url, _ = await crawl_single_item_async(
         spider_for(ProductPage), ProductHtml, settings, port=port
     )
     assert item == {
@@ -137,7 +137,7 @@ class OptionalAndUnionPageNew(WebPage):
 )
 @deferred_f_from_coro_f
 async def test_optional_and_unions_new(settings):
-    item, _, _ = await crawl_single_item(
+    item, _, _ = await crawl_single_item_async(
         spider_for(OptionalAndUnionPageNew), ProductHtml, settings
     )
     assert item["breadcrumbs"].response is item["response"]
@@ -170,7 +170,7 @@ class OptionalAndUnionPageOld(WebPage):
 )
 @deferred_f_from_coro_f
 async def test_optional_and_unions_old(settings):
-    item, _, _ = await crawl_single_item(
+    item, _, _ = await crawl_single_item_async(
         spider_for(OptionalAndUnionPageOld), ProductHtml, settings
     )
     assert item["breadcrumbs"].response is item["response"]
@@ -198,7 +198,7 @@ class NonInjectablePage(WebPage):
 )
 @deferred_f_from_coro_f
 async def test_non_injectable(settings):
-    item, _, _ = yield crawl_single_item(
+    item, _, _ = yield crawl_single_item_async(
         spider_for(NonInjectablePage), ProductHtml, settings
     )
     assert item["a"] is None
@@ -271,7 +271,7 @@ class ProvidedWithFuturesPage(ProvidedWithDeferredPage):
 @pytest.mark.parametrize("type_", [ProvidedWithDeferredPage, ProvidedWithFuturesPage])
 @deferred_f_from_coro_f
 async def test_providers(settings, type_):
-    item, _, _ = await crawl_single_item(spider_for(type_), ProductHtml, settings)
+    item, _, _ = await crawl_single_item_async(spider_for(type_), ProductHtml, settings)
     assert item["provided"].msg == "Provided 5!"
     assert item["provided"].response is None
 
@@ -281,7 +281,7 @@ async def test_providers_returning_wrong_classes(settings, caplog):
     """Injection Middleware should raise a runtime error whenever a provider
     returns instances of classes that they're not supposed to provide.
     """
-    await crawl_single_item(spider_for(ExtraClassData), ProductHtml, settings)
+    await crawl_single_item_async(spider_for(ExtraClassData), ProductHtml, settings)
     assert "UndeclaredProvidedTypeError:" in caplog.text
 
 
@@ -322,7 +322,7 @@ class MultiArgsCallbackSpiderNew(scrapy.Spider):
 )
 @deferred_f_from_coro_f
 async def test_multi_args_callbacks_new(settings):
-    item, _, _ = await crawl_single_item(
+    item, _, _ = await crawl_single_item_async(
         MultiArgsCallbackSpiderNew, ProductHtml, settings
     )
     assert type(item["product"]) is ProductPage
@@ -369,7 +369,7 @@ class MultiArgsCallbackSpiderOld(scrapy.Spider):
 )
 @deferred_f_from_coro_f
 async def test_multi_args_callbacks_old(settings):
-    item, _, _ = await crawl_single_item(
+    item, _, _ = await crawl_single_item_async(
         MultiArgsCallbackSpiderOld, ProductHtml, settings
     )
     assert type(item["product"]) is ProductPage
@@ -387,7 +387,7 @@ class UnressolvableProductPage(ProductPage):
 @deferred_f_from_coro_f
 async def test_injection_failure(settings):
     configure_logging(settings)
-    items, *_ = await crawl_items(
+    items, *_ = await crawl_items_async(
         spider_for(UnressolvableProductPage), ProductHtml, settings
     )
     assert items == []
@@ -427,14 +427,14 @@ class SkipDownloadSpider(scrapy.Spider):
 
 @deferred_f_from_coro_f
 async def test_skip_downloads(settings):
-    item, _, crawler = await crawl_single_item(MySpider, ProductHtml, settings)
+    item, _, crawler = await crawl_single_item_async(MySpider, ProductHtml, settings)
     assert isinstance(item["response"], Response) is True
     assert isinstance(item["response"], DummyResponse) is False
     assert crawler.stats.get_stats().get("downloader/request_count", 0) == 1
     assert crawler.stats.get_stats().get("scrapy_poet/dummy_response_count", 0) == 0
     assert crawler.stats.get_stats().get("downloader/response_count", 0) == 1
 
-    item, _, crawler = await crawl_single_item(
+    item, _, crawler = await crawl_single_item_async(
         SkipDownloadSpider, ProductHtml, settings
     )
     assert isinstance(item["response"], Response) is True
@@ -463,7 +463,7 @@ class RequestUrlSpider(scrapy.Spider):
 
 @deferred_f_from_coro_f
 async def test_skip_download_request_url(settings):
-    item, url, crawler = await crawl_single_item(
+    item, url, crawler = await crawl_single_item_async(
         RequestUrlSpider, ProductHtml, settings
     )
     assert isinstance(item["response"], Response) is True
@@ -494,7 +494,7 @@ class ResponseUrlSpider(scrapy.Spider):
 
 @deferred_f_from_coro_f
 async def test_skip_download_response_url(settings):
-    item, url, crawler = await crawl_single_item(
+    item, url, crawler = await crawl_single_item_async(
         ResponseUrlSpider, ProductHtml, settings
     )
     assert isinstance(item["response"], Response) is True
@@ -532,7 +532,7 @@ class ResponseUrlPageSpider(scrapy.Spider):
 
 @deferred_f_from_coro_f
 async def test_skip_download_response_url_page(settings):
-    item, url, crawler = await crawl_single_item(
+    item, url, crawler = await crawl_single_item_async(
         ResponseUrlPageSpider, ProductHtml, settings
     )
     assert tuple(item.keys()) == ("response_url",)
@@ -567,7 +567,7 @@ class RequestUrlPageSpider(scrapy.Spider):
 
 @deferred_f_from_coro_f
 async def test_skip_download_request_url_page(settings):
-    item, url, crawler = await crawl_single_item(
+    item, url, crawler = await crawl_single_item_async(
         RequestUrlPageSpider, ProductHtml, settings
     )
     assert tuple(item.keys()) == ("url",)

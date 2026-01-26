@@ -10,7 +10,11 @@ from scrapy_poet.page_input_providers import (
     HttpResponseProvider,
     PageObjectInputProvider,
 )
-from scrapy_poet.utils.testing import ProductHtml, crawl_items, crawl_single_item
+from scrapy_poet.utils.testing import (
+    ProductHtml,
+    crawl_items_async,
+    crawl_single_item_async,
+)
 
 
 @pytest.mark.parametrize("scrapy_class", SCRAPY_PROVIDED_CLASSES)
@@ -57,7 +61,7 @@ async def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
         def parse(self, response, page: Page):
             return page.to_item()
 
-    item, *_ = await crawl_single_item(MySpider, ProductHtml, settings)
+    item, *_ = await crawl_single_item_async(MySpider, ProductHtml, settings)
     assert item["scrapy_class"] == scrapy_class.__name__
 
 
@@ -89,5 +93,5 @@ async def test_scrapy_dependencies_on_page_objects(scrapy_class, settings) -> No
         def parse(self, response, page: Page):
             return page.to_item()
 
-    items, *_ = await crawl_items(MySpider, ProductHtml, settings)
+    items, *_ = await crawl_items_async(MySpider, ProductHtml, settings)
     assert not items
