@@ -228,7 +228,7 @@ If neither spider callback nor any of the input providers are using
     class MySpider(scrapy.Spider):
         name = "my_spider"
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse_page)
 
         def parse_page(self, response: DummyResponse, page: MyPageObject):
@@ -277,7 +277,7 @@ Page Object uses it, the request is not ignored, for example:
     class MySpider(scrapy.Spider):
         name = "my_spider"
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse_page)
 
         def parse_page(self, response: DummyResponse, page: MyPageObject):

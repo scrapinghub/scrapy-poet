@@ -42,9 +42,9 @@ spider name as the third argument::
     scrapy savefixture my_project.pages.MyItemPage 'https://quotes.toscrape.com/page/1/' toscrape_listing
 
 The command will try to run the spider overriding its
-:meth:`~scrapy.Spider.start_requests`, so it should run just one request but it
-can break on spiders with complicated logic, e.g. ones that use ``spider_idle``
-to schedule requests or modify items returned from
+:meth:`~scrapy.Spider.start`, so it should run just one request but it can
+break on spiders with complicated logic, e.g. ones that use ``spider_idle`` to
+schedule requests or modify items returned from
 :meth:`~web_poet.pages.ItemPage.to_item`. You may need to adapt your spiders to
 this, for example checking if the special ``_SCRAPY_POET_SAVEFIXTURE`` setting
 is set to ``True`` and using more simple logic in this case.

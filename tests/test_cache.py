@@ -1,15 +1,15 @@
 from tempfile import TemporaryDirectory
 
-from pytest_twisted import inlineCallbacks
 from scrapy import Request, Spider
+from scrapy.utils.defer import deferred_f_from_coro_f, maybe_deferred_to_future
 from web_poet import WebPage, field
 
 from scrapy_poet.utils.mockserver import MockServer
 from scrapy_poet.utils.testing import EchoResource, _get_test_settings, make_crawler
 
 
-@inlineCallbacks
-def test_cache_no_errors(caplog) -> None:
+@deferred_f_from_coro_f
+async def test_cache_no_errors(caplog) -> None:
     with TemporaryDirectory() as cache_dir, MockServer(EchoResource) as server:
 
         class Page(WebPage):
@@ -28,10 +28,14 @@ def test_cache_no_errors(caplog) -> None:
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse_url)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             async def parse_url(self, response, page: Page):
                 await page.to_item()
 
         crawler = make_crawler(CacheSpider, {})
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert all(record.levelname != "ERROR" for record in caplog.records)

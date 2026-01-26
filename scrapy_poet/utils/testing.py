@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import contextlib
 import json
 from inspect import isasyncgenfunction
@@ -7,6 +9,7 @@ from scrapy import Spider, signals
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider
 from scrapy.settings import Settings
+from scrapy.utils.defer import maybe_deferred_to_future
 from scrapy.utils.python import to_bytes
 from scrapy.utils.test import get_crawler as _get_crawler
 from twisted.internet.defer import inlineCallbacks
@@ -125,11 +128,31 @@ def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None, port=Non
     to the spider as ``url`` argument.
     Return ``(items, resource_url, crawler)`` tuple.
     """
+    warn(
+        "crawl_items is deprecated; use crawl_items_async instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     spider_kwargs = {} if spider_kwargs is None else spider_kwargs
     crawler = make_crawler(spider_cls, settings)
     with MockServer(resource_cls, port=port) as s:
         root_url = s.root_url
         yield crawler.crawl(url=root_url, **spider_kwargs)
+    return crawler.spider.collected_items, s.root_url, crawler
+
+
+async def crawl_items_async(
+    spider_cls, resource_cls, settings, spider_kwargs=None, port=None
+):
+    """Use spider_cls to crawl resource_cls. URL of the resource is passed
+    to the spider as ``url`` argument.
+    Return ``(items, resource_url, crawler)`` tuple.
+    """
+    spider_kwargs = {} if spider_kwargs is None else spider_kwargs
+    crawler = make_crawler(spider_cls, settings)
+    with MockServer(resource_cls, port=port) as s:
+        root_url = s.root_url
+        await maybe_deferred_to_future(crawler.crawl(url=root_url, **spider_kwargs))
     return crawler.spider.collected_items, s.root_url, crawler
 
 
@@ -140,7 +163,31 @@ def crawl_single_item(
     """Run a spider where a single item is expected. Use in combination with
     ``capture_exceptions`` and ``CollectorPipeline``
     """
+    warn(
+        "crawl_single_item is deprecated; use crawl_single_item_async instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     items, url, crawler = yield crawl_items(
+        spider_cls, resource_cls, settings, spider_kwargs=spider_kwargs, port=port
+    )
+    try:
+        item = items[0]
+    except IndexError:
+        return None, url, crawler
+
+    if isinstance(item, dict) and "exception" in item:
+        raise item["exception"]
+    return item, url, crawler
+
+
+async def crawl_single_item_async(
+    spider_cls, resource_cls, settings, spider_kwargs=None, port=None
+):
+    """Run a spider where a single item is expected. Use in combination with
+    ``capture_exceptions`` and ``CollectorPipeline``
+    """
+    items, url, crawler = await crawl_items_async(
         spider_cls, resource_cls, settings, spider_kwargs=spider_kwargs, port=port
     )
     try:
@@ -210,11 +257,17 @@ def get_crawler(settings=None, spider_cls=DummySpider, setup_engine=True):
 
 
 class CollectorPipeline:
-    def open_spider(self, spider):
-        spider.collected_items = []
+    @classmethod
+    def from_crawler(cls, crawler):
+        obj = cls()
+        obj.crawler = crawler
+        return obj
 
-    def process_item(self, item, spider):
-        spider.collected_items.append(item)
+    def open_spider(self, spider: Spider | None = None):
+        self.crawler.spider.collected_items = []  # type: ignore[attr-defined]
+
+    def process_item(self, item, spider: Spider | None = None):
+        self.crawler.spider.collected_items.append(item)  # type: ignore[attr-defined]
         return item
 
 
@@ -222,14 +275,15 @@ class InjectedDependenciesCollectorMiddleware:
     @classmethod
     def from_crawler(cls, crawler):
         obj = cls()
+        obj.crawler = crawler
         crawler.signals.connect(obj.spider_opened, signal=signals.spider_opened)
         return obj
 
-    def spider_opened(self, spider):
-        spider.collected_response_deps = []
+    def spider_opened(self, spider: Spider | None = None):
+        self.crawler.spider.collected_response_deps = []  # type: ignore[attr-defined]
 
-    def process_response(self, request, response, spider):
-        spider.collected_response_deps.append(request.cb_kwargs)
+    def process_response(self, request, response, spider: Spider | None = None):
+        self.crawler.spider.collected_response_deps.append(request.cb_kwargs)  # type: ignore[attr-defined]
         return response
 
 

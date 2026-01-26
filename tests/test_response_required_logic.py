@@ -4,11 +4,11 @@ from typing import Any
 import attr
 import pytest
 import scrapy
-from pytest_twisted import inlineCallbacks
 from scrapy.crawler import Crawler
 from scrapy.http import HtmlResponse, Request, TextResponse
 from scrapy.settings import Settings
 from scrapy.statscollectors import MemoryStatsCollector
+from scrapy.utils.defer import deferred_f_from_coro_f
 from web_poet import ItemPage, WebPage
 
 from scrapy_poet import DummyResponse, callback_for
@@ -459,8 +459,8 @@ def test_is_callback_using_response_for_scrapy28_and_above() -> None:
     assert not caught_warnings
 
 
-@inlineCallbacks
-def test_is_response_going_to_be_used():
+@deferred_f_from_coro_f
+async def test_is_response_going_to_be_used():
     crawler = Crawler(MySpider)
     spider = MySpider()
     crawler.spider = spider
@@ -475,31 +475,30 @@ def test_is_response_going_to_be_used():
     spider.settings = Settings(spider.custom_settings)
     injector = Injector(crawler)
 
-    @inlineCallbacks
-    def check_response_required(expected, callback):
+    async def check_response_required(expected, callback):
         request = scrapy.Request("http://example.com", callback=callback)
         assert injector.is_scrapy_response_required(request) is expected
-        yield injector.build_callback_dependencies(request, response(request))
+        await injector.build_callback_dependencies(request, response(request))
 
-    yield from check_response_required(True, None)
-    yield from check_response_required(True, spider.parse2)
-    yield from check_response_required(False, spider.parse3)
-    yield from check_response_required(False, spider.parse4)
-    yield from check_response_required(True, spider.parse5)
-    yield from check_response_required(True, spider.parse6)
-    yield from check_response_required(True, spider.parse7)
-    yield from check_response_required(False, spider.parse8)
-    yield from check_response_required(True, spider.parse9)
-    yield from check_response_required(False, spider.parse10)
-    yield from check_response_required(True, spider.parse11)
-    yield from check_response_required(True, spider.parse12)
-    yield from check_response_required(False, spider.parse13)
-    yield from check_response_required(False, spider.parse14)
-    yield from check_response_required(True, spider.parse15)
-    yield from check_response_required(True, spider.parse16)
-    yield from check_response_required(True, spider.parse17)
-    yield from check_response_required(False, spider.parse18)
-    yield from check_response_required(True, spider.parse19)
-    yield from check_response_required(False, spider.parse20)
-    yield from check_response_required(True, spider.parse21)
-    yield from check_response_required(True, spider.parse22)
+    await check_response_required(True, None)
+    await check_response_required(True, spider.parse2)
+    await check_response_required(False, spider.parse3)
+    await check_response_required(False, spider.parse4)
+    await check_response_required(True, spider.parse5)
+    await check_response_required(True, spider.parse6)
+    await check_response_required(True, spider.parse7)
+    await check_response_required(False, spider.parse8)
+    await check_response_required(True, spider.parse9)
+    await check_response_required(False, spider.parse10)
+    await check_response_required(True, spider.parse11)
+    await check_response_required(True, spider.parse12)
+    await check_response_required(False, spider.parse13)
+    await check_response_required(False, spider.parse14)
+    await check_response_required(True, spider.parse15)
+    await check_response_required(True, spider.parse16)
+    await check_response_required(True, spider.parse17)
+    await check_response_required(False, spider.parse18)
+    await check_response_required(True, spider.parse19)
+    await check_response_required(False, spider.parse20)
+    await check_response_required(True, spider.parse21)
+    await check_response_required(True, spider.parse22)

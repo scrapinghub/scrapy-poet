@@ -319,7 +319,7 @@ Let's adapt the spider to use this new Page Object:
         name = "books_spider"
         parse_book = callback_for(BookPage)  # extract items from book pages
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse)
 
         def parse(self, response, page: BookListPage):
@@ -353,8 +353,8 @@ Let's adapt the spider to use this new Page Object:
         TypeError: parse() missing 1 required positional argument: 'page'
 
     This stems from the fact that using ``start_urls`` would use the predefined
-    :meth:`start_requests() <scrapy.Spider.start_requests>` method wherein
-    :class:`scrapy.Request <scrapy.http.Request>` has ``callback=None``.
+    :meth:`~scrapy.Spider.start` method wherein :class:`scrapy.Request
+    <scrapy.http.Request>` has ``callback=None``.
 
     One way to avoid this is to always declare the callback in :class:`scrapy.Request
     <scrapy.http.Request>`, just like in the original example.

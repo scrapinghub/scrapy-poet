@@ -1,6 +1,6 @@
 import pytest
 import scrapy
-from pytest_twisted import ensureDeferred
+from scrapy.utils.defer import deferred_f_from_coro_f
 from web_poet.pages import ItemPage, WebPage
 
 from scrapy_poet import DummyResponse, callback_for
@@ -43,7 +43,7 @@ def test_callback_for():
     assert list(result) == ["fake item page"]
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_callback_for_async():
     cb = callback_for(FakeItemPageAsync)
     assert callable(cb)
@@ -65,7 +65,7 @@ def test_callback_for_instance_method():
     assert list(result) == ["fake item page"]
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_callback_for_instance_method_async():
     spider = MySpiderAsync()
     response = DummyResponse("http://example.com/")

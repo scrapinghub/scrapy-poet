@@ -7,7 +7,7 @@ from typing import Any
 
 import attr
 from scrapy import Request
-from twisted.internet.defer import inlineCallbacks
+from scrapy.utils.defer import maybe_deferred_to_future
 from twisted.internet.threads import deferToThread
 from web_poet import ItemPage
 
@@ -24,19 +24,19 @@ class AutoextractProductResponse:
 class AutoextractProductProvider(PageObjectInputProvider):
     provided_classes = {AutoextractProductResponse}
 
-    @inlineCallbacks
-    def __call__(self, to_provide, request: Request):
-        data = yield get_autoextract_product(request.url)
+    async def __call__(self, to_provide, request: Request):
+        data = await get_autoextract_product(request.url)
         return [AutoextractProductResponse(data=data)]
 
 
-@inlineCallbacks
-def get_autoextract_product(url):
+async def get_autoextract_product(url):
     # fixme: use async
     # fixme: rate limits?
     from autoextract.sync import request_batch
 
-    resp = yield deferToThread(request_batch, urls=[url], page_type="product")
+    resp = await maybe_deferred_to_future(
+        deferToThread(request_batch, urls=[url], page_type="product")
+    )
     return resp[0]
 
 

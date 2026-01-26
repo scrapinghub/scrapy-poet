@@ -222,7 +222,7 @@ Let's check out an example:
     class MySpider(scrapy.Spider):
         name = "myspider"
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request(
                 "https://toscrape.com/products/some-product", self.parse
             )
@@ -264,7 +264,7 @@ From this example, we can see that:
         class MySpider(scrapy.Spider):
             name = "myspider"
 
-            def start_requests(self):
+            async def start(self):
                 yield scrapy.Request(
                     "https://toscrape.com/products/some-product", self.parse
                 )

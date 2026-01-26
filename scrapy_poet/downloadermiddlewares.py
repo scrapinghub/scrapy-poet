@@ -11,7 +11,6 @@ import warnings
 from typing import TYPE_CHECKING
 
 from scrapy.downloadermiddlewares.stats import DownloaderStats
-from twisted.internet.defer import Deferred, inlineCallbacks
 from web_poet import RulesRegistry
 from web_poet.exceptions import Retry
 
@@ -29,8 +28,6 @@ from .page_input_providers import (
 from .utils import create_registry_instance, is_min_scrapy_version
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
     from scrapy import Spider
     from scrapy.crawler import Crawler
     from scrapy.http import Request, Response
@@ -47,7 +44,8 @@ class DownloaderStatsMiddleware(DownloaderStats):
     ) -> Request | Response:
         if isinstance(response, DummyResponse):
             return response
-        return super().process_response(request, response, spider)
+        kwargs = {"spider": spider} if spider is not None else {}
+        return super().process_response(request, response, **kwargs)
 
 
 DEFAULT_PROVIDERS = {
@@ -82,7 +80,9 @@ class InjectionMiddleware:
     def from_crawler(cls, crawler: Crawler) -> Self:
         return cls(crawler)
 
-    def process_request(self, request: Request, spider: Spider) -> DummyResponse | None:
+    def process_request(
+        self, request: Request, spider: Spider | None = None
+    ) -> DummyResponse | None:
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a :class:`scrapy.http.Response`
         is going to be used by the callback or a Page Input.
@@ -105,7 +105,7 @@ class InjectionMiddleware:
         self.crawler.stats.inc_value("scrapy_poet/dummy_response_count")
         return DummyResponse(url=request.url, request=request)
 
-    def _skip_dependency_creation(self, request: Request, spider: Spider) -> bool:
+    def _skip_dependency_creation(self, request: Request) -> bool:
         """See:
 
         * https://github.com/scrapinghub/scrapy-poet/issues/48  — scrapy <  2.8
@@ -120,7 +120,8 @@ class InjectionMiddleware:
 
         # If the Request.cb_kwargs possess all of the cb dependencies, then no
         # warning message should be issued.
-        signature_iter = iter(inspect.signature(spider.parse).parameters)
+        assert self.crawler.spider
+        signature_iter = iter(inspect.signature(self.crawler.spider.parse).parameters)
         next(signature_iter)  # skip the first arg: response
         cb_param_names = set(signature_iter)
         if cb_param_names and cb_param_names == request.cb_kwargs.keys():
@@ -129,10 +130,9 @@ class InjectionMiddleware:
         # Skip if providers are needed.
         return bool(self.injector.discover_callback_providers(request))
 
-    @inlineCallbacks
-    def process_response(
-        self, request: Request, response: Response, spider: Spider
-    ) -> Generator[Deferred, object, Response | Request]:
+    async def process_response(
+        self, request: Request, response: Response, spider: Spider | None = None
+    ) -> Response | Request:
         """This method fills :attr:`scrapy.Request.cb_kwargs
         <scrapy.http.Request.cb_kwargs>` with instances for the required Page
         Objects found in the callback signature.
@@ -142,7 +142,7 @@ class InjectionMiddleware:
         arguments and any other parameter with a :class:`~.PageObjectInputProvider`
         configured for its type.
         """
-        if self._skip_dependency_creation(request, spider):
+        if self._skip_dependency_creation(request):
             warnings.warn(
                 "A request has been encountered with callback=None which "
                 "defaults to the parse() method. On such cases, annotated "
@@ -156,7 +156,7 @@ class InjectionMiddleware:
 
         # Find out the dependencies
         try:
-            final_kwargs = yield from self.injector.build_callback_dependencies(
+            final_kwargs = await self.injector.build_callback_dependencies(
                 request,
                 response,
             )
@@ -168,9 +168,10 @@ class InjectionMiddleware:
             )
 
             reason = str(exception) or "page_object_retry"
+            assert self.crawler.spider
             new_request_or_none = get_retry_request(
                 request,
-                spider=spider,
+                spider=self.crawler.spider,
                 reason=reason,
             )
             if not new_request_or_none:

@@ -27,7 +27,7 @@ class BookPage(ProductPage):
 class BooksSpider(scrapy.Spider):
     name = "books_05"
 
-    def start_requests(self):
+    async def start(self):
         yield scrapy.Request("http://books.toscrape.com/", callback=self.parse)
 
     def parse(self, response, page: BookListPage):

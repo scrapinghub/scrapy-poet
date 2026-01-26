@@ -13,11 +13,17 @@ class RetryMiddleware:
     """Captures :exc:`web_poet.exceptions.Retry` exceptions from spider
     callbacks, and retries the source request."""
 
+    @classmethod
+    def from_crawler(cls, crawler):
+        obj = cls()
+        obj.crawler = crawler
+        return obj
+
     def process_spider_exception(
         self,
         response: Response,
         exception: BaseException,
-        spider: Spider,
+        spider: Spider | None = None,
     ) -> list[Request] | None:
         # Needed for Twisted < 21.2.0. See the discussion thread linked below:
         # https://github.com/scrapinghub/scrapy-poet/pull/129#discussion_r1102693967
@@ -30,7 +36,7 @@ class RetryMiddleware:
         assert response.request
         new_request_or_none = get_retry_request(
             response.request,
-            spider=spider,
+            spider=self.crawler.spider,  # type: ignore[attr-defined]
             reason=str(exception) or "page_object_retry",
         )
         if not new_request_or_none:

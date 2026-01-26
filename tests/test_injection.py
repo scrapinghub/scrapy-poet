@@ -1,16 +1,17 @@
+from __future__ import annotations
+
 import re
 import shutil
-from collections.abc import Generator
-from typing import Annotated, Any, Callable, Optional
+from typing import Annotated, Any, Callable
 
 import andi
 import attr
 import parsel
 import pytest
 from andi.typeutils import strip_annotated
-from pytest_twisted import inlineCallbacks
 from scrapy import Request
-from scrapy.http import Response
+from scrapy.http import Response  # noqa: TC002
+from scrapy.utils.defer import deferred_f_from_coro_f
 from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import Injectable, ItemPage, RulesRegistry, field
@@ -96,6 +97,33 @@ class ClsNoProvided(str):
 
 class ClsNoProviderRequired(Injectable, str):
     pass
+
+
+class ExpensiveDependency1:
+    pass
+
+
+class ExpensiveDependency2:
+    pass
+
+
+@attr.define
+class MyItem(Injectable):
+    exp: ExpensiveDependency2
+    i: int
+
+
+@attr.define
+class MyPage(ItemPage[MyItem]):
+    expensive: ExpensiveDependency2
+
+    @field
+    def i(self):
+        return 42
+
+    @field
+    def exp(self):
+        return self.expensive
 
 
 def get_providers_for_testing():
@@ -188,8 +216,8 @@ class TestInjector:
         response = get_response_for_testing(callback_yes_2)
         assert injector.is_scrapy_response_required(response.request)
 
-    @inlineCallbacks
-    def test_build_instances_methods(self, injector):
+    @deferred_f_from_coro_f
+    async def test_build_instances_methods(self, injector):
         def callback(
             response: DummyResponse,
             a: Cls1,
@@ -202,7 +230,7 @@ class TestInjector:
         response = get_response_for_testing(callback)
         request = response.request
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances(request, response, plan)
+        instances = await injector.build_instances(request, response, plan)
         assert instances == {
             Cls1: Cls1(),
             Cls2: Cls2(),
@@ -212,7 +240,7 @@ class TestInjector:
         }
         assert injector.weak_cache.get(request).keys() == {ClsReqResponse, Cls1, Cls2}
 
-        instances = yield from injector.build_instances_from_providers(
+        instances = await injector.build_instances_from_providers(
             request, response, plan
         )
         assert instances == {
@@ -222,8 +250,8 @@ class TestInjector:
         }
         assert injector.weak_cache.get(request).keys() == {ClsReqResponse, Cls1, Cls2}
 
-    @inlineCallbacks
-    def test_build_instances_from_providers_unexpected_return(self):
+    @deferred_f_from_coro_f
+    async def test_build_instances_from_providers_unexpected_return(self):
         class WrongProvider(get_provider({Cls1})):
             def __call__(self, to_provide):
                 return [*super().__call__(to_provide), Cls2()]
@@ -236,7 +264,7 @@ class TestInjector:
         response = get_response_for_testing(callback)
         plan = injector.build_plan(response.request)
         with pytest.raises(UndeclaredProvidedTypeError) as exinf:
-            yield from injector.build_instances_from_providers(
+            await injector.build_instances_from_providers(
                 response.request, response, plan
             )
         assert injector.weak_cache.get(response.request) is None
@@ -253,8 +281,8 @@ class TestInjector:
             ["1", "3", "2"],
         ],
     )
-    @inlineCallbacks
-    def test_build_instances_from_providers_respect_priorities(self, str_list):
+    @deferred_f_from_coro_f
+    async def test_build_instances_from_providers_respect_priorities(self, str_list):
         providers = {get_provider({str}, text): int(text) for text in str_list}
         injector = get_injector_for_testing(providers)
 
@@ -263,15 +291,15 @@ class TestInjector:
 
         response = get_response_for_testing(callback)
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances_from_providers(
+        instances = await injector.build_instances_from_providers(
             response.request, response, plan
         )
         assert injector.weak_cache.get(response.request).keys() == {str}
 
         assert instances[str] == min(str_list)
 
-    @inlineCallbacks
-    def test_build_callback_dependencies(self, injector):
+    @deferred_f_from_coro_f
+    async def test_build_callback_dependencies(self, injector):
         def callback(
             response: DummyResponse,
             a: Cls1,
@@ -282,9 +310,7 @@ class TestInjector:
             pass
 
         response = get_response_for_testing(callback)
-        kwargs = yield from injector.build_callback_dependencies(
-            response.request, response
-        )
+        kwargs = await injector.build_callback_dependencies(response.request, response)
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
         assert kwargs_types == {
             "a": Cls1,
@@ -294,30 +320,29 @@ class TestInjector:
         }
 
     @staticmethod
-    @inlineCallbacks
-    def _assert_instances(
+    async def _assert_instances(
         injector: Injector,
         callback: Callable,
         expected_instances: dict[type, Any],
         expected_kwargs: dict[str, Any],
-        reqmeta: Optional[dict[str, Any]] = None,
-    ) -> Generator[Any, Any, None]:
+        reqmeta: dict[str, Any] | None = None,
+    ) -> None:
         response = get_response_for_testing(callback, meta=reqmeta)
         assert response.request
         request = response.request
 
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances(request, response, plan)
+        instances = await injector.build_instances(request, response, plan)
         assert instances == expected_instances
 
-        kwargs = yield from injector.build_callback_dependencies(request, response)
+        kwargs = await injector.build_callback_dependencies(request, response)
         assert kwargs == expected_kwargs
 
     def test_annotated_provide(self, injector):
         assert injector.is_class_provided_by_any_provider(Annotated[Cls1, 42])
 
-    @inlineCallbacks
-    def test_annotated_build(self, injector):
+    @deferred_f_from_coro_f
+    async def test_annotated_build(self, injector):
         def callback(
             a: Cls1,
             b: Annotated[Cls2, 42],
@@ -332,12 +357,12 @@ class TestInjector:
             "a": Cls1(),
             "b": Cls2(),
         }
-        yield self._assert_instances(
+        await self._assert_instances(
             injector, callback, expected_instances, expected_kwargs
         )
 
-    @inlineCallbacks
-    def test_annotated_build_only(self, injector):
+    @deferred_f_from_coro_f
+    async def test_annotated_build_only(self, injector):
         def callback(
             a: Annotated[Cls1, 42],
         ):
@@ -349,12 +374,12 @@ class TestInjector:
         expected_kwargs = {
             "a": Cls1(),
         }
-        yield self._assert_instances(
+        await self._assert_instances(
             injector, callback, expected_instances, expected_kwargs
         )
 
-    @inlineCallbacks
-    def test_annotated_build_duplicate(self, injector):
+    @deferred_f_from_coro_f
+    async def test_annotated_build_duplicate(self, injector):
         def callback(
             a: Cls1,
             b: Cls2,
@@ -375,12 +400,12 @@ class TestInjector:
             "c": Cls2(),
             "d": Cls2(),
         }
-        yield self._assert_instances(
+        await self._assert_instances(
             injector, callback, expected_instances, expected_kwargs
         )
 
-    @inlineCallbacks
-    def test_annotated_build_no_support(self, injector):
+    @deferred_f_from_coro_f
+    async def test_annotated_build_no_support(self, injector):
         # get_provider_requiring_response() returns a provider that doesn't support Annotated
         def callback(
             a: Cls1,
@@ -392,15 +417,15 @@ class TestInjector:
         request = response.request
 
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances_from_providers(
+        instances = await injector.build_instances_from_providers(
             request, response, plan
         )
         assert instances == {
             Cls1: Cls1(),
         }
 
-    @inlineCallbacks
-    def test_annotated_build_duplicate_forbidden(
+    @deferred_f_from_coro_f
+    async def test_annotated_build_duplicate_forbidden(
         self,
     ):
         class Provider(PageObjectInputProvider):
@@ -444,20 +469,14 @@ class TestInjector:
 
         plan = injector.build_plan(response.request)
         with pytest.raises(ValueError, match="Different instances of Cls1 requested"):
-            yield from injector.build_instances(request, response, plan)
+            await injector.build_instances(request, response, plan)
 
-    @inlineCallbacks
-    def test_build_callback_dependencies_minimize_provider_calls(self):
+    @deferred_f_from_coro_f
+    async def test_build_callback_dependencies_minimize_provider_calls(self):
         """Test that build_callback_dependencies does not call any given
         provider more times than it needs when one provided class is requested
         directly while another is a page object dependency requested through
         an item."""
-
-        class ExpensiveDependency1:
-            pass
-
-        class ExpensiveDependency2:
-            pass
 
         class ExpensiveProvider(PageObjectInputProvider):
             provided_classes = {ExpensiveDependency1, ExpensiveDependency2}
@@ -475,23 +494,6 @@ class TestInjector:
                     )
                 return [cls() for cls in to_provide]
 
-        @attr.define
-        class MyItem(Injectable):
-            exp: ExpensiveDependency2
-            i: int
-
-        @attr.define
-        class MyPage(ItemPage[MyItem]):
-            expensive: ExpensiveDependency2
-
-            @field
-            def i(self):
-                return 42
-
-            @field
-            def exp(self):
-                return self.expensive
-
         def callback(
             expensive: ExpensiveDependency1,
             item: MyItem,
@@ -506,16 +508,14 @@ class TestInjector:
         response = get_response_for_testing(callback)
 
         # This would raise RuntimeError if expectations are not met.
-        kwargs = yield from injector.build_callback_dependencies(
-            response.request, response
-        )
+        kwargs = await injector.build_callback_dependencies(response.request, response)
 
         # Make sure the test does not simply pass because some dependencies were
         # not injected at all.
         assert set(kwargs.keys()) == {"expensive", "item"}
 
-    @inlineCallbacks
-    def test_dynamic_deps(self):
+    @deferred_f_from_coro_f
+    async def test_dynamic_deps(self):
         def callback(dd: DynamicDeps):
             pass
 
@@ -538,8 +538,8 @@ class TestInjector:
             reqmeta={"inject": [Cls1, Cls2]},
         )
 
-    @inlineCallbacks
-    def test_dynamic_deps_mix(self):
+    @deferred_f_from_coro_f
+    async def test_dynamic_deps_mix(self):
         def callback(c1: Cls1, dd: DynamicDeps):
             pass
 
@@ -550,7 +550,7 @@ class TestInjector:
         request = response.request
 
         plan = injector.build_plan(response.request)
-        instances = yield from injector.build_instances(request, response, plan)
+        instances = await injector.build_instances(request, response, plan)
         assert instances == {
             DynamicDeps: DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
             Cls1: Cls1(),
@@ -559,15 +559,15 @@ class TestInjector:
         assert instances[Cls1] is instances[DynamicDeps][Cls1]
         assert instances[Cls2] is instances[DynamicDeps][Cls2]
 
-        kwargs = yield from injector.build_callback_dependencies(request, response)
+        kwargs = await injector.build_callback_dependencies(request, response)
         assert kwargs == {
             "c1": Cls1(),
             "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
         }
         assert kwargs["c1"] is kwargs["dd"][Cls1]
 
-    @inlineCallbacks
-    def test_dynamic_deps_no_meta(self):
+    @deferred_f_from_coro_f
+    async def test_dynamic_deps_no_meta(self):
         def callback(dd: DynamicDeps):
             pass
 
@@ -580,15 +580,15 @@ class TestInjector:
         expected_kwargs = {
             "dd": DynamicDeps(),
         }
-        yield self._assert_instances(
+        await self._assert_instances(
             injector,
             callback,
             expected_instances,
             expected_kwargs,
         )
 
-    @inlineCallbacks
-    def test_dynamic_deps_page(self):
+    @deferred_f_from_coro_f
+    async def test_dynamic_deps_page(self):
         def callback(dd: DynamicDeps):
             pass
 
@@ -598,7 +598,7 @@ class TestInjector:
         request = response.request
 
         plan = injector.build_plan(response.request)
-        kwargs = yield from injector.build_callback_dependencies(request, response)
+        kwargs = await injector.build_callback_dependencies(request, response)
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
         assert kwargs_types == {
             "dd": DynamicDeps,
@@ -608,11 +608,11 @@ class TestInjector:
             PricePO: PricePO,
         }
 
-        instances = yield from injector.build_instances(request, response, plan)
+        instances = await injector.build_instances(request, response, plan)
         assert set(instances) == {Html, PricePO, DynamicDeps}
 
-    @inlineCallbacks
-    def test_dynamic_deps_item(self):
+    @deferred_f_from_coro_f
+    async def test_dynamic_deps_item(self):
         def callback(dd: DynamicDeps):
             pass
 
@@ -624,7 +624,7 @@ class TestInjector:
         request = response.request
 
         plan = injector.build_plan(response.request)
-        kwargs = yield from injector.build_callback_dependencies(request, response)
+        kwargs = await injector.build_callback_dependencies(request, response)
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
         assert kwargs_types == {
             "dd": DynamicDeps,
@@ -634,11 +634,11 @@ class TestInjector:
             TestItem: TestItem,
         }
 
-        instances = yield from injector.build_instances(request, response, plan)
+        instances = await injector.build_instances(request, response, plan)
         assert set(instances) == {TestItemPage, TestItem, DynamicDeps}
 
-    @inlineCallbacks
-    def test_dynamic_deps_annotated(self):
+    @deferred_f_from_coro_f
+    async def test_dynamic_deps_annotated(self):
         def callback(dd: DynamicDeps):
             pass
 
@@ -653,7 +653,7 @@ class TestInjector:
         expected_kwargs = {
             "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
         }
-        yield self._assert_instances(
+        await self._assert_instances(
             injector,
             callback,
             expected_instances,
@@ -701,6 +701,7 @@ class PriceInDollarsPO(ItemPage):
 
 @attr.s(auto_attribs=True)
 class TestItem:
+    __test__ = False
     foo: int
     bar: str
 
@@ -741,8 +742,8 @@ class TestInjectorStats:
             ),
         ],
     )
-    @inlineCallbacks
-    def test_stats(self, cb_args, expected, injector):
+    @deferred_f_from_coro_f
+    async def test_stats(self, cb_args, expected, injector):
         def callback_factory():
             args = ", ".join([f"{k}: {v.__name__}" for k, v in cb_args.items()])
             ns = {}
@@ -751,7 +752,7 @@ class TestInjectorStats:
 
         callback = callback_factory()
         response = get_response_for_testing(callback)
-        _ = yield from injector.build_callback_dependencies(response.request, response)
+        await injector.build_callback_dependencies(response.request, response)
         prefix = "poet/injector/"
         poet_stats = {
             name.replace(prefix, ""): value
@@ -761,8 +762,8 @@ class TestInjectorStats:
         assert set(poet_stats) == expected
         assert injector.weak_cache.get(response.request) is None
 
-    @inlineCallbacks
-    def test_po_provided_via_item(self):
+    @deferred_f_from_coro_f
+    async def test_po_provided_via_item(self):
         rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
         registry = RulesRegistry(rules=rules)
         injector = get_injector_for_testing({}, registry=registry)
@@ -771,7 +772,7 @@ class TestInjectorStats:
             pass
 
         response = get_response_for_testing(callback)
-        _ = yield from injector.build_callback_dependencies(response.request, response)
+        await injector.build_callback_dependencies(response.request, response)
         key = "poet/injector/tests.test_injection.TestItemPage"
         assert key in set(injector.crawler.stats.get_stats())
         assert injector.weak_cache.get(response.request) is None
@@ -779,8 +780,8 @@ class TestInjectorStats:
 
 class TestInjectorOverrides:
     @pytest.mark.parametrize("override_should_happen", [True, False])
-    @inlineCallbacks
-    def test_overrides(self, providers, override_should_happen):
+    @deferred_f_from_coro_f
+    async def test_overrides(self, providers, override_should_happen):
         domain = "example.com" if override_should_happen else "other-example.com"
         # The request domain is example.com, so overrides shouldn't be applied
         # when we configure them for domain other-example.com
@@ -799,9 +800,7 @@ class TestInjectorOverrides:
             pass
 
         response = get_response_for_testing(callback)
-        kwargs = yield from injector.build_callback_dependencies(
-            response.request, response
-        )
+        kwargs = await injector.build_callback_dependencies(response.request, response)
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
         price_po = kwargs["price_po"]
         item = price_po.to_item()
@@ -887,8 +886,8 @@ def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
 
 
 @pytest.mark.parametrize("cache_errors", [True, False])
-@inlineCallbacks
-def test_cache(tmp_path, cache_errors):
+@deferred_f_from_coro_f
+async def test_cache(tmp_path, cache_errors):
     """
     In a first run, the cache is empty, and two requests are done, one with exception.
     In the second run we should get the same result as in the first run. The
@@ -916,7 +915,7 @@ def test_cache(tmp_path, cache_errors):
 
     response = get_response_for_testing(callback)
     plan = injector.build_plan(response.request)
-    instances = yield from injector.build_instances_from_providers(
+    instances = await injector.build_instances_from_providers(
         response.request, response, plan
     )
     assert cache.exists()
@@ -932,9 +931,7 @@ def test_cache(tmp_path, cache_errors):
     with pytest.raises(
         ValueError, match=r"\(http://willfail.page\) is not example.com"
     ):
-        yield from injector.build_instances_from_providers(
-            response.request, response, plan
-        )
+        await injector.build_instances_from_providers(response.request, response, plan)
     assert injector.weak_cache.get(response.request) is None
 
     # Different providers. They return a different result, but the cache data should prevail.
@@ -946,7 +943,7 @@ def test_cache(tmp_path, cache_errors):
 
     response = get_response_for_testing(callback)
     plan = injector.build_plan(response.request)
-    instances = yield from injector.build_instances_from_providers(
+    instances = await injector.build_instances_from_providers(
         response.request, response, plan
     )
     assert injector.weak_cache.get(response.request).keys() == {Price, Name}
@@ -958,9 +955,7 @@ def test_cache(tmp_path, cache_errors):
     response.request = Request.replace(response.request, url="http://willfail.page")
     plan = injector.build_plan(response.request)
     with pytest.raises(Error):
-        yield from injector.build_instances_from_providers(
-            response.request, response, plan
-        )
+        await injector.build_instances_from_providers(response.request, response, plan)
     assert injector.weak_cache.get(response.request) is None
 
 

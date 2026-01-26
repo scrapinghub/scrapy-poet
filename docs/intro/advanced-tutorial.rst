@@ -77,7 +77,7 @@ It can be directly used inside the spider as:
 
     class ProductSpider(scrapy.Spider):
 
-        def start_requests(self):
+        async def start(self):
             for url in [
                 "https://toscrape.com/category/product/item?id=123",
                 "https://toscrape.com/category/product/item?id=989",
@@ -149,7 +149,7 @@ Let's see it in action:
             "https://toscrape.com/category/product/item?id=989",
         ]
 
-        def start_requests(self):
+        async def start(self):
             for url in start_urls:
                 yield scrapy.Request(
                     url=url,

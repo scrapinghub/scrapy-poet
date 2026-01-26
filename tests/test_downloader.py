@@ -1,8 +1,10 @@
-import sys
+from __future__ import annotations
+
 import warnings
-from collections.abc import Sequence
+from collections.abc import Sequence  # noqa: TC003
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Optional, Set
+from importlib.metadata import version
+from typing import TYPE_CHECKING, Any, Callable, Set
 from unittest import mock
 from urllib.parse import urlparse
 
@@ -11,17 +13,17 @@ import pytest
 import scrapy
 import twisted
 import web_poet
-from pytest_twisted import ensureDeferred, inlineCallbacks
+from packaging.version import parse as parse_version
 from scrapy import Request, Spider
-from scrapy.crawler import Crawler
+from scrapy.crawler import Crawler  # noqa: TC002
 from scrapy.exceptions import IgnoreRequest
-from scrapy.utils.defer import maybe_deferred_to_future
+from scrapy.utils.defer import deferred_f_from_coro_f, maybe_deferred_to_future
 from web_poet import BrowserResponse, HttpClient
 from web_poet.exceptions import HttpError, HttpRequestError, HttpResponseError
 from web_poet.pages import WebPage
 
 from scrapy_poet import DummyResponse, PageObjectInputProvider
-from scrapy_poet.downloader import create_scrapy_downloader
+from scrapy_poet.downloader import _create_scrapy_downloader
 from scrapy_poet.utils import (
     NO_CALLBACK,
     http_request_to_scrapy_request,
@@ -40,13 +42,128 @@ if TYPE_CHECKING:
     from scrapy.http import Response
 
 
+@attr.define
+class AdditionalRequestsSuccessPage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        response = await self.http.request(
+            self.response.url,
+            body=b"bar",
+        )
+        return {"foo": response.body.decode()}
+
+
+@attr.define
+class AdditionalRequestsBadResponsePage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        try:
+            await self.http.request(
+                self.response.url,
+                body=b"400",
+            )
+        except HttpResponseError:
+            return {"foo": "bar"}
+
+
+@attr.define
+class AdditionalRequestsConnectionIssuePage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        try:
+            await self.http.request(
+                self.response.url,
+                body=b"0.002",
+            )
+        except HttpRequestError:
+            return {"foo": "bar"}
+
+
+@attr.define
+class AdditionalRequestsIgnoredRequestPage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        try:
+            await self.http.request(
+                self.response.url,
+                body=b"ignore",
+            )
+        except HttpError as e:
+            return {"exc": e.__class__}
+
+
+@attr.define
+class AdditionalRequestsDontFilterDuplicatePage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        response1 = await self.http.request(
+            self.response.url,
+            body=b"a",
+        )
+        response2 = await self.http.request(
+            self.response.url,
+            body=b"a",
+        )
+        return {response1.body.decode(): response2.body.decode()}
+
+
+@attr.define
+class AdditionalRequestsDontFilterOffsitePage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        response1 = await self.http.request(
+            self.response.url,
+            body=b"a",
+        )
+        # Not filtered out by the offsite middleware because it is an
+        # additional request.
+        response2 = await self.http.request("data:,b")
+        return {response1.body.decode(): response2.body.decode()}
+
+
+@attr.define
+class AdditionalRequestsNoCbDepsPage(WebPage):
+    browser_response: BrowserResponse
+    http: HttpClient
+
+    async def to_item(self):
+        additional_response = await self.http.request(
+            self.response.url,
+            body=b"a",
+        )
+        return {
+            "main": str(self.browser_response.html),
+            "additional": additional_response.body.decode(),
+        }
+
+
+@attr.define
+class AdditionalRequestsUnhandledDownloaderMiddlewareExceptionPage(WebPage):
+    http: HttpClient
+
+    async def to_item(self):
+        try:
+            await self.http.request(
+                self.response.url,
+                body=b"raise",
+            )
+        except HttpError as e:
+            return {"exc": e.__class__}
+
+
 @pytest.fixture
 def scrapy_downloader() -> Callable:
     mock_downloader = mock.AsyncMock()
-    return create_scrapy_downloader(mock_downloader)
+    return _create_scrapy_downloader(mock_downloader)
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_incompatible_scrapy_request(scrapy_downloader) -> None:
     """The Request must be web_poet.HttpRequest and not anything else."""
 
@@ -66,150 +183,114 @@ def fake_http_response() -> web_poet.HttpResponse:
     )
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_scrapy_poet_downloader(fake_http_response) -> None:
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.return_value = fake_http_response
+    mock_downloader = mock.AsyncMock(return_value=fake_http_response)
+    scrapy_downloader = _create_scrapy_downloader(mock_downloader)
+    response = await scrapy_downloader(req)
+    assert isinstance(response, web_poet.HttpResponse)
 
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
-
-        response = await scrapy_downloader(req)
-
-        mock_downloader.assert_called_once()
-        assert isinstance(response, web_poet.HttpResponse)
-
-        assert str(response.url) == "https://example.com"
-        assert response.text == "some content"
-        assert response.status == 200
-        assert response.headers.get("Content-Type") == "text/html; charset=utf-8"
-        assert len(response.headers) == 1
+    assert str(response.url) == "https://example.com"
+    assert response.text == "some content"
+    assert response.status == 200
+    assert response.headers.get("Content-Type") == "text/html; charset=utf-8"
+    assert len(response.headers) == 1
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_scrapy_poet_downloader_ignored_request() -> None:
     """It should handle IgnoreRequest from Scrapy according to the web poet
     standard on additional request error handling."""
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.side_effect = scrapy.exceptions.IgnoreRequest
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
+    mock_downloader = mock.AsyncMock(side_effect=scrapy.exceptions.IgnoreRequest)
+    scrapy_downloader = _create_scrapy_downloader(mock_downloader)
 
-        with pytest.raises(web_poet.exceptions.HttpError):
-            await scrapy_downloader(req)
+    with pytest.raises(web_poet.exceptions.HttpError):
+        await scrapy_downloader(req)
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_scrapy_poet_downloader_twisted_error() -> None:
     req = web_poet.HttpRequest("https://example.com")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.side_effect = twisted.internet.error.TimeoutError
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
+    mock_downloader = mock.AsyncMock(side_effect=twisted.internet.error.TimeoutError)
+    scrapy_downloader = _create_scrapy_downloader(mock_downloader)
 
-        with pytest.raises(web_poet.exceptions.HttpRequestError):
-            await scrapy_downloader(req)
+    with pytest.raises(web_poet.exceptions.HttpRequestError):
+        await scrapy_downloader(req)
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_scrapy_poet_downloader_head_redirect(fake_http_response) -> None:
     req = web_poet.HttpRequest("https://example.com", method="HEAD")
 
-    with mock.patch(
-        "scrapy_poet.downloader.maybe_deferred_to_future", new_callable=mock.AsyncMock
-    ) as mock_dtf:
-        mock_dtf.return_value = fake_http_response
-        mock_downloader = mock.MagicMock(return_value=mock.AsyncMock)
-        scrapy_downloader = create_scrapy_downloader(mock_downloader)
+    mock_downloader = mock.AsyncMock(return_value=fake_http_response)
+    scrapy_downloader = _create_scrapy_downloader(mock_downloader)
 
-        await scrapy_downloader(req)
+    await scrapy_downloader(req)
 
-        args, _ = mock_downloader.call_args
-        scrapy_request = args[0]
-        assert scrapy_request.meta.get("dont_redirect") is True
+    args, _ = mock_downloader.call_args
+    scrapy_request = args[0]
+    assert scrapy_request.meta.get("dont_redirect") is True
 
 
-@inlineCallbacks
-def test_additional_requests_success() -> None:
+@deferred_f_from_coro_f
+async def test_additional_requests_success() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
 
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                response = await self.http.request(
-                    server.root_url,
-                    body=b"bar",
-                )
-                return {"foo": response.body.decode()}
-
         class TestSpider(Spider):
             name = "test_spider"
 
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
-            async def parse(self, response, page: ItemPage):
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            async def parse(self, response, page: AdditionalRequestsSuccessPage):
                 item = await page.to_item()
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
 
 
-@inlineCallbacks
-def test_additional_requests_bad_response() -> None:
+@deferred_f_from_coro_f
+async def test_additional_requests_bad_response() -> None:
     items = []
 
     with MockServer(StatusResource) as server:
 
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                try:
-                    await self.http.request(
-                        server.root_url,
-                        body=b"400",
-                    )
-                except HttpResponseError:
-                    return {"foo": "bar"}
-
         class TestSpider(Spider):
             name = "test_spider"
 
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
-            async def parse(self, response, page: ItemPage):
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            async def parse(self, response, page: AdditionalRequestsBadResponsePage):
                 item = await page.to_item()
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
 
 
-@inlineCallbacks
-def test_additional_requests_connection_issue() -> None:
+@deferred_f_from_coro_f
+async def test_additional_requests_connection_issue() -> None:
     items = []
 
     with mock.patch(
@@ -222,56 +303,38 @@ def test_additional_requests_connection_issue() -> None:
 
         with MockServer(DelayedResource) as server:
 
-            @attr.define
-            class ItemPage(WebPage):
-                http: HttpClient
-
-                async def to_item(self):
-                    try:
-                        await self.http.request(
-                            server.root_url,
-                            body=b"0.002",
-                        )
-                    except HttpRequestError:
-                        return {"foo": "bar"}
-
             class TestSpider(Spider):
                 name = "test_spider"
 
                 def start_requests(self):
                     yield Request(server.root_url, callback=self.parse)
 
-                async def parse(self, response, page: ItemPage):
+                async def start(self):
+                    for item_or_request in self.start_requests():
+                        yield item_or_request
+
+                async def parse(
+                    self, response, page: AdditionalRequestsConnectionIssuePage
+                ):
                     item = await page.to_item()
                     items.append(item)
 
             crawler = make_crawler(TestSpider)
-            yield crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
 
 
-@inlineCallbacks
-def test_additional_requests_ignored_request() -> None:
+@deferred_f_from_coro_f
+async def test_additional_requests_ignored_request() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
 
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                try:
-                    await self.http.request(
-                        server.root_url,
-                        body=b"ignore",
-                    )
-                except HttpError as e:
-                    return {"exc": e.__class__}
-
         class TestDownloaderMiddleware:
-            def process_response(self, request, response, spider):
+            def process_response(
+                self, request: Request, response: Response, spider: Spider | None = None
+            ):
                 if b"ignore" in response.body:
                     raise IgnoreRequest
                 return response
@@ -282,50 +345,50 @@ def test_additional_requests_ignored_request() -> None:
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
-            async def parse(self, response, page: ItemPage):
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            async def parse(self, response, page: AdditionalRequestsIgnoredRequestPage):
                 item = await page.to_item()
                 items.append(item)
 
         settings = _get_test_settings()
         settings["DOWNLOADER_MIDDLEWARES"][TestDownloaderMiddleware] = 1
         crawler = make_crawler(TestSpider, settings)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"exc": HttpError}]
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Currently, we do not make a distinction between exceptions raised "
-        "from the downloader or from a downloader middleware, except for "
-        "IgnoreRequest. In the future, we might want to inspect the stack to "
-        "determine the source of an exception and raise HttpError instead of "
-        "HttpRequestError when the exception originates in a downloader "
-        "middleware."
-    ),
-    strict=True,
-)
-@inlineCallbacks
-def test_additional_requests_unhandled_downloader_middleware_exception() -> None:
+if parse_version(version("Twisted")) >= parse_version("24.7.0"):
+    _twisted_24_7_0_plus_xfail = pytest.mark.xfail(
+        reason=(
+            "Currently, we do not make a distinction between exceptions "
+            "raised from the downloader or from a downloader middleware, "
+            "except for IgnoreRequest. In the future, we might want to "
+            "inspect the stack to determine the source of an exception and "
+            "raise HttpError instead of HttpRequestError when the exception "
+            "originates in a downloader middleware."
+        ),
+        strict=True,
+    )
+else:
+
+    def _twisted_24_7_0_plus_xfail(f):  # type: ignore[misc]
+        return f
+
+
+@_twisted_24_7_0_plus_xfail
+async def test_additional_requests_unhandled_downloader_middleware_exception() -> None:
     items = []
 
     with MockServer(EchoResource) as server:
 
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                try:
-                    await self.http.request(
-                        server.root_url,
-                        body=b"raise",
-                    )
-                except HttpError as e:
-                    return {"exc": e.__class__}
-
         class TestDownloaderMiddleware:
-            def process_response(self, request, response, spider):
+            def process_response(
+                self, request: Request, response: Response, spider: Spider | None = None
+            ):
                 if b"raise" in response.body:
                     raise RuntimeError
                 return response
@@ -336,20 +399,29 @@ def test_additional_requests_unhandled_downloader_middleware_exception() -> None
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
-            async def parse(self, response, page: ItemPage):
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            async def parse(
+                self,
+                response,
+                page: AdditionalRequestsUnhandledDownloaderMiddlewareExceptionPage,
+            ):
                 item = await page.to_item()
                 items.append(item)
 
         settings = _get_test_settings()
         settings["DOWNLOADER_MIDDLEWARES"][TestDownloaderMiddleware] = 1
-        crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        settings["RETRY_ENABLED"] = False
+        crawler = make_crawler(TestSpider, settings=settings)
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"exc": HttpError}]
 
 
-@inlineCallbacks
-def test_additional_requests_dont_filter_duplicate() -> None:
+@deferred_f_from_coro_f
+async def test_additional_requests_dont_filter_duplicate() -> None:
     """Verify that while duplicate regular requests are filtered out,
     additional requests are not (neither relative to the main requests not
     relative to each other).
@@ -362,21 +434,6 @@ def test_additional_requests_dont_filter_duplicate() -> None:
 
     with MockServer(EchoResource) as server:
 
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                response1 = await self.http.request(
-                    server.root_url,
-                    body=b"a",
-                )
-                response2 = await self.http.request(
-                    server.root_url,
-                    body=b"a",
-                )
-                return {response1.body.decode(): response2.body.decode()}
-
         class TestSpider(Spider):
             name = "test_spider"
 
@@ -384,37 +441,29 @@ def test_additional_requests_dont_filter_duplicate() -> None:
                 yield Request(server.root_url, body=b"a", callback=self.parse)
                 yield Request(server.root_url, body=b"a", callback=self.parse)
 
-            async def parse(self, response, page: ItemPage):
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            async def parse(
+                self, response, page: AdditionalRequestsDontFilterDuplicatePage
+            ):
                 item = await page.to_item()
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"a": "a"}]
 
 
-@inlineCallbacks
-def test_additional_requests_dont_filter_offsite() -> None:
+@deferred_f_from_coro_f
+async def test_additional_requests_dont_filter_offsite() -> None:
     pytest.importorskip("scrapy.downloadermiddlewares.offsite")
 
     items = []
 
     with MockServer(EchoResource) as server:
-
-        @attr.define
-        class ItemPage(WebPage):
-            http: HttpClient
-
-            async def to_item(self):
-                response1 = await self.http.request(
-                    server.root_url,
-                    body=b"a",
-                )
-                # Not filtered out by the offsite middleware because it is an
-                # additional request.
-                response2 = await self.http.request("data:,b")
-                return {response1.body.decode(): response2.body.decode()}
 
         class TestSpider(Spider):
             name = "test_spider"
@@ -425,18 +474,24 @@ def test_additional_requests_dont_filter_offsite() -> None:
                 # Filtered out by the offsite middleware:
                 yield Request("data:,", callback=self.parse)
 
-            async def parse(self, response, page: ItemPage):
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            async def parse(
+                self, response, page: AdditionalRequestsDontFilterOffsitePage
+            ):
                 item = await page.to_item()
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"a": "b"}]
 
 
-@inlineCallbacks
-def test_additional_requests_no_cb_deps() -> None:
+@deferred_f_from_coro_f
+async def test_additional_requests_no_cb_deps() -> None:
     # https://github.com/scrapy-plugins/scrapy-zyte-api/issues/135
     # This tests that the additional request doesn't go through dep resolving
     # like if it used self.parse as a callback.
@@ -456,9 +511,14 @@ def test_additional_requests_no_cb_deps() -> None:
                 request.url, body=request.body, callback=NO_CALLBACK
             )
             assert crawler.engine
-            scrapy_response: Response = await maybe_deferred_to_future(
-                crawler.engine.download(custom_request)
-            )
+            scrapy_response: Response
+            if hasattr(crawler.engine, "download_async"):
+                # Scrapy 2.14+
+                scrapy_response = await crawler.engine.download_async(custom_request)
+            else:
+                scrapy_response = await maybe_deferred_to_future(
+                    crawler.engine.download(custom_request)
+                )
             result = BrowserResponse(
                 url=scrapy_response.url,
                 html=scrapy_response.text,
@@ -467,21 +527,6 @@ def test_additional_requests_no_cb_deps() -> None:
             return [result]
 
     with MockServer(EchoResource) as server:
-
-        @attr.define
-        class ItemPage(WebPage):
-            browser_response: BrowserResponse
-            http: HttpClient
-
-            async def to_item(self):
-                additional_response = await self.http.request(
-                    server.root_url,
-                    body=b"a",
-                )
-                return {
-                    "main": str(self.browser_response.html),
-                    "additional": additional_response.body.decode(),
-                }
 
         class TestSpider(Spider):
             name = "test_spider"
@@ -495,12 +540,18 @@ def test_additional_requests_no_cb_deps() -> None:
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
-            async def parse(self, response: DummyResponse, page: ItemPage):  # type: ignore[override]
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            async def parse(  # type: ignore[override]
+                self, response: DummyResponse, page: AdditionalRequestsNoCbDepsPage
+            ):  # type: ignore[override]
                 item = await page.to_item()
                 items.append(item)
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert provider_calls == 1
     assert items == [{"main": "", "additional": "a"}]
@@ -512,13 +563,18 @@ class BasicPage(WebPage):
         return {"key": "value"}
 
 
+@attr.define
+class AnotherPage(WebPage):
+    pass
+
+
 class BaseSpider(Spider):
     name = "test_spider"
 
 
 # See: https://github.com/scrapinghub/scrapy-poet/issues/48
 def _assert_warning_messages(
-    record, index: Optional[list] = None, not_existing: bool = False
+    record, index: list | None = None, not_existing: bool = False
 ):
     index = index or [0, 1]
 
@@ -556,8 +612,7 @@ def _assert_warning_messages(
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_dummy_response() -> None:
+async def test_parse_callback_none_dummy_response() -> None:
     """If request.callback == None and the parse() method only has a single
     parameter of ``response: DummyResponse``, then a warning should be issued.
 
@@ -578,7 +633,7 @@ def test_parse_callback_none_dummy_response() -> None:
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     _assert_warning_messages(record, index=[0])
     assert not isinstance(collected["response"], DummyResponse)
@@ -588,8 +643,7 @@ def test_parse_callback_none_dummy_response() -> None:
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_response() -> None:
+async def test_parse_callback_none_response() -> None:
     """Similar to ``test_parse_callback_none_dummy_response()`` but instead of
     ``response: DummyResponse``, it's ``response: scrapy.http.Response``.
 
@@ -608,19 +662,17 @@ def test_parse_callback_none_response() -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+        with warnings.catch_warnings(record=True) as w:
+            await maybe_deferred_to_future(crawler.crawl())
 
-    _assert_warning_messages(record, not_existing=True)
-    assert not isinstance(collected["response"], DummyResponse)
+    assert not w
 
 
 @pytest.mark.skipif(
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_no_annotated_deps() -> None:
+async def test_parse_callback_none_no_annotated_deps() -> None:
     """Similar to ``test_parse_callback_none_dummy_response()`` but there are
     no annotated dependencies.
 
@@ -640,7 +692,7 @@ def test_parse_callback_none_no_annotated_deps() -> None:
         crawler = make_crawler(TestSpider)
 
         with warnings.catch_warnings(record=True) as w:
-            yield crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     assert not any("with callback=None" in str(warning.message) for warning in w)
     assert isinstance(collected["response"], scrapy.http.Response)
@@ -650,8 +702,7 @@ def test_parse_callback_none_no_annotated_deps() -> None:
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_with_deps(caplog) -> None:
+async def test_parse_callback_none_with_deps(caplog) -> None:
     """Same with the ``test_parse_callback_none_dummy_response`` test but it
     confirms that the other dependencies requested by the parse() method isn't
     injected.
@@ -670,19 +721,14 @@ def test_parse_callback_none_with_deps(caplog) -> None:
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     _assert_warning_messages(record)
 
-    if sys.version_info < (3, 10):
-        expected_msg = (
-            "TypeError: parse() missing 1 required positional argument: 'page'"
-        )
-    else:
-        expected_msg = (
-            "TypeError: test_parse_callback_none_with_deps.<locals>.TestSpider"
-            ".parse() missing 1 required positional argument: 'page'"
-        )
+    expected_msg = (
+        "TypeError: test_parse_callback_none_with_deps.<locals>.TestSpider"
+        ".parse() missing 1 required positional argument: 'page'"
+    )
     assert expected_msg in caplog.text
 
 
@@ -690,8 +736,7 @@ def test_parse_callback_none_with_deps(caplog) -> None:
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
+async def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
     """Same with the ``test_parse_callback_none_with_deps`` but the dep is passed
     via the ``cb_kwargs`` Request parameter.
 
@@ -707,13 +752,17 @@ def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
                 page = BasicPage(web_poet.HttpResponse("https://example.com", b""))
                 yield Request(server.root_url, cb_kwargs={"page": page})
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response: DummyResponse, page: BasicPage):  # type: ignore[override]
                 collected["response"] = response
 
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     _assert_warning_messages(record, index=[0])
     assert not caplog.text  # no TypeError caused by missing ``page`` arg.
@@ -724,8 +773,7 @@ def test_parse_callback_none_with_deps_cb_kwargs(caplog) -> None:
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",
 )
-@inlineCallbacks
-def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
+async def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
     """Same with the ``test_parse_callback_none_with_deps_cb_kwargs`` but not
     all of the callback dependencies are available in the ``cb_kwargs`` Request
     parameter.
@@ -733,14 +781,14 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
 
     with MockServer(EchoResource) as server:
 
-        @attr.define
-        class AnotherPage(WebPage):
-            pass
-
         class TestSpider(BaseSpider):
             def start_requests(self):
                 page = BasicPage(web_poet.HttpResponse("https://example.com", b""))
                 yield Request(server.root_url, cb_kwargs={"page": page})
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
 
             def parse(  # type: ignore[override]
                 self,
@@ -753,19 +801,14 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
         crawler = make_crawler(TestSpider)
 
         with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+            await maybe_deferred_to_future(crawler.crawl())
 
     _assert_warning_messages(record)
 
-    if sys.version_info < (3, 10):
-        expected_msg = (
-            "TypeError: parse() missing 1 required positional argument: 'page2'"
-        )
-    else:
-        expected_msg = (
-            "TypeError: test_parse_callback_none_with_deps_cb_kwargs_incomplete."
-            "<locals>.TestSpider.parse() missing 1 required positional argument: 'page2'"
-        )
+    expected_msg = (
+        "TypeError: test_parse_callback_none_with_deps_cb_kwargs_incomplete."
+        "<locals>.TestSpider.parse() missing 1 required positional argument: 'page2'"
+    )
     assert expected_msg in caplog.text
 
 
@@ -773,8 +816,8 @@ def test_parse_callback_none_with_deps_cb_kwargs_incomplete(caplog) -> None:
     not is_min_scrapy_version("2.8.0"),
     reason="NO_CALLBACK not available in Scrapy < 2.8",
 )
-@inlineCallbacks
-def test_parse_callback_NO_CALLBACK(caplog) -> None:
+@deferred_f_from_coro_f
+async def test_parse_callback_NO_CALLBACK(caplog) -> None:
     """See: https://github.com/scrapinghub/scrapy-poet/issues/118"""
 
     collected = {}
@@ -789,10 +832,10 @@ def test_parse_callback_NO_CALLBACK(caplog) -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+        with warnings.catch_warnings(record=True) as w:
+            await maybe_deferred_to_future(crawler.crawl())
 
-    _assert_warning_messages(record, not_existing=True)
+    assert not w
     assert not caplog.text
     assert isinstance(collected["response"], DummyResponse)
 
@@ -801,8 +844,8 @@ def test_parse_callback_NO_CALLBACK(caplog) -> None:
     not is_min_scrapy_version("2.8.0"),
     reason="NO_CALLBACK not available in Scrapy < 2.8",
 )
-@inlineCallbacks
-def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
+@deferred_f_from_coro_f
+async def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
     """See: https://github.com/scrapinghub/scrapy-poet/issues/118
 
     Similar to ``test_parse_callback_NO_CALLBACK()`` but with a page object
@@ -821,9 +864,9 @@ def test_parse_callback_NO_CALLBACK_with_page_dep(caplog) -> None:
 
         crawler = make_crawler(TestSpider)
 
-        with pytest.warns(UserWarning) as record:  # noqa: PT030
-            yield crawler.crawl()
+        with warnings.catch_warnings(record=True) as w:
+            await maybe_deferred_to_future(crawler.crawl())
 
-    _assert_warning_messages(record, not_existing=True)
+    assert not w
     assert not caplog.text
     assert not isinstance(collected["response"], DummyResponse)
