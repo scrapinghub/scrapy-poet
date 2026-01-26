@@ -7,9 +7,9 @@ Changelog
 
 * Dropped Python 3.9 support.
 
-* Added Scrapy 2.14 support.
+* Added Scrapy 2.13 and 2.14 support.
 
-* The following backward-incompatible changes have been implemented:
+* Backward-incompatible changes:
 
   * ``scrapy_poet.commands.SavingInjector.build_instances_from_providers()`` is
     now an ``async`` method.
@@ -24,6 +24,15 @@ Changelog
   * In ``scrapy_poet.injection.Injector``, ``build_callback_dependencies()``,
     ``build_instances()`` and ``build_instances_from_providers()`` are now
     ``async`` methods.
+
+* Removed deprecations:
+
+  * The ``scrapy_poet.page_input_providers.ItemProvider`` class, deprecated in
+    0.19.0.
+
+  * The ``SCRAPY_POET_OVERRIDES`` setting, deprecated in 0.9.0.
+
+  * The ``scrapy_poet.middlewares`` module, deprecated in 0.5.0.
 
 * In ``scrapy_poet.utils.testing``, ``crawl_items()`` and
   ``crawl_single_item()`` are now deprecated in favor of their new ``async
@@ -149,7 +158,7 @@ Changelog
   that includes building page objects and items. This fixes problems such as
   providers being called multiple times.
 
-  * :class:`~scrapy_poet.page_input_providers.ItemProvider` is now no-op. It's
+  * ``scrapy_poet.page_input_providers.ItemProvider`` is now no-op. It's
     no longer enabled by default and users should also stop enabling it.
   * ``PageObjectInputProvider.allow_prev_instances`` and code related to it
     were removed so custom providers may need updating.
