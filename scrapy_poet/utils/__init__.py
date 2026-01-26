@@ -4,7 +4,7 @@ import asyncio
 import inspect
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ParamSpec
 
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
@@ -30,11 +30,10 @@ except ImportError:
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from typing import ParamSpec
 
     from scrapy.crawler import Crawler
 
-    _P = ParamSpec("_P")
+_P = ParamSpec("_P")
 
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
