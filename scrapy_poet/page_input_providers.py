@@ -50,7 +50,7 @@ class PageObjectInputProvider:
 
     .. code-block:: python
 
-        def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]:
+        def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]: ...
 
     Therefore, it receives a list of types to be provided and return a list
     with the instances created (don't get confused by the ``Callable``
@@ -78,7 +78,9 @@ class PageObjectInputProvider:
 
     .. code-block:: python
 
-        class BodyHtml(str): pass
+        class BodyHtml(str):
+            pass
+
 
         class BodyHtmlProvider(PageObjectInputProvider):
             provided_classes = {BodyHtml}
