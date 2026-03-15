@@ -42,6 +42,9 @@ savefixture = "scrapy_poet.commands:SaveFixtureCommand"
 
 [project.urls]
 Homepage = "https://github.com/scrapinghub/scrapy-poet"
+Tracker = "https://github.com/scrapinghub/scrapy-poet/issues"
+Documentation = "https://scrapy-poet.readthedocs.io/"
+"Release notes" = "https://scrapy-poet.readthedocs.io/en/stable/changelog.html"
 
 [tool.hatch.version]
 path = "scrapy_poet/VERSION"
