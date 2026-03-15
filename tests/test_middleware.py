@@ -356,7 +356,7 @@ class MultiArgsCallbackSpiderOld(scrapy.Spider):
         provided: ProvidedWithDeferred,
         cb_arg: str | None,
         cb_arg2: bool | None,
-        non_cb_arg: str | None,
+        non_cb_arg: Optional[str],  # noqa: UP045
     ):
         yield {
             "product": product,
