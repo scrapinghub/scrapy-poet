@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 import shutil
-from typing import Annotated, Any, Callable
+from typing import TYPE_CHECKING, Annotated, Any
 
 import andi
 import attr
@@ -40,6 +40,9 @@ from scrapy_poet.injection_errors import (
 )
 
 from .test_providers import Name, Price
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def get_provider(classes, content=None):

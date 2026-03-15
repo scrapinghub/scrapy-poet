@@ -120,12 +120,14 @@ async def test_overrides(settings):
 @attr.s(auto_attribs=True)
 class OptionalAndUnionPageNew(WebPage):
     breadcrumbs: BreadcrumbsExtraction
+    # ruff: disable[UP007,UP045]
     opt_check_1: Optional[BreadcrumbsExtraction]
     union_check_1: Union[BreadcrumbsExtraction, HttpResponse]  # Breadcrumbs is injected
     union_check_2: Union[str, HttpResponse]  # HttpResponse is injected
     union_check_3: Union[Optional[str], HttpResponse]  # HttpResponse is injected
     union_check_4: Union[None, str, HttpResponse]  # HttpResponse is injected
     union_check_5: Union[BreadcrumbsExtraction, None, str]  # Breadcrumbs is injected
+    # ruff: enable[UP007,UP045]
 
     def to_item(self):
         return attr.asdict(self, recurse=False)
@@ -152,6 +154,7 @@ async def test_optional_and_unions_new(settings):
 @attr.s(auto_attribs=True)
 class OptionalAndUnionPageOld(WebPage):
     breadcrumbs: BreadcrumbsExtraction
+    # ruff: disable[UP007,UP045]
     opt_check_1: Optional[BreadcrumbsExtraction]
     opt_check_2: Optional[str]  # str is not Injectable, so None expected here
     union_check_1: Union[BreadcrumbsExtraction, HttpResponse]  # Breadcrumbs is injected
@@ -159,6 +162,7 @@ class OptionalAndUnionPageOld(WebPage):
     union_check_3: Union[Optional[str], HttpResponse]  # None is injected
     union_check_4: Union[None, str, HttpResponse]  # None is injected
     union_check_5: Union[BreadcrumbsExtraction, None, str]  # Breadcrumbs is injected
+    # ruff: enable[UP007,UP045]
 
     def to_item(self):
         return attr.asdict(self, recurse=False)
@@ -185,7 +189,7 @@ async def test_optional_and_unions_old(settings):
 
 @attr.s(auto_attribs=True)
 class NonInjectablePage(WebPage):
-    a: Optional[str] = None
+    a: str | None = None
     b: str = "foo"
 
     def to_item(self):
@@ -208,7 +212,7 @@ async def test_non_injectable(settings):
 @attr.s(auto_attribs=True)
 class ProvidedWithDeferred:
     msg: str
-    response: Optional[HttpResponse]  # it should be None because this class is provided
+    response: HttpResponse | None  # it should be None because this class is provided
 
 
 @attr.s(auto_attribs=True)
@@ -303,9 +307,9 @@ class MultiArgsCallbackSpiderNew(scrapy.Spider):
         response,
         product: ProductPage,
         provided: ProvidedWithDeferred,
-        cb_arg: Optional[str],
-        cb_arg2: Optional[bool],
-        non_cb_arg: Optional[str] = "default",
+        cb_arg: str | None,
+        cb_arg2: bool | None,
+        non_cb_arg: str | None = "default",
     ):
         yield {
             "product": product,
@@ -350,9 +354,9 @@ class MultiArgsCallbackSpiderOld(scrapy.Spider):
         response,
         product: ProductPage,
         provided: ProvidedWithDeferred,
-        cb_arg: Optional[str],
-        cb_arg2: Optional[bool],
-        non_cb_arg: Optional[str],
+        cb_arg: str | None,
+        cb_arg2: bool | None,
+        non_cb_arg: str | None,
     ):
         yield {
             "product": product,

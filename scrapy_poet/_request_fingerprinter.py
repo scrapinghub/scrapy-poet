@@ -12,7 +12,7 @@ else:
     import json
     from functools import cached_property
     from logging import getLogger
-    from typing import Annotated, Callable, get_args, get_origin
+    from typing import Annotated, get_args, get_origin
     from weakref import WeakKeyDictionary
 
     from andi import CustomBuilder
@@ -20,6 +20,8 @@ else:
     from scrapy.utils.misc import load_object
 
     if TYPE_CHECKING:
+        from collections.abc import Callable
+
         from scrapy import Request
         from scrapy.crawler import Crawler
 

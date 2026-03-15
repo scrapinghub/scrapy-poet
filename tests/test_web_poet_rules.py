@@ -10,7 +10,7 @@ import os
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Callable, Optional, Set
+from typing import Any, Callable, Set
 
 import attrs
 import pytest
@@ -103,7 +103,7 @@ class PageObjectCounterMixin:
 
 
 async def crawl_item_and_deps(
-    page_object, override_settings: Optional[dict] = None
+    page_object, override_settings: dict | None = None
 ) -> tuple[Any, Any]:
     """Helper function to easily return the item and injected dependencies from
     a simulated Scrapy callback which asks for either of these dependencies:

@@ -9,7 +9,7 @@ different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from an API for automatic extraction.
 """
 
-from typing import Any, Callable, ClassVar, Set, Union
+from typing import Any, Callable, ClassVar, Set
 
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -92,7 +92,7 @@ class PageObjectInputProvider:
     given type, which must be callable, is provided by this provider.
     """
 
-    provided_classes: Union[set[Callable], Callable[[Callable], bool]]
+    provided_classes: set[Callable] | Callable[[Callable], bool]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
     def is_provided(self, type_: Callable) -> bool:
