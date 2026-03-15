@@ -52,8 +52,7 @@ dependency. For example, you might have an existing Page Object for book extract
 .. code-block:: python
 
     class BookPage(ItemPage):
-        def to_item(self):
-            ...
+        def to_item(self): ...
 
 Imagine this Page Object obtains its data from an external API.
 Therefore, it is not holding the page HTML code.
@@ -73,7 +72,7 @@ using the following Page Object:
 
         def to_item(self):
             item = self.book_page.to_item()
-            item['isbn'] = self.css(".isbn-class::text").get()
+            item["isbn"] = self.css(".isbn-class::text").get()
             return item
 
 And then override it for a particular domain using ``settings.py``:
@@ -81,7 +80,7 @@ And then override it for a particular domain using ``settings.py``:
 .. code-block:: python
 
     SCRAPY_POET_RULES = [
-        ApplyRule("toscrape.com", use=ISBNBookPage, instead_of=BookPage)
+        ApplyRule("toscrape.com", use=ISBNBookPage, instead_of=BookPage),
     ]
 
 This new Page Object gets the original ``BookPage`` as dependency and enrich
@@ -107,7 +106,7 @@ the obtained item with the ISBN from the page HTML.
 
             def to_item(self):
                 item = self.book_page.to_item()
-                item['isbn'] = self.css(".isbn-class::text").get()
+                item["isbn"] = self.css(".isbn-class::text").get()
                 return item
 
 
@@ -121,14 +120,14 @@ from ``books.toscrape.com``:
 
     from web_poet import ApplyRule
 
-
     SCRAPY_POET_RULES = [
         ApplyRule(
             for_patterns=Patterns(
                 include=["books.toscrape.com/cataloge/*index.html|"],
-                exclude=["/catalogue/category/"]),
+                exclude=["/catalogue/category/"],
+            ),
             use=MyBookPage,
-            instead_of=BookPage
+            instead_of=BookPage,
         )
     ]
 
@@ -162,8 +161,8 @@ Let's see an example:
 
         def to_item(self):
             return {
-                'url': self.url,
-                'name': self.css("title::text").get(),
+                "url": self.url,
+                "name": self.css("title::text").get(),
             }
 
 The :py:func:`web_poet.handle_urls` decorator in this case is indicating that
@@ -223,9 +222,7 @@ Let's check out an example:
         name = "myspider"
 
         async def start(self):
-            yield scrapy.Request(
-                "https://toscrape.com/products/some-product", self.parse
-            )
+            yield scrapy.Request("https://toscrape.com/products/some-product", self.parse)
 
         # We can directly ask for the item here instead of the page object.
         def parse(self, response: DummyResponse, item: Product):
@@ -265,9 +262,7 @@ From this example, we can see that:
             name = "myspider"
 
             async def start(self):
-                yield scrapy.Request(
-                    "https://toscrape.com/products/some-product", self.parse
-                )
+                yield scrapy.Request("https://toscrape.com/products/some-product", self.parse)
 
             async def parse(self, response: DummyResponse, product_page: ProductPage):
                 return await product_page.to_item()

@@ -221,7 +221,7 @@ returning the result of the ``to_item`` method call. We could use
             parse_book = callback_for(BookPage)
 
     This is useful when the Page Objects uses additional requests, which rely
-    heavily on ``async/await`` syntax. More info on this in this tutorial 
+    heavily on ``async/await`` syntax. More info on this in this tutorial
     section: :ref:`intro-additional-requests`.
 
 Final result
@@ -381,8 +381,8 @@ existing Page Objects as subclasses of them:
 
     from web_poet.pages import WebPage
 
-
     # ------ Base page objects ------
+
 
     class BookListPage(WebPage):
 
@@ -395,7 +395,9 @@ existing Page Objects as subclasses of them:
         def to_item(self):
             return None
 
+
     # ------ Concrete page objects for books.toscrape.com (BTS) ------
+
 
     class BTSBookListPage(BookListPage):
 
@@ -421,7 +423,7 @@ be done by configuring ``SCRAPY_POET_RULES`` into ``settings.py``:
 
     SCRAPY_POET_RULES = [
         ApplyRule("toscrape.com", BTSBookListPage, BookListPage),
-        ApplyRule("toscrape.com", BTSBookPage, BookPage)
+        ApplyRule("toscrape.com", BTSBookPage, BookPage),
     ]
 
 The spider is back to life!
@@ -477,7 +479,7 @@ are used for the domain
         ApplyRule("toscrape.com", use=BTSBookListPage, instead_of=BookListPage),
         ApplyRule("toscrape.com", use=BTSBookPage, instead_of=BookPage),
         ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),
-        ApplyRule("bookpage.com", use=BPBookPage, instead_of=BookPage)
+        ApplyRule("bookpage.com", use=BPBookPage, instead_of=BookPage),
     ]
 
 The spider is now ready to extract books from both sites 😀.

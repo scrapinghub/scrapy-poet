@@ -38,6 +38,7 @@ instance for Injectables that need it, like the :class:`web_poet.WebPage
 
     class HttpResponseProvider(PageObjectInputProvider):
         """This class provides ``web_poet.HttpResponse`` instances."""
+
         provided_classes = {web_poet.HttpResponse}
 
         def __call__(self, to_provide: Set[Callable], response: Response):
@@ -78,8 +79,10 @@ would lead to the following code:
         PageObjectInputProvider,
     )
 
+
     class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
         """This class provides ``web_poet.HttpResponse`` instances."""
+
         provided_classes = {web_poet.HttpResponse}
 
         def __call__(self, to_provide: Set[Callable], response: Response):
@@ -206,12 +209,7 @@ If neither spider callback nor any of the input providers are using
         provided_classes = {CachedData}
 
         def __call__(self, to_provide: List[Callable], request: scrapy.Request):
-            return [
-                CachedData(
-                    key=request.url,
-                    value=get_cached_content(request.url)
-                )
-            ]
+            return [CachedData(key=request.url, value=get_cached_content(request.url))]
 
 
     @attr.define
