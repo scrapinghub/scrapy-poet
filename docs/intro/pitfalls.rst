@@ -12,7 +12,7 @@ Pitfalls
     Note that the pitfalls discussed in this section aren't applicable to
     Scrapy >= 2.8 for most cases.
 
-    However, if you have code somewhere which directly adds 
+    However, if you have code somewhere which directly adds
     :class:`scrapy.Request <scrapy.http.Request>` instances to the downloader,
     you need to ensure that they don't use ``None`` as the callback value.
     Instead, you can use the new :func:`scrapy.http.request.NO_CALLBACK`
@@ -41,8 +41,7 @@ Let's take a look at the following code:
         name = "my_spider"
         start_urls = ["https://books.toscrape.com"]
 
-        def parse(self, response):
-            ...
+        def parse(self, response): ...
 
 Under the hood, the inherited :meth:`~scrapy.Spider.start` method from
 :class:`scrapy.Spider` doesn't declare any callback value to
@@ -61,7 +60,7 @@ the :class:`scrapy.Request <scrapy.http.Request>` callback value:
 * :class:`scrapy.pipelines.files.FilesPipeline`
 
 However, omitting the :class:`scrapy.Request <scrapy.http.Request>` callback
-value presents *some problems* for **scrapy-poet**. 
+value presents *some problems* for **scrapy-poet**.
 
 Skipped Downloads
 -----------------
@@ -84,8 +83,7 @@ Let's take a look at an example:
         name = "my_spider"
         start_urls = ["https://books.toscrape.com"]
 
-        def parse(self, response: DummyResponse):
-            ...
+        def parse(self, response: DummyResponse): ...
 
 In order for the built-in Scrapy < 2.8 features listed above to work properly,
 **scrapy-poet** chooses to ignore the :class:`~.DummyResponse`
@@ -135,11 +133,10 @@ Let's take a look at the following code:
         name = "my_spider"
         start_urls = ["https://books.toscrape.com"]
 
-        def parse(self, response: scrapy.http.Response, page: MyPage):
-            ...
+        def parse(self, response: scrapy.http.Response, page: MyPage): ...
 
 In the above example, this error would be raised: ``TypeError: parse() missing 1
-required positional argument: 'page'``. 
+required positional argument: 'page'``.
 
 The reason for this **scrapy-poet** behavior is to prevent the wasted dependency
 building *(which could be expensive in some cases)* when the ``parse()`` method
@@ -171,8 +168,7 @@ is **not** ``None``:
         async def start(self):
             yield scrapy.Request("https://books.toscrape.com", callback=self.parse)
 
-        def parse(self, response: scrapy.http.Response, page: MyPage):
-            ...
+        def parse(self, response: scrapy.http.Response, page: MyPage): ...
 
 The :class:`UserWarning` is only shown when the ``parse()`` method declares any
 dependency that is fullfilled by any provider declared in ``SCRAPY_POET_PROVIDERS``.
@@ -185,8 +181,7 @@ skip any dependency from being built because there is none:
             name = "my_spider"
             start_urls = ["https://books.toscrape.com"]
 
-            def parse(self, response: scrapy.http.Response):
-                ...
+            def parse(self, response: scrapy.http.Response): ...
 
 Similarly, the best way to completely avoid the said warning and this **scrapy-poet**
 behavior is to avoid defining a ``parse()`` method and instead choose any other name.
@@ -195,9 +190,7 @@ Opening a response in a web browser
 ===================================
 
 When using scrapy-poet, the ``open_in_browser`` function from Scrapy may raise
-the following exception:
-
-.. code-block:: python
+the following exception::
 
     TypeError: Unsupported response type: HttpResponse
 

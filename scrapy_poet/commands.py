@@ -3,7 +3,6 @@ import logging
 import sys
 from pathlib import Path
 from types import MethodType
-from typing import Optional
 
 import andi
 import scrapy
@@ -66,7 +65,7 @@ class SavingInjectionMiddleware(InjectionMiddleware):
 def spider_for(
     injectable: type[ItemPage],
     url: str,
-    base_spider: Optional[type[scrapy.Spider]] = None,
+    base_spider: type[scrapy.Spider] | None = None,
 ) -> type[scrapy.Spider]:
     if base_spider is None:
         base_spider = scrapy.Spider

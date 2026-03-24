@@ -1,3 +1,65 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "scrapy-poet"
+dynamic = ["version"]
+description = "Page Object pattern for Scrapy"
+readme = "README.rst"
+license = "BSD-3-Clause"
+requires-python = ">=3.10"
+authors = [
+    { name = "Mikhail Korobov", email = "kmike84@gmail.com" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Scrapy",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+    "andi >= 0.6.0",
+    "attrs >= 21.3.0",
+    "parsel >= 1.5.0",
+    "scrapy >= 2.6.0",
+    "sqlitedict >= 1.5.0",
+    "time_machine >= 2.7.1",
+    "twisted >= 18.9.0",
+    "url-matcher >= 0.2.0",
+    "web-poet >= 0.17.0",
+]
+
+[project.entry-points."scrapy.commands"]
+savefixture = "scrapy_poet.commands:SaveFixtureCommand"
+
+[project.urls]
+Homepage = "https://github.com/scrapinghub/scrapy-poet"
+Tracker = "https://github.com/scrapinghub/scrapy-poet/issues"
+Documentation = "https://scrapy-poet.readthedocs.io/"
+"Release notes" = "https://scrapy-poet.readthedocs.io/en/stable/changelog.html"
+
+[tool.hatch.version]
+path = "scrapy_poet/VERSION"
+pattern = "^(?P<version>.+)$"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/docs",
+    "/example",
+    "/scrapy_poet",
+    "/tests",
+    "CHANGELOG.rst",
+    "tox.ini",
+]
+
 [tool.bumpversion]
 current_version = "0.27.0"
 commit = true

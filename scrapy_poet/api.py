@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from inspect import iscoroutinefunction
-from typing import Callable, Optional
 
 from scrapy.http import Request, Response
 from web_poet.pages import ItemPage
@@ -27,7 +27,7 @@ class DummyResponse(Response):
     :class:`~.DummyResponse` to your parser instead.
     """
 
-    def __init__(self, url: str, request: Optional[Request] = None):
+    def __init__(self, url: str, request: Request | None = None):
         super().__init__(url=url, request=request)
 
 

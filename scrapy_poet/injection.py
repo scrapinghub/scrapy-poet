@@ -3,9 +3,9 @@ import inspect
 import logging
 import pprint
 import warnings
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
-from typing import Any, Callable, Optional, cast, get_type_hints
+from typing import Any, cast, get_type_hints
 from weakref import WeakKeyDictionary
 
 import andi
@@ -60,8 +60,8 @@ class Injector:
         self,
         crawler: Crawler,
         *,
-        default_providers: Optional[Mapping] = None,
-        registry: Optional[RulesRegistry] = None,
+        default_providers: Mapping | None = None,
+        registry: RulesRegistry | None = None,
     ):
         self.crawler = crawler
         self.spider = crawler.spider
@@ -69,7 +69,7 @@ class Injector:
         self.load_providers(default_providers)
         self.init_cache()
 
-    def load_providers(self, default_providers: Optional[Mapping] = None):
+    def load_providers(self, default_providers: Mapping | None = None):
         providers_dict = {
             **(default_providers or {}),
             **self.crawler.settings.getdict("SCRAPY_POET_PROVIDERS"),
@@ -171,7 +171,7 @@ class Injector:
 
     def _get_custom_builder(
         self, request: Request
-    ) -> Callable[[Callable], Optional[Callable]]:
+    ) -> Callable[[Callable], Callable | None]:
         """Return a function suitable for passing as ``custom_builder_fn`` to ``andi.plan``.
 
         The returned function can map an item to a factory for that item based
@@ -179,7 +179,7 @@ class Injector:
         """
 
         @functools.cache  # to minimize the registry queries
-        def mapping_fn(dep_cls: Callable) -> Optional[Callable]:
+        def mapping_fn(dep_cls: Callable) -> Callable | None:
             # building DynamicDeps
             if dep_cls is DynamicDeps:
                 dynamic_types = request.meta.get("inject", [])
@@ -188,7 +188,7 @@ class Injector:
                 return self._get_dynamic_deps_factory(dynamic_types)
 
             # building items from pages
-            page_object_cls: Optional[type[ItemPage]] = self.registry.page_cls_for_item(
+            page_object_cls: type[ItemPage] | None = self.registry.page_cls_for_item(
                 request.url, cast("type", dep_cls)
             )
             if not page_object_cls:
@@ -500,8 +500,8 @@ def is_provider_requiring_scrapy_response(provider):
 
 def get_injector_for_testing(
     providers: Mapping,
-    additional_settings: Optional[dict] = None,
-    registry: Optional[RulesRegistry] = None,
+    additional_settings: dict | None = None,
+    registry: RulesRegistry | None = None,
 ) -> Injector:
     """
     Return an :class:`Injector` using a fake crawler.
@@ -523,7 +523,7 @@ def get_injector_for_testing(
 
 
 def get_response_for_testing(
-    callback: Callable, meta: Optional[dict[str, Any]] = None
+    callback: Callable, meta: dict[str, Any] | None = None
 ) -> Response:
     """
     Return a :class:`scrapy.http.Response` with fake content with the configured

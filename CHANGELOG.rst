@@ -315,9 +315,11 @@ Changelog
       from web_poet import WebPage, handle_urls, field
       from scrapy_poet import DummyResponse
 
+
       @attrs.define
       class Image:
           url: str
+
 
       @handle_urls("example.com")
       class ProductImagePage(WebPage[Image]):
@@ -325,10 +327,12 @@ Changelog
           def url(self) -> str:
               return self.css("#product img ::attr(href)").get("")
 
+
       @attrs.define
       class Product:
           name: str
           image: Image
+
 
       @handle_urls("example.com")
       @attrs.define
@@ -345,6 +349,7 @@ Changelog
           @field
           def image(self) -> Image:
               return self.image_item
+
 
       class MySpider(scrapy.Spider):
           name = "myspider"
@@ -525,8 +530,7 @@ Changelog
                 name = "my_spider"
                 start_urls = ["https://books.toscrape.com"]
 
-                def parse(self, response: scrapy.http.Response, page: MyPage):
-                    ...
+                def parse(self, response: scrapy.http.Response, page: MyPage): ...
 
 * :func:`scrapy_poet.injection.is_callback_requiring_scrapy_response` now accepts
   an optional ``raw_callback`` parameter meant to represent the actual callback
