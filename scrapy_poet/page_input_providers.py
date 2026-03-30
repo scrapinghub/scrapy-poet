@@ -6,7 +6,7 @@ The current module implements a Page Input Provider for
 :class:`web_poet.HttpResponse <web_poet.page_inputs.http.HttpResponse>`, which
 is in charge of providing the response HTML from Scrapy. You could also implement
 different providers in order to acquire data from multiple external sources,
-for example, from scrapy-playwright or from an API for automatic extraction.
+for example, from scrapy-playwright or from scrapy-zyte-api.
 """
 
 from typing import Any, Callable, ClassVar, Set

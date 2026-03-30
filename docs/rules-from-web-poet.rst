@@ -28,19 +28,6 @@ on the request URL domain. Please have a look to :ref:`intro-tutorial` to
 learn the basics about overrides before digging deeper in the content of this
 page.
 
-.. tip::
-
-    Some real-world examples on this topic can be found in:
-
-    - `Example 1 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_01.py>`_:
-      shorter example
-    - `Example 2 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_02.py>`_:
-      longer example
-    - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_03.py>`_:
-      rules using :py:func:`web_poet.handle_urls` decorator and retrieving them
-      via :py:meth:`web_poet.RulesRegistry.get_rules <web_poet.rules.RulesRegistry.get_rules>`
-
-
 Page Objects refinement
 -----------------------
 
