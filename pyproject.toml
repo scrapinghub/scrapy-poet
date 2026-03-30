@@ -53,6 +53,7 @@ pattern = "^(?P<version>.+)$"
 [tool.hatch.build.targets.sdist]
 include = [
     "/docs",
+    "/example",
     "/scrapy_poet",
     "/tests",
     "CHANGELOG.rst",

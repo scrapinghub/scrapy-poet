@@ -483,6 +483,8 @@ are used for the domain
     ]
 
 The spider is now ready to extract books from both sites 😀.
+The full example
+`can be seen here <https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders/books_04_overrides_02.py>`_
 
 On the surface, it looks just like a different way to organize Scrapy spider
 code - and indeed, it *is* just a different way to organize the code,
@@ -521,6 +523,8 @@ Next steps
 Now that you know how ``scrapy-poet`` is supposed to work, what about trying to
 apply it to an existing or new Scrapy project?
 
-Also, please check :ref:`rules-from-web-poet` and :ref:`providers`.
+Also, please check the :ref:`rules-from-web-poet` and :ref:`providers` sections
+as well as refer to spiders in the "example" folder:
+https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders
 
 .. _Scrapy Tutorial: https://docs.scrapy.org/en/latest/intro/tutorial.html
