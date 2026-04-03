@@ -1,3 +1,5 @@
+# This runs the tests for the unreleased Scrapy master branch.
+# It doesn't run by default, to run it label your PR with the "test-scrapy-unreleased" label.
 name: scrapy-unreleased
 
 permissions:
