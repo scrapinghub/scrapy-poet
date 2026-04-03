@@ -104,7 +104,7 @@ module = [
 [tool.pytest.ini_options]
 filterwarnings = [
     "ignore:The registry contains .*conflicting rules with:UserWarning",
-    "ignore:Passing method to twisted.internet.ssl.CertificateOptions:DeprecationWarning"
+    "ignore:Passing method to twisted.internet.ssl.CertificateOptions:DeprecationWarning",
 ]
 
 [tool.ruff.lint]
