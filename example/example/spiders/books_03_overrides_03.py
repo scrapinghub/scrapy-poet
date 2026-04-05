@@ -6,7 +6,7 @@ the crawling logic (the spider is exactly the same)
 No configured default logic: if used for an unregistered domain, no logic
 at all is applied.
 
-This example is quite similar to books_04_overrides_02.py where the only
+This example is quite similar to books_03_overrides_02.py where the only
 difference is that this example is using the ``@handle_urls`` decorator to
 store the rules in web-poet's registry.
 """
@@ -65,7 +65,7 @@ class BPBookPage(BookPage):
 
 
 class BooksSpider(scrapy.Spider):
-    name = "books_04_overrides_03"
+    name = "books_03_overrides_03"
     start_urls = ["http://books.toscrape.com/", "https://bookpage.com/reviews"]
     # Configuring different page objects pages for different domains
     custom_settings = {"SCRAPY_POET_RULES": default_registry.get_rules()}

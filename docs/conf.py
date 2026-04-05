@@ -56,14 +56,13 @@ version, release = get_version_and_release()
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-sys.path.insert(0, str(Path(__file__).parent.absolute()))  # _ext
 extensions = [
-    "_ext",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.ifconfig",
     "sphinx.ext.viewcode",
     "sphinx.ext.githubpages",
+    "sphinx_scrapy",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -205,22 +204,17 @@ epub_exclude_files = ["search.html"]
 
 # -- Extension configuration -------------------------------------------------
 
-# -- Options for intersphinx extension ---------------------------------------
-intersphinx_mapping = {
-    "python": (
-        "https://docs.python.org/3",
-        None,
-    ),
-    "scrapy": (
-        "https://docs.scrapy.org/en/latest",
-        None,
-    ),
-    "web-poet": ("https://web-poet.readthedocs.io/en/latest", None),
-    "url-matcher": ("https://url-matcher.readthedocs.io/en/stable", None),
-}
 
 autodoc_default_options = {
     "special-members": "__init__,__call__",
     # 'undoc-members': True,
     "exclude-members": "__weakref__",
 }
+
+# -- sphinx-scrapy -----------------------------------------------------------
+
+scrapy_intersphinx_enable = [
+    "scrapy-zyte-api",
+    "web-poet",
+    "url-matcher",
+]

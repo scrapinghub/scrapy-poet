@@ -484,7 +484,7 @@ are used for the domain
 
 The spider is now ready to extract books from both sites 😀.
 The full example
-`can be seen here <https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders/books_04_overrides_02.py>`_
+`can be seen here <https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders/books_03_overrides_02.py>`_
 
 On the surface, it looks just like a different way to organize Scrapy spider
 code - and indeed, it *is* just a different way to organize the code,
