@@ -94,8 +94,7 @@ class InjectionMiddleware:
 
         With this behavior, we're able to optimize spider executions avoiding
         unnecessary downloads. That could be the case when the callback is
-        actually using another source like external APIs such as Zyte's
-        AutoExtract.
+        actually using another source like external APIs such as Zyte API.
         """
         if self.injector.is_scrapy_response_required(request):
             return None

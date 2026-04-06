@@ -196,18 +196,18 @@ epub_title = project
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ["search.html"]
 
-
 # -- Extension configuration -------------------------------------------------
-
-# -- sphinx-scrapy -----------------------------------------------------------
-
-scrapy_intersphinx_enable = [
-    "url-matcher",
-    "web-poet",
-]
 
 autodoc_default_options = {
     "special-members": "__init__,__call__",
     # 'undoc-members': True,
     "exclude-members": "__weakref__",
 }
+
+# -- sphinx-scrapy -----------------------------------------------------------
+
+scrapy_intersphinx_enable = [
+    "scrapy-zyte-api",
+    "web-poet",
+    "url-matcher",
+]

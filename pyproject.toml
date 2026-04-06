@@ -240,7 +240,6 @@ banned-module-level-imports = [
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"example/*" = ["PLC0415"]
 # scrapy_poet/__init__.py: Automatic import sorting causes circular dependencies.
 "scrapy_poet/__init__.py" = ["F401", "I"]
 "scrapy_poet/page_inputs/__init__.py" = ["F401"]

@@ -166,7 +166,7 @@ Ignoring requests
 =================
 
 Sometimes requests could be skipped, for example, when you're fetching data
-using a third-party API such as Auto Extract or querying a database.
+using a third-party API such as Zyte API or querying a database.
 
 In cases like that, it makes no sense to send the request to Scrapy's downloader
 as it will only waste network resources. But there's an alternative to avoid
