@@ -2,6 +2,16 @@
 Changelog
 =========
 
+0.27.1 (unreleased)
+-------------------
+
+* The package now ships type information (PEP 561).
+
+* Made the documentation more LLM-friendly, with markdown versions of every
+  page and :file:`llms.txt` and :file:`llms-full.txt` files.
+
+* Removed documentation and example references to outdated software.
+
 0.27.0 (2026-01-27)
 -------------------
 
