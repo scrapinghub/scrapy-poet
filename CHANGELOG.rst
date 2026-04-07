@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.27.1 (unreleased)
+0.27.1 (2026-04-07)
 -------------------
 
 * The package now ships type information (PEP 561).
