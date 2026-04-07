@@ -46,7 +46,7 @@ class MockServer:
         time.sleep(0.2)
 
 
-def main():
+def main() -> None:
     from twisted.internet import reactor
 
     parser = argparse.ArgumentParser()

@@ -69,7 +69,7 @@ class Injector:
         self.load_providers(default_providers)
         self.init_cache()
 
-    def load_providers(self, default_providers: Mapping | None = None):
+    def load_providers(self, default_providers: Mapping | None = None) -> None:
         providers_dict = {
             **(default_providers or {}),
             **self.crawler.settings.getdict("SCRAPY_POET_PROVIDERS"),
@@ -88,7 +88,7 @@ class Injector:
             self.providers
         )
 
-    def init_cache(self):
+    def init_cache(self) -> None:
         self.cache = {}
         cache_path = self.crawler.settings.get("SCRAPY_POET_CACHE")
 
@@ -140,7 +140,7 @@ class Injector:
 
         return result
 
-    def is_scrapy_response_required(self, request: Request):
+    def is_scrapy_response_required(self, request: Request) -> bool:
         """
         Check whether Scrapy's :class:`~scrapy.http.Request`'s
         :class:`~scrapy.http.Response` is going to be used.
@@ -384,7 +384,7 @@ class Injector:
         return plan.final_kwargs(provider_instances)
 
 
-def check_all_providers_are_callable(providers):
+def check_all_providers_are_callable(providers) -> None:
     for provider in providers:
         if not callable(provider):
             raise NonCallableProviderError(
@@ -482,7 +482,7 @@ SCRAPY_PROVIDED_CLASSES = {
 }
 
 
-def is_provider_requiring_scrapy_response(provider):
+def is_provider_requiring_scrapy_response(provider) -> bool:
     """Check whether injectable provider makes use of a valid
     :class:`scrapy.http.Response`.
     """

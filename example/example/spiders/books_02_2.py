@@ -29,6 +29,6 @@ class BooksSpider(scrapy.Spider):
     name = "books_02_2"
     start_urls = ["http://books.toscrape.com/"]
 
-    def parse(self, response):
+    def parse(self, response) -> None:
         for url in response.css(".image_container a::attr(href)").getall():
             yield response.follow(url, callback_for(BookPage))

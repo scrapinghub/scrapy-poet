@@ -85,7 +85,7 @@ class HeadersResource(LeafResource):
 
 
 class StatusResource(LeafResource):
-    def render_GET(self, request):
+    def render_GET(self, request) -> bytes:
         decoded_body = request.content.read().decode()
         if decoded_body:
             request.setResponseCode(int(decoded_body))
@@ -93,7 +93,7 @@ class StatusResource(LeafResource):
 
 
 class ForbiddenResource(LeafResource):
-    def render_GET(self, request):
+    def render_GET(self, request) -> bytes:
         request.setResponseCode(403)
         return b""
 
@@ -226,7 +226,7 @@ def make_crawler(spider_cls, settings=None):
     return Crawler(spider_cls, settings)
 
 
-def setup_crawler_engine(crawler: Crawler):
+def setup_crawler_engine(crawler: Crawler) -> None:
     """Run the crawl steps until engine setup, so that crawler.engine is not
     None.
     https://github.com/scrapy/scrapy/blob/8fbebfa943c3352f5ba49f46531a6ccdd0b52b60/scrapy/crawler.py#L116-L122
@@ -248,7 +248,7 @@ class DummySpider(Spider):
     name = "dummy"
 
 
-def get_crawler(settings=None, spider_cls=DummySpider, setup_engine=True):
+def get_crawler(settings=None, spider_cls=DummySpider, setup_engine: bool=True):
     settings = settings or {}
     crawler = _get_crawler(settings_dict=settings, spidercls=spider_cls)
     if setup_engine:
@@ -263,7 +263,7 @@ class CollectorPipeline:
         obj.crawler = crawler
         return obj
 
-    def open_spider(self, spider: Spider | None = None):
+    def open_spider(self, spider: Spider | None = None) -> None:
         self.crawler.spider.collected_items = []  # type: ignore[attr-defined]
 
     def process_item(self, item, spider: Spider | None = None):
@@ -279,7 +279,7 @@ class InjectedDependenciesCollectorMiddleware:
         crawler.signals.connect(obj.spider_opened, signal=signals.spider_opened)
         return obj
 
-    def spider_opened(self, spider: Spider | None = None):
+    def spider_opened(self, spider: Spider | None = None) -> None:
         self.crawler.spider.collected_response_deps = []  # type: ignore[attr-defined]
 
     def process_response(self, request, response, spider: Spider | None = None):

@@ -53,15 +53,15 @@ class BookPage(WebPage):
 class BooksSpider(scrapy.Spider):
     name = "books_04"
 
-    async def start(self):
+    async def start(self) -> None:
         yield scrapy.Request("http://books.toscrape.com/", callback=self.parse)
 
-    def parse(self, response, page: ListingsPage):
+    def parse(self, response, page: ListingsPage) -> None:
         """Callback for Listings pages"""
         yield from response.follow_all(page.book_list.urls(), self.parse_book)
         yield from response.follow_all(page.pagination.urls(), self.parse, priority=+10)
 
-    def parse_book(self, response, page: BookPage):
+    def parse_book(self, response, page: BookPage) -> None:
         yield from response.follow_all(page.recently_viewed_urls(), self.parse_book)
         yield from response.follow_all(page.breadcrumbs.urls(), self.parse)
         yield page.to_item()

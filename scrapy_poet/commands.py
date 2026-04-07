@@ -84,7 +84,7 @@ def spider_for(
 
             self.start = MethodType(start, self)
 
-        async def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
+        async def cb(self, response: DummyResponse, page: injectable) -> None:  # type: ignore[valid-type]
             global frozen_time  # noqa: PLW0603
             frozen_time = datetime.datetime.now(datetime.timezone.utc).replace(
                 microsecond=0
@@ -103,13 +103,13 @@ def spider_for(
 
 
 class SaveFixtureCommand(ScrapyCommand):
-    def syntax(self):
+    def syntax(self) -> str:
         return "<page object class> <URL> [<spider name>]"
 
-    def short_desc(self):
+    def short_desc(self) -> str:
         return "Generate a web-poet test for the provided page object and URL"
 
-    def run(self, args, opts):
+    def run(self, args, opts) -> None:
         if len(args) < 2:
             raise UsageError
         type_name = args[0]

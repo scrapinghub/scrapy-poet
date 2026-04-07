@@ -69,9 +69,9 @@ class BooksSpider(scrapy.Spider):
         ]
     }
 
-    async def start(self):
+    async def start(self) -> None:
         for url in ["http://books.toscrape.com/", "https://bookpage.com/reviews"]:
             yield scrapy.Request(url, callback=self.parse)
 
-    def parse(self, response, page: BookListPage):
+    def parse(self, response, page: BookListPage) -> None:
         yield from response.follow_all(page.book_urls(), callback_for(BookPage))

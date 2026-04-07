@@ -23,6 +23,6 @@ class BooksSpider(scrapy.Spider):
     start_urls = ["http://books.toscrape.com/"]
     parse_book = callback_for(BookPage)
 
-    def parse(self, response):
+    def parse(self, response) -> None:
         for url in response.css(".image_container a::attr(href)").getall():
             yield response.follow(url, self.parse_book)
