@@ -18,7 +18,7 @@ charset-normalizer==3.4.7
     # via requests
 constantly==23.10.4
     # via twisted
-cryptography==46.0.6
+cryptography==46.0.7
     # via
     #   pyopenssl
     #   scrapy
@@ -125,7 +125,7 @@ sphinx-markdown-builder @ git+https://github.com/zytedata/sphinx-markdown-builde
     # via sphinx-scrapy
 sphinx-rtd-theme==3.1.0
     # via -r requirements.in
-sphinx-scrapy @ git+https://github.com/scrapy/sphinx-scrapy.git@2b5f6c7de64c8317cb771fdeb2e5020d1c9c9dcf
+sphinx-scrapy @ git+https://github.com/scrapy/sphinx-scrapy.git@0.7.1
     # via -r requirements.in
 sphinxcontrib-applehelp==2.0.0
     # via sphinx
