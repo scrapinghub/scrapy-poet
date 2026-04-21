@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING
 
 from web_poet.exceptions import Retry
 
+from .utils import _get_retry_request_from_exception
+
 if TYPE_CHECKING:
     from scrapy import Spider
     from scrapy.http import Request, Response
@@ -25,19 +27,11 @@ class RetryMiddleware:
         exception: BaseException,
         spider: Spider | None = None,
     ) -> list[Request] | None:
-        # Needed for Twisted < 21.2.0. See the discussion thread linked below:
-        # https://github.com/scrapinghub/scrapy-poet/pull/129#discussion_r1102693967
-        from scrapy.downloadermiddlewares.retry import (  # noqa: PLC0415
-            get_retry_request,
-        )
-
         if not isinstance(exception, Retry):
             return None
         assert response.request
-        new_request_or_none = get_retry_request(
-            response.request,
-            spider=self.crawler.spider,  # type: ignore[attr-defined]
-            reason=str(exception) or "page_object_retry",
+        new_request_or_none = _get_retry_request_from_exception(
+            response.request, exception, self.crawler
         )
         if not new_request_or_none:
             return []
