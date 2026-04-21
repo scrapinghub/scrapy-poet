@@ -8,12 +8,15 @@ from .utils import _get_retry_request_from_exception
 
 if TYPE_CHECKING:
     from scrapy import Spider
+    from scrapy.crawler import Crawler
     from scrapy.http import Request, Response
 
 
 class RetryMiddleware:
     """Captures :exc:`web_poet.exceptions.Retry` exceptions from spider
     callbacks, and retries the source request."""
+
+    crawler: Crawler | None
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -30,6 +33,7 @@ class RetryMiddleware:
         if not isinstance(exception, Retry):
             return None
         assert response.request
+        assert self.crawler
         new_request_or_none = _get_retry_request_from_exception(
             response.request, exception, self.crawler
         )
