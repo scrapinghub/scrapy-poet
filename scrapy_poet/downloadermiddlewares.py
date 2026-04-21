@@ -25,7 +25,11 @@ from .page_input_providers import (
     ResponseUrlProvider,
     StatsProvider,
 )
-from .utils import create_registry_instance, is_min_scrapy_version
+from .utils import (
+    _get_retry_request_from_exception,
+    create_registry_instance,
+    is_min_scrapy_version,
+)
 
 if TYPE_CHECKING:
     from scrapy import Spider
@@ -160,18 +164,8 @@ class InjectionMiddleware:
                 response,
             )
         except Retry as exception:
-            # Needed for Twisted < 21.2.0. See the discussion thread linked below:
-            # https://github.com/scrapinghub/scrapy-poet/pull/129#discussion_r1102693967
-            from scrapy.downloadermiddlewares.retry import (  # noqa: PLC0415
-                get_retry_request,
-            )
-
-            reason = str(exception) or "page_object_retry"
-            assert self.crawler.spider
-            new_request_or_none = get_retry_request(
-                request,
-                spider=self.crawler.spider,
-                reason=reason,
+            new_request_or_none = _get_retry_request_from_exception(
+                request, exception, self.crawler
             )
             if not new_request_or_none:
                 return response

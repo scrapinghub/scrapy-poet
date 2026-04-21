@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from scrapy.crawler import Crawler
+    from web_poet.exceptions import Retry
 
 _P = ParamSpec("_P")
 
@@ -126,3 +127,20 @@ def maybeDeferred_coro(
     if isinstance(result, failure.Failure):
         return fail(result)
     return succeed(result)
+
+
+def _get_retry_request_from_exception(
+    request: Request, exception: Retry, crawler: Crawler
+) -> Request | None:
+    # Needed for Twisted < 21.2.0
+    # https://github.com/scrapinghub/scrapy-poet/pull/129#discussion_r1102693967
+    from scrapy.downloadermiddlewares.retry import get_retry_request  # noqa: PLC0415
+
+    reason = str(exception) or "page_object_retry"
+    assert crawler.spider
+    return get_retry_request(
+        request,
+        spider=crawler.spider,
+        reason=reason,
+        max_retry_times=getattr(exception, "max_retries", None),
+    )
