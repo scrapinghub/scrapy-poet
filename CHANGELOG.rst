@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.27.2 (unreleased)
+0.27.2 (2026-04-28)
 -------------------
 
 * When raising :class:`~web_poet.exceptions.core.Retry`, setting a
