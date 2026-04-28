@@ -2,6 +2,15 @@
 Changelog
 =========
 
+0.27.2 (unreleased)
+-------------------
+
+* When raising :class:`~web_poet.exceptions.core.Retry`, setting a
+  ``max_retries`` attribute on the exception now overrides the
+  ``RETRY_TIMES`` setting.
+
+* Fixed links in https://scrapy-poet.readthedocs.io/llms.txt.
+
 0.27.1 (2026-04-07)
 -------------------
 
