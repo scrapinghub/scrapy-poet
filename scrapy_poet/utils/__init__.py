@@ -31,7 +31,7 @@ try:
     from web_poet.exceptions import Retry  # available on web-poet >= 0.24.0
 except ImportError:
 
-    class Retry(Exception):
+    class Retry(Exception):  # type: ignore[no-redef]
         pass
 
 
