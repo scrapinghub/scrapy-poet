@@ -21,7 +21,6 @@ from web_poet import (
     consume_modules,
     default_registry,
 )
-from web_poet.exceptions import Retry
 
 try:
     from scrapy.http.request import NO_CALLBACK  # available on Scrapy >= 2.8
@@ -33,6 +32,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from scrapy.crawler import Crawler
+    from web_poet.exceptions import Retry
 
 _P = ParamSpec("_P")
 
@@ -130,20 +130,17 @@ def maybeDeferred_coro(
 
 
 def _get_retry_request_from_exception(
-    request: Request, exception: Exception, crawler: Crawler
+    request: Request, exception: Retry, crawler: Crawler
 ) -> Request | None:
     # Needed for Twisted < 21.2.0
     # https://github.com/scrapinghub/scrapy-poet/pull/129#discussion_r1102693967
     from scrapy.downloadermiddlewares.retry import get_retry_request  # noqa: PLC0415
 
-    if isinstance(exception, Retry):
-        reason = (
-            exception.args[0]
-            if exception.args and exception.args[0]
-            else "page_object_retry"
-        )
-    else:
-        reason = str(exception) or "page_object_retry"
+    reason = (
+        exception.args[0]
+        if exception.args and exception.args[0]
+        else "page_object_retry"
+    )
     assert crawler.spider
     return get_retry_request(
         request,
