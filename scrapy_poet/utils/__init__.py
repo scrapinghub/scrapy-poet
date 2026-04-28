@@ -21,18 +21,12 @@ from web_poet import (
     consume_modules,
     default_registry,
 )
+from web_poet.exceptions import Retry
 
 try:
     from scrapy.http.request import NO_CALLBACK  # available on Scrapy >= 2.8
 except ImportError:
     NO_CALLBACK = None  # type: ignore[assignment]
-
-try:
-    from web_poet.exceptions import Retry  # available on web-poet >= 0.24.0
-except ImportError:
-
-    class Retry(Exception):  # type: ignore[no-redef]
-        pass
 
 
 if TYPE_CHECKING:
