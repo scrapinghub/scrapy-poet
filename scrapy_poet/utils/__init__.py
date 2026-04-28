@@ -136,11 +136,9 @@ def _get_retry_request_from_exception(
     # https://github.com/scrapinghub/scrapy-poet/pull/129#discussion_r1102693967
     from scrapy.downloadermiddlewares.retry import get_retry_request  # noqa: PLC0415
 
-    reason = (
-        exception.args[0]
-        if exception.args and exception.args[0]
-        else str(exception) or "page_object_retry"
-    )
+    message = exception.args[0] if exception.args else None
+    reason = str(message) if message is not None else ""
+    reason = reason or "page_object_retry"
     assert crawler.spider
     return get_retry_request(
         request,
