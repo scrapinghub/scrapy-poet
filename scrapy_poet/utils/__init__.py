@@ -149,7 +149,7 @@ def _get_retry_request_from_exception(
             else "page_object_retry"
         )
     else:
-        reason = str(exception)
+        reason = str(exception) or "page_object_retry"
     assert crawler.spider
     return get_retry_request(
         request,
