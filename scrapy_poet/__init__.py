@@ -1,3 +1,8 @@
+from importlib.metadata import version
+
+__version__ = version("scrapy-poet")
+
+
 from .api import DummyResponse, callback_for
 from .downloadermiddlewares import DownloaderStatsMiddleware, InjectionMiddleware
 from .injection import DynamicDeps
