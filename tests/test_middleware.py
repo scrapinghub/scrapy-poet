@@ -636,13 +636,23 @@ def test_scrapy_shell(tmp_path):
 
 
 class InjectionMiddlewareGetSpider(scrapy.Spider):
-    """Spider that uses InjectionMiddleware.get() in start() to resolve a page
-    object directly, then yields the item without going through a callback."""
+    """Spider that uses InjectionMiddleware.get() in an async callback to
+    resolve a page object directly, then yields the item."""
 
     url = None
 
-    async def start(self):
-        middleware = self.crawler.get_downloader_middleware(InjectionMiddleware)
+    def start_requests(self):
+        yield Request(url=self.url, callback=self.parse)
+
+    async def parse(self, response: DummyResponse):  # type: ignore[override]
+        if hasattr(self.crawler, "get_downloader_middleware"):  # Scrapy 2.12+
+            middleware = self.crawler.get_downloader_middleware(InjectionMiddleware)
+        else:
+            middleware = next(
+                mw
+                for mw in self.crawler.engine.downloader.middleware.middlewares
+                if isinstance(mw, InjectionMiddleware)
+            )
         page = await middleware.get(self.url, ProductPage)
         yield page.to_item()
 
