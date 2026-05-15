@@ -104,9 +104,10 @@ class InjectionMiddleware:
                 for kw in self.keywords:
                     yield template(keyword=kw).to_scrapy()
         """
+        if self.crawler.engine is None:
+            raise RuntimeError("get() called before the engine was created")
 
         scrapy_request = ScrapyRequest(url, dont_filter=True, meta=dict(meta or {}))
-
         if hasattr(self.crawler.engine, "download_async"):  # Scrapy 2.14+
             scrapy_response = await self.crawler.engine.download_async(scrapy_request)
         else:
