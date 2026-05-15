@@ -68,7 +68,7 @@ DEFAULT_PROVIDERS = {
 
 
 class InjectionMiddleware:
-    """Downloader middleware that handles dependencie injection.
+    """Downloader middleware that handles dependency injection.
 
     It provides a :meth:`get` method that can be used for simple in-line
     requests.
