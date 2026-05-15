@@ -645,9 +645,12 @@ class InjectionMiddlewareGetSpider(scrapy.Spider):
         yield Request(url=self.url, callback=self.parse)
 
     async def parse(self, response: DummyResponse):  # type: ignore[override]
+        assert self.url is not None
         if hasattr(self.crawler, "get_downloader_middleware"):  # Scrapy 2.12+
             middleware = self.crawler.get_downloader_middleware(InjectionMiddleware)
+            assert middleware is not None
         else:
+            assert self.crawler.engine is not None
             middleware = next(
                 mw
                 for mw in self.crawler.engine.downloader.middleware.middlewares
