@@ -18,7 +18,7 @@ from url_matcher.util import get_domain
 from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
 from web_poet.pages import is_injectable
 
-from scrapy_poet import DummyResponse, callback_for
+from scrapy_poet import DummyResponse, InjectionMiddleware, callback_for
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils.mockserver import MockServer, get_ephemeral_port
 from scrapy_poet.utils.testing import (
@@ -633,3 +633,29 @@ def test_scrapy_shell(tmp_path):
 
     assert b"Using DummyResponse instead of downloading" not in err
     assert b"{}" in out
+
+
+class InjectionMiddlewareGetSpider(scrapy.Spider):
+    """Spider that uses InjectionMiddleware.get() in start() to resolve a page
+    object directly, then yields the item without going through a callback."""
+
+    url = None
+
+    async def start(self):
+        middleware = self.crawler.get_downloader_middleware(InjectionMiddleware)
+        page = await middleware.get(self.url, ProductPage)
+        yield page.to_item()
+
+
+@deferred_f_from_coro_f
+async def test_injection_middleware_get(settings):
+    item, url, _ = await crawl_single_item_async(
+        InjectionMiddlewareGetSpider, ProductHtml, settings
+    )
+    assert item == {
+        "url": url,
+        "name": "Chocolate",
+        "price": "22€",
+        "description": "The best chocolate ever",
+        "category": "Food / Sweets",
+    }

@@ -8,11 +8,15 @@ from __future__ import annotations
 import inspect
 import logging
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+import andi
+from scrapy import Request as ScrapyRequest
 from scrapy.downloadermiddlewares.stats import DownloaderStats
+from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import RulesRegistry
 from web_poet.exceptions import Retry
+from web_poet.pages import is_injectable
 
 from .api import DummyResponse
 from .injection import Injector
@@ -64,10 +68,10 @@ DEFAULT_PROVIDERS = {
 
 
 class InjectionMiddleware:
-    """This is a Downloader Middleware that's supposed to:
+    """Downloader middleware that handles dependencie injection.
 
-    * check if request downloads could be skipped
-    * inject dependencies before request callbacks are executed
+    It provides a :meth:`get` method that can be used for simple in-line
+    requests.
     """
 
     def __init__(self, crawler: Crawler) -> None:
@@ -83,6 +87,51 @@ class InjectionMiddleware:
     @classmethod
     def from_crawler(cls, crawler: Crawler) -> Self:
         return cls(crawler)
+
+    async def get(self, url: str, cls: type, *, meta: dict | None = None) -> Any:
+        """Download *url* and return a fully-resolved instance of *cls*.
+
+        *meta* is an optional dict for :attr:`Request.meta
+        <scrapy.Request.meta>`.
+
+        Example:
+
+        .. code-block:: python
+
+            async def start(self):
+                injector = self.crawler.get_downloader_middleware(InjectionMiddleware)
+                template = await injector.get("https://example.com", SearchRequestTemplate)
+                for kw in self.keywords:
+                    yield template(keyword=kw).to_scrapy()
+        """
+
+        scrapy_request = ScrapyRequest(url, dont_filter=True, meta=dict(meta or {}))
+
+        if hasattr(self.crawler.engine, "download_async"):  # Scrapy 2.14+
+            scrapy_response = await self.crawler.engine.download_async(scrapy_request)
+        else:
+            scrapy_response = await maybe_deferred_to_future(
+                self.crawler.engine.download(scrapy_request)
+            )
+
+        def _wrapper(page_object):
+            return page_object
+
+        # Set the annotation directly to avoid string-ification from
+        # `from __future__ import annotations` at the top of this module.
+        _wrapper.__annotations__ = {"page_object": cls}
+
+        plan = andi.plan(
+            _wrapper,
+            is_injectable=is_injectable,
+            externally_provided=self.injector.is_class_provided_by_any_provider,
+            overrides=self.injector.registry.overrides_for(url).get,  # type: ignore[arg-type]
+            custom_builder_fn=self.injector._get_custom_builder(scrapy_request),
+        )
+        instances = await self.injector.build_instances(
+            scrapy_request, scrapy_response, plan
+        )
+        return instances[cls]
 
     def process_request(
         self, request: Request, spider: Spider | None = None
