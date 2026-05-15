@@ -57,3 +57,14 @@ Configuring the item adapter
 As documented in :ref:`web-poet:web-poet-testing-adapters`, fixtures can use custom
 item adapters. The ``savefixture`` command uses the adapter specified in the
 ``SCRAPY_POET_TESTS_ADAPTER`` setting to save the fixture.
+
+Configuring settings
+====================
+
+Any Scrapy setting can be configured for the ``savefixture`` command using the
+``-s`` CLI option, which is especially useful when running it outside a Scrapy
+project::
+
+    scrapy savefixture my_project.pages.MyItemPage 'https://example.com' \
+        -s SCRAPY_POET_PROVIDERS='{"my_project.providers.MyProvider": 500}' \
+        -s MY_API_KEY=secret
