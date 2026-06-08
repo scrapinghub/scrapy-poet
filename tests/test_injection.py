@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import re
 import shutil
 from typing import TYPE_CHECKING, Annotated, Any
@@ -218,6 +219,47 @@ class TestInjector:
 
         response = get_response_for_testing(callback_yes_2)
         assert injector.is_scrapy_response_required(response.request)
+
+    def test_build_plan_cache(self, injector):
+        def callback(a: Cls1):
+            pass
+
+        response = get_response_for_testing(callback)
+        request = response.request
+        plan1 = injector.build_plan(request)
+        plan2 = injector.build_plan(request)
+        assert plan1 is plan2
+
+    def test_build_plan_cache_inject_change(self, caplog):
+        def callback(dd: DynamicDeps):
+            pass
+
+        provider = get_provider({Cls1, Cls2})
+        injector = get_injector_for_testing({provider: 1})
+
+        with caplog.at_level(logging.WARNING, logger="scrapy_poet.injection"):
+            response = get_response_for_testing(callback, meta={"inject": [Cls1]})
+            request = response.request
+            plan1 = injector.build_plan(request)
+
+            # Change inject — should rebuild and log one warning.
+            request.meta["inject"] = [Cls2]
+            plan2 = injector.build_plan(request)
+            assert plan2 is not plan1
+            assert len(caplog.records) == 1
+            assert "inject" in caplog.records[0].message
+
+            # Same inject — cache hit, no new warning.
+            plan3 = injector.build_plan(request)
+            assert plan3 is plan2
+            assert len(caplog.records) == 1
+
+            # inject changes on a different request — rebuilds, no new warning.
+            response2 = get_response_for_testing(callback, meta={"inject": [Cls1]})
+            injector.build_plan(response2.request)
+            response2.request.meta["inject"] = [Cls2]
+            injector.build_plan(response2.request)
+            assert len(caplog.records) == 1
 
     @deferred_f_from_coro_f
     async def test_build_instances_methods(self, injector):
