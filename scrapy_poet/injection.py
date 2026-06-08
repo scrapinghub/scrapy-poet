@@ -112,6 +112,11 @@ class Injector:
         # as the request exists. This is useful for latter providers to re-use the
         # already built instances by earlier providers.
         self.weak_cache: WeakKeyDictionary[Request, dict] = WeakKeyDictionary()
+        # Caches the result of build_plan() per request as (plan, inject_snapshot).
+        self._plan_cache: WeakKeyDictionary[Request, tuple[andi.Plan, tuple]] = (
+            WeakKeyDictionary()
+        )
+        self._warned_inject_changed = False
 
     def available_dependencies_for_providers(
         self, request: Request, response: Response
@@ -157,6 +162,24 @@ class Injector:
 
     def build_plan(self, request: Request) -> andi.Plan:
         """Create a plan for building the dependencies required by the callback"""
+        inject = tuple(request.meta.get("inject", []))
+        if request in self._plan_cache:
+            cached_plan, cached_inject = self._plan_cache[request]
+            if inject == cached_inject:
+                return cached_plan
+            if not self._warned_inject_changed:
+                logger.warning(
+                    f"request.meta['inject'] changed between calls for "
+                    f"{request.url!r}. Set its final value as early as "
+                    f"possible, so that e.g. request fingerprints can account "
+                    f"for it."
+                )
+                self._warned_inject_changed = True
+        plan = self._build_plan(request)
+        self._plan_cache[request] = (plan, inject)
+        return plan
+
+    def _build_plan(self, request: Request) -> andi.Plan:
         callback = get_callback(request, self.spider)
         return andi.plan(
             callback,
