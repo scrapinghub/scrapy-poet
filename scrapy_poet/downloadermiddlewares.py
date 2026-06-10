@@ -8,11 +8,13 @@ from __future__ import annotations
 import inspect
 import logging
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, TypeVar
 
+from scrapy import Request
 from scrapy.downloadermiddlewares.stats import DownloaderStats
-from web_poet import RulesRegistry
+from web_poet import HttpRequest, RequestUrl, ResponseUrl, RulesRegistry
 from web_poet.exceptions import Retry
+from web_poet.pages import is_injectable
 
 from .api import DummyResponse
 from .injection import Injector
@@ -28,16 +30,36 @@ from .page_input_providers import (
 from .utils import (
     _get_retry_request_from_exception,
     create_registry_instance,
+    http_request_to_scrapy_request,
     is_min_scrapy_version,
 )
 
 if TYPE_CHECKING:
     from scrapy import Spider
     from scrapy.crawler import Crawler
-    from scrapy.http import Request, Response
+    from scrapy.http import Response
 
     # typing.Self requires Python 3.11
     from typing_extensions import Self
+
+_T = TypeVar("_T")
+
+# Requests sent via get_page() / get_item() carry this meta key so that
+# process_request and process_response skip the normal callback-based
+# injection (which get_page/get_item handle themselves).
+_POET_PAGE_REQUEST_META_KEY = "_scrapy_poet_page_request"
+
+
+def _to_scrapy_request(
+    request: str | Request | HttpRequest | RequestUrl | ResponseUrl,
+) -> Request:
+    """Normalise any *RequestLike* value to a fresh :class:`scrapy.Request`."""
+    if isinstance(request, Request):
+        return request.replace()  # copy so we don't mutate the caller's object
+    if isinstance(request, HttpRequest):
+        return http_request_to_scrapy_request(request)
+    return Request(url=str(request))
+
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +122,9 @@ class InjectionMiddleware:
         unnecessary downloads. That could be the case when the callback is
         actually using another source like external APIs such as Zyte API.
         """
+        if request.meta.get(_POET_PAGE_REQUEST_META_KEY):
+            return None
+
         if self.injector.is_scrapy_response_required(request):
             return None
 
@@ -145,6 +170,9 @@ class InjectionMiddleware:
         arguments and any other parameter with a :class:`~.PageObjectInputProvider`
         configured for its type.
         """
+        if request.meta.get(_POET_PAGE_REQUEST_META_KEY):
+            return response
+
         if self._skip_dependency_creation(request):
             warnings.warn(
                 "A request has been encountered with callback=None which "
@@ -180,3 +208,90 @@ class InjectionMiddleware:
             # TODO: check if all arguments are fulfilled somehow?
 
         return response
+
+    async def get_page(
+        self,
+        request: str | Request | HttpRequest | RequestUrl | ResponseUrl,
+        page_cls: type[_T],
+        *,
+        page_params: dict[Any, Any] | None = None,
+    ) -> _T:
+        """Return an instance of *page_cls* built from *request*.
+
+        *request* can be a URL string, a :class:`scrapy.Request`, or any of
+        the web-poet request types (:class:`~web_poet.HttpRequest`,
+        :class:`~web_poet.RequestUrl`, :class:`~web_poet.ResponseUrl`).
+
+        *page_params* is forwarded to the page object as a
+        :class:`~web_poet.PageParams` dependency.
+
+        Requires Scrapy 2.14+.
+
+        Example:
+
+        .. code-block:: python
+
+            async def start(self):
+                mw = self.crawler.get_downloader_middleware(InjectionMiddleware)
+                page = await mw.get_page("https://example.com", MyPage)
+                yield await page.to_item()
+        """
+        assert self.crawler.engine
+        scrapy_request = _to_scrapy_request(request)
+        if page_params is not None:
+            scrapy_request.meta["page_params"] = {
+                **scrapy_request.meta.get("page_params", {}),
+                **page_params,
+            }
+        scrapy_request.meta[_POET_PAGE_REQUEST_META_KEY] = True
+        response = await self.crawler.engine.download_async(scrapy_request)
+        plan = self.injector.build_plan_for_type(scrapy_request, page_cls)
+        instances = await self.injector.build_instances(scrapy_request, response, plan)
+        if page_cls in instances:
+            return instances[page_cls]
+        return page_cls(**plan.final_kwargs(instances))
+
+    async def get_item(
+        self,
+        request: str | Request | HttpRequest | RequestUrl | ResponseUrl,
+        item_or_page_cls: type,
+        *,
+        page_params: dict[Any, Any] | None = None,
+    ) -> Any:
+        """Return an item extracted from *request*.
+
+        *item_or_page_cls* can be either an item class or a page object class:
+
+        - **Page class**: the page object is built and its
+          :meth:`~web_poet.ItemPage.to_item` method is called.
+        - **Item class**: the corresponding page class is looked up in the
+          registry and used to extract the item.
+
+        *request* and *page_params* behave the same as in :meth:`get_page`.
+
+        Requires Scrapy 2.14+.
+
+        Example:
+
+        .. code-block:: python
+
+            async def start(self):
+                mw = self.crawler.get_downloader_middleware(InjectionMiddleware)
+                yield await mw.get_item("https://example.com", MyItem)
+        """
+        if is_injectable(item_or_page_cls):
+            page_cls = item_or_page_cls
+        else:
+            url = str(
+                request.url if isinstance(request, (Request, HttpRequest)) else request
+            )
+            page_cls = self.registry.page_cls_for_item(url, item_or_page_cls)
+            if page_cls is None:
+                raise ValueError(
+                    f"No page class is registered for item type {item_or_page_cls!r}."
+                )
+        page = await self.get_page(request, page_cls, page_params=page_params)
+        item = page.to_item()
+        if inspect.isawaitable(item):
+            item = await item
+        return item

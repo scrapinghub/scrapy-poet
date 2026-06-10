@@ -159,3 +159,61 @@ Let's see it in action:
 
         async def parse(self, response, page: ProductPage):
             return await page.to_item()
+
+.. _inline:
+
+Inline page object and item resolution
+======================================
+
+The callback-based approach — annotating a ``parse`` method with page object
+types — is the recommended pattern for most spiders. Sometimes, however, you
+might want to resolve a page object or extract an item *inline*.
+
+:class:`~scrapy_poet.InjectionMiddleware` provides two methods for this:
+
+-   :meth:`~scrapy_poet.InjectionMiddleware.get_page` — downloads a URL and
+    returns a page object instance.
+-   :meth:`~scrapy_poet.InjectionMiddleware.get_item` — downloads a URL,
+    builds the page object, and calls its ``to_item()`` method, returning the
+    extracted item directly.
+
+Both methods require **Scrapy 2.14+**. Retrieve the middleware instance via
+:meth:`scrapy.crawler.Crawler.get_downloader_middleware`.
+
+.. code-block:: python
+
+    import scrapy
+    from scrapy_poet import InjectionMiddleware
+
+
+    class ProductSpider(scrapy.Spider):
+        start_urls = [
+            "https://toscrape.com/category/product/item?id=123",
+            "https://toscrape.com/category/product/item?id=989",
+        ]
+
+        async def start(self):
+            mw = self.crawler.get_downloader_middleware(InjectionMiddleware)
+            for url in self.start_urls:
+                yield await mw.get_item(url, ProductPage)
+
+Both methods accept any of the following as their first argument:
+
+-   A URL string.
+-   A :class:`scrapy.Request` — useful when you need to set custom headers,
+    meta, or other request options.
+-   A :class:`web_poet.HttpRequest`, :class:`web_poet.RequestUrl`, or
+    :class:`web_poet.ResponseUrl`.
+
+**Passing page params**
+
+Both methods accept a ``page_params`` keyword argument that is forwarded to
+the page object as a :class:`~web_poet.PageParams` dependency, equivalent to
+setting ``Request.meta["page_params"]``:
+
+.. code-block:: python
+
+        async def start(self):
+            mw = self.crawler.get_downloader_middleware(InjectionMiddleware)
+            for url in self.start_urls:
+                yield await mw.get_item(url, ProductPage, page_params={"enable_images": True})
