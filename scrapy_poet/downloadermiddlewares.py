@@ -290,7 +290,7 @@ class InjectionMiddleware:
                 raise ValueError(
                     f"No page class is registered for item type {item_or_page_cls!r}."
                 )
-        page = await self.get_page(request, page_cls, page_params=page_params)
+        page: Any = await self.get_page(request, page_cls, page_params=page_params)
         item = page.to_item()
         if inspect.isawaitable(item):
             item = await item

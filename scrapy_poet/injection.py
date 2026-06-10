@@ -88,8 +88,8 @@ class Injector:
             self.providers
         )
 
-    def init_cache(self):
-        self.cache = {}
+    def init_cache(self) -> None:
+        self.cache: dict[Any, Any] | SerializedDataCache = {}
         cache_path = self.crawler.settings.get("SCRAPY_POET_CACHE")
 
         # SCRAPY_POET_CACHE: True
@@ -377,6 +377,7 @@ class Injector:
                 except Exception as e:
                     if self.cache and self.caching_errors:
                         # Save errors in the cache
+                        assert fingerprint is not None
                         self.cache[fingerprint] = e
                         self.crawler.stats.inc_value("poet/cache/firsthand")
                     raise
@@ -405,6 +406,7 @@ class Injector:
 
             if self.cache and not cache_hit:
                 # Save the results in the cache
+                assert fingerprint is not None
                 self.cache[fingerprint] = serialize(objs)
                 self.crawler.stats.inc_value("poet/cache/firsthand")
 

@@ -1,12 +1,19 @@
 """Integration tests for InjectionMiddleware.get_page() and get_item()."""
 
+import pytest
 import scrapy
 from scrapy import Request
 from scrapy.utils.defer import deferred_f_from_coro_f
 from web_poet import ApplyRule, HttpRequest, ItemPage, PageParams, RequestUrl, WebPage
 
 from scrapy_poet import InjectionMiddleware, callback_for
+from scrapy_poet.utils import is_min_scrapy_version
 from scrapy_poet.utils.testing import ProductHtml, crawl_items_async
+
+pytestmark = pytest.mark.skipif(
+    not is_min_scrapy_version("2.14"),
+    reason="Requires Scrapy 2.14+",
+)
 
 # ---------------------------------------------------------------------------
 # Page / item fixtures
