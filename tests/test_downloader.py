@@ -639,6 +639,14 @@ async def test_parse_callback_none_dummy_response() -> None:
     assert not isinstance(collected["response"], DummyResponse)
 
 
+def test_dummy_response_replace() -> None:
+    request = Request("https://example.com")
+    response = DummyResponse(url=request.url, request=request).replace(status=404)
+    assert isinstance(response, DummyResponse)
+    assert response.status == 404
+    assert response.request is request
+
+
 @pytest.mark.skipif(
     is_min_scrapy_version("2.8.0"),
     reason="tests Scrapy < 2.8 before NO_CALLBACK was introduced",

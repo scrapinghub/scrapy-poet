@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from inspect import iscoroutinefunction
 
-from scrapy.http import Request, Response
+from scrapy.http import Response
 from web_poet.pages import ItemPage
 
 _CALLBACK_FOR_MARKER = "__scrapy_poet_callback"
@@ -26,9 +26,6 @@ class DummyResponse(Response):
     :class:`~.InjectionMiddleware` is going to skip download and provide a
     :class:`~.DummyResponse` to your parser instead.
     """
-
-    def __init__(self, url: str, request: Request | None = None):
-        super().__init__(url=url, request=request)
 
 
 def callback_for(page_or_item_cls: type) -> Callable:
