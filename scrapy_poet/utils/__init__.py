@@ -1,13 +1,19 @@
-import os
+from __future__ import annotations
+
+import asyncio
+import inspect
 from functools import lru_cache
-from typing import Type
-from warnings import warn
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, ParamSpec
 
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
-from scrapy.crawler import Crawler
-from scrapy.http import Request, Response
+from scrapy.http import HtmlResponse, Request, Response
+from scrapy.utils.defer import deferred_from_coro
 from scrapy.utils.project import inside_project, project_data_dir
+from scrapy.utils.response import open_in_browser as scrapy_open_in_browser
+from twisted.internet.defer import Deferred, fail, succeed
+from twisted.python import failure
 from web_poet import (
     HttpRequest,
     HttpResponse,
@@ -15,6 +21,20 @@ from web_poet import (
     consume_modules,
     default_registry,
 )
+
+try:
+    from scrapy.http.request import NO_CALLBACK  # available on Scrapy >= 2.8
+except ImportError:
+    NO_CALLBACK = None  # type: ignore[assignment]
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from scrapy.crawler import Crawler
+    from web_poet.exceptions import Retry
+
+_P = ParamSpec("_P")
 
 
 def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -> str:
@@ -26,7 +46,7 @@ def get_scrapy_data_path(createdir: bool = True, default_dir: str = ".scrapy") -
     # which does too many things.
     path = project_data_dir() if inside_project() else default_dir
     if createdir:
-        os.makedirs(path, exist_ok=True)
+        Path(path).mkdir(exist_ok=True, parents=True)
     return path
 
 
@@ -36,6 +56,7 @@ def http_request_to_scrapy_request(request: HttpRequest, **kwargs) -> Request:
         method=request.method,
         headers=request.headers,
         body=request.body,
+        callback=NO_CALLBACK,
         **kwargs,
     )
 
@@ -57,22 +78,71 @@ def scrapy_response_to_http_response(response: Response) -> HttpResponse:
     )
 
 
-def create_registry_instance(cls: Type, crawler: Crawler):
+def open_in_browser(response):
+    scrapy_open_in_browser(http_response_to_scrapy_response(response))
+
+
+def http_response_to_scrapy_response(response: HttpResponse) -> HtmlResponse:
+    """Convenience method to convert a ``web_poet.HttpResponse`` into a
+    ``scrapy.http.HtmlResponse``.
+    """
+    kwargs = {}
+    encoding = getattr(response, "_encoding", None) or "utf-8"
+    kwargs["encoding"] = encoding
+
+    return HtmlResponse(
+        url=response.url._url,
+        body=response.text,
+        status=response.status,
+        headers=response.headers,
+        **kwargs,
+    )
+
+
+def create_registry_instance(cls: type, crawler: Crawler):
     for module in crawler.settings.getlist("SCRAPY_POET_DISCOVER", []):
         consume_modules(module)
-    if "SCRAPY_POET_OVERRIDES" in crawler.settings:
-        msg = (
-            "The SCRAPY_POET_OVERRIDES setting is deprecated. "
-            "Use SCRAPY_POET_RULES instead."
-        )
-        warn(msg, DeprecationWarning, stacklevel=2)
-    rules = crawler.settings.getlist(
-        "SCRAPY_POET_RULES",
-        crawler.settings.getlist("SCRAPY_POET_OVERRIDES", default_registry.get_rules()),
-    )
+    rules = crawler.settings.getlist("SCRAPY_POET_RULES", default_registry.get_rules())
     return cls(rules=rules)
 
 
-@lru_cache()
+@lru_cache
 def is_min_scrapy_version(version: str) -> bool:
     return Version(SCRAPY_VERSION) >= Version(version)
+
+
+def maybeDeferred_coro(
+    f: Callable[_P, Any], *args: _P.args, **kw: _P.kwargs
+) -> Deferred:
+    """Copy of defer.maybeDeferred that also converts coroutines to Deferreds."""
+    try:
+        result = f(*args, **kw)
+    except:  # noqa: E722
+        return fail(failure.Failure(captureVars=Deferred.debug))
+
+    if isinstance(result, Deferred):
+        return result
+    if asyncio.isfuture(result) or inspect.isawaitable(result):
+        return deferred_from_coro(result)
+    if isinstance(result, failure.Failure):
+        return fail(result)
+    return succeed(result)
+
+
+def _get_retry_request_from_exception(
+    request: Request, exception: Retry, crawler: Crawler
+) -> Request | None:
+    # Needed for Twisted < 21.2.0
+    # https://github.com/scrapinghub/scrapy-poet/pull/129#discussion_r1102693967
+    from scrapy.downloadermiddlewares.retry import get_retry_request  # noqa: PLC0415
+
+    message = exception.args[0] if exception.args else None
+    reason = str(message) if message is not None else ""
+    reason = reason or "page_object_retry"
+    assert crawler.spider
+    return get_retry_request(
+        request,
+        spider=crawler.spider,
+        reason=reason,
+        max_retry_times=getattr(exception, "max_retries", None),
+    )

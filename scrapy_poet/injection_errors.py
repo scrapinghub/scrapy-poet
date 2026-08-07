@@ -22,5 +22,3 @@ class ProviderDependencyDeadlockError(InjectionError):
         - Page object named "ChickenPage" require "EggPage" as a dependency.
         - Page object named "EggPage" require "ChickenPage" as a dependency.
     """
-
-    pass

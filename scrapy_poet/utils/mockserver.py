@@ -5,7 +5,6 @@ import time
 from importlib import import_module
 from subprocess import PIPE, Popen
 
-from twisted.internet import reactor
 from twisted.web.server import Site
 
 
@@ -16,15 +15,16 @@ def get_ephemeral_port():
 
 
 class MockServer:
-    def __init__(self, resource, port=None):
-        self.resource = "{0}.{1}".format(resource.__module__, resource.__name__)
+    def __init__(self, resource, port=None, pythonpath=None):
+        self.resource = f"{resource.__module__}.{resource.__name__}"
         self.proc = None
         host = socket.gethostbyname(socket.gethostname())
         self.port = port or get_ephemeral_port()
-        self.root_url = "http://%s:%d" % (host, self.port)
+        self.root_url = f"http://{host}:{self.port}"
+        self.pythonpath = pythonpath or ""
 
     def __enter__(self):
-        self.proc = Popen(
+        self.proc = Popen(  # noqa: S603
             [
                 sys.executable,
                 "-u",
@@ -35,6 +35,7 @@ class MockServer:
                 str(self.port),
             ],
             stdout=PIPE,
+            env={"PYTHONPATH": self.pythonpath},
         )
         self.proc.stdout.readline()
         return self
@@ -46,6 +47,8 @@ class MockServer:
 
 
 def main():
+    from twisted.internet import reactor
+
     parser = argparse.ArgumentParser()
     parser.add_argument("resource")
     parser.add_argument("--port", type=int)
@@ -57,11 +60,7 @@ def main():
 
     def print_listening():
         host = http_port.getHost()
-        print(
-            "Mock server {0} running at http://{1}:{2}".format(
-                resource, host.host, host.port
-            )
-        )
+        print(f"Mock server {resource} running at http://{host.host}:{host.port}")
 
     reactor.callWhenRunning(print_listening)
     reactor.run()

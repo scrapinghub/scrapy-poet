@@ -38,6 +38,7 @@ instance for Injectables that need it, like the :class:`web_poet.WebPage
 
     class HttpResponseProvider(PageObjectInputProvider):
         """This class provides ``web_poet.HttpResponse`` instances."""
+
         provided_classes = {web_poet.HttpResponse}
 
         def __call__(self, to_provide: Set[Callable], response: Response):
@@ -59,8 +60,8 @@ Please, check the docs provided in the following API reference for more details:
 :class:`~.PageObjectInputProvider`.
 
 
-Cache Suppport in Providers
-===========================
+Cache Support in Providers
+==========================
 
 ``scrapy-poet`` also supports caching of the provided dependencies from the
 providers. For example, :class:`~.HttpResponseProvider` supports this right off
@@ -78,8 +79,10 @@ would lead to the following code:
         PageObjectInputProvider,
     )
 
+
     class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
         """This class provides ``web_poet.HttpResponse`` instances."""
+
         provided_classes = {web_poet.HttpResponse}
 
         def __call__(self, to_provide: Set[Callable], response: Response):
@@ -127,6 +130,14 @@ which Scrapy has. Although they are quite similar in its intended purpose,
 could be anything that could stretch beyond Scrapy's ``Responses`` `(e.g. Network
 Database queries, API Calls, AWS S3 files, etc)`.
 
+.. note::
+
+   The :class:`scrapy_poet.injection.Injector` maintains a ``.weak_cache`` which
+   stores the instances created by the providers as long as the corresponding
+   :class:`scrapy.Request <scrapy.http.Request>` instance exists. This means that
+   the instances created by earlier providers can be accessed and reused by latter
+   providers. This is turned on by default and the instances are stored in memory.
+
 
 Configuring providers
 =====================
@@ -155,7 +166,7 @@ Ignoring requests
 =================
 
 Sometimes requests could be skipped, for example, when you're fetching data
-using a third-party API such as Auto Extract or querying a database.
+using a third-party API such as Zyte API or querying a database.
 
 In cases like that, it makes no sense to send the request to Scrapy's downloader
 as it will only waste network resources. But there's an alternative to avoid
@@ -198,12 +209,7 @@ If neither spider callback nor any of the input providers are using
         provided_classes = {CachedData}
 
         def __call__(self, to_provide: List[Callable], request: scrapy.Request):
-            return [
-                CachedData(
-                    key=request.url,
-                    value=get_cached_content(request.url)
-                )
-            ]
+            return [CachedData(key=request.url, value=get_cached_content(request.url))]
 
 
     @attr.define
@@ -220,7 +226,7 @@ If neither spider callback nor any of the input providers are using
     class MySpider(scrapy.Spider):
         name = "my_spider"
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse_page)
 
         def parse_page(self, response: DummyResponse, page: MyPageObject):
@@ -269,7 +275,7 @@ Page Object uses it, the request is not ignored, for example:
     class MySpider(scrapy.Spider):
         name = "my_spider"
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse_page)
 
         def parse_page(self, response: DummyResponse, page: MyPageObject):
@@ -312,3 +318,46 @@ but not the others.
 To have other settings respected, in addition to ``CONCURRENT_REQUESTS``, you'd
 need to use ``crawler.engine.download`` or something like that. Alternatively,
 you could implement those limits in the library itself.
+
+
+.. _annotated:
+
+Attaching metadata to dependencies
+==================================
+
+Providers can support dependencies with arbitrary metadata attached and use
+that metadata when creating them. Attaching the metadata is done by wrapping
+the dependency class in :data:`typing.Annotated`:
+
+.. code-block:: python
+
+    @attr.define
+    class MyPageObject(ItemPage):
+        response: Annotated[HtmlResponse, "foo", "bar"]
+
+To handle this you need the following changes in your provider:
+
+.. code-block:: python
+
+    from andi.typeutils import strip_annotated
+    from scrapy_poet import PageObjectInputProvider
+    from web_poet.annotated import AnnotatedInstance
+
+
+    class Provider(PageObjectInputProvider):
+        ...
+
+        def is_provided(self, type_: Callable) -> bool:
+            # needed so that you can list just the base type in provided_classes
+            return super().is_provided(strip_annotated(type_))
+
+        def __call__(self, to_provide):
+            result = []
+            for cls in to_provide:
+                metadata = getattr(cls, "__metadata__", None)
+                obj = ...  # create the instance using cls and metadata
+                if metadata:
+                    # wrap the instance into a web_poet.annotated.AnnotatedInstance object
+                    obj = AnnotatedInstance(obj, metadata)
+                result.append(obj)
+            return result

@@ -10,12 +10,12 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
 import pkgutil
 import sys
 from datetime import datetime
+from pathlib import Path
 
-sys.path.insert(0, os.path.abspath("../"))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def get_copyright(attribution, *, first_year):
@@ -28,7 +28,7 @@ def get_copyright(attribution, *, first_year):
 
 def get_version_and_release():
     try:
-        import scrapy_poet  # noqa: F401
+        import scrapy_poet  # noqa: F401,PLC0415
     except ImportError:
         return "", ""
     version_bytes = pkgutil.get_data("scrapy_poet", "VERSION") or b""
@@ -41,7 +41,7 @@ def get_version_and_release():
 # -- Project information -----------------------------------------------------
 
 project = "scrapy-poet"
-copyright = get_copyright("Zyte Group Ltd", first_year=2019)
+project_copyright = get_copyright("Zyte Group Ltd", first_year=2019)
 author = "Zyte"
 
 version, release = get_version_and_release()
@@ -57,11 +57,7 @@ version, release = get_version_and_release()
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.ifconfig",
-    "sphinx.ext.viewcode",
-    "sphinx.ext.githubpages",
+    "sphinx_scrapy",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -98,13 +94,6 @@ pygments_style = None
 # a list of builtin themes.
 #
 html_theme = "sphinx_rtd_theme"
-
-# Add any paths that contain custom themes here, relative to this directory.
-# Add path to the RTD explicitly to robustify builds (otherwise might
-# fail in a clean Debian build env)
-import sphinx_rtd_theme  # noqa: E402
-
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -207,25 +196,18 @@ epub_title = project
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ["search.html"]
 
-
 # -- Extension configuration -------------------------------------------------
-
-# -- Options for intersphinx extension ---------------------------------------
-intersphinx_mapping = {
-    "python": (
-        "https://docs.python.org/3",
-        None,
-    ),
-    "scrapy": (
-        "https://docs.scrapy.org/en/latest",
-        None,
-    ),
-    "web-poet": ("https://web-poet.readthedocs.io/en/latest/", None),
-    "url-matcher": ("https://url-matcher.readthedocs.io/en/stable/", None),
-}
 
 autodoc_default_options = {
     "special-members": "__init__,__call__",
     # 'undoc-members': True,
     "exclude-members": "__weakref__",
 }
+
+# -- sphinx-scrapy -----------------------------------------------------------
+
+scrapy_intersphinx_enable = [
+    "scrapy-zyte-api",
+    "web-poet",
+    "url-matcher",
+]

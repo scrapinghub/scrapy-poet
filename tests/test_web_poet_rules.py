@@ -10,12 +10,14 @@ import os
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, Callable, Set
 
 import attrs
 import pytest
 import scrapy
-from pytest_twisted import inlineCallbacks
+from packaging.version import Version
+from scrapy import __version__ as SCRAPY_VERSION
+from scrapy.utils.defer import deferred_f_from_coro_f
 from url_matcher import Patterns
 from url_matcher.util import get_domain
 from web_poet import (
@@ -32,12 +34,13 @@ from web_poet.pages import ItemT
 
 from scrapy_poet import callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
+from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils import is_min_scrapy_version
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
+    _get_test_settings,
     capture_exceptions,
-    crawl_single_item,
-    create_scrapy_settings,
+    crawl_single_item_async,
 )
 from tests.test_middleware import ProductHtml
 
@@ -47,21 +50,21 @@ URL = f"{DOMAIN}:{PORT}"
 
 
 def rules_settings() -> dict:
-    settings = create_scrapy_settings(None)
+    settings = _get_test_settings()
     settings["SCRAPY_POET_RULES"] = default_registry.get_rules()
     return settings
 
 
-def spider_for(injectable: Type):
+def spider_for(injectable: type):
     class InjectableSpider(scrapy.Spider):
-
         url = None
-        custom_settings = {
-            "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS,
-        }
 
         def start_requests(self):
             yield scrapy.Request(self.url, capture_exceptions(callback_for(injectable)))
+
+        async def start(self):
+            for item_or_request in self.start_requests():
+                yield item_or_request
 
     return InjectableSpider
 
@@ -76,12 +79,9 @@ class PageObjectCounterMixin:
     For example, a PO could have its ``.to_item()`` method called multiple times
     to produce the same item. This is extremely wasteful should there be any
     additional requests used to produce the item.
-
-    ``ItemProvider`` should cache up such instances and prevent them from being
-    built again.
     """
 
-    instances: Dict[Type, Any] = defaultdict(list)
+    instances: dict[type, Any] = defaultdict(list)
     to_item_call_count = 0
 
     def __attrs_pre_init__(self):
@@ -93,29 +93,35 @@ class PageObjectCounterMixin:
 
     @classmethod
     def clear(cls):
-        for po_cls in cls.instances.keys():
+        for po_cls in cls.instances:
             po_cls.to_item_call_count = 0
         cls.instances = defaultdict(list)
 
     async def to_item(self) -> ItemT:
         type(self).to_item_call_count += 1
-        return await super().to_item()
+        return await super().to_item()  # type: ignore[misc]
 
 
-@inlineCallbacks
-def crawl_item_and_deps(PageObject) -> Tuple[Any, Any]:
+async def crawl_item_and_deps(
+    page_object, override_settings: dict | None = None
+) -> tuple[Any, Any]:
     """Helper function to easily return the item and injected dependencies from
     a simulated Scrapy callback which asks for either of these dependencies:
         - page object
         - item class
     """
-    item, _, crawler = yield crawl_single_item(
-        spider_for(PageObject), ProductHtml, rules_settings(), port=PORT
+
+    settings = {**rules_settings(), "SCRAPY_POET_PROVIDERS": DEFAULT_PROVIDERS}
+    if override_settings:
+        settings.update(override_settings)
+
+    item, _, crawler = await crawl_single_item_async(
+        spider_for(page_object), ProductHtml, settings, port=PORT
     )
     return item, crawler.spider.collected_response_deps
 
 
-def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int = 1):
+def assert_deps(deps: list[dict[str, Any]], expected: dict[str, Any], size: int = 1):
     """Helper for easily checking the instances of the ``deps`` returned by
     ``crawl_item_and_deps()``.
 
@@ -130,22 +136,19 @@ def assert_deps(deps: List[Dict[str, Any]], expected: Dict[str, Any], size: int 
     # Only checks the first element for now since it's used alongside crawling
     # a single item.
     assert not deps[0].keys() - expected.keys()
-    assert all([True for k, v in expected.items() if isinstance(deps[0][k], v)])
+    assert all(isinstance(deps[0][k], v) for k, v in expected.items())
 
 
-def assert_warning_tokens(caught_warnings, expected_warning_tokens):
-    results = []
-    for warning in caught_warnings:
-        results.append(
-            all(
-                [
-                    True
-                    for expected in expected_warning_tokens
-                    if expected in str(warning.message)
-                ]
-            )
-        )
-    assert all(results)
+async def assert_no_item(page: type) -> None:
+    # Starting Scrapy 2.7, there's better support for async callbacks. This
+    # means that errors aren't suppressed.
+    if is_min_scrapy_version("2.7.0"):
+        expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
+        with pytest.raises(TypeError, match=expected_msg):
+            await crawl_item_and_deps(page)
+    else:
+        item = await crawl_item_and_deps(page)
+        assert item == (None, [{}])
 
 
 @handle_urls(URL)
@@ -154,12 +157,12 @@ class UrlMatchPage(ItemPage):
         return {"msg": "PO URL Match"}
 
 
-@inlineCallbacks
-def test_url_only_match() -> None:
+@deferred_f_from_coro_f
+async def test_url_only_match() -> None:
     """Page Objects which only have URL in its ``@handle_urls`` annotation should
     work.
     """
-    item, deps = yield crawl_item_and_deps(UrlMatchPage)
+    item, deps = await crawl_item_and_deps(UrlMatchPage)
     assert item == {"msg": "PO URL Match"}
     assert_deps(deps, {"page": UrlMatchPage})
 
@@ -170,8 +173,8 @@ class UrlNoMatchPage(ItemPage):
         return {"msg": "PO No URL Match"}
 
 
-@inlineCallbacks
-def test_url_only_no_match() -> None:
+@deferred_f_from_coro_f
+async def test_url_only_no_match() -> None:
     """Same case as with ``test_url_only_match()`` but the URL specified in the
     ``@handle_urls`` annotation doesn't match the request/response URL that the
     spider is crawling.
@@ -179,7 +182,7 @@ def test_url_only_no_match() -> None:
     However, it should still work since we're forcing to use ``UrlNoMatchPage``
     specifically as the page object input.
     """
-    item, deps = yield crawl_item_and_deps(UrlNoMatchPage)
+    item, deps = await crawl_item_and_deps(UrlNoMatchPage)
     assert item == {"msg": "PO No URL Match"}
     assert_deps(deps, {"page": UrlNoMatchPage})
 
@@ -194,18 +197,18 @@ class NoRuleWebPage(WebPage):
         return {"msg": "NO Rule Web"}
 
 
-@inlineCallbacks
-def test_no_rule_declaration() -> None:
+@deferred_f_from_coro_f
+async def test_no_rule_declaration() -> None:
     """A more extreme case of ``test_url_only_no_match()`` where the page object
     doesn't have any rule declaration at all.
 
     But it should still work since we're enforcing the dependency.
     """
-    item, deps = yield crawl_item_and_deps(NoRulePage)
+    item, deps = await crawl_item_and_deps(NoRulePage)
     assert item == {"msg": "NO Rule"}
     assert_deps(deps, {"page": NoRulePage})
 
-    item, deps = yield crawl_item_and_deps(NoRuleWebPage)
+    item, deps = await crawl_item_and_deps(NoRuleWebPage)
     assert item == {"msg": "NO Rule Web"}
     assert_deps(deps, {"page": NoRuleWebPage})
 
@@ -221,20 +224,20 @@ class ReplacementPage(WebPage):
         return {"msg": "PO replacement"}
 
 
-@inlineCallbacks
-def test_basic_overrides() -> None:
+@deferred_f_from_coro_f
+async def test_basic_overrides() -> None:
     """Basic overrides use case.
 
-    If a page object is asked for and it's available in a rule's ``instead_of``
+    If a page object is asked for, and it's available in a rule's ``instead_of``
     parameter, it would be replaced by the page object inside the rule's ``use``
     parameter.
     """
-    item, deps = yield crawl_item_and_deps(OverriddenPage)
+    item, deps = await crawl_item_and_deps(OverriddenPage)
     assert item == {"msg": "PO replacement"}
     assert_deps(deps, {"page": ReplacementPage})
 
     # Calling the replacement should also still work
-    item, deps = yield crawl_item_and_deps(ReplacementPage)
+    item, deps = await crawl_item_and_deps(ReplacementPage)
     assert item == {"msg": "PO replacement"}
     assert_deps(deps, {"page": ReplacementPage})
 
@@ -255,8 +258,8 @@ class RightPage(WebPage):
 handle_urls(URL, instead_of=RightPage)(LeftPage)
 
 
-@inlineCallbacks
-def test_mutual_overrides() -> None:
+@deferred_f_from_coro_f
+async def test_mutual_overrides() -> None:
     """Two page objects that override each other should not present any problems.
 
     In practice, this isn't useful at all.
@@ -275,11 +278,11 @@ def test_mutual_overrides() -> None:
         Let's hold off this potential warning mechanism until we observe that it
         actually affects users.
     """
-    item, deps = yield crawl_item_and_deps(LeftPage)
+    item, deps = await crawl_item_and_deps(LeftPage)
     assert item == {"msg": "right page"}
     assert_deps(deps, {"page": RightPage})
 
-    item, deps = yield crawl_item_and_deps(RightPage)
+    item, deps = await crawl_item_and_deps(RightPage)
     assert item == {"msg": "left page"}
     assert_deps(deps, {"page": LeftPage})
 
@@ -302,22 +305,22 @@ class ReturnOfTheJediPage(WebPage):
         return {"msg": "return of the jedi"}
 
 
-@inlineCallbacks
-def test_chained_overrides() -> None:
+@deferred_f_from_coro_f
+async def test_chained_overrides() -> None:
     """If 3 overrides are connected to each other, there wouldn't be any
     transitivity than spans the 3 POs.
     """
-    item, deps = yield crawl_item_and_deps(NewHopePage)
+    item, deps = await crawl_item_and_deps(NewHopePage)
     assert item == {"msg": "empire strikes back"}
     assert_deps(deps, {"page": EmpireStrikesBackPage})
 
     # Calling the other PO should still work
 
-    item, deps = yield crawl_item_and_deps(EmpireStrikesBackPage)
+    item, deps = await crawl_item_and_deps(EmpireStrikesBackPage)
     assert item == {"msg": "return of the jedi"}
     assert_deps(deps, {"page": ReturnOfTheJediPage})
 
-    item, deps = yield crawl_item_and_deps(ReturnOfTheJediPage)
+    item, deps = await crawl_item_and_deps(ReturnOfTheJediPage)
     assert item == {"msg": "return of the jedi"}
     assert_deps(deps, {"page": ReturnOfTheJediPage})
 
@@ -341,19 +344,19 @@ class MultipleRulePage(WebPage):
         return {"msg": "multiple rule page"}
 
 
-@inlineCallbacks
-def test_multiple_rules_single_page_object() -> None:
+@deferred_f_from_coro_f
+async def test_multiple_rules_single_page_object() -> None:
     """A single PO could be used by multiple other rules."""
-    item, deps = yield crawl_item_and_deps(FirstPage)
+    item, deps = await crawl_item_and_deps(FirstPage)
     assert item == {"msg": "multiple rule page"}
     assert_deps(deps, {"page": MultipleRulePage})
 
-    item, deps = yield crawl_item_and_deps(SecondPage)
+    item, deps = await crawl_item_and_deps(SecondPage)
     assert item == {"msg": "multiple rule page"}
     assert_deps(deps, {"page": MultipleRulePage})
 
     # Calling the replacement should also still work
-    item, deps = yield crawl_item_and_deps(MultipleRulePage)
+    item, deps = await crawl_item_and_deps(MultipleRulePage)
     assert item == {"msg": "multiple rule page"}
     assert_deps(deps, {"page": MultipleRulePage})
 
@@ -370,20 +373,20 @@ class ProductPage(ItemPage[Product]):
         return "product name"
 
 
-@inlineCallbacks
-def test_basic_item_return() -> None:
+@deferred_f_from_coro_f
+async def test_basic_item_return() -> None:
     """Basic item use case.
 
-    If an item class is asked for and it's available in some rule's ``to_return``
+    If an item class is asked for, and it's available in some rule's ``to_return``
     parameter, an item class's instance shall be produced by the page object
     declared inside the rule's ``use`` parameter.
     """
-    item, deps = yield crawl_item_and_deps(Product)
+    item, deps = await crawl_item_and_deps(Product)
     assert item == Product(name="product name")
     assert_deps(deps, {"item": Product})
 
     # calling the actual page object should also work
-    item, deps = yield crawl_item_and_deps(ProductPage)
+    item, deps = await crawl_item_and_deps(ProductPage)
     assert item == Product(name="product name")
     assert_deps(deps, {"page": ProductPage})
 
@@ -393,22 +396,13 @@ class ItemButNoPageObject:
     name: str
 
 
-@inlineCallbacks
-def test_basic_item_but_no_page_object() -> None:
+@deferred_f_from_coro_f
+async def test_basic_item_but_no_page_object() -> None:
     """When an item is requested as a dependency but there's no page object that's
     assigned to it in any of the given ``ApplyRule``, it would result to an error
     in the spider callback since
     """
-
-    # Starting Scrapy 2.7, there's better support for async callbacks. This
-    # means that errors aren't suppresed.
-    if is_min_scrapy_version("2.7.0"):
-        expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
-        with pytest.raises(TypeError, match=expected_msg):
-            yield crawl_item_and_deps(ItemButNoPageObject)
-    else:
-        item = yield crawl_item_and_deps(ItemButNoPageObject)
-        assert item == (None, [{}])
+    await assert_no_item(ItemButNoPageObject)
 
 
 @attrs.define
@@ -428,17 +422,17 @@ class DelayedProductPage(ItemPage[DelayedProduct]):
     os.environ.get("REACTOR") != "asyncio",
     reason="Using asyncio will only work if the AsyncioSelectorReactor is used.",
 )
-@inlineCallbacks
-def test_item_using_asyncio() -> None:
-    """This ensures that ``ItemProvider`` works properly for page objects using
+@deferred_f_from_coro_f
+async def test_item_using_asyncio() -> None:
+    """This ensures that the injector works properly for page objects using
     the ``asyncio`` functionalities.
     """
-    item, deps = yield crawl_item_and_deps(DelayedProduct)
+    item, deps = await crawl_item_and_deps(DelayedProduct)
     assert item == DelayedProduct(name="delayed product name")
     assert_deps(deps, {"item": DelayedProduct})
 
     # calling the actual page object should also work
-    item, deps = yield crawl_item_and_deps(DelayedProductPage)
+    item, deps = await crawl_item_and_deps(DelayedProductPage)
     assert item == DelayedProduct(name="delayed product name")
     assert_deps(deps, {"page": DelayedProductPage})
 
@@ -455,23 +449,12 @@ class DifferentUrlPage(ItemPage[ItemWithPageObjectButForDifferentUrl]):
         return "wrong url"
 
 
-@inlineCallbacks
-def test_basic_item_with_page_object_but_different_url() -> None:
+@deferred_f_from_coro_f
+async def test_basic_item_with_page_object_but_different_url() -> None:
     """If an item has been requested and a page object can produce it, but the
     URL pattern is different, the item won't be produced at all.
-
-    For these cases, a warning should be issued since the user might have written
-    some incorrect URL Pattern for the ``ApplyRule``.
     """
-    msg = (
-        "Can't find appropriate page object for <class 'tests.test_web_poet_rules."
-        "ItemWithPageObjectButForDifferentUrl'> item for url: "
-    )
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = yield crawl_item_and_deps(ItemWithPageObjectButForDifferentUrl)
-        assert any([True for w in caught_warnings if msg in str(w.message)])
-    assert item is None
-    assert not deps
+    await assert_no_item(ItemWithPageObjectButForDifferentUrl)
 
 
 @attrs.define
@@ -493,8 +476,8 @@ class SubclassProductPage(ParentProductPage):
         return "subclass product name"
 
 
-@inlineCallbacks
-def test_item_return_subclass() -> None:
+@deferred_f_from_coro_f
+async def test_item_return_subclass() -> None:
     """A page object should properly derive the ``Return[ItemType]`` that it
     inherited from its parent.
 
@@ -506,28 +489,18 @@ def test_item_return_subclass() -> None:
     To remove this warning, the user should update the priority in
     ``url_matcher.Patterns`` which is set in ``ApplyRule.for_patterns``.
     """
-
-    # There should be a warning to the user about clashing rules.
-    expected_warning_tokens = [
-        "Consider setting the priority explicitly for these rules:",
-        repr(ApplyRule(URL, use=ParentProductPage, to_return=ProductFromParent)),
-        repr(ApplyRule(URL, use=SubclassProductPage, to_return=ProductFromParent)),
-    ]
-
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = yield crawl_item_and_deps(ProductFromParent)
-        assert_warning_tokens(caught_warnings, expected_warning_tokens)
+    item, deps = await crawl_item_and_deps(ProductFromParent)
 
     assert item == ProductFromParent(name="subclass product name")
     assert_deps(deps, {"item": ProductFromParent})
 
     # calling the actual page objects should still work
 
-    item, deps = yield crawl_item_and_deps(ParentProductPage)
+    item, deps = await crawl_item_and_deps(ParentProductPage)
     assert item == ProductFromParent(name="parent product name")
     assert_deps(deps, {"page": ParentProductPage})
 
-    item, deps = yield crawl_item_and_deps(SubclassProductPage)
+    item, deps = await crawl_item_and_deps(SubclassProductPage)
     assert item == ProductFromParent(name="subclass product name")
     assert_deps(deps, {"page": SubclassProductPage})
 
@@ -551,8 +524,8 @@ class IndependentA2Page(ItemPage[AItem]):
         return "independent A2"
 
 
-@inlineCallbacks
-def test_item_return_individually_defined() -> None:
+@deferred_f_from_coro_f
+async def test_item_return_individually_defined() -> None:
     """Same case with ``test_item_return_subclass()`` but the 'to_return' item
     has not been derived due to subclassing but rather, two page objects were
     defined independently that returns the same item.
@@ -560,26 +533,18 @@ def test_item_return_individually_defined() -> None:
     The latter rule that was defined should be used when the priorities are the
     same.
     """
-    expected_warning_tokens = [
-        "Consider setting the priority explicitly for these rules:",
-        repr(ApplyRule(URL, use=IndependentA1Page, to_return=AItem)),
-        repr(ApplyRule(URL, use=IndependentA2Page, to_return=AItem)),
-    ]
-
-    with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = yield crawl_item_and_deps(AItem)
-        assert_warning_tokens(caught_warnings, expected_warning_tokens)
+    item, deps = await crawl_item_and_deps(AItem)
 
     assert item == AItem(name="independent A2")
-    assert_deps(deps, {"item": IndependentA2Page})
+    assert_deps(deps, {"item": AItem})
 
     # calling the actual page objects should still work
 
-    item, deps = yield crawl_item_and_deps(IndependentA1Page)
+    item, deps = await crawl_item_and_deps(IndependentA1Page)
     assert item == AItem(name="independent A1")
     assert_deps(deps, {"page": IndependentA1Page})
 
-    item, deps = yield crawl_item_and_deps(IndependentA2Page)
+    item, deps = await crawl_item_and_deps(IndependentA2Page)
     assert item == AItem(name="independent A2")
     assert_deps(deps, {"page": IndependentA2Page})
 
@@ -603,8 +568,8 @@ class PrioritySubclassProductPage(PriorityParentProductPage):
         return "priority subclass product name"
 
 
-@inlineCallbacks
-def test_item_return_parent_priority() -> None:
+@deferred_f_from_coro_f
+async def test_item_return_parent_priority() -> None:
     """Same case as with ``test_item_return_subclass()`` but now the parent PO
     uses a higher priority of 600 than the default 500.
     """
@@ -619,19 +584,19 @@ def test_item_return_parent_priority() -> None:
     msg = f"Consider updating the priority of these rules: {rules}"
 
     with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = yield crawl_item_and_deps(PriorityProductFromParent)
-        assert not any([True for w in caught_warnings if msg in str(w.message)])
+        item, deps = await crawl_item_and_deps(PriorityProductFromParent)
+        assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == PriorityProductFromParent(name="priority parent product name")
     assert_deps(deps, {"item": PriorityProductFromParent})
 
     # calling the actual page objects should still work
 
-    item, deps = yield crawl_item_and_deps(PriorityParentProductPage)
+    item, deps = await crawl_item_and_deps(PriorityParentProductPage)
     assert item == PriorityProductFromParent(name="priority parent product name")
     assert_deps(deps, {"page": PriorityParentProductPage})
 
-    item, deps = yield crawl_item_and_deps(PrioritySubclassProductPage)
+    item, deps = await crawl_item_and_deps(PrioritySubclassProductPage)
     assert item == PriorityProductFromParent(name="priority subclass product name")
     assert_deps(deps, {"page": PriorityParentProductPage})
 
@@ -655,8 +620,8 @@ class IndependentB2Page(ItemPage[BItem]):
         return "independent B2"
 
 
-@inlineCallbacks
-def test_item_return_individually_defined_first_rule_higher_priority() -> None:
+@deferred_f_from_coro_f
+async def test_item_return_individually_defined_first_rule_higher_priority() -> None:
     """Same case with ``test_item_return_parent_priority()`` but the 'to_return'
     item has not been derived due to subclassing but rather, two page objects
     were defined independently that returns the same item.
@@ -671,19 +636,19 @@ def test_item_return_individually_defined_first_rule_higher_priority() -> None:
     msg = f"Consider updating the priority of these rules: {rules}"
 
     with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = yield crawl_item_and_deps(BItem)
-        assert not any([True for w in caught_warnings if msg in str(w.message)])
+        item, deps = await crawl_item_and_deps(BItem)
+        assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == BItem(name="independent B1")
-    assert_deps(deps, {"item": IndependentB1Page})
+    assert_deps(deps, {"item": BItem})
 
     # calling the actual page objects should still work
 
-    item, deps = yield crawl_item_and_deps(IndependentB1Page)
+    item, deps = await crawl_item_and_deps(IndependentB1Page)
     assert item == BItem(name="independent B1")
     assert_deps(deps, {"page": IndependentB1Page})
 
-    item, deps = yield crawl_item_and_deps(IndependentB2Page)
+    item, deps = await crawl_item_and_deps(IndependentB2Page)
     assert item == BItem(name="independent B2")
     assert_deps(deps, {"page": IndependentB2Page})
 
@@ -707,8 +672,8 @@ class Priority2SubclassProductPage(Priority2ParentProductPage):
         return "priority subclass product name"
 
 
-@inlineCallbacks
-def test_item_return_subclass_priority() -> None:
+@deferred_f_from_coro_f
+async def test_item_return_subclass_priority() -> None:
     """Same case as with ``test_item_return_parent_priority()`` but now the
     PO subclass uses a higher priority of 600 than the default 500.
     """
@@ -723,19 +688,19 @@ def test_item_return_subclass_priority() -> None:
     msg = f"Consider updating the priority of these rules: {rules}"
 
     with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = yield crawl_item_and_deps(PriorityProductFromSubclass)
-        assert not any([True for w in caught_warnings if msg in str(w.message)])
+        item, deps = await crawl_item_and_deps(PriorityProductFromSubclass)
+        assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == PriorityProductFromSubclass(name="priority subclass product name")
     assert_deps(deps, {"item": PriorityProductFromSubclass})
 
     # calling the actual page objects should still work
 
-    item, deps = yield crawl_item_and_deps(Priority2ParentProductPage)
+    item, deps = await crawl_item_and_deps(Priority2ParentProductPage)
     assert item == PriorityProductFromSubclass(name="priority parent product name")
     assert_deps(deps, {"page": Priority2ParentProductPage})
 
-    item, deps = yield crawl_item_and_deps(Priority2SubclassProductPage)
+    item, deps = await crawl_item_and_deps(Priority2SubclassProductPage)
     assert item == PriorityProductFromSubclass(name="priority subclass product name")
     assert_deps(deps, {"page": Priority2ParentProductPage})
 
@@ -759,8 +724,8 @@ class IndependentC2Page(ItemPage[CItem]):
         return "independent C2"
 
 
-@inlineCallbacks
-def test_item_return_individually_defined_second_rule_higher_priority() -> None:
+@deferred_f_from_coro_f
+async def test_item_return_individually_defined_second_rule_higher_priority() -> None:
     """Same case with ``test_item_return_subclass_priority()`` but the 'to_return'
     item has not been derived due to subclassing but rather, two page objects
     were defined independently that returns the same item.
@@ -775,17 +740,17 @@ def test_item_return_individually_defined_second_rule_higher_priority() -> None:
     msg = f"Consider updating the priority of these rules: {rules}"
 
     with warnings.catch_warnings(record=True) as caught_warnings:
-        item, deps = yield crawl_item_and_deps(CItem)
-        assert not any([True for w in caught_warnings if msg in str(w.message)])
+        item, deps = await crawl_item_and_deps(CItem)
+        assert not any(True for w in caught_warnings if msg in str(w.message))
 
     assert item == CItem(name="independent C2")
-    assert_deps(deps, {"item": IndependentC2Page})
+    assert_deps(deps, {"item": CItem})
 
-    item, deps = yield crawl_item_and_deps(IndependentC1Page)
+    item, deps = await crawl_item_and_deps(IndependentC1Page)
     assert item == CItem(name="independent C1")
     assert_deps(deps, {"page": IndependentC1Page})
 
-    item, deps = yield crawl_item_and_deps(IndependentC2Page)
+    item, deps = await crawl_item_and_deps(IndependentC2Page)
     assert item == CItem(name="independent C2")
     assert_deps(deps, {"page": IndependentC2Page})
 
@@ -802,37 +767,27 @@ class ReplacedProductPage(ItemPage[Product]):
         return "replaced product name"
 
 
-@pytest.mark.xfail(
-    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
-    "ItemProvide has received a different type of item class from the page object."
-)
-@inlineCallbacks
-def test_item_to_return_in_handle_urls() -> None:
+@deferred_f_from_coro_f
+async def test_item_to_return_in_handle_urls() -> None:
     """Even if ``@handle_urls`` could derive the value for the ``to_return``
     parameter when the class inherits from something like ``ItemPage[ItemType]``,
     any value passed through its ``to_return`` parameter should take precedence.
 
-    Note that that this produces some inconsistencies between the rule's item
+    Note that this produces some inconsistencies between the rule's item
     class vs the class that is actually returned. Using the ``to_return``
     parameter in ``@handle_urls`` isn't recommended because of this.
     """
-    item, deps = yield crawl_item_and_deps(ReplacedProduct)
+    item, deps = await crawl_item_and_deps(ReplacedProduct)
     assert item == Product(name="replaced product name")
-    assert_deps(deps, {"page": ReplacedProductPage})
+    assert_deps(deps, {"item": Product})
 
-
-@inlineCallbacks
-def test_item_to_return_in_handle_urls_other() -> None:
-    """Remaining tests for ``test_item_to_return_in_handle_urls()`` which are
-    not expected to be xfail.
-    """
     # Requesting the underlying item class from the PO should still work.
-    item, deps = yield crawl_item_and_deps(Product)
+    item, deps = await crawl_item_and_deps(Product)
     assert item == Product(name="product name")
     assert_deps(deps, {"item": Product})
 
     # calling the actual page objects should still work
-    item, deps = yield crawl_item_and_deps(ReplacedProductPage)
+    item, deps = await crawl_item_and_deps(ReplacedProductPage)
     assert item == Product(name="replaced product name")
     assert_deps(deps, {"page": ReplacedProductPage})
 
@@ -861,37 +816,27 @@ class SubclassReplacedProductPage(ParentReplacedProductPage):
         return "subclass replaced product name"
 
 
-@pytest.mark.xfail(
-    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
-    "ItemProvide has received a different type of item class from the page object."
-)
-@inlineCallbacks
-def test_item_to_return_in_handle_urls_subclass() -> None:
+@deferred_f_from_coro_f
+async def test_item_to_return_in_handle_urls_subclass() -> None:
     """Same case as with the ``test_item_to_return_in_handle_urls()`` case above
     but the ``to_return`` is declared in the subclass.
     """
-    item, deps = yield crawl_item_and_deps(SubclassReplacedProduct)
+    item, deps = await crawl_item_and_deps(SubclassReplacedProduct)
     assert item == ParentReplacedProduct(name="subclass replaced product name")
-    assert_deps(deps, {"page": SubclassReplacedProductPage})
+    assert_deps(deps, {"item": ParentReplacedProduct})
 
-
-@inlineCallbacks
-def test_item_to_return_in_handle_urls_subclass_others() -> None:
-    """Remaining tests for ``test_item_to_return_in_handle_urls_subclass()``
-    which are not expected to be xfail.
-    """
     # Requesting the underlying item class from the parent PO should still work.
-    item, deps = yield crawl_item_and_deps(ParentReplacedProduct)
+    item, deps = await crawl_item_and_deps(ParentReplacedProduct)
     assert item == ParentReplacedProduct(name="parent replaced product name")
     assert_deps(deps, {"item": ParentReplacedProduct})
 
     # calling the actual page objects should still work
 
-    item, deps = yield crawl_item_and_deps(ParentReplacedProductPage)
+    item, deps = await crawl_item_and_deps(ParentReplacedProductPage)
     assert item == ParentReplacedProduct(name="parent replaced product name")
     assert_deps(deps, {"page": ParentReplacedProductPage})
 
-    item, deps = yield crawl_item_and_deps(SubclassReplacedProductPage)
+    item, deps = await crawl_item_and_deps(SubclassReplacedProductPage)
     assert item == ParentReplacedProduct(name="subclass replaced product name")
     assert_deps(deps, {"page": SubclassReplacedProductPage})
 
@@ -908,28 +853,17 @@ class StandaloneProductPage(ItemPage):
         return "standalone product name"
 
 
-@pytest.mark.xfail(
-    reason="This currently causes an ``UndeclaredProvidedTypeError`` since the "
-    "ItemProvide has received a different type of item class from the page object."
-)
-@inlineCallbacks
-def test_item_to_return_standalone() -> None:
+@deferred_f_from_coro_f
+async def test_item_to_return_standalone() -> None:
     """Same case as with ``test_item_to_return_in_handle_urls()`` above but the
     page object doesn't inherit from something like ``ItemPage[ItemClass]``
     """
-    item, deps = yield crawl_item_and_deps(StandaloneProduct)
+    item, deps = await crawl_item_and_deps(StandaloneProduct)
     assert item == {"name": "standalone product name"}
-    assert_deps(deps, {"page": StandaloneProductPage})
-
-
-@inlineCallbacks
-def test_item_to_return_standalone_others() -> None:
-    """Remaining tests for ``test_item_to_return_standalone()``
-    which are not expected to be xfail.
-    """
+    assert_deps(deps, {"item": dict})
 
     # calling the actual page object should still work
-    item, deps = yield crawl_item_and_deps(StandaloneProductPage)
+    item, deps = await crawl_item_and_deps(StandaloneProductPage)
     assert item == {"name": "standalone product name"}
     assert_deps(deps, {"page": StandaloneProductPage})
 
@@ -949,20 +883,25 @@ class ProductFromInjectablePage(Injectable):
         return await item_from_fields(self, item_cls=ProductFromInjectable)
 
 
-@inlineCallbacks
-def test_item_return_from_injectable() -> None:
+@deferred_f_from_coro_f
+async def test_item_return_from_injectable() -> None:
     """The case wherein a PageObject inherits directly from ``web_poet.Injectable``
     should also work, provided that the ``to_item`` method is similar with
     ``web_poet.ItemPage``:
     """
-    item, deps = yield crawl_item_and_deps(ProductFromInjectable)
+    item, deps = await crawl_item_and_deps(ProductFromInjectable)
     assert item == ProductFromInjectable(name="product from injectable")
     assert_deps(deps, {"item": ProductFromInjectable})
 
-    # calling the actual page object should not work since it's not inheriting
-    # from ``web_poet.ItemPage``.
-    item, deps = yield crawl_item_and_deps(ProductFromInjectablePage)
-    assert item is None
+    # calling the actual page object should not work in the same way since it's
+    # not inheriting from ``web_poet.ItemPage``.
+    item, deps = await crawl_item_and_deps(ProductFromInjectablePage)
+    if Version(SCRAPY_VERSION) < Version("2.13"):
+        # older Scrapy refuses to return a ProductFromInjectablePage instance
+        assert item is None
+    else:
+        # newer Scrapy returns it
+        assert isinstance(item, ProductFromInjectablePage)
 
     # However, the page object should still be injected into the callback method.
     assert_deps(deps, {"item": ProductFromInjectablePage})
@@ -998,10 +937,10 @@ class ProductWithPageObjectDepPage(ItemPage[MainProductA]):
         return await self.injected_page.to_item()
 
 
-@inlineCallbacks
-def test_page_object_with_page_object_dependency() -> None:
+@deferred_f_from_coro_f
+async def test_page_object_with_page_object_dependency() -> None:
     # item from 'to_return'
-    item, deps = yield crawl_item_and_deps(MainProductA)
+    item, deps = await crawl_item_and_deps(MainProductA)
     assert item == MainProductA(
         name="(with item dependency) product name",
         item_from_po_dependency={"name": "item dependency"},
@@ -1009,7 +948,7 @@ def test_page_object_with_page_object_dependency() -> None:
     assert_deps(deps, {"item": MainProductA})
 
     # item from 'instead_of'
-    item, deps = yield crawl_item_and_deps(ReplacedProductPageObjectDepPage)
+    item, deps = await crawl_item_and_deps(ReplacedProductPageObjectDepPage)
     assert item == MainProductA(
         name="(with item dependency) product name",
         item_from_po_dependency={"name": "item dependency"},
@@ -1018,11 +957,11 @@ def test_page_object_with_page_object_dependency() -> None:
 
     # calling the actual page objects should still work
 
-    item, deps = yield crawl_item_and_deps(PageObjectDependencyPage)
+    item, deps = await crawl_item_and_deps(PageObjectDependencyPage)
     assert item == {"name": "item dependency"}
     assert_deps(deps, {"page": PageObjectDependencyPage})
 
-    item, deps = yield crawl_item_and_deps(ProductWithPageObjectDepPage)
+    item, deps = await crawl_item_and_deps(ProductWithPageObjectDepPage)
     assert item == MainProductA(
         name="(with item dependency) product name",
         item_from_po_dependency={"name": "item dependency"},
@@ -1067,14 +1006,14 @@ class ProductWithItemDepPage(PageObjectCounterMixin, ItemPage[MainProductB]):
         return self.injected_item
 
 
-@inlineCallbacks
-def test_page_object_with_item_dependency() -> None:
+@deferred_f_from_coro_f
+async def test_page_object_with_item_dependency() -> None:
     """Page objects with dependencies like item classes should have them resolved
     by the page object assigned in one of the rules' ``use`` parameter.
     """
 
     # item from 'to_return'
-    item, deps = yield crawl_item_and_deps(MainProductB)
+    item, deps = await crawl_item_and_deps(MainProductB)
     assert item == MainProductB(
         name="(with item dependency) product name",
         item_dependency=ItemDependency(name="item dependency"),
@@ -1082,7 +1021,7 @@ def test_page_object_with_item_dependency() -> None:
     assert_deps(deps, {"item": MainProductB})
 
     # item from 'instead_of'
-    item, deps = yield crawl_item_and_deps(ReplacedProductItemDepPage)
+    item, deps = await crawl_item_and_deps(ReplacedProductItemDepPage)
     assert item == MainProductB(
         name="(with item dependency) product name",
         item_dependency=ItemDependency(name="item dependency"),
@@ -1091,11 +1030,11 @@ def test_page_object_with_item_dependency() -> None:
 
     # calling the actual page objects should still work
 
-    item, deps = yield crawl_item_and_deps(ItemDependencyPage)
+    item, deps = await crawl_item_and_deps(ItemDependencyPage)
     assert item == ItemDependency(name="item dependency")
     assert_deps(deps, {"page": ItemDependencyPage})
 
-    item, deps = yield crawl_item_and_deps(ProductWithItemDepPage)
+    item, deps = await crawl_item_and_deps(ProductWithItemDepPage)
     assert item == MainProductB(
         name="(with item dependency) product name",
         item_dependency=ItemDependency(name="item dependency"),
@@ -1103,7 +1042,7 @@ def test_page_object_with_item_dependency() -> None:
     assert_deps(deps, {"page": ProductWithItemDepPage})
 
     # Calling the original dependency should still work
-    item, deps = yield crawl_item_and_deps(ItemDependency)
+    item, deps = await crawl_item_and_deps(ItemDependency)
     assert item == ItemDependency(name="item dependency")
     assert_deps(deps, {"item": ItemDependency})
 
@@ -1134,15 +1073,15 @@ class ProductDeepDependencyPage(PageObjectCounterMixin, ItemPage[MainProductC]):
         return self.main_product_b_dependency_item
 
 
-@inlineCallbacks
-def test_page_object_with_deep_item_dependency() -> None:
+@deferred_f_from_coro_f
+async def test_page_object_with_deep_item_dependency() -> None:
     """This builds upon the earlier ``test_page_object_with_item_dependency()``
     but with another layer of item dependencies.
     """
 
     # item from 'to_return'
     PageObjectCounterMixin.clear()
-    item, deps = yield crawl_item_and_deps(MainProductC)
+    item, deps = await crawl_item_and_deps(MainProductC)
     assert item == MainProductC(
         name="(with deep item dependency) product name",
         item_dependency=ItemDependency(name="item dependency"),
@@ -1162,7 +1101,7 @@ def test_page_object_with_deep_item_dependency() -> None:
     # calling the actual page objects should still work
 
     PageObjectCounterMixin.clear()
-    item, deps = yield crawl_item_and_deps(ProductDeepDependencyPage)
+    item, deps = await crawl_item_and_deps(ProductDeepDependencyPage)
     assert item == MainProductC(
         name="(with deep item dependency) product name",
         item_dependency=ItemDependency(name="item dependency"),
@@ -1180,7 +1119,7 @@ def test_page_object_with_deep_item_dependency() -> None:
     assert ProductDeepDependencyPage.to_item_call_count == 1
 
     PageObjectCounterMixin.clear()
-    item, deps = yield crawl_item_and_deps(ItemDependencyPage)
+    item, deps = await crawl_item_and_deps(ItemDependencyPage)
     assert item == ItemDependency(name="item dependency")
     assert_deps(deps, {"page": ItemDependencyPage})
     PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
@@ -1191,7 +1130,7 @@ def test_page_object_with_deep_item_dependency() -> None:
     assert ProductDeepDependencyPage.to_item_call_count == 0
 
     PageObjectCounterMixin.clear()
-    item, deps = yield crawl_item_and_deps(ProductWithItemDepPage)
+    item, deps = await crawl_item_and_deps(ProductWithItemDepPage)
     assert item == MainProductB(
         name="(with item dependency) product name",
         item_dependency=ItemDependency(name="item dependency"),
@@ -1207,7 +1146,7 @@ def test_page_object_with_deep_item_dependency() -> None:
     # Calling the other item dependencies should still work
 
     PageObjectCounterMixin.clear()
-    item, deps = yield crawl_item_and_deps(MainProductB)
+    item, deps = await crawl_item_and_deps(MainProductB)
     assert item == MainProductB(
         name="(with item dependency) product name",
         item_dependency=ItemDependency(name="item dependency"),
@@ -1221,7 +1160,7 @@ def test_page_object_with_deep_item_dependency() -> None:
     assert ProductDeepDependencyPage.to_item_call_count == 0
 
     PageObjectCounterMixin.clear()
-    item, deps = yield crawl_item_and_deps(ItemDependency)
+    item, deps = await crawl_item_and_deps(ItemDependency)
     assert item == ItemDependency(name="item dependency")
     assert_deps(deps, {"item": ItemDependency})
     PageObjectCounterMixin.assert_instance_count(1, ItemDependencyPage)
@@ -1272,8 +1211,8 @@ class ProductDuplicateDeepDependencyPage(
         return self.second_main_product_c_dependency_item
 
 
-@inlineCallbacks
-def test_page_object_with_duplicate_deep_item_dependency() -> None:
+@deferred_f_from_coro_f
+async def test_page_object_with_duplicate_deep_item_dependency() -> None:
     """This yet builds upon the earlier ``test_page_object_with_deep_item_dependency()``
     making it deeper.
 
@@ -1282,7 +1221,7 @@ def test_page_object_with_duplicate_deep_item_dependency() -> None:
 
     # item from 'to_return'
     PageObjectCounterMixin.clear()
-    item, deps = yield crawl_item_and_deps(MainProductD)
+    item, deps = await crawl_item_and_deps(MainProductD)
     assert item == MainProductD(
         name="(with duplicate deep item dependency) product name",
         item_dependency=ItemDependency(name="item dependency"),
@@ -1320,7 +1259,7 @@ def test_page_object_with_duplicate_deep_item_dependency() -> None:
     # calling the actual page objects should still work
 
     PageObjectCounterMixin.clear()
-    item, deps = yield crawl_item_and_deps(ProductDuplicateDeepDependencyPage)
+    item, deps = await crawl_item_and_deps(ProductDuplicateDeepDependencyPage)
     assert item == MainProductD(
         name="(with duplicate deep item dependency) product name",
         item_dependency=ItemDependency(name="item dependency"),
@@ -1370,7 +1309,7 @@ class EggItem:
 
 @handle_urls(URL)
 @attrs.define
-class ChickenDeadlockPage(ItemPage[ChickenItem]):
+class ChickenCyclePage(ItemPage[ChickenItem]):
     other_injected_item: EggItem
 
     @field
@@ -1384,7 +1323,7 @@ class ChickenDeadlockPage(ItemPage[ChickenItem]):
 
 @handle_urls(URL)
 @attrs.define
-class EggDeadlockPage(ItemPage[EggItem]):
+class EggCyclePage(ItemPage[EggItem]):
     other_injected_item: ChickenItem
 
     @field
@@ -1396,31 +1335,31 @@ class EggDeadlockPage(ItemPage[EggItem]):
         return self.other_injected_item.name
 
 
-@inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_a(caplog) -> None:
-    """Items with page objects which depend on each other resulting in a deadlock
+@deferred_f_from_coro_f
+async def test_page_object_with_item_dependency_cycle_a(caplog) -> None:
+    """Items with page objects which depend on each other resulting in a plan cycle
     should have a corresponding error raised.
     """
-    item, deps = yield crawl_item_and_deps(ChickenItem)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    await crawl_item_and_deps(ChickenItem)
+    assert "Cyclic dependency found" in caplog.text
 
 
-@inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_b(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(EggItem)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+@deferred_f_from_coro_f
+async def test_page_object_with_item_dependency_cycle_b(caplog) -> None:
+    await crawl_item_and_deps(EggItem)
+    assert "Cyclic dependency found" in caplog.text
 
 
-@inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_c(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(ChickenDeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+@deferred_f_from_coro_f
+async def test_page_object_with_item_dependency_cycle_c(caplog) -> None:
+    await crawl_item_and_deps(ChickenCyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
-@inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_d(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(EggDeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+@deferred_f_from_coro_f
+async def test_page_object_with_item_dependency_cycle_d(caplog) -> None:
+    await crawl_item_and_deps(EggCyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
 @attrs.define
@@ -1437,7 +1376,7 @@ class Egg2Item:
 
 @handle_urls(URL)
 @attrs.define
-class Chicken2DeadlockPage(ItemPage[Chicken2Item]):
+class Chicken2CyclePage(ItemPage[Chicken2Item]):
     other_injected_item: Egg2Item
 
     @field
@@ -1451,8 +1390,8 @@ class Chicken2DeadlockPage(ItemPage[Chicken2Item]):
 
 @handle_urls(URL)
 @attrs.define
-class Egg2DeadlockPage(ItemPage[Egg2Item]):
-    other_injected_page: Chicken2DeadlockPage
+class Egg2CyclePage(ItemPage[Egg2Item]):
+    other_injected_page: Chicken2CyclePage
 
     @field
     def name(self) -> str:
@@ -1464,31 +1403,150 @@ class Egg2DeadlockPage(ItemPage[Egg2Item]):
         return item.name
 
 
-@inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_a(caplog) -> None:
-    """Same with ``test_page_object_with_item_dependency_deadlock()`` but one
+@deferred_f_from_coro_f
+async def test_page_object_with_item_dependency_cycle_2_a(caplog) -> None:
+    """Same with ``test_page_object_with_item_dependency_cycle()`` but one
     of the page objects requires a page object instead of an item.
     """
-    item, deps = yield crawl_item_and_deps(Chicken2Item)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+    await crawl_item_and_deps(Chicken2Item)
+    assert "Cyclic dependency found" in caplog.text
 
 
-@inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_b(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(Egg2Item)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+@deferred_f_from_coro_f
+async def test_page_object_with_item_dependency_cycle_2_b(caplog) -> None:
+    await crawl_item_and_deps(Egg2Item)
+    assert "Cyclic dependency found" in caplog.text
 
 
-@inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_c(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(Chicken2DeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+@deferred_f_from_coro_f
+async def test_page_object_with_item_dependency_cycle_2_c(caplog) -> None:
+    await crawl_item_and_deps(Chicken2CyclePage)
+    assert "Cyclic dependency found" in caplog.text
 
 
-@inlineCallbacks
-def test_page_object_with_item_dependency_deadlock_2_d(caplog) -> None:
-    item, deps = yield crawl_item_and_deps(Egg2DeadlockPage)
-    assert "ProviderDependencyDeadlockError" in caplog.text
+@deferred_f_from_coro_f
+async def test_page_object_with_item_dependency_cycle_2_d(caplog) -> None:
+    await crawl_item_and_deps(Egg2CyclePage)
+    assert "Cyclic dependency found" in caplog.text
+
+
+@attrs.define
+class Mobius:
+    name: str
+
+
+@handle_urls(URL)
+@attrs.define
+class MobiusPage(WebPage[Mobius]):
+    mobius_item: Mobius
+
+    @field
+    def name(self) -> str:
+        return f"(modified) {self.mobius_item.name}"
+
+
+class MobiusProvider(PageObjectInputProvider):
+    provided_classes = {Mobius}
+
+    def __call__(self, to_provide: Set[Callable], request: scrapy.Request):
+        return [Mobius(name="mobius from MobiusProvider")]
+
+
+@deferred_f_from_coro_f
+async def test_page_object_returning_item_which_is_also_a_dep() -> None:
+    """Tests that the item from a provider has been modified correctly
+    by the corresponding PO.
+    """
+
+    settings = {"SCRAPY_POET_PROVIDERS": {**DEFAULT_PROVIDERS, MobiusProvider: 1000}}
+    # item from 'to_return'
+    item, deps = await crawl_item_and_deps(Mobius, override_settings=settings)
+    assert item == Mobius(name="(modified) mobius from MobiusProvider")
+    assert_deps(deps, {"item": Mobius})
+
+    # calling the actual page objects should still work
+    item, deps = await crawl_item_and_deps(MobiusPage, override_settings=settings)
+    assert item == Mobius(name="(modified) mobius from MobiusProvider")
+    assert_deps(deps, {"page": MobiusPage})
+
+
+@deferred_f_from_coro_f
+async def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_item(
+    caplog,
+) -> None:
+    """Same as ``test_page_object_returning_item_which_is_also_a_dep()``
+    but there's no provider for the original item
+    """
+    await crawl_item_and_deps(Mobius)
+    assert "NonProvidableError" in caplog.text
+
+
+@deferred_f_from_coro_f
+async def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_po(
+    caplog,
+) -> None:
+    """Same with ``test_page_object_returning_item_which_is_also_a_dep_but_no_provider_item()``
+    but tests the PO instead of the item.
+    """
+    await crawl_item_and_deps(MobiusPage)
+    assert "NonProvidableError" in caplog.text
+
+
+@attrs.define
+class Kangaroo:
+    name: str
+
+
+@handle_urls(URL)
+@attrs.define
+class KangarooPage(WebPage[Kangaroo]):
+    kangaroo_item: Kangaroo
+
+    @field
+    def name(self) -> str:
+        return f"(modified) {self.kangaroo_item.name}"
+
+
+@handle_urls(URL, priority=600)
+@attrs.define
+class JoeyPage(KangarooPage):
+    @field
+    def name(self) -> str:
+        return f"(modified by Joey) {self.kangaroo_item.name}"
+
+
+class KangarooProvider(PageObjectInputProvider):
+    provided_classes = {Kangaroo}
+
+    def __call__(self, to_provide: Set[Callable], request: scrapy.Request):
+        return [Kangaroo(name="data from KangarooProvider")]
+
+
+@deferred_f_from_coro_f
+async def test_page_object_returning_item_which_is_also_a_dep_2() -> None:
+    """Same with ``test_page_object_returning_item_which_is_also_a_dep()`` but
+    there are now 2 POs with different priorities that returns the item.
+
+    The PO with the higher priority should be the one returning the item.
+    """
+
+    settings = {"SCRAPY_POET_PROVIDERS": {**DEFAULT_PROVIDERS, KangarooProvider: 1000}}
+    # item from 'to_return'
+    item, deps = await crawl_item_and_deps(Kangaroo, override_settings=settings)
+    assert item == Kangaroo(name="(modified by Joey) data from KangarooProvider")
+    assert_deps(deps, {"item": Kangaroo})
+
+    # both page objects are called
+    item, deps = await crawl_item_and_deps(KangarooPage, override_settings=settings)
+    assert item == Kangaroo(
+        name="(modified) (modified by Joey) data from KangarooProvider"
+    )
+    assert_deps(deps, {"page": KangarooPage})
+
+    # calling the actual page object should still work
+    item, deps = await crawl_item_and_deps(JoeyPage, override_settings=settings)
+    assert item == Kangaroo(name="(modified by Joey) data from KangarooProvider")
+    assert_deps(deps, {"page": JoeyPage})
 
 
 def test_created_apply_rules() -> None:
@@ -1582,8 +1640,11 @@ def test_created_apply_rules() -> None:
         ),
         ApplyRule(URL, use=ProductDeepDependencyPage, to_return=MainProductC),
         ApplyRule(URL, use=ProductDuplicateDeepDependencyPage, to_return=MainProductD),
-        ApplyRule(URL, use=ChickenDeadlockPage, to_return=ChickenItem),
-        ApplyRule(URL, use=EggDeadlockPage, to_return=EggItem),
-        ApplyRule(URL, use=Chicken2DeadlockPage, to_return=Chicken2Item),
-        ApplyRule(URL, use=Egg2DeadlockPage, to_return=Egg2Item),
+        ApplyRule(URL, use=ChickenCyclePage, to_return=ChickenItem),
+        ApplyRule(URL, use=EggCyclePage, to_return=EggItem),
+        ApplyRule(URL, use=Chicken2CyclePage, to_return=Chicken2Item),
+        ApplyRule(URL, use=Egg2CyclePage, to_return=Egg2Item),
+        ApplyRule(URL, use=MobiusPage, to_return=Mobius),
+        ApplyRule(URL, use=KangarooPage, to_return=Kangaroo),
+        ApplyRule(Patterns([URL], priority=600), use=JoeyPage, to_return=Kangaroo),
     ]

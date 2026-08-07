@@ -1,6 +1,6 @@
 import pytest
 import scrapy
-from pytest_twisted import ensureDeferred
+from scrapy.utils.defer import deferred_f_from_coro_f
 from web_poet.pages import ItemPage, WebPage
 
 from scrapy_poet import DummyResponse, callback_for
@@ -22,14 +22,12 @@ class FakeWebPage(WebPage):
 
 
 class MySpider(scrapy.Spider):
-
     name = "my_spider"
     parse_item = callback_for(FakeItemPage)
     parse_web = callback_for(FakeWebPage)
 
 
 class MySpiderAsync(scrapy.Spider):
-
     name = "my_spider_async"
     parse_item = callback_for(FakeItemPageAsync)
 
@@ -45,7 +43,7 @@ def test_callback_for():
     assert list(result) == ["fake item page"]
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_callback_for_async():
     cb = callback_for(FakeItemPageAsync)
     assert callable(cb)
@@ -67,7 +65,7 @@ def test_callback_for_instance_method():
     assert list(result) == ["fake item page"]
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_callback_for_instance_method_async():
     spider = MySpiderAsync()
     response = DummyResponse("http://example.com/")
@@ -110,7 +108,7 @@ def test_inline_callback():
     spider = MySpider()
     cb = callback_for(FakeItemPage)
     request = scrapy.Request("http://example.com/", callback=cb)
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match="is not an instance method in:") as exc:
         request.to_dict(spider=spider)
 
     msg = f"Function {cb} is not an instance method in: {spider}"
@@ -122,7 +120,7 @@ def test_inline_callback_async():
     spider = MySpiderAsync()
     cb = callback_for(FakeItemPageAsync)
     request = scrapy.Request("http://example.com/", callback=cb)
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match="is not an instance method in:") as exc:
         request.to_dict(spider=spider)
 
     msg = f"Function {cb} is not an instance method in: {spider}"

@@ -2,10 +2,314 @@
 Changelog
 =========
 
+0.27.2 (2026-04-28)
+-------------------
+
+* When raising :class:`~web_poet.exceptions.core.Retry`, setting a
+  ``max_retries`` attribute on the exception now overrides the
+  ``RETRY_TIMES`` setting.
+
+* Fixed links in https://scrapy-poet.readthedocs.io/llms.txt.
+
+0.27.1 (2026-04-07)
+-------------------
+
+* The package now ships type information (PEP 561).
+
+* Made the documentation more LLM-friendly, with markdown versions of every
+  page and :file:`llms.txt` and :file:`llms-full.txt` files.
+
+* Removed documentation and example references to outdated software.
+
+0.27.0 (2026-01-27)
+-------------------
+
+* Dropped Python 3.9 support.
+
+* Added Scrapy 2.13 and 2.14 support.
+
+* Backward-incompatible changes:
+
+  * ``scrapy_poet.commands.SavingInjector.build_instances_from_providers()`` is
+    now an ``async`` method.
+
+  * ``scrapy_poet.downloader.create_scrapy_downloader()`` has been removed
+    (technically, renamed to ``_create_scrapy_downloader()``). It was never
+    meant to be a public function.
+
+  * ``scrapy_poet.downloadermiddlewares.InjectionMiddleware.process_response()``
+    is now an ``async`` method.
+
+  * In ``scrapy_poet.injection.Injector``, ``build_callback_dependencies()``,
+    ``build_instances()`` and ``build_instances_from_providers()`` are now
+    ``async`` methods.
+
+* Removed deprecations:
+
+  * The ``scrapy_poet.page_input_providers.ItemProvider`` class, deprecated in
+    0.19.0.
+
+  * The ``SCRAPY_POET_OVERRIDES`` setting, deprecated in 0.9.0.
+
+  * The ``scrapy_poet.middlewares`` module, deprecated in 0.5.0.
+
+* In ``scrapy_poet.utils.testing``, ``crawl_items()`` and
+  ``crawl_single_item()`` are now deprecated in favor of their new ``async
+  def`` counterparts, ``crawl_items_async()`` and
+  ``crawl_single_item_async()``.
+
+0.26.0 (2025-01-28)
+-------------------
+
+* Added an :ref:`add-on <addon>`.
+
+0.25.0 (2024-12-27)
+-------------------
+
+* Added Python 3.13 support, removed Python 3.8 support.
+
+* Improved Scrapy 2.12 support (typing, deprecations).
+
+0.24.0 (2024-10-10)
+-------------------
+
+* When the :ref:`dynamic dependencies <dynamic-deps>` are annotated with
+  :data:`typing.Annotated`, the keys in the resulting :class:`~.DynamicDeps`
+  instance are now not annotated.
+
+* Improved the error message when passing incorrect values in the ``"inject"``
+  meta key.
+
+* Fixed documentation builds with ``sphinx-rtd-theme`` 3.0.0+.
+
+0.23.0 (2024-07-18)
+-------------------
+
+* Added support for :ref:`specifying callback dependencies dynamically
+  <dynamic-deps>`.
+
+0.22.6 (2024-07-03)
+-------------------
+
+* Raising :class:`~web_poet.exceptions.core.Retry` now also works as expected
+  when callbacks ask for an item instead of asking for its page object.
+
+0.22.5 (2024-06-27)
+-------------------
+
+* When :class:`~web_poet.exceptions.core.Retry` is raised with a message, that
+  message now becomes the retry reason, replacing the default
+  (``page_object_retry``).
+
+0.22.4 (2024-06-10)
+-------------------
+
+* :ref:`Additional requests <additional-requests>`, when mapped to
+  :class:`scrapy.Request <scrapy.http.Request>` objects, now get their
+  ``dont_filter`` parameter set to ``True``, to ask downloader middlewares like
+  :class:`~scrapy.downloadermiddlewares.offsite.OffsiteMiddleware` not to drop
+  those requests.
+
+0.22.3 (2024-04-25)
+-------------------
+
+* :func:`scrapy_poet.utils.testing.make_crawler` now respects setting
+  priorities when it receives a :class:`~scrapy.settings.Settings` object
+  instead of a :class:`dict`.
+
+0.22.2 (2024-04-24)
+-------------------
+
+* :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`, added in
+  0.17.0, is now actually enabled by default.
+
+0.22.1 (2024-03-07)
+-------------------
+
+* Fixed ``scrapy savefixture`` not finding page object modules when used
+  outside a Scrapy project.
+
+0.22.0 (2024-03-04)
+-------------------
+
+* Now requires ``web-poet >= 0.17.0`` and ``time_machine >= 2.7.1``.
+
+* Removed ``scrapy_poet.AnnotatedResult``, use
+  :class:`web_poet.annotated.AnnotatedInstance` instead.
+
+* Added support for annotated dependencies to the ``scrapy savefixture``
+  command.
+
+* Test improvements.
+
+0.21.0 (2024-02-08)
+-------------------
+
+* Added a ``.weak_cache`` to :class:`scrapy_poet.injection.Injector` which
+  stores instances created by providers as long as the :class:`scrapy.Request
+  <scrapy.http.Request>` exists.
+
+* Fixed the incorrect value of ``downloader/response_count`` in the stats due
+  to additional counting of :class:`scrapy_poet.api.DummyResponse`.
+
+* Fixed the detection of :class:`scrapy_poet.api.DummyResponse` when some type
+  hints are annotated using strings.
+
+0.20.1 (2024-01-24)
+-------------------
+
+* :class:`~scrapy_poet.ScrapyPoetRequestFingerprinter` now supports item
+  dependencies.
+
+0.20.0 (2024-01-15)
+-------------------
+
+* Add :class:`~scrapy_poet.ScrapyPoetRequestFingerprinter`, a request
+  fingerprinter that uses request dependencies in the fingerprint generation.
+
+0.19.0 (2023-12-26)
+-------------------
+
+* Now requires ``andi >= 0.6.0``.
+
+* Changed the implementation of resolving and building item dependencies from
+  page objects. Now ``andi`` custom builders are used to create a single plan
+  that includes building page objects and items. This fixes problems such as
+  providers being called multiple times.
+
+  * ``scrapy_poet.page_input_providers.ItemProvider`` is now no-op. It's
+    no longer enabled by default and users should also stop enabling it.
+  * ``PageObjectInputProvider.allow_prev_instances`` and code related to it
+    were removed so custom providers may need updating.
+
+* Fixed some tests.
+
+0.18.0 (2023-12-12)
+-------------------
+
+* Now requires ``andi >= 0.5.0``.
+
+* Add support for dependency metadata via ``typing.Annotated`` (requires
+  Python 3.9+).
+
+0.17.0 (2023-12-11)
+-------------------
+
+* Now requires ``web-poet >= 0.15.1``.
+
+* :class:`~web_poet.page_inputs.http.HttpRequest` dependencies are now
+  supported, via :class:`~scrapy_poet.page_input_providers.HttpRequestProvider`
+  (enabled by default).
+
+* Enable :class:`~scrapy_poet.page_input_providers.StatsProvider`, which
+  provides :class:`~web_poet.page_inputs.stats.Stats` dependencies, by default.
+
+* More robust disabling of
+  :class:`~scrapy_poet.downloadermiddlewares.InjectionMiddleware` in the
+  ``scrapy savefixture`` command.
+
+* Official support for Python 3.12.
+
+0.16.1 (2023-11-02)
+-------------------
+
+* Fix the bug that caused requests produced by
+  :class:`~scrapy_poet.page_input_providers.HttpClientProvider` to
+  be treated as if they need arguments of the ``parse`` callback as
+  dependencies, which could cause returning an empty response and/or making
+  extra provider calls.
+
+0.16.0 (2023-09-26)
+-------------------
+
+* Now requires ``time_machine >= 2.2.0``.
+
+* ``ItemProvider`` now supports page objects that declare a dependency on the
+  same type of item that they return, as long as there is an earlier page
+  object input provider that can provide such dependency.
+
+* Fix running tests with Scrapy 2.11.
+
+0.15.1 (2023-09-15)
+-------------------
+
+* :ref:`scrapy-poet stats <stats>` now also include counters for injected
+  dependencies (``poet/injector/<dependency import path>``).
+
+* All scrapy-poet stats  that used to be prefixed with ``scrapy-poet/`` are now
+  prefixed with ``poet/`` instead.
+
+0.15.0 (2023-09-12)
+-------------------
+
+* Now requires ``web-poet >= 0.15.0``.
+
+* :external+web-poet:ref:`Web-poet stats <stats>` are now :ref:`supported
+  <stats>`.
+
+
+0.14.0 (2023-09-08)
+-------------------
+
+* Python 3.7 support has been dropped.
+
+* Caching is now built on top of web-poet serialization, extending caching
+  support to additional inputs, while making our code simpler, more reliable,
+  and more future-proof.
+
+  This has resulted in a few backward-incompatible changes:
+
+  * The ``scrapy_poet.page_input_providers.CacheDataProviderMixin`` mixin class
+    has been removed. Providers no longer need to use it or reimplement its
+    methods.
+
+  * The ``SCRAPY_POET_CACHE_GZIP`` setting has been removed.
+
+* Added ``scrapy_poet.utils.open_in_browser``, an alternative to
+  ``scrapy.utils.response.open_in_browser`` that supports scrapy-poet.
+
+* Fixed some documentation links.
+
+
+0.13.0 (2023-05-08)
+-------------------
+
+* Now requires ``web-poet >= 0.12.0``.
+
+* The ``scrapy savefixture`` command now uses the adapter from the
+  ``SCRAPY_POET_TESTS_ADAPTER`` setting to save the fixture.
+
+* Fix a typo in the docs.
+
+
+0.12.0 (2023-04-26)
+-------------------
+
+* Now requires ``web-poet >= 0.11.0``.
+
+* The ``scrapy savefixture`` command can now generate tests that expect that
+  ``to_item()`` raises a specific exception (only
+  :class:`web_poet.exceptions.PageObjectAction` and its descendants are
+  expected).
+
+* Fixed an error when using ``scrapy shell`` with
+  :class:`scrapy_poet.InjectionMiddleware` enabled.
+
+* Add a ``twine check`` CI check.
+
+
+0.11.0 (2023-03-17)
+-------------------
+
+* The ``scrapy savefixture`` command can now generate a fixture :ref:`using an
+  existing spider <fixture-spiders>`.
+
+
 0.10.1 (2023-03-03)
 -------------------
 
 * More robust time freezing in ``scrapy savefixture`` command.
+
 
 0.10.0 (2023-02-24)
 -------------------
@@ -22,7 +326,7 @@ Changelog
 
 * Added support for item classes which are used as dependencies in page objects
   and spider callbacks. The following is now possible:
- 
+
   .. code-block:: python
 
       import attrs
@@ -30,9 +334,11 @@ Changelog
       from web_poet import WebPage, handle_urls, field
       from scrapy_poet import DummyResponse
 
+
       @attrs.define
       class Image:
           url: str
+
 
       @handle_urls("example.com")
       class ProductImagePage(WebPage[Image]):
@@ -40,10 +346,12 @@ Changelog
           def url(self) -> str:
               return self.css("#product img ::attr(href)").get("")
 
+
       @attrs.define
       class Product:
           name: str
           image: Image
+
 
       @handle_urls("example.com")
       @attrs.define
@@ -60,6 +368,7 @@ Changelog
           @field
           def image(self) -> Image:
               return self.image_item
+
 
       class MySpider(scrapy.Spider):
           name = "myspider"
@@ -95,7 +404,7 @@ Changelog
 
 * New setting named ``SCRAPY_POET_DISCOVER`` to ensure that ``SCRAPY_POET_RULES``
   have properly loaded all intended rules annotated with the ``@handle_urls``
-  decorator. 
+  decorator.
 
 * New utility functions in ``scrapy_poet.utils.testing``.
 
@@ -240,8 +549,7 @@ Changelog
                 name = "my_spider"
                 start_urls = ["https://books.toscrape.com"]
 
-                def parse(self, response: scrapy.http.Response, page: MyPage):
-                    ...
+                def parse(self, response: scrapy.http.Response, page: MyPage): ...
 
 * :func:`scrapy_poet.injection.is_callback_requiring_scrapy_response` now accepts
   an optional ``raw_callback`` parameter meant to represent the actual callback

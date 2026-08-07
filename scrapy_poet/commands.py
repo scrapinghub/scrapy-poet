@@ -1,6 +1,8 @@
 import datetime
+import logging
+import sys
 from pathlib import Path
-from typing import Type
+from types import MethodType
 
 import andi
 import scrapy
@@ -11,8 +13,10 @@ from scrapy.crawler import Crawler
 from scrapy.exceptions import UsageError
 from scrapy.http import Response
 from scrapy.utils.misc import load_object
-from twisted.internet.defer import inlineCallbacks
+from scrapy.utils.project import inside_project
 from web_poet import ItemPage
+from web_poet.annotated import AnnotatedInstance
+from web_poet.exceptions import PageObjectAction
 from web_poet.testing import Fixture
 from web_poet.utils import ensure_awaitable
 
@@ -20,27 +24,32 @@ from scrapy_poet import DummyResponse
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS, InjectionMiddleware
 from scrapy_poet.injection import Injector
 
+logger = logging.getLogger(__name__)
+
+
 saved_dependencies = []
 saved_items = []
+saved_exceptions = []
 frozen_time = None
 
 
 class SavingInjector(Injector):
-    @inlineCallbacks
-    def build_instances_from_providers(
-        self, request: Request, response: Response, plan: andi.Plan
+    async def build_instances_from_providers(
+        self,
+        request: Request,
+        response: Response,
+        plan: andi.Plan,
     ):
-        instances = yield super().build_instances_from_providers(
+        instances = await super().build_instances_from_providers(
             request, response, plan
         )
-        saved_dependencies.extend(instances.values())
+        if request.meta.get("savefixture", False):
+            for cls, value in instances.items():
+                metadata = getattr(cls, "__metadata__", None)
+                if metadata:
+                    value = AnnotatedInstance(value, metadata)  # noqa: PLW2901
+                saved_dependencies.append(value)
         return instances
-
-
-class SavingPipeline:
-    def process_item(self, item, spider):
-        saved_items.append(item)
-        return item
 
 
 class SavingInjectionMiddleware(InjectionMiddleware):
@@ -53,43 +62,70 @@ class SavingInjectionMiddleware(InjectionMiddleware):
         )
 
 
-def spider_for(injectable: Type[ItemPage]) -> Type[scrapy.Spider]:
-    class InjectableSpider(scrapy.Spider):
-        name = "injectable"
-        url = None
+def spider_for(
+    injectable: type[ItemPage],
+    url: str,
+    base_spider: type[scrapy.Spider] | None = None,
+) -> type[scrapy.Spider]:
+    if base_spider is None:
+        base_spider = scrapy.Spider
 
-        def start_requests(self):
-            yield scrapy.Request(self.url, self.cb)
+    class InjectableSpider(base_spider):  # type: ignore[valid-type, misc]
+        name = "injectable"
+
+        def __init__(self, name=None, **kwargs):
+            super().__init__(name, **kwargs)
+            meta = {"savefixture": True}
+            self.start_requests = lambda: [scrapy.Request(url, self.cb, meta=meta)]
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            self.start = MethodType(start, self)
 
         async def cb(self, response: DummyResponse, page: injectable):  # type: ignore[valid-type]
-            global frozen_time
+            global frozen_time  # noqa: PLW0603
             frozen_time = datetime.datetime.now(datetime.timezone.utc).replace(
                 microsecond=0
             )
             with time_machine.travel(frozen_time):
-                yield await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]
+                try:
+                    item = await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]
+                except PageObjectAction as ex:
+                    # let other exception types fail the test generation
+                    saved_exceptions.append(ex)
+                else:
+                    saved_items.append(item)
+                    yield item
 
     return InjectableSpider
 
 
 class SaveFixtureCommand(ScrapyCommand):
     def syntax(self):
-        return "<page object class> <URL>"
+        return "<page object class> <URL> [<spider name>]"
 
     def short_desc(self):
         return "Generate a web-poet test for the provided page object and URL"
 
     def run(self, args, opts):
-        if len(args) != 2:
-            raise UsageError()
+        if len(args) < 2:
+            raise UsageError
         type_name = args[0]
         url = args[1]
 
+        if not inside_project() and "" not in sys.path:
+            # when running without a Scrapy project the current dir may not be in sys.path,
+            # but the user may expect modules in the current dir to be available
+            sys.path.insert(0, "")
         cls = load_object(type_name)
         if not issubclass(cls, ItemPage):
             raise UsageError(f"Error: {type_name} is not a descendant of ItemPage")
 
-        self.settings["ITEM_PIPELINES"][SavingPipeline] = 100
+        self.settings["DOWNLOADER_MIDDLEWARES"]["scrapy_poet.InjectionMiddleware"] = (
+            None
+        )
         self.settings["DOWNLOADER_MIDDLEWARES"][
             "scrapy_poet.downloadermiddlewares.InjectionMiddleware"
         ] = None
@@ -97,15 +133,41 @@ class SaveFixtureCommand(ScrapyCommand):
         self.settings["DOWNLOADER_MIDDLEWARES"][SavingInjectionMiddleware] = 543
         self.settings["_SCRAPY_POET_SAVEFIXTURE"] = True
 
-        spider_cls = spider_for(cls)
-        self.crawler_process.crawl(spider_cls, url=url)
+        base_spider_cls = None
+        if len(args) > 2:
+            spider_name = args[2]
+            spider_loader = self.crawler_process.spider_loader
+            try:
+                base_spider_cls = spider_loader.load(spider_name)
+            except KeyError:
+                logger.error(f"Unable to find spider: {spider_name}")
+                return
+        spider_cls = spider_for(cls, url, base_spider_cls)
+        self.crawler_process.crawl(spider_cls)
         self.crawler_process.start()
 
+        if not saved_items and not saved_exceptions:
+            logger.error(
+                "No items were scraped and no handled exceptions were caught, check the spider output."
+            )
+            self.exitcode = 1
+            return
         deps = saved_dependencies
-        item = saved_items[0]
         meta = {
             "frozen_time": frozen_time.isoformat(timespec="seconds"),
         }
+        adapter = self.settings.get("SCRAPY_POET_TESTS_ADAPTER")
+        if adapter:
+            meta["adapter"] = load_object(adapter)
         basedir = Path(self.settings.get("SCRAPY_POET_TESTS_DIR", "fixtures"))
-        fixture = Fixture.save(basedir / type_name, inputs=deps, item=item, meta=meta)
-        print(f"\nThe test fixture has been written to {fixture.path}.")
+        if saved_items:
+            item = saved_items[0]
+            fixture = Fixture.save(
+                basedir / type_name, inputs=deps, item=item, meta=meta
+            )
+        else:
+            exception = saved_exceptions[0]
+            fixture = Fixture.save(
+                basedir / type_name, inputs=deps, exception=exception, meta=meta
+            )
+        logger.info(f"\nThe test fixture has been written to {fixture.path}.")

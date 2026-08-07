@@ -1,6 +1,7 @@
 import pytest
 
-from scrapy_poet import PageObjectInputProvider
+from scrapy_poet import PageObjectInputProvider, page_input_providers
+from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
 
 
@@ -19,8 +20,8 @@ class TestProvider:
     def test_is_provided_on_function(self):
         class Provider(PageObjectInputProvider):
             @staticmethod
-            def provided_classes(cls):
-                return issubclass(cls, str)
+            def provided_classes(type_):
+                return issubclass(type_, str)
 
         class SubStr(str):
             pass
@@ -38,3 +39,15 @@ class TestProvider:
         assert provider.is_provided(str)
         assert provider.is_provided(int)
         assert not provider.is_provided(float)
+
+
+def test_default_providers():
+    providers = {
+        obj
+        for obj_name, obj in page_input_providers.__dict__.items()
+        if (
+            obj_name.endswith("Provider")
+            and obj_name != "PageObjectInputProvider"  # Base class
+        )
+    }
+    assert providers == set(DEFAULT_PROVIDERS)

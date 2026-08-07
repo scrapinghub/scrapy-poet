@@ -1,6 +1,7 @@
 """
 Baseline: regular Scrapy spider, sweet & easy.
 """
+
 import scrapy
 
 

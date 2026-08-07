@@ -16,8 +16,9 @@ A list of :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>` can be configur
 by passing it to the ``SCRAPY_POET_RULES`` setting.
 
 In this section, we go over its ``instead_of`` parameter for overrides and
-``to_return`` for item returns. However, please make sure you also read web-poet's
-:ref:`rules-intro` tutorial to see all of the expected behaviors of the rules.
+``to_return`` for item returns. However, please make sure you also read
+web-poet's :ref:`rules` documentation to see all of the expected behaviors of
+the rules.
 
 
 Overrides
@@ -31,14 +32,13 @@ page.
 
     Some real-world examples on this topic can be found in:
 
-    - `Example 1 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_01.py>`_:
-      shorter example
-    - `Example 2 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_02.py>`_:
-      longer example
-    - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_03.py>`_:
+    - `Example 1 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_03_overrides_01.py>`_:
+        shorter example
+    - `Example 2 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_03_overrides_02.py>`_:
+        longer example
+    - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_03_overrides_03.py>`_:
       rules using :py:func:`web_poet.handle_urls` decorator and retrieving them
       via :py:meth:`web_poet.RulesRegistry.get_rules <web_poet.rules.RulesRegistry.get_rules>`
-
 
 Page Objects refinement
 -----------------------
@@ -51,8 +51,7 @@ dependency. For example, you might have an existing Page Object for book extract
 .. code-block:: python
 
     class BookPage(ItemPage):
-        def to_item(self):
-            ...
+        def to_item(self): ...
 
 Imagine this Page Object obtains its data from an external API.
 Therefore, it is not holding the page HTML code.
@@ -72,7 +71,7 @@ using the following Page Object:
 
         def to_item(self):
             item = self.book_page.to_item()
-            item['isbn'] = self.css(".isbn-class::text").get()
+            item["isbn"] = self.css(".isbn-class::text").get()
             return item
 
 And then override it for a particular domain using ``settings.py``:
@@ -80,7 +79,7 @@ And then override it for a particular domain using ``settings.py``:
 .. code-block:: python
 
     SCRAPY_POET_RULES = [
-        ApplyRule("example.com", use=ISBNBookPage, instead_of=BookPage)
+        ApplyRule("toscrape.com", use=ISBNBookPage, instead_of=BookPage),
     ]
 
 This new Page Object gets the original ``BookPage`` as dependency and enrich
@@ -106,7 +105,7 @@ the obtained item with the ISBN from the page HTML.
 
             def to_item(self):
                 item = self.book_page.to_item()
-                item['isbn'] = self.css(".isbn-class::text").get()
+                item["isbn"] = self.css(".isbn-class::text").get()
                 return item
 
 
@@ -120,14 +119,14 @@ from ``books.toscrape.com``:
 
     from web_poet import ApplyRule
 
-
     SCRAPY_POET_RULES = [
         ApplyRule(
             for_patterns=Patterns(
                 include=["books.toscrape.com/cataloge/*index.html|"],
-                exclude=["/catalogue/category/"]),
+                exclude=["/catalogue/category/"],
+            ),
             use=MyBookPage,
-            instead_of=BookPage
+            instead_of=BookPage,
         )
     ]
 
@@ -146,9 +145,8 @@ along with where it is applied. This can be done by decorating the
 Page Objects with :py:func:`web_poet.handle_urls` provided by `web-poet`_.
 
 .. tip::
-    Make sure to read the :external:ref:`rules-intro` Tutorial section of
-    `web-poet`_ to learn all of its other functionalities that is not covered
-    in this section.
+    Make sure to read the :external:ref:`rules` documentation of `web-poet`_ to
+    learn all of its other functionalities that is not covered in this section.
 
 Let's see an example:
 
@@ -162,8 +160,8 @@ Let's see an example:
 
         def to_item(self):
             return {
-                'url': self.url,
-                'name': self.css("title::text").get(),
+                "url": self.url,
+                "name": self.css("title::text").get(),
             }
 
 The :py:func:`web_poet.handle_urls` decorator in this case is indicating that
@@ -184,8 +182,7 @@ which returns a ``List[ApplyRule]``. Moreover, you also need to set the
 
     For more info and advanced features of `web-poet`_'s :py:func:`web_poet.handle_urls`
     and its registry, kindly read the `web-poet <https://web-poet.readthedocs.io>`_
-    documentation, specifically its :external:ref:`rules-intro` tutorial
-    section.
+    documentation, specifically its :external:ref:`rules` documentation.
 
 
 Item Returns
@@ -211,7 +208,7 @@ Let's check out an example:
         name: str
 
 
-    @handle_urls("example.com")
+    @handle_urls("toscrape.com")
     @attrs.define
     class ProductPage(WebPage[Product]):
 
@@ -223,10 +220,8 @@ Let's check out an example:
     class MySpider(scrapy.Spider):
         name = "myspider"
 
-        def start_requests(self):
-            yield scrapy.Request(
-                "https://example.com/products/some-product", self.parse
-            )
+        async def start(self):
+            yield scrapy.Request("https://toscrape.com/products/some-product", self.parse)
 
         # We can directly ask for the item here instead of the page object.
         def parse(self, response: DummyResponse, item: Product):
@@ -236,7 +231,7 @@ From this example, we can see that:
 
     * Spider callbacks can directly ask for items as dependencies.
     * The ``Product`` item instance directly comes from ``ProductPage``.
-    * This is made possible by the ``ApplyRule("example.com", use=ProductPage,
+    * This is made possible by the ``ApplyRule("toscrape.com", use=ProductPage,
       to_return=Product)`` instance created from the ``@handle_urls`` decorator
       on ``ProductPage``.
 
@@ -248,7 +243,7 @@ From this example, we can see that:
 
     .. code-block:: python
 
-        @handle_urls("example.com")
+        @handle_urls("toscrape.com")
         @attrs.define
         class ProductPage(WebPage[Product]):
             product_image_page: ProductImagePage
@@ -265,14 +260,12 @@ From this example, we can see that:
         class MySpider(scrapy.Spider):
             name = "myspider"
 
-            def start_requests(self):
-                yield scrapy.Request(
-                    "https://example.com/products/some-product", self.parse
-                )
+            async def start(self):
+                yield scrapy.Request("https://toscrape.com/products/some-product", self.parse)
 
             async def parse(self, response: DummyResponse, product_page: ProductPage):
                 return await product_page.to_item()
 
 For more information about all the expected behavior for the ``to_return``
 parameter in :class:`web_poet.ApplyRule <web_poet.rules.ApplyRule>`, check out
-web-poet's tutorial regarding :ref:`rules-item-class-example`.
+web-poet :ref:`rules` documentation.

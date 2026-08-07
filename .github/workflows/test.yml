@@ -3,6 +3,9 @@
 
 name: tox
 
+permissions:
+  contents: read
+
 on:
   pull_request:
   push:
@@ -16,25 +19,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - python-version: "3.7"
+        - python-version: "3.10"
           toxenv: "min"
-        - python-version: "3.7"
+        - python-version: "3.10"
           toxenv: "pinned-scrapy-2x7"
-        - python-version: "3.7"
+        - python-version: "3.10"
           toxenv: "pinned-scrapy-2x8"
-        - python-version: "3.7"
+        - python-version: "3.10"
           toxenv: "asyncio-min"
-        - python-version: "3.8"
-        - python-version: "3.9"
         - python-version: "3.10"
         - python-version: "3.11"
-        - python-version: "3.11"
-          toxenv: "asyncio"
+        - python-version: "3.12"
+        - python-version: "3.13"
+        - python-version: "3.13"
+          toxenv: "default-reactor"
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v6
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
@@ -45,21 +48,23 @@ jobs:
       run: |
         tox -e ${{ matrix.toxenv || 'py' }}
     - name: coverage
-      if: ${{ success() }}
-      run: bash <(curl -s https://codecov.io/bash)
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   check:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.11']
-        tox-job: ["mypy", "docs", "linters"]
+        # Keep in sync with pyproject.toml's tool.sphinx-scrapy.python-version.
+        python-version: ['3.13']
+        tox-job: ["mypy", "docs", "linters", "twinecheck"]
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v6
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies

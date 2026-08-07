@@ -2,42 +2,65 @@
 responsible for injecting Page Input dependencies before the request callbacks
 are executed.
 """
+
+from __future__ import annotations
+
 import inspect
 import logging
 import warnings
-from typing import Generator, Optional, Type, TypeVar
+from typing import TYPE_CHECKING
 
-from scrapy import Spider, signals
-from scrapy.crawler import Crawler
-from scrapy.http import Request, Response
-from twisted.internet.defer import Deferred, inlineCallbacks
+from scrapy.downloadermiddlewares.stats import DownloaderStats
 from web_poet import RulesRegistry
+from web_poet.exceptions import Retry
 
 from .api import DummyResponse
 from .injection import Injector
 from .page_input_providers import (
     HttpClientProvider,
+    HttpRequestProvider,
     HttpResponseProvider,
-    ItemProvider,
     PageParamsProvider,
     RequestUrlProvider,
     ResponseUrlProvider,
+    StatsProvider,
 )
-from .utils import create_registry_instance, is_min_scrapy_version
+from .utils import (
+    _get_retry_request_from_exception,
+    create_registry_instance,
+    is_min_scrapy_version,
+)
+
+if TYPE_CHECKING:
+    from scrapy import Spider
+    from scrapy.crawler import Crawler
+    from scrapy.http import Request, Response
+
+    # typing.Self requires Python 3.11
+    from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
 
 
+class DownloaderStatsMiddleware(DownloaderStats):
+    def process_response(
+        self, request: Request, response: Response, spider: Spider | None = None
+    ) -> Request | Response:
+        if isinstance(response, DummyResponse):
+            return response
+        kwargs = {"spider": spider} if spider is not None else {}
+        return super().process_response(request, response, **kwargs)
+
+
 DEFAULT_PROVIDERS = {
+    HttpRequestProvider: 400,
     HttpResponseProvider: 500,
     HttpClientProvider: 600,
     PageParamsProvider: 700,
     RequestUrlProvider: 800,
     ResponseUrlProvider: 900,
-    ItemProvider: 1000,
+    StatsProvider: 1000,
 }
-
-InjectionMiddlewareTV = TypeVar("InjectionMiddlewareTV", bound="InjectionMiddleware")
 
 
 class InjectionMiddleware:
@@ -58,19 +81,12 @@ class InjectionMiddleware:
         )
 
     @classmethod
-    def from_crawler(
-        cls: Type[InjectionMiddlewareTV], crawler: Crawler
-    ) -> InjectionMiddlewareTV:
-        o = cls(crawler)
-        crawler.signals.connect(o.spider_closed, signal=signals.spider_closed)
-        return o
-
-    def spider_closed(self, spider: Spider) -> None:
-        self.injector.close()
+    def from_crawler(cls, crawler: Crawler) -> Self:
+        return cls(crawler)
 
     def process_request(
-        self, request: Request, spider: Spider
-    ) -> Optional[DummyResponse]:
+        self, request: Request, spider: Spider | None = None
+    ) -> DummyResponse | None:
         """This method checks if the request is really needed and if its
         download could be skipped by trying to infer if a :class:`scrapy.http.Response`
         is going to be used by the callback or a Page Input.
@@ -82,17 +98,17 @@ class InjectionMiddleware:
 
         With this behavior, we're able to optimize spider executions avoiding
         unnecessary downloads. That could be the case when the callback is
-        actually using another source like external APIs such as Zyte's
-        AutoExtract.
+        actually using another source like external APIs such as Zyte API.
         """
         if self.injector.is_scrapy_response_required(request):
             return None
 
         logger.debug(f"Using DummyResponse instead of downloading {request}")
+        assert self.crawler.stats
         self.crawler.stats.inc_value("scrapy_poet/dummy_response_count")
         return DummyResponse(url=request.url, request=request)
 
-    def _skip_dependency_creation(self, request: Request, spider: Spider) -> bool:
+    def _skip_dependency_creation(self, request: Request) -> bool:
         """See:
 
         * https://github.com/scrapinghub/scrapy-poet/issues/48  — scrapy <  2.8
@@ -107,22 +123,19 @@ class InjectionMiddleware:
 
         # If the Request.cb_kwargs possess all of the cb dependencies, then no
         # warning message should be issued.
-        signature_iter = iter(inspect.signature(spider.parse).parameters)
+        assert self.crawler.spider
+        signature_iter = iter(inspect.signature(self.crawler.spider.parse).parameters)
         next(signature_iter)  # skip the first arg: response
         cb_param_names = set(signature_iter)
         if cb_param_names and cb_param_names == request.cb_kwargs.keys():
             return False
 
         # Skip if providers are needed.
-        if self.injector.discover_callback_providers(request):
-            return True
+        return bool(self.injector.discover_callback_providers(request))
 
-        return False
-
-    @inlineCallbacks
-    def process_response(
-        self, request: Request, response: Response, spider: Spider
-    ) -> Generator[Deferred, object, Response]:
+    async def process_response(
+        self, request: Request, response: Response, spider: Spider | None = None
+    ) -> Response | Request:
         """This method fills :attr:`scrapy.Request.cb_kwargs
         <scrapy.http.Request.cb_kwargs>` with instances for the required Page
         Objects found in the callback signature.
@@ -132,7 +145,7 @@ class InjectionMiddleware:
         arguments and any other parameter with a :class:`~.PageObjectInputProvider`
         configured for its type.
         """
-        if self._skip_dependency_creation(request, spider):
+        if self._skip_dependency_creation(request):
             warnings.warn(
                 "A request has been encountered with callback=None which "
                 "defaults to the parse() method. On such cases, annotated "
@@ -145,10 +158,18 @@ class InjectionMiddleware:
             return response
 
         # Find out the dependencies
-        final_kwargs = yield from self.injector.build_callback_dependencies(
-            request,
-            response,
-        )
+        try:
+            final_kwargs = await self.injector.build_callback_dependencies(
+                request,
+                response,
+            )
+        except Retry as exception:
+            new_request_or_none = _get_retry_request_from_exception(
+                request, exception, self.crawler
+            )
+            if not new_request_or_none:
+                return response
+            return new_request_or_none
         # Fill the callback arguments with the created instances
         for arg, value in final_kwargs.items():
             # If scrapy-poet can't provided the dependency, allow the user to

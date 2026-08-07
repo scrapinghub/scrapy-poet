@@ -1,8 +1,8 @@
 import attr
 import pytest
-from pytest_twisted import inlineCallbacks
 from scrapy import Spider
 from scrapy.http import Request
+from scrapy.utils.defer import deferred_f_from_coro_f
 from web_poet.pages import WebPage
 
 from scrapy_poet.injection import SCRAPY_PROVIDED_CLASSES
@@ -10,27 +10,16 @@ from scrapy_poet.page_input_providers import (
     HttpResponseProvider,
     PageObjectInputProvider,
 )
-from scrapy_poet.utils.testing import HtmlResource, crawl_items, crawl_single_item
+from scrapy_poet.utils.testing import (
+    ProductHtml,
+    crawl_items_async,
+    crawl_single_item_async,
+)
 
 
-class ProductHtml(HtmlResource):
-
-    html = """
-    <html>
-        <div class="breadcrumbs">
-            <a href="/food">Food</a> /
-            <a href="/food/sweets">Sweets</a>
-        </div>
-        <h1 class="name">Chocolate</h1>
-        <p>Price: <span class="price">22€</span></p>
-        <p class="description">The best chocolate ever</p>
-    </html>
-    """
-
-
-@inlineCallbacks
 @pytest.mark.parametrize("scrapy_class", SCRAPY_PROVIDED_CLASSES)
-def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
+@deferred_f_from_coro_f
+async def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
     """Scrapy dependencies should be injected into Providers."""
 
     @attr.s(auto_attribs=True)
@@ -38,7 +27,6 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
         scrapy_class: str
 
     class PageDataProvider(PageObjectInputProvider):
-
         provided_classes = {PageData}
 
         def __call__(self, to_provide, obj: scrapy_class):  # type: ignore[valid-type]
@@ -46,7 +34,6 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
 
     @attr.s(auto_attribs=True)
     class Page(WebPage):
-
         page_data: PageData
 
         def to_item(self):
@@ -55,7 +42,6 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
             }
 
     class MySpider(Spider):
-
         name = "my_spider"
         url = None
         custom_settings = {
@@ -68,21 +54,24 @@ def test_scrapy_dependencies_on_providers(scrapy_class, settings) -> None:
         def start_requests(self):
             yield Request(url=self.url, callback=self.parse)
 
+        async def start(self):
+            for item_or_request in self.start_requests():
+                yield item_or_request
+
         def parse(self, response, page: Page):
             return page.to_item()
 
-    item, url, crawler = yield crawl_single_item(MySpider, ProductHtml, settings)
+    item, *_ = await crawl_single_item_async(MySpider, ProductHtml, settings)
     assert item["scrapy_class"] == scrapy_class.__name__
 
 
-@inlineCallbacks
 @pytest.mark.parametrize("scrapy_class", SCRAPY_PROVIDED_CLASSES)
-def test_scrapy_dependencies_on_page_objects(scrapy_class, settings) -> None:
+@deferred_f_from_coro_f
+async def test_scrapy_dependencies_on_page_objects(scrapy_class, settings) -> None:
     """Scrapy dependencies should not be injected into Page Objects."""
 
     @attr.s(auto_attribs=True)
     class Page(WebPage):
-
         scrapy_obj: scrapy_class  # type: ignore[valid-type]
 
         def to_item(self):
@@ -91,15 +80,18 @@ def test_scrapy_dependencies_on_page_objects(scrapy_class, settings) -> None:
             }
 
     class MySpider(Spider):
-
         name = "my_spider"
         url = None
 
         def start_requests(self):
             yield Request(url=self.url, callback=self.parse)
 
+        async def start(self):
+            for item_or_request in self.start_requests():
+                yield item_or_request
+
         def parse(self, response, page: Page):
             return page.to_item()
 
-    items, url, crawler = yield crawl_items(MySpider, ProductHtml, settings)
+    items, *_ = await crawl_items_async(MySpider, ProductHtml, settings)
     assert not items

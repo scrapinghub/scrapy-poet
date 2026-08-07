@@ -221,7 +221,7 @@ returning the result of the ``to_item`` method call. We could use
             parse_book = callback_for(BookPage)
 
     This is useful when the Page Objects uses additional requests, which rely
-    heavily on ``async/await`` syntax. More info on this in this tutorial 
+    heavily on ``async/await`` syntax. More info on this in this tutorial
     section: :ref:`intro-additional-requests`.
 
 Final result
@@ -319,7 +319,7 @@ Let's adapt the spider to use this new Page Object:
         name = "books_spider"
         parse_book = callback_for(BookPage)  # extract items from book pages
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse)
 
         def parse(self, response, page: BookListPage):
@@ -353,8 +353,8 @@ Let's adapt the spider to use this new Page Object:
         TypeError: parse() missing 1 required positional argument: 'page'
 
     This stems from the fact that using ``start_urls`` would use the predefined
-    :meth:`start_requests() <scrapy.Spider.start_requests>` method wherein
-    :class:`scrapy.Request <scrapy.http.Request>` has ``callback=None``.
+    :meth:`~scrapy.Spider.start` method wherein :class:`scrapy.Request
+    <scrapy.http.Request>` has ``callback=None``.
 
     One way to avoid this is to always declare the callback in :class:`scrapy.Request
     <scrapy.http.Request>`, just like in the original example.
@@ -381,8 +381,8 @@ existing Page Objects as subclasses of them:
 
     from web_poet.pages import WebPage
 
-
     # ------ Base page objects ------
+
 
     class BookListPage(WebPage):
 
@@ -395,7 +395,9 @@ existing Page Objects as subclasses of them:
         def to_item(self):
             return None
 
+
     # ------ Concrete page objects for books.toscrape.com (BTS) ------
+
 
     class BTSBookListPage(BookListPage):
 
@@ -421,7 +423,7 @@ be done by configuring ``SCRAPY_POET_RULES`` into ``settings.py``:
 
     SCRAPY_POET_RULES = [
         ApplyRule("toscrape.com", BTSBookListPage, BookListPage),
-        ApplyRule("toscrape.com", BTSBookPage, BookPage)
+        ApplyRule("toscrape.com", BTSBookPage, BookPage),
     ]
 
 The spider is back to life!
@@ -477,12 +479,12 @@ are used for the domain
         ApplyRule("toscrape.com", use=BTSBookListPage, instead_of=BookListPage),
         ApplyRule("toscrape.com", use=BTSBookPage, instead_of=BookPage),
         ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),
-        ApplyRule("bookpage.com", use=BPBookPage, instead_of=BookPage)
+        ApplyRule("bookpage.com", use=BPBookPage, instead_of=BookPage),
     ]
 
 The spider is now ready to extract books from both sites 😀.
 The full example
-`can be seen here <https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders/books_04_overrides_02.py>`_
+`can be seen here <https://github.com/scrapinghub/scrapy-poet/tree/master/example/example/spiders/books_03_overrides_02.py>`_
 
 On the surface, it looks just like a different way to organize Scrapy spider
 code - and indeed, it *is* just a different way to organize the code,
@@ -513,7 +515,7 @@ For more info on this, you can refer to these docs:
     * ``scrapy-poet``'s :ref:`rules-from-web-poet` Tutorial section.
     * External `web-poet`_ docs.
 
-        * Specifically, the :external:ref:`rules-intro` Tutorial section.
+        * Specifically, the :ref:`rules` documentation.
 
 Next steps
 ==========

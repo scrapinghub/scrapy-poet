@@ -5,6 +5,7 @@ the crawling logic (the spider is exactly the same).
 
 The default configured PO logic contains the logic for books.toscrape.com
 """
+
 import scrapy
 from web_poet import ApplyRule, WebPage
 
@@ -46,7 +47,7 @@ class BPBookPage(WebPage):
 
 
 class BooksSpider(scrapy.Spider):
-    name = "books_04_overrides_01"
+    name = "books_03_overrides_01"
     # Configuring different page objects pages from the bookpage.com domain
     custom_settings = {
         "SCRAPY_POET_RULES": [
@@ -55,7 +56,7 @@ class BooksSpider(scrapy.Spider):
         ]
     }
 
-    def start_requests(self):
+    async def start(self):
         for url in ["http://books.toscrape.com/", "https://bookpage.com/reviews"]:
             yield scrapy.Request(url, callback=self.parse)
 

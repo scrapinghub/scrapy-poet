@@ -10,6 +10,7 @@ It should be possible to fix this limitation, so even though this code
 has problems now, it is used in the latter examples, because as an API
 it is better than defining callback explicitly.
 """
+
 import scrapy
 from web_poet import WebPage
 

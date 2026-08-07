@@ -1,40 +1,34 @@
-import json
-from typing import Any, Callable, List, Sequence, Set
+from typing import Any, Callable, Set
 from unittest import mock
 
 import attr
 import scrapy
-from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
 from scrapy.settings import Settings
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy.utils.test import get_crawler
 from twisted.python.failure import Failure
-from web_poet import HttpClient, HttpResponse
+from web_poet import (
+    HttpClient,
+    HttpRequest,
+    HttpRequestBody,
+    HttpRequestHeaders,
+    HttpResponse,
+    RequestUrl,
+)
+from web_poet.serialization import SerializedLeafData, register_serialization
 
 from scrapy_poet import HttpResponseProvider
 from scrapy_poet.injection import Injector
 from scrapy_poet.page_input_providers import (
-    CacheDataProviderMixin,
     HttpClientProvider,
-    ItemProvider,
+    HttpRequestProvider,
     PageObjectInputProvider,
     PageParamsProvider,
+    StatsProvider,
 )
-from scrapy_poet.utils.testing import AsyncMock, HtmlResource, crawl_single_item
-
-
-class ProductHtml(HtmlResource):
-    html = """
-    <html>
-        <div class="breadcrumbs">
-            <a href="/food">Food</a> /
-            <a href="/food/sweets">Sweets</a>
-        </div>
-        <h1 class="name">Chocolate</h1>
-        <p>Price: <span class="price">22€</span></p>
-        <p class="description">The best chocolate ever</p>
-    </html>
-    """
+from scrapy_poet.utils.mockserver import get_ephemeral_port
+from scrapy_poet.utils.testing import HtmlResource, ProductHtml, crawl_single_item_async
 
 
 class NonProductHtml(HtmlResource):
@@ -60,8 +54,7 @@ class Html:
     html: str
 
 
-class PriceHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
-
+class PriceHtmlDataProvider(PageObjectInputProvider):
     name = "price_html"
     provided_classes = {Price, Html}
 
@@ -73,45 +66,30 @@ class PriceHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
         self, to_provide, response: scrapy.http.Response, spider: scrapy.Spider
     ):
         assert isinstance(spider, scrapy.Spider)
-        ret: List[Any] = []
+        ret: list[Any] = []
         if Price in to_provide:
-            ret.append(Price(response.css(".price::text").get()))
+            price = response.css(".price::text").get()
+            assert price is not None
+            ret.append(Price(price))
         if Html in to_provide:
             ret.append(Html("Price Html!"))
         return ret
 
-    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        return "http://example.com"
 
-    def serialize(self, result: Sequence[Any]) -> Any:
-        return result
-
-    def deserialize(self, data: Any) -> Sequence[Any]:
-        return data
-
-
-class NameHtmlDataProvider(PageObjectInputProvider, CacheDataProviderMixin):
-
+class NameHtmlDataProvider(PageObjectInputProvider):
     name = "name_html"
     provided_classes = {Name, Html}.__contains__
 
     def __call__(self, to_provide, response: scrapy.http.Response, settings: Settings):
         assert isinstance(settings, Settings)
-        ret: List[Any] = []
+        ret: list[Any] = []
         if Name in to_provide:
-            ret.append(Name(response.css(".name::text").get()))
+            name = response.css(".name::text").get()
+            assert name is not None
+            ret.append(Name(name))
         if Html in to_provide:
             ret.append(Html("Name Html!"))
         return ret
-
-    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
-        return "http://example.com"
-
-    def serialize(self, result: Sequence[Any]) -> Any:
-        return result
-
-    def deserialize(self, data: Any) -> Sequence[Any]:
-        return data
 
 
 class HttpResponseProviderForTest(HttpResponseProvider):
@@ -121,8 +99,18 @@ class HttpResponseProviderForTest(HttpResponseProvider):
         return "http://example.com"
 
 
-class PriceFirstMultiProviderSpider(scrapy.Spider):
+for dep_cls in [Price, Name, Html]:
+    # all these types have the same structure so we can DRY
+    def _serialize(o: dep_cls) -> SerializedLeafData:  # type: ignore[valid-type]
+        return {"txt": attr.astuple(o)[0].encode()}
 
+    def _deserialize(cls: type[dep_cls], data: SerializedLeafData) -> dep_cls:  # type: ignore[valid-type]
+        return cls(data["txt"].decode())  # type: ignore[misc]
+
+    register_serialization(_serialize, _deserialize)
+
+
+class PriceFirstMultiProviderSpider(scrapy.Spider):
     url = None
     custom_settings = {
         "SCRAPY_POET_PROVIDERS": {
@@ -134,6 +122,10 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
 
     def start_requests(self):
         yield Request(self.url, self.parse, errback=self.errback)
+
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
 
     def errback(self, failure: Failure):
         yield {"exception": failure.value}
@@ -155,7 +147,6 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
 
 
 class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
-
     custom_settings = {
         "SCRAPY_POET_PROVIDERS": {
             HttpResponseProviderForTest: 0,
@@ -165,12 +156,13 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
     }
 
 
-@inlineCallbacks
-def test_name_first_spider(settings, tmp_path):
-    cache = tmp_path / "cache.sqlite3"
-    settings.set("SCRAPY_POET_CACHE", str(cache))
-    item, _, _ = yield crawl_single_item(
-        NameFirstMultiProviderSpider, ProductHtml, settings
+@deferred_f_from_coro_f
+async def test_name_first_spider(settings, tmp_path):
+    port = get_ephemeral_port()
+    cache = tmp_path / "cache"
+    settings["SCRAPY_POET_CACHE"] = str(cache)
+    item, _, _ = await crawl_single_item_async(
+        NameFirstMultiProviderSpider, ProductHtml, settings, port=port
     )
     assert cache.exists()
     assert item == {
@@ -182,8 +174,8 @@ def test_name_first_spider(settings, tmp_path):
 
     # Let's see that the cache is working. We use a different and wrong resource,
     # but it should be ignored by the cached version used
-    item, _, _ = yield crawl_single_item(
-        NameFirstMultiProviderSpider, NonProductHtml, settings
+    item, _, _ = await crawl_single_item_async(
+        NameFirstMultiProviderSpider, NonProductHtml, settings, port=port
     )
     assert item == {
         Price: Price("22€"),
@@ -193,9 +185,9 @@ def test_name_first_spider(settings, tmp_path):
     }
 
 
-@inlineCallbacks
-def test_price_first_spider(settings):
-    item, _, _ = yield crawl_single_item(
+@deferred_f_from_coro_f
+async def test_price_first_spider(settings):
+    item, _, _ = await crawl_single_item_async(
         PriceFirstMultiProviderSpider, ProductHtml, settings
     )
     assert item == {
@@ -206,31 +198,51 @@ def test_price_first_spider(settings):
     }
 
 
-def test_response_data_provider_fingerprint(settings):
-    crawler = get_crawler(Spider, settings)
-    injector = Injector(crawler)
-    rdp = HttpResponseProvider(injector)
-    request = scrapy.http.Request("https://example.com")
-
-    # The fingerprint should be readable since it's JSON-encoded.
-    fp = rdp.fingerprint(scrapy.http.Response, request)
-    assert json.loads(fp)
-
-
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_http_client_provider(settings):
     crawler = get_crawler(Spider, settings)
-    crawler.engine = AsyncMock()
+    crawler.engine = mock.AsyncMock()
     injector = Injector(crawler)
 
     with mock.patch(
-        "scrapy_poet.page_input_providers.create_scrapy_downloader"
+        "scrapy_poet.page_input_providers._create_scrapy_downloader"
     ) as mock_factory:
         provider = HttpClientProvider(injector)
         results = provider(set(), crawler)
         assert isinstance(results[0], HttpClient)
 
     assert results[0]._request_downloader == mock_factory.return_value
+
+
+@deferred_f_from_coro_f
+async def test_http_request_provider(settings):
+    crawler = get_crawler(Spider, settings)
+    injector = Injector(crawler)
+    provider = HttpRequestProvider(injector)
+
+    empty_scrapy_request = scrapy.http.Request("https://example.com")
+    (empty_request,) = provider(set(), empty_scrapy_request)
+    assert isinstance(empty_request, HttpRequest)
+    assert isinstance(empty_request.url, RequestUrl)
+    assert str(empty_request.url) == "https://example.com"
+    assert empty_request.method == "GET"
+    assert isinstance(empty_request.headers, HttpRequestHeaders)
+    assert empty_request.headers == HttpRequestHeaders()
+    assert isinstance(empty_request.body, HttpRequestBody)
+    assert empty_request.body == HttpRequestBody()
+
+    full_scrapy_request = scrapy.http.Request(
+        "https://example.com", method="POST", body=b"a", headers={"a": "b"}
+    )
+    (full_request,) = provider(set(), full_scrapy_request)
+    assert isinstance(full_request, HttpRequest)
+    assert isinstance(full_request.url, RequestUrl)
+    assert str(full_request.url) == "https://example.com"
+    assert full_request.method == "POST"
+    assert isinstance(full_request.headers, HttpRequestHeaders)
+    assert full_request.headers == HttpRequestHeaders([("a", "b")])
+    assert isinstance(full_request.body, HttpRequestBody)
+    assert full_request.body == HttpRequestBody(b"a")
 
 
 def test_page_params_provider(settings):
@@ -257,29 +269,23 @@ def test_page_params_provider(settings):
     assert results[0] == expected_data
 
 
-def test_item_provider_cache(settings):
-    """Note that the bulk of the tests for the ``ItemProvider`` alongside the
-    ``Injector`` is tested in ``tests/test_web_poet_rules.py``.
-
-    We'll only test its caching behavior here if its properly garbage collected.
-    """
-
+def test_stats_provider(settings):
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)
-    provider = ItemProvider(injector)
+    provider = StatsProvider(injector)
 
-    assert len(provider._cached_instances) == 0
+    results = provider(set(), crawler)
 
-    def inside():
-        request = Request("https://example.com")
-        provider.update_cache(request, {Name: Name("test")})
-        assert len(provider._cached_instances) == 1
+    stats = results[0]
+    assert stats._stats._stats == crawler.stats
 
-        cached_instance = provider.get_from_cache(request, Name)
-        assert isinstance(cached_instance, Name)
+    stats.set("a", "1")
+    stats.set("b", 2)
+    stats.inc("b")
+    stats.inc("b", 5)
+    stats.inc("c")
 
-    # The cache should be empty after the ``inside`` scope has finished which
-    # means that the corresponding ``request`` and the contents under it are
-    # garbage collected.
-    inside()
-    assert len(provider._cached_instances) == 0
+    expected = {"a": "1", "b": 8, "c": 1}
+    expected = {f"poet/stats/{k}": v for k, v in expected.items()}
+    actual = {k: v for k, v in crawler.stats._stats.items() if k in expected}
+    assert actual == expected

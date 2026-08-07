@@ -6,6 +6,7 @@ the crawling logic (the spider is exactly the same)
 No configured default logic: if used for an unregistered domain, no logic
 at all is applied.
 """
+
 import scrapy
 from web_poet import WebPage
 from web_poet.rules import ApplyRule
@@ -57,7 +58,7 @@ class BPBookPage(BookPage):
 
 
 class BooksSpider(scrapy.Spider):
-    name = "books_04_overrides_02"
+    name = "books_03_overrides_02"
     # Configuring different page objects pages for different domains
     custom_settings = {
         "SCRAPY_POET_RULES": [
@@ -68,7 +69,7 @@ class BooksSpider(scrapy.Spider):
         ]
     }
 
-    def start_requests(self):
+    async def start(self):
         for url in ["http://books.toscrape.com/", "https://bookpage.com/reviews"]:
             yield scrapy.Request(url, callback=self.parse)
 
