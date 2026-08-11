@@ -1,7 +1,6 @@
 import logging
 
 from scrapy.exceptions import IgnoreRequest
-from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import HttpRequest
 from web_poet.exceptions import HttpError, HttpRequestError
 
@@ -13,7 +12,7 @@ from scrapy_poet.utils import (
 logger = logging.getLogger(__name__)
 
 
-def create_scrapy_downloader(download_func):
+def _create_scrapy_downloader(download_func):
     async def scrapy_downloader(request: HttpRequest):
         if not isinstance(request, HttpRequest):
             raise TypeError(
@@ -26,10 +25,8 @@ def create_scrapy_downloader(download_func):
         if scrapy_request.method == "HEAD":
             scrapy_request.meta["dont_redirect"] = True
 
-        deferred = download_func(scrapy_request)
-        deferred_or_future = maybe_deferred_to_future(deferred)
         try:
-            response = await deferred_or_future
+            response = await download_func(scrapy_request)
         except IgnoreRequest as e:
             # A Scrapy downloader middleware has caused the request to be
             # ignored.

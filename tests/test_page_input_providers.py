@@ -20,8 +20,8 @@ class TestProvider:
     def test_is_provided_on_function(self):
         class Provider(PageObjectInputProvider):
             @staticmethod
-            def provided_classes(cls):
-                return issubclass(cls, str)
+            def provided_classes(type_):
+                return issubclass(type_, str)
 
         class SubStr(str):
             pass

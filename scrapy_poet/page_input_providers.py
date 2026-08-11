@@ -6,14 +6,15 @@ The current module implements a Page Input Provider for
 :class:`web_poet.HttpResponse <web_poet.page_inputs.http.HttpResponse>`, which
 is in charge of providing the response HTML from Scrapy. You could also implement
 different providers in order to acquire data from multiple external sources,
-for example, from scrapy-playwright or from an API for automatic extraction.
+for example, from scrapy-playwright or from scrapy-zyte-api.
 """
 
-from typing import Any, Callable, ClassVar, FrozenSet, Set, Union
+from typing import Any, Callable, ClassVar, Set
 
 from scrapy import Request
 from scrapy.crawler import Crawler
 from scrapy.http import Response
+from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import (
     HttpClient,
     HttpRequest,
@@ -27,7 +28,7 @@ from web_poet import (
 )
 from web_poet.page_inputs.stats import StatCollector, StatNum
 
-from scrapy_poet.downloader import create_scrapy_downloader
+from scrapy_poet.downloader import _create_scrapy_downloader
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
 
 
@@ -39,24 +40,25 @@ class PageObjectInputProvider:
     instances of some types to Scrapy callbacks. The types a POIP provides must
     be declared in the class attribute ``provided_classes``.
 
-    POIPs are initialized when the spider starts by invoking the ``__init__`` method,
-    which receives the ``scrapy_poet.injection.Injector`` instance as argument.
+    POIPs are initialized when the spider starts by invoking the ``__init__``
+    method, which receives the ``scrapy_poet.injection.Injector`` instance as
+    argument.
 
     The ``__call__`` method must be overridden, and it is inside this method
-    where the actual instances must be build. The default ``__call__`` signature
-    is as follows:
+    where the actual instances must be build. The default ``__call__``
+    signature is as follows:
 
     .. code-block:: python
 
-        def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]:
+        def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]: ...
 
     Therefore, it receives a list of types to be provided and return a list
-    with the instances created (don't get confused by the
-    ``Callable`` annotation. Think on it as a synonym of ``Type``).
+    with the instances created (don't get confused by the ``Callable``
+    annotation. Think on it as a synonym of ``Type``).
 
-    Additional dependencies can be declared in the ``__call__`` signature
-    that will be automatically injected. Currently, scrapy-poet is able
-    to inject instances of the following classes:
+    Additional dependencies can be declared in the ``__call__`` signature that
+    will be automatically injected. Currently, scrapy-poet is able to inject
+    instances of the following classes:
 
     - :class:`~scrapy.http.Request`
     - :class:`~scrapy.http.Response`
@@ -64,23 +66,21 @@ class PageObjectInputProvider:
     - :class:`~scrapy.settings.Settings`
     - :class:`~scrapy.statscollectors.StatsCollector`
 
-    Finally, ``__call__`` function can execute asynchronous code. Just
-    either prepend the declaration with ``async`` to use futures or annotate it with
-    ``@inlineCallbacks`` for deferred execution. Additionally, you
-    might want to configure Scrapy ``TWISTED_REACTOR`` to support ``asyncio``
-    libraries.
+    Finally, ``__call__`` function can execute asynchronous code. Just prepend
+    the declaration with ``async``.
 
     The available POIPs should be declared in the spider setting using the key
     ``SCRAPY_POET_PROVIDERS``. It must be a dictionary that follows same
-    structure than the
-    :ref:`Scrapy Middlewares <scrapy:topics-downloader-middleware-ref>`
-    configuration dictionaries.
+    structure than the :ref:`Scrapy Middlewares
+    <scrapy:topics-downloader-middleware-ref>` configuration dictionaries.
 
     A simple example of a provider:
 
     .. code-block:: python
 
-        class BodyHtml(str): pass
+        class BodyHtml(str):
+            pass
+
 
         class BodyHtmlProvider(PageObjectInputProvider):
             provided_classes = {BodyHtml}
@@ -88,14 +88,13 @@ class PageObjectInputProvider:
             def __call__(self, to_provide, response: Response):
                 return [BodyHtml(response.css("html body").get())]
 
-    The **provided_classes** class attribute is the ``set`` of classes
-    that this provider provides.
-    Alternatively, it can be a function with type ``Callable[[Callable], bool]`` that
-    returns ``True`` if and only if the given type, which must be callable,
-    is provided by this provider.
+    The **provided_classes** class attribute is the ``set`` of classes that
+    this provider provides. Alternatively, it can be a function with type
+    ``Callable[[Callable], bool]`` that returns ``True`` if and only if the
+    given type, which must be callable, is provided by this provider.
     """
 
-    provided_classes: Union[Set[Callable], Callable[[Callable], bool]]
+    provided_classes: set[Callable] | Callable[[Callable], bool]
     name: ClassVar[str] = ""  # It must be a unique name. Used by the cache mechanism
 
     def is_provided(self, type_: Callable) -> bool:
@@ -103,15 +102,14 @@ class PageObjectInputProvider:
         Return ``True`` if the given type is provided by this provider based
         on the value of the attribute ``provided_classes``
         """
-        if isinstance(self.provided_classes, (Set, FrozenSet)):
+        if isinstance(self.provided_classes, (set, frozenset)):
             return type_ in self.provided_classes
-        elif callable(self.provided_classes):
+        if callable(self.provided_classes):
             return self.provided_classes(type_)
-        else:
-            raise MalformedProvidedClassesError(
-                f"Unexpected type {type_!r} for 'provided_classes' attribute of"
-                f"{self!r}. Expected either 'set' or 'callable'"
-            )
+        raise MalformedProvidedClassesError(
+            f"Unexpected type {type_!r} for 'provided_classes' attribute of"
+            f"{self!r}. Expected either 'set' or 'callable'"
+        )
 
     # FIXME: Can't import the Injector as class annotation due to circular dep.
     def __init__(self, injector):
@@ -188,8 +186,16 @@ class HttpClientProvider(PageObjectInputProvider):
         <web_poet.page_inputs.client.HttpClient>` instance using Scrapy's
         downloader.
         """
-        assert crawler.engine
-        downloader = create_scrapy_downloader(crawler.engine.download)
+        if hasattr(crawler.engine, "download_async"):  # Scrapy 2.14+
+            assert crawler.engine
+            download_func = crawler.engine.download_async
+        else:
+
+            async def download_func(request: Request):
+                assert crawler.engine
+                return await maybe_deferred_to_future(crawler.engine.download(request))
+
+        downloader = _create_scrapy_downloader(download_func)
         save_responses = crawler.settings.getbool("_SCRAPY_POET_SAVEFIXTURE")
         return [
             HttpClient(request_downloader=downloader, save_responses=save_responses)
@@ -243,10 +249,10 @@ class ScrapyPoetStatCollector(StatCollector):
         self._stats = stats
         self._prefix = "poet/stats/"
 
-    def set(self, key: str, value: Any) -> None:  # noqa: D102
+    def set(self, key: str, value: Any) -> None:
         self._stats.set_value(f"{self._prefix}{key}", value)
 
-    def inc(self, key: str, value: StatNum = 1) -> None:  # noqa: D102
+    def inc(self, key: str, value: StatNum = 1) -> None:
         self._stats.inc_value(f"{self._prefix}{key}", value)
 
 

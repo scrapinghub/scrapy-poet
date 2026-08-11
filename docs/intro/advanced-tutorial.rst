@@ -21,7 +21,7 @@ Additional Requests
 ===================
 
 Using Page Objects using additional requests doesn't need anything special from
-the spider. It would work as-is because of the readily available 
+the spider. It would work as-is because of the readily available
 :class:`scrapy_poet.HttpClientProvider <scrapy_poet.page_input_providers.HttpClientProvider>`
 that is enabled out of the box.
 
@@ -62,7 +62,7 @@ Suppose we have the following Page Object:
 
             # Simulates clicking on a button that says "View All Images"
             response: web_poet.HttpResponse = await self.http.get(
-                f"https://api.example.com/v2/images?id={item['product_id']}"
+                f"https://api.toscrape.com/v2/images?id={item['product_id']}"
             )
             item["images"] = response.css(".product-images img::attr(src)").getall()
             return item
@@ -77,10 +77,10 @@ It can be directly used inside the spider as:
 
     class ProductSpider(scrapy.Spider):
 
-        def start_requests(self):
+        async def start(self):
             for url in [
-                "https://example.com/category/product/item?id=123",
-                "https://example.com/category/product/item?id=989",
+                "https://toscrape.com/category/product/item?id=123",
+                "https://toscrape.com/category/product/item?id=989",
             ]:
                 yield scrapy.Request(url, callback=self.parse)
 
@@ -120,9 +120,9 @@ This basically acts as a switch to update the behavior of the Page Object:
             }
 
             # Simulates clicking on a button that says "View All Images"
-            if self.page_params.get("enable_extracting_all_images")
+            if self.page_params.get("enable_extracting_all_images"):
                 response: web_poet.HttpResponse = await self.http.get(
-                    f"https://api.example.com/v2/images?id={item['product_id']}"
+                    f"https://api.toscrape.com/v2/images?id={item['product_id']}"
                 )
                 item["images"] = response.css(".product-images img::attr(src)").getall()
 
@@ -145,16 +145,16 @@ Let's see it in action:
     class ProductSpider(scrapy.Spider):
 
         start_urls = [
-            "https://example.com/category/product/item?id=123",
-            "https://example.com/category/product/item?id=989",
+            "https://toscrape.com/category/product/item?id=123",
+            "https://toscrape.com/category/product/item?id=989",
         ]
 
-        def start_requests(self):
+        async def start(self):
             for url in start_urls:
                 yield scrapy.Request(
                     url=url,
                     callback=self.parse,
-                    meta={"page_params": {"enable_extracting_all_images": True}}
+                    meta={"page_params": {"enable_extracting_all_images": True}},
                 )
 
         async def parse(self, response, page: ProductPage):

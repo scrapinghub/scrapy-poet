@@ -15,18 +15,15 @@ opens the door to create generic spider code that works across sites.
 Integrating a new site in the spider is then just a matter of write
 a bunch of Page Objects for it.
 
-``scrapy-poet`` also provides a way to integrate third-party APIs
-(like `Splash`_ and `AutoExtract`_) with the spider, without losing
-testability and reusability.
-Concrete integrations are not provided by ``web-poet``, but
-``scrapy-poet`` makes them possbile.
+``scrapy-poet`` also provides a way to integrate third-party APIs (like
+:doc:`scrapy-zyte-api <scrapy-zyte-api:index>`) with the spider, without losing
+testability and reusability. Concrete integrations are not provided by
+``web-poet``, but ``scrapy-poet`` makes them possbile.
 
 To get started, see :ref:`setup` and :ref:`intro-tutorial`.
 
 :ref:`license` is BSD 3-clause.
 
-.. _AutoExtract: https://scrapinghub.com/autoextract
-.. _Splash: https://scrapinghub.com/splash
 .. _web-poet: https://github.com/scrapinghub/web-poet
 .. _docs: https://web-poet.readthedocs.io/en/stable/
 

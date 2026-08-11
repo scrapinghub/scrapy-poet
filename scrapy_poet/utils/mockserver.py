@@ -16,15 +16,15 @@ def get_ephemeral_port():
 
 class MockServer:
     def __init__(self, resource, port=None, pythonpath=None):
-        self.resource = "{0}.{1}".format(resource.__module__, resource.__name__)
+        self.resource = f"{resource.__module__}.{resource.__name__}"
         self.proc = None
         host = socket.gethostbyname(socket.gethostname())
         self.port = port or get_ephemeral_port()
-        self.root_url = "http://%s:%d" % (host, self.port)
+        self.root_url = f"http://{host}:{self.port}"
         self.pythonpath = pythonpath or ""
 
     def __enter__(self):
-        self.proc = Popen(
+        self.proc = Popen(  # noqa: S603
             [
                 sys.executable,
                 "-u",
@@ -60,11 +60,7 @@ def main():
 
     def print_listening():
         host = http_port.getHost()
-        print(
-            "Mock server {0} running at http://{1}:{2}".format(
-                resource, host.host, host.port
-            )
-        )
+        print(f"Mock server {resource} running at http://{host.host}:{host.port}")
 
     reactor.callWhenRunning(print_listening)
     reactor.run()

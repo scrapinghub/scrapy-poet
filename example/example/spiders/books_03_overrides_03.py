@@ -5,11 +5,14 @@ the crawling logic (the spider is exactly the same)
 
 No configured default logic: if used for an unregistered domain, no logic
 at all is applied.
+
+This example is quite similar to books_03_overrides_02.py where the only
+difference is that this example is using the ``@handle_urls`` decorator to
+store the rules in web-poet's registry.
 """
 
 import scrapy
-from web_poet import WebPage
-from web_poet.rules import ApplyRule
+from web_poet import WebPage, default_registry, handle_urls
 
 from scrapy_poet import callback_for
 
@@ -23,6 +26,7 @@ class BookPage(WebPage):
     pass
 
 
+@handle_urls("toscrape.com", instead_of=BookListPage)
 class BTSBookListPage(BookListPage):
     """Logic to extract listings from pages like https://books.toscrape.com"""
 
@@ -30,6 +34,7 @@ class BTSBookListPage(BookListPage):
         return self.css(".image_container a::attr(href)").getall()
 
 
+@handle_urls("toscrape.com", instead_of=BookPage)
 class BTSBookPage(BookPage):
     """Logic to extract book info from pages like https://books.toscrape.com/catalogue/soumission_998/index.html"""
 
@@ -40,6 +45,7 @@ class BTSBookPage(BookPage):
         }
 
 
+@handle_urls("bookpage.com", instead_of=BookListPage)
 class BPBookListPage(BookListPage):
     """Logic to extract listings from pages like https://bookpage.com/reviews"""
 
@@ -47,6 +53,7 @@ class BPBookListPage(BookListPage):
         return self.css("article.post h4 a::attr(href)").getall()
 
 
+@handle_urls("bookpage.com", instead_of=BookPage)
 class BPBookPage(BookPage):
     """Logic to extract from pages like https://bookpage.com/reviews/25879-laird-hunt-zorrie-fiction"""
 
@@ -58,18 +65,12 @@ class BPBookPage(BookPage):
 
 
 class BooksSpider(scrapy.Spider):
-    name = "books_04_overrides_02"
+    name = "books_03_overrides_03"
+    start_urls = ["http://books.toscrape.com/", "https://bookpage.com/reviews"]
     # Configuring different page objects pages for different domains
-    custom_settings = {
-        "SCRAPY_POET_RULES": [
-            ApplyRule("toscrape.com", use=BTSBookListPage, instead_of=BookListPage),
-            ApplyRule("toscrape.com", use=BTSBookPage, instead_of=BookPage),
-            ApplyRule("bookpage.com", use=BPBookListPage, instead_of=BookListPage),
-            ApplyRule("bookpage.com", use=BPBookPage, instead_of=BookPage),
-        ]
-    }
+    custom_settings = {"SCRAPY_POET_RULES": default_registry.get_rules()}
 
-    def start_requests(self):
+    async def start(self):
         for url in ["http://books.toscrape.com/", "https://bookpage.com/reviews"]:
             yield scrapy.Request(url, callback=self.parse)
 

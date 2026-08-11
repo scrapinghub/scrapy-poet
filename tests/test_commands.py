@@ -24,9 +24,9 @@ pytest_plugins = ["pytester"]
 def call_scrapy_command(cwd: str, *args: str, run_module: bool = True) -> None:
     with tempfile.TemporaryFile() as out:
         if run_module:
-            args = (sys.executable, "-m", "scrapy.cmdline") + args
+            args = (sys.executable, "-m", "scrapy.cmdline", *args)
         else:
-            args = ("scrapy",) + args
+            args = ("scrapy", *args)
         status = subprocess.call(args, stdout=out, stderr=out, cwd=cwd)
         out.seek(0)
         assert status == 0, out.read().decode()
@@ -42,7 +42,7 @@ class CustomResource(Resource):
 
 def _get_pythonpath() -> str:
     # needed for mockserver to find CustomResource as the pytester fixture changes the working directory
-    return str(Path(os.path.dirname(__file__)).parent)
+    return str(Path(__file__).parent.parent)
 
 
 def test_savefixture(pytester) -> None:

@@ -15,11 +15,10 @@ hints for its arguments:
     class BooksSpider(scrapy.Spider):
         ...
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse_book)
 
-        def parse_book(self, response, book_page: BookPage, other_dep: OtherDep):
-            ...
+        def parse_book(self, response, book_page: BookPage, other_dep: OtherDep): ...
 
 In some cases some or all of the dependencies need to be specified dynamically
 instead, e.g. because they need to be different for different requests using
@@ -36,7 +35,7 @@ request meta dictionary using the "inject" key:
     class BooksSpider(scrapy.Spider):
         ...
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request(
                 "http://books.toscrape.com/",
                 self.parse_book,

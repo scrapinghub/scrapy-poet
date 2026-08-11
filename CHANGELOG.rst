@@ -2,6 +2,62 @@
 Changelog
 =========
 
+0.27.2 (2026-04-28)
+-------------------
+
+* When raising :class:`~web_poet.exceptions.core.Retry`, setting a
+  ``max_retries`` attribute on the exception now overrides the
+  ``RETRY_TIMES`` setting.
+
+* Fixed links in https://scrapy-poet.readthedocs.io/llms.txt.
+
+0.27.1 (2026-04-07)
+-------------------
+
+* The package now ships type information (PEP 561).
+
+* Made the documentation more LLM-friendly, with markdown versions of every
+  page and :file:`llms.txt` and :file:`llms-full.txt` files.
+
+* Removed documentation and example references to outdated software.
+
+0.27.0 (2026-01-27)
+-------------------
+
+* Dropped Python 3.9 support.
+
+* Added Scrapy 2.13 and 2.14 support.
+
+* Backward-incompatible changes:
+
+  * ``scrapy_poet.commands.SavingInjector.build_instances_from_providers()`` is
+    now an ``async`` method.
+
+  * ``scrapy_poet.downloader.create_scrapy_downloader()`` has been removed
+    (technically, renamed to ``_create_scrapy_downloader()``). It was never
+    meant to be a public function.
+
+  * ``scrapy_poet.downloadermiddlewares.InjectionMiddleware.process_response()``
+    is now an ``async`` method.
+
+  * In ``scrapy_poet.injection.Injector``, ``build_callback_dependencies()``,
+    ``build_instances()`` and ``build_instances_from_providers()`` are now
+    ``async`` methods.
+
+* Removed deprecations:
+
+  * The ``scrapy_poet.page_input_providers.ItemProvider`` class, deprecated in
+    0.19.0.
+
+  * The ``SCRAPY_POET_OVERRIDES`` setting, deprecated in 0.9.0.
+
+  * The ``scrapy_poet.middlewares`` module, deprecated in 0.5.0.
+
+* In ``scrapy_poet.utils.testing``, ``crawl_items()`` and
+  ``crawl_single_item()`` are now deprecated in favor of their new ``async
+  def`` counterparts, ``crawl_items_async()`` and
+  ``crawl_single_item_async()``.
+
 0.26.0 (2025-01-28)
 -------------------
 
@@ -121,7 +177,7 @@ Changelog
   that includes building page objects and items. This fixes problems such as
   providers being called multiple times.
 
-  * :class:`~scrapy_poet.page_input_providers.ItemProvider` is now no-op. It's
+  * ``scrapy_poet.page_input_providers.ItemProvider`` is now no-op. It's
     no longer enabled by default and users should also stop enabling it.
   * ``PageObjectInputProvider.allow_prev_instances`` and code related to it
     were removed so custom providers may need updating.
@@ -278,9 +334,11 @@ Changelog
       from web_poet import WebPage, handle_urls, field
       from scrapy_poet import DummyResponse
 
+
       @attrs.define
       class Image:
           url: str
+
 
       @handle_urls("example.com")
       class ProductImagePage(WebPage[Image]):
@@ -288,10 +346,12 @@ Changelog
           def url(self) -> str:
               return self.css("#product img ::attr(href)").get("")
 
+
       @attrs.define
       class Product:
           name: str
           image: Image
+
 
       @handle_urls("example.com")
       @attrs.define
@@ -308,6 +368,7 @@ Changelog
           @field
           def image(self) -> Image:
               return self.image_item
+
 
       class MySpider(scrapy.Spider):
           name = "myspider"
@@ -488,8 +549,7 @@ Changelog
                 name = "my_spider"
                 start_urls = ["https://books.toscrape.com"]
 
-                def parse(self, response: scrapy.http.Response, page: MyPage):
-                    ...
+                def parse(self, response: scrapy.http.Response, page: MyPage): ...
 
 * :func:`scrapy_poet.injection.is_callback_requiring_scrapy_response` now accepts
   an optional ``raw_callback`` parameter meant to represent the actual callback

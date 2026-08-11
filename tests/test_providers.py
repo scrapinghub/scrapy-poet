@@ -1,11 +1,11 @@
-from typing import Any, Callable, List, Set, Type
+from typing import Any, Callable, Set
 from unittest import mock
 
 import attr
 import scrapy
-from pytest_twisted import ensureDeferred, inlineCallbacks
 from scrapy import Request, Spider
 from scrapy.settings import Settings
+from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy.utils.test import get_crawler
 from twisted.python.failure import Failure
 from web_poet import (
@@ -28,7 +28,7 @@ from scrapy_poet.page_input_providers import (
     StatsProvider,
 )
 from scrapy_poet.utils.mockserver import get_ephemeral_port
-from scrapy_poet.utils.testing import HtmlResource, ProductHtml, crawl_single_item
+from scrapy_poet.utils.testing import HtmlResource, ProductHtml, crawl_single_item_async
 
 
 class NonProductHtml(HtmlResource):
@@ -66,7 +66,7 @@ class PriceHtmlDataProvider(PageObjectInputProvider):
         self, to_provide, response: scrapy.http.Response, spider: scrapy.Spider
     ):
         assert isinstance(spider, scrapy.Spider)
-        ret: List[Any] = []
+        ret: list[Any] = []
         if Price in to_provide:
             price = response.css(".price::text").get()
             assert price is not None
@@ -82,7 +82,7 @@ class NameHtmlDataProvider(PageObjectInputProvider):
 
     def __call__(self, to_provide, response: scrapy.http.Response, settings: Settings):
         assert isinstance(settings, Settings)
-        ret: List[Any] = []
+        ret: list[Any] = []
         if Name in to_provide:
             name = response.css(".name::text").get()
             assert name is not None
@@ -104,7 +104,7 @@ for dep_cls in [Price, Name, Html]:
     def _serialize(o: dep_cls) -> SerializedLeafData:  # type: ignore[valid-type]
         return {"txt": attr.astuple(o)[0].encode()}
 
-    def _deserialize(cls: Type[dep_cls], data: SerializedLeafData) -> dep_cls:  # type: ignore[valid-type]
+    def _deserialize(cls: type[dep_cls], data: SerializedLeafData) -> dep_cls:  # type: ignore[valid-type]
         return cls(data["txt"].decode())  # type: ignore[misc]
 
     register_serialization(_serialize, _deserialize)
@@ -122,6 +122,10 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
 
     def start_requests(self):
         yield Request(self.url, self.parse, errback=self.errback)
+
+    async def start(self):
+        for item_or_request in self.start_requests():
+            yield item_or_request
 
     def errback(self, failure: Failure):
         yield {"exception": failure.value}
@@ -152,12 +156,12 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
     }
 
 
-@inlineCallbacks
-def test_name_first_spider(settings, tmp_path):
+@deferred_f_from_coro_f
+async def test_name_first_spider(settings, tmp_path):
     port = get_ephemeral_port()
     cache = tmp_path / "cache"
     settings["SCRAPY_POET_CACHE"] = str(cache)
-    item, _, _ = yield crawl_single_item(
+    item, _, _ = await crawl_single_item_async(
         NameFirstMultiProviderSpider, ProductHtml, settings, port=port
     )
     assert cache.exists()
@@ -170,7 +174,7 @@ def test_name_first_spider(settings, tmp_path):
 
     # Let's see that the cache is working. We use a different and wrong resource,
     # but it should be ignored by the cached version used
-    item, _, _ = yield crawl_single_item(
+    item, _, _ = await crawl_single_item_async(
         NameFirstMultiProviderSpider, NonProductHtml, settings, port=port
     )
     assert item == {
@@ -181,9 +185,9 @@ def test_name_first_spider(settings, tmp_path):
     }
 
 
-@inlineCallbacks
-def test_price_first_spider(settings):
-    item, _, _ = yield crawl_single_item(
+@deferred_f_from_coro_f
+async def test_price_first_spider(settings):
+    item, _, _ = await crawl_single_item_async(
         PriceFirstMultiProviderSpider, ProductHtml, settings
     )
     assert item == {
@@ -194,14 +198,14 @@ def test_price_first_spider(settings):
     }
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_http_client_provider(settings):
     crawler = get_crawler(Spider, settings)
     crawler.engine = mock.AsyncMock()
     injector = Injector(crawler)
 
     with mock.patch(
-        "scrapy_poet.page_input_providers.create_scrapy_downloader"
+        "scrapy_poet.page_input_providers._create_scrapy_downloader"
     ) as mock_factory:
         provider = HttpClientProvider(injector)
         results = provider(set(), crawler)
@@ -210,7 +214,7 @@ async def test_http_client_provider(settings):
     assert results[0]._request_downloader == mock_factory.return_value
 
 
-@ensureDeferred
+@deferred_f_from_coro_f
 async def test_http_request_provider(settings):
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)

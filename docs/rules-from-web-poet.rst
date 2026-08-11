@@ -32,14 +32,13 @@ page.
 
     Some real-world examples on this topic can be found in:
 
-    - `Example 1 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_01.py>`_:
-      shorter example
-    - `Example 2 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_02.py>`_:
-      longer example
-    - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_04_overrides_03.py>`_:
+    - `Example 1 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_03_overrides_01.py>`_:
+        shorter example
+    - `Example 2 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_03_overrides_02.py>`_:
+        longer example
+    - `Example 3 <https://github.com/scrapinghub/scrapy-poet/blob/master/example/example/spiders/books_03_overrides_03.py>`_:
       rules using :py:func:`web_poet.handle_urls` decorator and retrieving them
       via :py:meth:`web_poet.RulesRegistry.get_rules <web_poet.rules.RulesRegistry.get_rules>`
-
 
 Page Objects refinement
 -----------------------
@@ -52,8 +51,7 @@ dependency. For example, you might have an existing Page Object for book extract
 .. code-block:: python
 
     class BookPage(ItemPage):
-        def to_item(self):
-            ...
+        def to_item(self): ...
 
 Imagine this Page Object obtains its data from an external API.
 Therefore, it is not holding the page HTML code.
@@ -73,7 +71,7 @@ using the following Page Object:
 
         def to_item(self):
             item = self.book_page.to_item()
-            item['isbn'] = self.css(".isbn-class::text").get()
+            item["isbn"] = self.css(".isbn-class::text").get()
             return item
 
 And then override it for a particular domain using ``settings.py``:
@@ -81,7 +79,7 @@ And then override it for a particular domain using ``settings.py``:
 .. code-block:: python
 
     SCRAPY_POET_RULES = [
-        ApplyRule("example.com", use=ISBNBookPage, instead_of=BookPage)
+        ApplyRule("toscrape.com", use=ISBNBookPage, instead_of=BookPage),
     ]
 
 This new Page Object gets the original ``BookPage`` as dependency and enrich
@@ -107,7 +105,7 @@ the obtained item with the ISBN from the page HTML.
 
             def to_item(self):
                 item = self.book_page.to_item()
-                item['isbn'] = self.css(".isbn-class::text").get()
+                item["isbn"] = self.css(".isbn-class::text").get()
                 return item
 
 
@@ -121,14 +119,14 @@ from ``books.toscrape.com``:
 
     from web_poet import ApplyRule
 
-
     SCRAPY_POET_RULES = [
         ApplyRule(
             for_patterns=Patterns(
                 include=["books.toscrape.com/cataloge/*index.html|"],
-                exclude=["/catalogue/category/"]),
+                exclude=["/catalogue/category/"],
+            ),
             use=MyBookPage,
-            instead_of=BookPage
+            instead_of=BookPage,
         )
     ]
 
@@ -162,8 +160,8 @@ Let's see an example:
 
         def to_item(self):
             return {
-                'url': self.url,
-                'name': self.css("title::text").get(),
+                "url": self.url,
+                "name": self.css("title::text").get(),
             }
 
 The :py:func:`web_poet.handle_urls` decorator in this case is indicating that
@@ -210,7 +208,7 @@ Let's check out an example:
         name: str
 
 
-    @handle_urls("example.com")
+    @handle_urls("toscrape.com")
     @attrs.define
     class ProductPage(WebPage[Product]):
 
@@ -222,10 +220,8 @@ Let's check out an example:
     class MySpider(scrapy.Spider):
         name = "myspider"
 
-        def start_requests(self):
-            yield scrapy.Request(
-                "https://example.com/products/some-product", self.parse
-            )
+        async def start(self):
+            yield scrapy.Request("https://toscrape.com/products/some-product", self.parse)
 
         # We can directly ask for the item here instead of the page object.
         def parse(self, response: DummyResponse, item: Product):
@@ -235,7 +231,7 @@ From this example, we can see that:
 
     * Spider callbacks can directly ask for items as dependencies.
     * The ``Product`` item instance directly comes from ``ProductPage``.
-    * This is made possible by the ``ApplyRule("example.com", use=ProductPage,
+    * This is made possible by the ``ApplyRule("toscrape.com", use=ProductPage,
       to_return=Product)`` instance created from the ``@handle_urls`` decorator
       on ``ProductPage``.
 
@@ -247,7 +243,7 @@ From this example, we can see that:
 
     .. code-block:: python
 
-        @handle_urls("example.com")
+        @handle_urls("toscrape.com")
         @attrs.define
         class ProductPage(WebPage[Product]):
             product_image_page: ProductImagePage
@@ -264,10 +260,8 @@ From this example, we can see that:
         class MySpider(scrapy.Spider):
             name = "myspider"
 
-            def start_requests(self):
-                yield scrapy.Request(
-                    "https://example.com/products/some-product", self.parse
-                )
+            async def start(self):
+                yield scrapy.Request("https://toscrape.com/products/some-product", self.parse)
 
             async def parse(self, response: DummyResponse, product_page: ProductPage):
                 return await product_page.to_item()

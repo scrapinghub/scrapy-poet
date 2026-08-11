@@ -38,6 +38,7 @@ instance for Injectables that need it, like the :class:`web_poet.WebPage
 
     class HttpResponseProvider(PageObjectInputProvider):
         """This class provides ``web_poet.HttpResponse`` instances."""
+
         provided_classes = {web_poet.HttpResponse}
 
         def __call__(self, to_provide: Set[Callable], response: Response):
@@ -78,8 +79,10 @@ would lead to the following code:
         PageObjectInputProvider,
     )
 
+
     class HttpResponseProvider(PageObjectInputProvider, CacheDataProviderMixin):
         """This class provides ``web_poet.HttpResponse`` instances."""
+
         provided_classes = {web_poet.HttpResponse}
 
         def __call__(self, to_provide: Set[Callable], response: Response):
@@ -163,7 +166,7 @@ Ignoring requests
 =================
 
 Sometimes requests could be skipped, for example, when you're fetching data
-using a third-party API such as Auto Extract or querying a database.
+using a third-party API such as Zyte API or querying a database.
 
 In cases like that, it makes no sense to send the request to Scrapy's downloader
 as it will only waste network resources. But there's an alternative to avoid
@@ -206,12 +209,7 @@ If neither spider callback nor any of the input providers are using
         provided_classes = {CachedData}
 
         def __call__(self, to_provide: List[Callable], request: scrapy.Request):
-            return [
-                CachedData(
-                    key=request.url,
-                    value=get_cached_content(request.url)
-                )
-            ]
+            return [CachedData(key=request.url, value=get_cached_content(request.url))]
 
 
     @attr.define
@@ -228,7 +226,7 @@ If neither spider callback nor any of the input providers are using
     class MySpider(scrapy.Spider):
         name = "my_spider"
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse_page)
 
         def parse_page(self, response: DummyResponse, page: MyPageObject):
@@ -277,7 +275,7 @@ Page Object uses it, the request is not ignored, for example:
     class MySpider(scrapy.Spider):
         name = "my_spider"
 
-        def start_requests(self):
+        async def start(self):
             yield scrapy.Request("http://books.toscrape.com/", self.parse_page)
 
         def parse_page(self, response: DummyResponse, page: MyPageObject):

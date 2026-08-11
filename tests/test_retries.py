@@ -1,10 +1,10 @@
 from collections import deque
-from typing import Any, List
+from typing import Any
 from urllib.parse import urlparse
 
 import attrs
-from pytest_twisted import inlineCallbacks
 from scrapy import Request, Spider
+from scrapy.utils.defer import deferred_f_from_coro_f, maybe_deferred_to_future
 from web_poet import RulesRegistry
 from web_poet.exceptions import Retry
 from web_poet.page_inputs.http import HttpResponse
@@ -18,12 +18,12 @@ class BaseSpider(Spider):
     name = "test_spider"
 
 
-def _assert_all_unique_instances(instances: List[Any]):
+def _assert_all_unique_instances(instances: list[Any]):
     assert len({id(instance) for instance in instances}) == len(instances)
 
 
-@inlineCallbacks
-def test_retry_once():
+@deferred_f_from_coro_f
+async def test_retry_once():
     retries = deque([True, False])
     items, page_instances, page_response_instances = [], [], []
 
@@ -41,11 +41,15 @@ def test_retry_once():
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 2
@@ -56,8 +60,8 @@ def test_retry_once():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_once_item():
+@deferred_f_from_coro_f
+async def test_retry_once_item():
     """Retries should also work when asking for an item instead of a page
     object."""
     retries = deque([True, False])
@@ -70,7 +74,6 @@ def test_retry_once_item():
         foo: str
 
     with MockServer(EchoResource) as server:
-
         netloc = urlparse(server.root_url).netloc
 
         @registry.handle_urls(netloc)
@@ -86,12 +89,16 @@ def test_retry_once_item():
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, item: TestItem):
                 items.append(item)
 
         settings = {"SCRAPY_POET_RULES": registry.get_rules()}
         crawler = make_crawler(TestSpider, settings=settings)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [TestItem(foo="bar")]
     assert crawler.stats.get_value("downloader/request_count") == 2
@@ -102,8 +109,8 @@ def test_retry_once_item():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_reason():
+@deferred_f_from_coro_f
+async def test_retry_reason():
     retries = deque([True, False])
     items, page_instances, page_response_instances = [], [], []
 
@@ -121,11 +128,15 @@ def test_retry_reason():
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 2
@@ -136,8 +147,8 @@ def test_retry_reason():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_max():
+@deferred_f_from_coro_f
+async def test_retry_max():
     # The default value of the RETRY_TIMES Scrapy setting is 2.
     retries = deque([True, True, False])
     items, page_instances, page_response_instances = [], [], []
@@ -156,11 +167,15 @@ def test_retry_max():
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 3
@@ -171,8 +186,8 @@ def test_retry_max():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_exceeded():
+@deferred_f_from_coro_f
+async def test_retry_exceeded():
     items, page_instances, page_response_instances = [], [], []
 
     with MockServer(EchoResource) as server:
@@ -187,11 +202,15 @@ def test_retry_exceeded():
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == []
     assert crawler.stats.get_value("downloader/request_count") == 3
@@ -202,8 +221,8 @@ def test_retry_exceeded():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_max_configuration():
+@deferred_f_from_coro_f
+async def test_retry_max_configuration():
     retries = deque([True, True, True, False])
     items, page_instances, page_response_instances = [], [], []
 
@@ -225,11 +244,15 @@ def test_retry_max_configuration():
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 4
@@ -240,8 +263,8 @@ def test_retry_max_configuration():
     _assert_all_unique_instances(page_response_instances)
 
 
-@inlineCallbacks
-def test_retry_cb_kwargs():
+@deferred_f_from_coro_f
+async def test_retry_cb_kwargs():
     retries = deque([True, True, False])
     items, page_instances, page_response_instances = [], [], []
 
@@ -267,11 +290,15 @@ def test_retry_cb_kwargs():
                     cb_kwargs={"page": page_from_cb_kwargs},
                 )
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
     assert crawler.stats.get_value("downloader/request_count") == 3
@@ -284,8 +311,153 @@ def test_retry_cb_kwargs():
     assert page_response_instances[0] is not page_from_cb_kwargs.response
 
 
-@inlineCallbacks
-def test_non_retry_exception():
+@deferred_f_from_coro_f
+async def test_retry_respects_exception_max_retries_attribute():
+    """If the raised Retry instance provides a numeric ``max_retries`` it
+    should be passed to Scrapy's ``get_retry_request`` and override the
+    ``RETRY_TIMES`` setting.
+    """
+    retries = deque([True, True, False])
+    items, page_instances, page_response_instances = [], [], []
+
+    with MockServer(EchoResource) as server:
+
+        class CustomRetry(Retry):
+            pass
+
+        class SamplePage(WebPage):
+            def to_item(self):
+                page_instances.append(self)
+                page_response_instances.append(self.response)
+                if retries.popleft():
+                    exc = CustomRetry()
+                    exc.max_retries = 1
+                    raise exc
+                return {"foo": "bar"}
+
+        class TestSpider(BaseSpider):
+            # Make the setting larger than the exception-provided limit to
+            # ensure the exception attribute is effective.
+            custom_settings = {"RETRY_TIMES": 3}
+
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            def parse(self, response, page: SamplePage):
+                items.append(page.to_item())
+
+        crawler = make_crawler(TestSpider)
+        await maybe_deferred_to_future(crawler.crawl())
+
+    # Since the exception limits retries to 1, the second failure should
+    # cause the retry to be exhausted.
+    assert items == []
+    assert crawler.stats.get_value("downloader/request_count") == 2
+    assert crawler.stats.get_value("retry/count") == 1
+    assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 1
+    assert crawler.stats.get_value("retry/max_reached") == 1
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
+
+
+@deferred_f_from_coro_f
+async def test_retry_missing_max_retries_uses_default():
+    """If the Retry instance doesn't provide ``max_retries``, the
+    Scrapy ``RETRY_TIMES`` setting should be used.
+    """
+    retries = deque([True, False])
+    items, page_instances, page_response_instances = [], [], []
+
+    with MockServer(EchoResource) as server:
+
+        class SamplePage(WebPage):
+            def to_item(self):
+                page_instances.append(self)
+                page_response_instances.append(self.response)
+                if retries.popleft():
+                    raise Retry
+                return {"foo": "bar"}
+
+        class TestSpider(BaseSpider):
+            custom_settings = {"RETRY_TIMES": 1}
+
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            def parse(self, response, page: SamplePage):
+                items.append(page.to_item())
+
+        crawler = make_crawler(TestSpider)
+        await maybe_deferred_to_future(crawler.crawl())
+
+    assert items == [{"foo": "bar"}]
+    assert crawler.stats.get_value("downloader/request_count") == 2
+    assert crawler.stats.get_value("retry/count") == 1
+    assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 1
+    assert crawler.stats.get_value("retry/max_reached") is None
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
+
+
+@deferred_f_from_coro_f
+async def test_retry_none_max_retries_uses_default():
+    """If the Retry instance provides ``max_retries = None``, it should
+    be treated like the attribute being absent and fall back to the
+    ``RETRY_TIMES`` setting.
+    """
+    retries = deque([True, False])
+    items, page_instances, page_response_instances = [], [], []
+
+    with MockServer(EchoResource) as server:
+
+        class CustomRetry(Retry):
+            pass
+
+        class SamplePage(WebPage):
+            def to_item(self):
+                page_instances.append(self)
+                page_response_instances.append(self.response)
+                if retries.popleft():
+                    exc = CustomRetry()
+                    exc.max_retries = None
+                    raise exc
+                return {"foo": "bar"}
+
+        class TestSpider(BaseSpider):
+            custom_settings = {"RETRY_TIMES": 1}
+
+            def start_requests(self):
+                yield Request(server.root_url, callback=self.parse)
+
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            def parse(self, response, page: SamplePage):
+                items.append(page.to_item())
+
+        crawler = make_crawler(TestSpider)
+        await maybe_deferred_to_future(crawler.crawl())
+
+    assert items == [{"foo": "bar"}]
+    assert crawler.stats.get_value("downloader/request_count") == 2
+    assert crawler.stats.get_value("retry/count") == 1
+    assert crawler.stats.get_value("retry/reason_count/page_object_retry") == 1
+    assert crawler.stats.get_value("retry/max_reached") is None
+    _assert_all_unique_instances(page_instances)
+    _assert_all_unique_instances(page_response_instances)
+
+
+@deferred_f_from_coro_f
+async def test_non_retry_exception():
     items = []
 
     with MockServer(EchoResource) as server:
@@ -298,11 +470,15 @@ def test_non_retry_exception():
             def start_requests(self):
                 yield Request(server.root_url, callback=self.parse)
 
+            async def start(self):
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
             def parse(self, response, page: SamplePage):
                 items.append(page.to_item())
 
         crawler = make_crawler(TestSpider)
-        yield crawler.crawl()
+        await maybe_deferred_to_future(crawler.crawl())
 
     assert items == []
     assert crawler.stats.get_value("downloader/request_count") == 1
