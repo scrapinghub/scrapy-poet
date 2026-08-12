@@ -61,7 +61,7 @@ async def test_retry_once():
 
 
 @deferred_f_from_coro_f
-async def test_retry_once_item():
+async def test_retry_once_item() -> None:
     """Retries should also work when asking for an item instead of a page
     object."""
     retries = deque([True, False])
