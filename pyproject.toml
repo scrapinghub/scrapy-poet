@@ -24,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "andi >= 0.6.0",
@@ -258,4 +259,4 @@ convention = "pep257"
 
 [tool.sphinx-scrapy]
 # Keep in sync with .github/workflows/test.yml.
-python-version = "3.13"
+python-version = "3.14"

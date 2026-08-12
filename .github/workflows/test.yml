@@ -31,7 +31,8 @@ jobs:
         - python-version: "3.11"
         - python-version: "3.12"
         - python-version: "3.13"
-        - python-version: "3.13"
+        - python-version: "3.14"
+        - python-version: "3.14"
           toxenv: "default-reactor"
 
     steps:
@@ -58,7 +59,7 @@ jobs:
       fail-fast: false
       matrix:
         # Keep in sync with pyproject.toml's tool.sphinx-scrapy.python-version.
-        python-version: ['3.13']
+        python-version: ['3.14']
         tox-job: ["mypy", "docs", "linters", "twinecheck"]
 
     steps:
