@@ -88,8 +88,8 @@ class Injector:
             self.providers
         )
 
-    def init_cache(self):
-        self.cache = {}
+    def init_cache(self) -> None:
+        self.cache: dict[Any, Any] | SerializedDataCache = {}
         cache_path = self.crawler.settings.get("SCRAPY_POET_CACHE")
 
         # SCRAPY_POET_CACHE: True
@@ -188,6 +188,20 @@ class Injector:
             # Ignore the type since andi.plan expects overrides to be
             # Callable[[Callable], Optional[Callable]] but the registry
             # returns the typing for ``dict.get()`` method.
+            overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
+            custom_builder_fn=self._get_custom_builder(request),
+        )
+
+    def build_plan_for_type(self, request: Request, cls: Callable) -> andi.Plan:
+        """Build a dependency plan for *cls* rather than for a callback.
+
+        Used by :meth:`InjectionMiddleware.get_page` and
+        :meth:`InjectionMiddleware.get_item` to resolve a specific type inline.
+        """
+        return andi.plan(
+            cls,
+            is_injectable=is_injectable,
+            externally_provided=self.is_class_provided_by_any_provider,
             overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
             custom_builder_fn=self._get_custom_builder(request),
         )
@@ -363,6 +377,7 @@ class Injector:
                 except Exception as e:
                     if self.cache and self.caching_errors:
                         # Save errors in the cache
+                        assert fingerprint is not None
                         self.cache[fingerprint] = e
                         self.crawler.stats.inc_value("poet/cache/firsthand")
                     raise
@@ -391,6 +406,7 @@ class Injector:
 
             if self.cache and not cache_hit:
                 # Save the results in the cache
+                assert fingerprint is not None
                 self.cache[fingerprint] = serialize(objs)
                 self.crawler.stats.inc_value("poet/cache/firsthand")
 
