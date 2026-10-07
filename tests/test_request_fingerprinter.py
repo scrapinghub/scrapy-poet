@@ -1,16 +1,10 @@
+from importlib.metadata import version as package_version
 from itertools import combinations
 from typing import Annotated, Callable, Set
 from unittest.mock import patch
 
 import pytest
 from packaging.version import Version
-from scrapy import __version__ as SCRAPY_VERSION
-
-if Version(SCRAPY_VERSION) < Version("2.7"):
-    pytest.skip("Skipping tests for Scrapy < 2.7", allow_module_level=True)
-
-from importlib.metadata import version as package_version
-
 from scrapy import Request, Spider
 from scrapy.http import Response
 from scrapy.utils.misc import load_object
