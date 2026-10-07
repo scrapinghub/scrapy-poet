@@ -297,6 +297,9 @@ def _get_test_settings():
             # collect injected dependencies to crawler.spider.collected_response_deps
             InjectedDependenciesCollectorMiddleware: 542,
         },
+        # Scrapy 2.19+ logs a warning when the default reactor keeps this
+        # extension from loading, which breaks tests asserting an empty log.
+        "REMOTE_CONTROL_ENABLED": False,
     }
     try:
         import scrapy.addons  # noqa: F401,PLC0415
