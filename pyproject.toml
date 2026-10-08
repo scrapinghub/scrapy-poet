@@ -99,7 +99,6 @@ strict = true
 # Unannotated third-party functions.
 untyped_calls_exclude = [
     "twisted",
-    "web_poet.utils",
 ]
 
 [tool.pytest.ini_options]
@@ -244,11 +243,7 @@ split-on-trailing-comma = false
 # scrapy_poet/__init__.py: Automatic import sorting causes circular dependencies.
 "scrapy_poet/__init__.py" = ["F401", "I"]
 "scrapy_poet/page_inputs/__init__.py" = ["F401"]
-
-# UP006, UP035: we need to use typing.Set[] over modern alternatives with web-poet<0.19.0 && Python<3.11
-# see https://github.com/scrapinghub/web-poet/pull/219
-"scrapy_poet/page_input_providers.py" = ["UP006", "UP035"]
-"tests/*" = ["S", "SLOT000", "UP006", "UP035"]
+"tests/*" = ["S", "SLOT000"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"

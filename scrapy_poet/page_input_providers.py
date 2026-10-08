@@ -9,7 +9,8 @@ different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from scrapy-zyte-api.
 """
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, List, Set
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -54,7 +55,7 @@ class PageObjectInputProvider:
 
     .. code-block:: python
 
-        def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]: ...
+        def __call__(self, to_provide: set[Callable]) -> Sequence[Any]: ...
 
     Therefore, it receives a list of types to be provided and return a list
     with the instances created (don't get confused by the ``Callable``
@@ -122,7 +123,7 @@ class PageObjectInputProvider:
     # Remember that is expected for all children to implement the ``__call__``
     # method. The simplest signature for it is:
     #
-    #   def __call__(self, to_provide: Set[Callable]) -> Sequence[Any]:
+    #   def __call__(self, to_provide: set[Callable]) -> Sequence[Any]:
     #
     # But some adding some other injectable attributes are possible
     # (see the class docstring)
@@ -140,8 +141,8 @@ class HttpRequestProvider(PageObjectInputProvider):
     name = "request_data"
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]], request: Request
-    ) -> List[HttpRequest]:
+        self, to_provide: set[Callable[..., Any]], request: Request
+    ) -> list[HttpRequest]:
         """Builds a :class:`web_poet.HttpRequest
         <web_poet.page_inputs.http.HttpRequest>` instance using a
         :class:`scrapy.http.Request` instance.
@@ -165,8 +166,8 @@ class HttpResponseProvider(PageObjectInputProvider):
     name = "response_data"
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]], response: Response
-    ) -> List[HttpResponse]:
+        self, to_provide: set[Callable[..., Any]], response: Response
+    ) -> list[HttpResponse]:
         """Builds a :class:`web_poet.HttpResponse
         <web_poet.page_inputs.http.HttpResponse>` instance using a
         :class:`scrapy.http.Response` instance.
@@ -189,8 +190,8 @@ class HttpClientProvider(PageObjectInputProvider):
     provided_classes = {HttpClient}
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]], crawler: Crawler
-    ) -> List[HttpClient]:
+        self, to_provide: set[Callable[..., Any]], crawler: Crawler
+    ) -> list[HttpClient]:
         """Creates an :class:`web_poet.HttpClient
         <web_poet.page_inputs.client.HttpClient>` instance using Scrapy's
         downloader.
@@ -219,8 +220,8 @@ class PageParamsProvider(PageObjectInputProvider):
     provided_classes = {PageParams}
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]], request: Request
-    ) -> List[PageParams[Any, Any]]:
+        self, to_provide: set[Callable[..., Any]], request: Request
+    ) -> list[PageParams[Any, Any]]:
         """Creates a :class:`web_poet.PageParams
         <web_poet.page_inputs.page_params.PageParams>` instance based on the
         data found from the ``meta["page_params"]`` field of a
@@ -238,8 +239,8 @@ class RequestUrlProvider(PageObjectInputProvider):
     name = "request_url"
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]], request: Request
-    ) -> List[RequestUrl]:
+        self, to_provide: set[Callable[..., Any]], request: Request
+    ) -> list[RequestUrl]:
         """Builds a :class:`web_poet.RequestUrl <web_poet.page_inputs.http.RequestUrl>`
         instance using :class:`scrapy.Request <scrapy.http.Request>` instance.
         """
@@ -251,8 +252,8 @@ class ResponseUrlProvider(PageObjectInputProvider):
     name = "response_url"
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]], response: Response
-    ) -> List[ResponseUrl]:
+        self, to_provide: set[Callable[..., Any]], response: Response
+    ) -> list[ResponseUrl]:
         """Builds a :class:`web_poet.RequestUrl <web_poet.page_inputs.http.RequestUrl>`
         instance using a :class:`scrapy.http.Response` instance.
         """
@@ -279,8 +280,8 @@ class StatsProvider(PageObjectInputProvider):
     provided_classes = {Stats}
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]], crawler: Crawler
-    ) -> List[Stats]:
+        self, to_provide: set[Callable[..., Any]], crawler: Crawler
+    ) -> list[Stats]:
         """Creates an :class:`web_poet.Stats
         <web_poet.page_inputs.client.Stats>` instance using Scrapy's
         stat collector.

@@ -5,7 +5,7 @@ import sys
 from collections.abc import AsyncIterator, Callable, Iterator
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Optional, Set, Union
+from typing import Any, Optional, Union
 
 import andi
 import attr
@@ -226,7 +226,7 @@ class WithDeferredProvider(PageObjectInputProvider):
     provided_classes = {ProvidedWithDeferred}
 
     async def __call__(
-        self, to_provide: Set[Callable[..., Any]], response: scrapy.http.Response
+        self, to_provide: set[Callable[..., Any]], response: scrapy.http.Response
     ) -> list[Any]:
         five = await maybe_deferred_to_future(deferToThread(lambda: 5))
         return [ProvidedWithDeferred(f"Provided {five}!", None)]
@@ -238,7 +238,7 @@ class WithFuturesProvider(PageObjectInputProvider):
     async def async_fn(self) -> int:
         return 5
 
-    async def __call__(self, to_provide: Set[Callable[..., Any]]) -> list[Any]:
+    async def __call__(self, to_provide: set[Callable[..., Any]]) -> list[Any]:
         five = await self.async_fn()
         return [ProvidedWithFutures(f"Provided {five}!", None)]
 
@@ -254,7 +254,7 @@ class ExtraClassData(ItemPage[Any]):
 class ExtraClassDataProvider(PageObjectInputProvider):
     provided_classes = {ExtraClassData}
 
-    def __call__(self, to_provide: Set[Callable[..., Any]]) -> dict[type, Any]:
+    def __call__(self, to_provide: set[Callable[..., Any]]) -> dict[type, Any]:
         # This should generate a runtime error in Injection Middleware because
         # we're returning a class that's not listed in self.provided_classes
         return {

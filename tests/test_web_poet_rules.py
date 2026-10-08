@@ -10,8 +10,8 @@ import os
 import socket
 import warnings
 from collections import defaultdict
-from collections.abc import AsyncIterator, Iterator
-from typing import Any, Callable, Set, cast
+from collections.abc import AsyncIterator, Callable, Iterator
+from typing import Any, cast
 
 import attrs
 import pytest
@@ -1447,7 +1447,7 @@ class MobiusProvider(PageObjectInputProvider):
     provided_classes = {Mobius}
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]], request: scrapy.Request
+        self, to_provide: set[Callable[..., Any]], request: scrapy.Request
     ) -> list[Mobius]:
         return [Mobius(name="mobius from MobiusProvider")]
 
@@ -1519,7 +1519,7 @@ class KangarooProvider(PageObjectInputProvider):
     provided_classes = {Kangaroo}
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]], request: scrapy.Request
+        self, to_provide: set[Callable[..., Any]], request: scrapy.Request
     ) -> list[Kangaroo]:
         return [Kangaroo(name="data from KangarooProvider")]
 

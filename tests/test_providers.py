@@ -1,6 +1,6 @@
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from pathlib import Path
-from typing import Any, Callable, Set
+from typing import Any
 from unittest import mock
 
 import attr
@@ -67,7 +67,7 @@ class PriceHtmlDataProvider(PageObjectInputProvider):
 
     def __call__(
         self,
-        to_provide: Set[Callable[..., Any]],
+        to_provide: set[Callable[..., Any]],
         response: scrapy.http.Response,
         spider: scrapy.Spider,
     ) -> list[Any]:
@@ -88,7 +88,7 @@ class NameHtmlDataProvider(PageObjectInputProvider):
 
     def __call__(
         self,
-        to_provide: Set[Callable[..., Any]],
+        to_provide: set[Callable[..., Any]],
         response: scrapy.http.Response,
         settings: Settings,
     ) -> list[Any]:
@@ -106,7 +106,7 @@ class NameHtmlDataProvider(PageObjectInputProvider):
 class HttpResponseProviderForTest(HttpResponseProvider):
     """Uses a fixed fingerprint because the test server is always changing the URL from test to test"""
 
-    def fingerprint(self, to_provide: Set[Callable[..., Any]], request: Request) -> str:
+    def fingerprint(self, to_provide: set[Callable[..., Any]], request: Request) -> str:
         return "http://example.com"
 
 

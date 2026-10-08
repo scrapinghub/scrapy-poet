@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import Callable
-from typing import Any, Set
+from typing import Any
 
 import attr
 import pytest
@@ -40,7 +40,7 @@ class DummyProductProvider(PageObjectInputProvider):
     provided_classes = {DummyProductResponse}
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]], request: scrapy.Request
+        self, to_provide: set[Callable[..., Any]], request: scrapy.Request
     ) -> list[DummyProductResponse]:
         data = {
             "product": {
@@ -55,7 +55,7 @@ class FakeProductProvider(PageObjectInputProvider):
     provided_classes = {FakeProductResponse}
 
     def __call__(
-        self, to_provide: Set[Callable[..., Any]]
+        self, to_provide: set[Callable[..., Any]]
     ) -> list[FakeProductResponse]:
         data = {
             "product": {
@@ -70,14 +70,14 @@ class TextProductProvider(HttpResponseProvider):
     # This is wrong. You should not annotate provider dependencies with classes
     # like TextResponse or HtmlResponse, you should use Response instead.
     def __call__(  # type: ignore[override]
-        self, to_provide: Set[Callable[..., Any]], response: TextResponse
+        self, to_provide: set[Callable[..., Any]], response: TextResponse
     ) -> list[HttpResponse]:
         return super().__call__(to_provide, response)
 
 
 class StringProductProvider(HttpResponseProvider):
     def __call__(  # type: ignore[override]
-        self, to_provide: Set[Callable[..., Any]], response: str
+        self, to_provide: set[Callable[..., Any]], response: str
     ) -> list[HttpResponse]:
         return super().__call__(to_provide, response)  # type: ignore[arg-type]
 

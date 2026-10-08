@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import shutil
-from typing import TYPE_CHECKING, Annotated, Any, Set
+from typing import TYPE_CHECKING, Annotated, Any
 
 import andi
 import attr
@@ -60,7 +60,7 @@ def get_provider(
         def is_provided(self, type_: Any) -> bool:
             return super().is_provided(strip_annotated(type_))
 
-        def __call__(self, to_provide: Set[Any]) -> list[Any]:
+        def __call__(self, to_provide: set[Any]) -> list[Any]:
             result = []
             for cls in to_provide:
                 obj = cls(content) if content else cls()
@@ -82,7 +82,7 @@ def get_provider_requiring_response(
         def __init__(self, crawler: Any) -> None:
             self.crawler = crawler
 
-        def __call__(self, to_provide: Set[Any], response: Response) -> list[Any]:
+        def __call__(self, to_provide: set[Any], response: Response) -> list[Any]:
             return [cls() for cls in classes]
 
     return Provider
@@ -317,7 +317,7 @@ class TestInjector:
     @deferred_f_from_coro_f
     async def test_build_instances_from_providers_unexpected_return(self) -> None:
         class WrongProvider(get_provider({Cls1})):  # type: ignore[misc]
-            def __call__(self, to_provide: Set[Any]) -> list[Any]:
+            def __call__(self, to_provide: set[Any]) -> list[Any]:
                 return [*super().__call__(to_provide), Cls2()]
 
         injector = get_injector_for_testing({WrongProvider: 0})
@@ -508,7 +508,7 @@ class TestInjector:
             def is_provided(self, type_: Callable[..., Any]) -> bool:
                 return super().is_provided(strip_annotated(type_))
 
-            def __call__(self, to_provide: Set[Any]) -> list[Any]:
+            def __call__(self, to_provide: set[Any]) -> list[Any]:
                 result = []
                 processed_classes = set()
                 for cls in to_provide:
@@ -556,7 +556,7 @@ class TestInjector:
                 super().__init__(injector)
                 self.call_count = 0
 
-            def __call__(self, to_provide: Set[Any]) -> list[Any]:
+            def __call__(self, to_provide: set[Any]) -> list[Any]:
                 self.call_count += 1
                 if self.call_count > 1:
                     raise RuntimeError(
@@ -988,7 +988,7 @@ def get_provider_for_cache(
         def __init__(self, crawler: Any) -> None:
             self.crawler = crawler
 
-        def __call__(self, to_provide: Set[Any], request: Request) -> list[Any]:
+        def __call__(self, to_provide: set[Any], request: Request) -> list[Any]:
             domain = get_domain(request.url)
             if not domain == "example.com":
                 raise error(

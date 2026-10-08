@@ -98,7 +98,7 @@ def spider_for(
             frozen_time = datetime.datetime.now(datetime.UTC).replace(microsecond=0)
             with time_machine.travel(frozen_time):
                 try:
-                    item = await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]
+                    item = await ensure_awaitable(page.to_item())  # type: ignore[attr-defined,no-untyped-call]
                 except PageObjectAction as ex:
                     # let other exception types fail the test generation
                     saved_exceptions.append(ex)

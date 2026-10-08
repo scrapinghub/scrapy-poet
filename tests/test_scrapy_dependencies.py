@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator, Callable, Iterator
-from typing import Any, Set
+from typing import Any
 
 import attr
 import pytest
@@ -36,7 +36,7 @@ async def test_scrapy_dependencies_on_providers(
 
         def __call__(
             self,
-            to_provide: Set[Callable[..., Any]],
+            to_provide: set[Callable[..., Any]],
             obj: scrapy_class,  # type: ignore[valid-type]
         ) -> list[PageData]:
             return [PageData(scrapy_class=scrapy_class.__name__)]

@@ -1,7 +1,7 @@
 from collections.abc import Callable, Iterable
 from importlib.metadata import version as package_version
 from itertools import combinations
-from typing import TYPE_CHECKING, Annotated, Any, Set, cast
+from typing import TYPE_CHECKING, Annotated, Any, cast
 from unittest.mock import patch
 
 import pytest
@@ -89,7 +89,7 @@ def get_dummy_providers(*input_classes: Any) -> list[type[PageObjectInputProvide
         class DummyProvider(PageObjectInputProvider):
             provided_classes = {input_cls}
 
-            def __call__(self, to_provide: Set[Callable[..., Any]]) -> list[Any]:
+            def __call__(self, to_provide: set[Callable[..., Any]]) -> list[Any]:
                 input_cls = next(iter(self.provided_classes))
                 return [input_cls()]
 

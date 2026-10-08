@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import AsyncIterator, Awaitable, Iterator, Sequence  # noqa: TC003
+from collections.abc import (  # noqa: TC003
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    Iterator,
+    Sequence,
+)
 from functools import partial
 from importlib.metadata import version
-from typing import Any, Callable, Set
+from typing import Any
 from unittest import mock
 from urllib.parse import urlparse
 
@@ -528,7 +534,7 @@ async def test_additional_requests_no_cb_deps() -> None:
 
         async def __call__(
             self,
-            to_provide: Set[Callable[..., Any]],
+            to_provide: set[Callable[..., Any]],
             request: Request,
             crawler: Crawler,
         ) -> Sequence[Any]:
