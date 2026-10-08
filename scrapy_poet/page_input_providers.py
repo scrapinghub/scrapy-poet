@@ -9,7 +9,7 @@ different providers in order to acquire data from multiple external sources,
 for example, from scrapy-playwright or from scrapy-zyte-api.
 """
 
-from typing import Any, Callable, ClassVar, Set
+from typing import TYPE_CHECKING, Any, Callable, ClassVar, Set
 
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -30,6 +30,9 @@ from web_poet.page_inputs.stats import StatCollector, StatNum
 
 from scrapy_poet.downloader import _create_scrapy_downloader
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
+
+if TYPE_CHECKING:
+    from scrapy_poet.injection import Injector
 
 
 class PageObjectInputProvider:
@@ -111,8 +114,7 @@ class PageObjectInputProvider:
             f"{self!r}. Expected either 'set' or 'callable'"
         )
 
-    # FIXME: Can't import the Injector as class annotation due to circular dep.
-    def __init__(self, injector):
+    def __init__(self, injector: "Injector"):
         """Initializes the provider. Invoked only at spider start up."""
         self.injector = injector
 

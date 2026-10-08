@@ -284,7 +284,7 @@ class Injector:
             if cls not in instances:
                 result_cls: type = cast("type", cls)
                 if isinstance(cls, andi.CustomBuilder):
-                    result_cls = cls.result_class_or_fn
+                    result_cls = cast("type", cls.result_class_or_fn)
                     result = cls.factory(**kwargs_spec.kwargs(instances))
                     if inspect.isawaitable(result):
                         result = await result
@@ -383,6 +383,9 @@ class Injector:
                     f"provider: {provided_classes}"
                 )
             instances.update(objs_by_type)
+            for cls in objs_by_type:
+                cls_fqn = get_fq_class_name(cast("type", strip_annotated(cls)))
+                self.crawler.stats.inc_value(f"poet/injector/{cls_fqn}")
 
             if self.weak_cache.get(request):
                 self.weak_cache[request].update(objs_by_type)
