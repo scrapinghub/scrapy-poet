@@ -352,7 +352,8 @@ def _get_test_settings() -> dict[str, Any]:
             # collect injected dependencies to crawler.spider.collected_response_deps
             InjectedDependenciesCollectorMiddleware: 542,
         },
-        # Scrapy 2.19+ warns about it when not using the asyncio reactor.
+        # Scrapy 2.19+ logs a warning when the default reactor keeps this
+        # extension from loading, which breaks tests asserting an empty log.
         "REMOTE_CONTROL_ENABLED": False,
     }
     try:
