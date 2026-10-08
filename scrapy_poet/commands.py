@@ -109,11 +109,36 @@ class SaveFixtureCommand(ScrapyCommand):
     def short_desc(self):
         return "Generate a web-poet test for the provided page object and URL"
 
+    def add_options(self, parser):
+        parser.add_argument(
+            "page_object",
+            metavar="<page object class>",
+            help=(
+                "Import path of the page object class to generate a test for, "
+                "e.g. my_project.pages.MyItemPage."
+            ),
+        )
+        parser.add_argument(
+            "url",
+            metavar="<URL>",
+            help="URL of the web page to use as input for the page object.",
+        )
+        parser.add_argument(
+            "spider_name",
+            metavar="[<spider name>]",
+            nargs="?",
+            help=(
+                "Name of a spider from the current project. When set, the test "
+                "is generated using that spider, so that its settings (e.g. "
+                "custom_settings) and class take effect. When omitted, a "
+                "generic spider that uses the project settings is used instead."
+            ),
+        )
+        super().add_options(parser)
+
     def run(self, args, opts):
-        if len(args) < 2:
-            raise UsageError
-        type_name = args[0]
-        url = args[1]
+        type_name = opts.page_object
+        url = opts.url
 
         if not inside_project() and "" not in sys.path:
             # when running without a Scrapy project the current dir may not be in sys.path,
@@ -134,8 +159,8 @@ class SaveFixtureCommand(ScrapyCommand):
         self.settings["_SCRAPY_POET_SAVEFIXTURE"] = True
 
         base_spider_cls = None
-        if len(args) > 2:
-            spider_name = args[2]
+        if opts.spider_name:
+            spider_name = opts.spider_name
             spider_loader = self.crawler_process.spider_loader
             try:
                 base_spider_cls = spider_loader.load(spider_name)
