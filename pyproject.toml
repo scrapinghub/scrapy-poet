@@ -77,7 +77,7 @@ filename = "scrapy_poet/VERSION"
 
 [tool.coverage.run]
 branch = true
-sigterm = true
+sigterm = true  # MockServer stops its subprocess with SIGTERM
 patch = [
     "subprocess",
 ]
