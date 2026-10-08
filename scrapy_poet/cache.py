@@ -62,5 +62,3 @@ class SerializedDataCache(_Cache):
     def _get_exception_file_path(self, fingerprint: str) -> Path:
         """Save exception inside self.directory, so that `storage.read()` can read it correctly"""
         return self._get_directory_path(fingerprint) / "error"
-
-    # TODO: Add option for compressed cache
