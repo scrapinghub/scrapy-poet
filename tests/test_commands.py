@@ -6,6 +6,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
 from twisted.web.resource import Resource
 from web_poet.testing import Fixture
 
@@ -33,11 +34,11 @@ def call_scrapy_command(cwd: str, *args: str, run_module: bool = True) -> None:
 
 
 class CustomResource(Resource):
-    def __init__(self):
-        super().__init__()
-        self.putChild(b"", ProductHtml())
-        self.putChild(b"403", ForbiddenResource())
-        self.putChild(b"drop", DropResource())
+    def __init__(self) -> None:
+        super().__init__()  # type: ignore[no-untyped-call]
+        self.putChild(b"", ProductHtml())  # type: ignore[arg-type,no-untyped-call]
+        self.putChild(b"403", ForbiddenResource())  # type: ignore[arg-type,no-untyped-call]
+        self.putChild(b"drop", DropResource())  # type: ignore[arg-type,no-untyped-call]
 
 
 def _get_pythonpath() -> str:
@@ -45,7 +46,7 @@ def _get_pythonpath() -> str:
     return str(Path(__file__).parent.parent)
 
 
-def test_savefixture(pytester) -> None:
+def test_savefixture(pytester: pytest.Pytester) -> None:
     project_name = "foo"
     cwd = Path(pytester.path)
     call_scrapy_command(str(cwd), "startproject", project_name)
@@ -105,7 +106,7 @@ class BTSBookPage(WebPage):
     result.assert_outcomes(passed=4)
 
 
-def test_savefixture_spider(pytester) -> None:
+def test_savefixture_spider(pytester: pytest.Pytester) -> None:
     project_name = "foo"
     cwd = Path(pytester.path)
     call_scrapy_command(str(cwd), "startproject", project_name)
@@ -153,7 +154,7 @@ class HeadersPage(WebPage):
     result.assert_outcomes(passed=3)
 
 
-def test_savefixture_expected_exception(pytester) -> None:
+def test_savefixture_expected_exception(pytester: pytest.Pytester) -> None:
     project_name = "foo"
     cwd = Path(pytester.path)
     call_scrapy_command(str(cwd), "startproject", project_name)
@@ -186,7 +187,7 @@ class SamplePage(WebPage):
     result.assert_outcomes(passed=1)
 
 
-def test_savefixture_adapter(pytester) -> None:
+def test_savefixture_adapter(pytester: pytest.Pytester) -> None:
     project_name = "foo"
     cwd = Path(pytester.path)
     call_scrapy_command(str(cwd), "startproject", project_name)
@@ -245,7 +246,7 @@ SCRAPY_POET_TESTS_ADAPTER = CustomItemAdapter
     result.assert_outcomes(passed=3)
 
 
-def test_savefixture_annotated(pytester) -> None:
+def test_savefixture_annotated(pytester: pytest.Pytester) -> None:
     project_name = "foo"
     cwd = Path(pytester.path)
     call_scrapy_command(str(cwd), "startproject", project_name)
@@ -329,7 +330,7 @@ SCRAPY_POET_PROVIDERS = {{"{project_name}.providers.AnnotatedHttpResponseProvide
     result.assert_outcomes(passed=4)
 
 
-def test_savefixture_without_project(pytester) -> None:
+def test_savefixture_without_project(pytester: pytest.Pytester) -> None:
     cwd = Path(pytester.path)
     type_name = "po.BTSBookPage"
     (cwd / "po.py").write_text(

@@ -1,5 +1,6 @@
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable, Iterator
 from inspect import iscoroutinefunction
+from typing import Any
 
 from scrapy.http import Request, Response
 from web_poet.pages import ItemPage
@@ -27,11 +28,11 @@ class DummyResponse(Response):
     :class:`~.DummyResponse` to your parser instead.
     """
 
-    def __init__(self, url: str, request: Request | None = None):
+    def __init__(self, url: str, request: Request | None = None) -> None:
         super().__init__(url=url, request=request)
 
 
-def callback_for(page_or_item_cls: type) -> Callable:
+def callback_for(page_or_item_cls: type) -> Callable[..., Any]:
     """Create a callback for an :class:`web_poet.ItemPage <web_poet.pages.ItemPage>`
     subclass or an item class.
 
@@ -116,10 +117,18 @@ def callback_for(page_or_item_cls: type) -> Callable:
     # a dict of named arguments after our injectable.
     if issubclass(page_or_item_cls, ItemPage):
 
-        def parse(*args, page: page_or_item_cls, **kwargs):  # type: ignore[valid-type]
+        def parse(
+            *args: Any,
+            page: page_or_item_cls,  # type: ignore[valid-type]
+            **kwargs: Any,
+        ) -> Iterator[Any]:
             yield page.to_item()  # type: ignore[attr-defined]
 
-        async def async_parse(*args, page: page_or_item_cls, **kwargs):  # type: ignore[valid-type]
+        async def async_parse(
+            *args: Any,
+            page: page_or_item_cls,  # type: ignore[valid-type]
+            **kwargs: Any,
+        ) -> AsyncIterator[Any]:
             yield await page.to_item()  # type: ignore[attr-defined]
 
         if iscoroutinefunction(page_or_item_cls.to_item):
@@ -128,7 +137,11 @@ def callback_for(page_or_item_cls: type) -> Callable:
 
     else:
 
-        def parse(*args, item: page_or_item_cls, **kwargs):  # type:ignore[valid-type,misc]
+        def parse(  # type: ignore[misc]
+            *args: Any,
+            item: page_or_item_cls,  # type: ignore[valid-type]
+            **kwargs: Any,
+        ) -> Iterator[Any]:
             yield item
 
     setattr(parse, _CALLBACK_FOR_MARKER, True)

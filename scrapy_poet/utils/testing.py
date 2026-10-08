@@ -3,6 +3,7 @@ from __future__ import annotations
 import contextlib
 import json
 from inspect import isasyncgenfunction
+from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 from scrapy import Spider, signals
@@ -20,6 +21,16 @@ from twisted.web.server import NOT_DONE_YET
 from scrapy_poet import ScrapyPoetRequestFingerprinter
 from scrapy_poet.utils.mockserver import MockServer
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Callable, Generator
+    from typing import Self
+
+    from scrapy.http import Request, Response
+    from scrapy.settings import BaseSettings
+    from twisted.internet.defer import Deferred
+    from twisted.python.failure import Failure
+    from twisted.web.server import Request as TwistedRequest
+
 
 class HtmlResource(Resource):
     isLeaf = True
@@ -28,7 +39,7 @@ class HtmlResource(Resource):
     extra_headers: dict[str, str] = {}
     status_code = 200
 
-    def render_GET(self, request):
+    def render_GET(self, request: TwistedRequest) -> bytes:
         request.setHeader(b"content-type", to_bytes(self.content_type))
         for name, value in self.extra_headers.items():
             request.setHeader(to_bytes(name), to_bytes(value))
@@ -39,10 +50,17 @@ class HtmlResource(Resource):
 class LeafResource(Resource):
     isLeaf = True
 
-    def deferRequest(self, request, delay, f, *a, **kw):
+    def deferRequest(
+        self,
+        request: TwistedRequest,
+        delay: float,
+        f: Callable[..., Any],
+        *a: Any,
+        **kw: Any,
+    ) -> Deferred[Any]:
         from twisted.internet import reactor
 
-        def _cancelrequest(_):
+        def _cancelrequest(_: Failure) -> None:
             # silence CancelledError
             d.addErrback(lambda _: None)
             d.cancel()
@@ -53,7 +71,8 @@ class LeafResource(Resource):
 
 
 class DelayedResource(LeafResource):
-    def render_GET(self, request):
+    def render_GET(self, request: TwistedRequest) -> int:
+        assert request.content
         decoded_body = request.content.read().decode()
         seconds = float(decoded_body) if decoded_body else 0
         self.deferRequest(
@@ -65,17 +84,19 @@ class DelayedResource(LeafResource):
         )
         return NOT_DONE_YET
 
-    def _delayedRender(self, request, seconds):
+    def _delayedRender(self, request: TwistedRequest, seconds: float) -> None:
         request.finish()
 
 
 class EchoResource(LeafResource):
-    def render_GET(self, request):
-        return request.content.read()
+    def render_GET(self, request: TwistedRequest) -> bytes:
+        assert request.content
+        content: bytes = request.content.read()
+        return content
 
 
 class HeadersResource(LeafResource):
-    def render_GET(self, request):
+    def render_GET(self, request: TwistedRequest) -> bytes:
         return json.dumps(
             {
                 k.decode(): [v.decode() for v in vs]
@@ -85,7 +106,8 @@ class HeadersResource(LeafResource):
 
 
 class StatusResource(LeafResource):
-    def render_GET(self, request):
+    def render_GET(self, request: TwistedRequest) -> bytes:
+        assert request.content
         decoded_body = request.content.read().decode()
         if decoded_body:
             request.setResponseCode(int(decoded_body))
@@ -93,16 +115,17 @@ class StatusResource(LeafResource):
 
 
 class ForbiddenResource(LeafResource):
-    def render_GET(self, request):
+    def render_GET(self, request: TwistedRequest) -> bytes:
         request.setResponseCode(403)
         return b""
 
 
 class DropResource(LeafResource):
-    def render_GET(self, request):
+    def render_GET(self, request: TwistedRequest) -> int:
         request.setHeader(b"Content-Length", b"10")
         try:
-            request.channel.transport.loseConnection()
+            assert request.channel.transport
+            request.channel.transport.loseConnection()  # type: ignore[misc]
         finally:
             request.finish()
         return NOT_DONE_YET
@@ -123,7 +146,13 @@ class ProductHtml(HtmlResource):
 
 
 @inlineCallbacks
-def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None, port=None):
+def crawl_items(
+    spider_cls: type[Spider],
+    resource_cls: type[Resource],
+    settings: dict[str, Any] | BaseSettings | None,
+    spider_kwargs: dict[str, Any] | None = None,
+    port: int | None = None,
+) -> Generator[Deferred[Any], Any, tuple[list[Any], str, Crawler]]:
     """Use spider_cls to crawl resource_cls. URL of the resource is passed
     to the spider as ``url`` argument.
     Return ``(items, resource_url, crawler)`` tuple.
@@ -138,12 +167,16 @@ def crawl_items(spider_cls, resource_cls, settings, spider_kwargs=None, port=Non
     with MockServer(resource_cls, port=port) as s:
         root_url = s.root_url
         yield crawler.crawl(url=root_url, **spider_kwargs)
-    return crawler.spider.collected_items, s.root_url, crawler
+    return crawler.spider.collected_items, s.root_url, crawler  # type: ignore[union-attr]
 
 
 async def crawl_items_async(
-    spider_cls, resource_cls, settings, spider_kwargs=None, port=None
-):
+    spider_cls: type[Spider],
+    resource_cls: type[Resource],
+    settings: dict[str, Any] | BaseSettings | None,
+    spider_kwargs: dict[str, Any] | None = None,
+    port: int | None = None,
+) -> tuple[list[Any], str, Crawler]:
     """Use spider_cls to crawl resource_cls. URL of the resource is passed
     to the spider as ``url`` argument.
     Return ``(items, resource_url, crawler)`` tuple.
@@ -153,13 +186,17 @@ async def crawl_items_async(
     with MockServer(resource_cls, port=port) as s:
         root_url = s.root_url
         await maybe_deferred_to_future(crawler.crawl(url=root_url, **spider_kwargs))
-    return crawler.spider.collected_items, s.root_url, crawler
+    return crawler.spider.collected_items, s.root_url, crawler  # type: ignore[union-attr]
 
 
 @inlineCallbacks
 def crawl_single_item(
-    spider_cls, resource_cls, settings, spider_kwargs=None, port=None
-):
+    spider_cls: type[Spider],
+    resource_cls: type[Resource],
+    settings: dict[str, Any] | BaseSettings | None,
+    spider_kwargs: dict[str, Any] | None = None,
+    port: int | None = None,
+) -> Generator[Deferred[Any], Any, tuple[Any, str, Crawler]]:
     """Run a spider where a single item is expected. Use in combination with
     ``capture_exceptions`` and ``CollectorPipeline``
     """
@@ -182,8 +219,12 @@ def crawl_single_item(
 
 
 async def crawl_single_item_async(
-    spider_cls, resource_cls, settings, spider_kwargs=None, port=None
-):
+    spider_cls: type[Spider],
+    resource_cls: type[Resource],
+    settings: dict[str, Any] | BaseSettings | None,
+    spider_kwargs: dict[str, Any] | None = None,
+    port: int | None = None,
+) -> tuple[Any, str, Crawler]:
     """Run a spider where a single item is expected. Use in combination with
     ``capture_exceptions`` and ``CollectorPipeline``
     """
@@ -200,24 +241,28 @@ async def crawl_single_item_async(
     return item, url, crawler
 
 
-def get_download_handler(crawler, schema):
+def get_download_handler(crawler: Crawler, schema: str) -> Any:
+    assert crawler.engine
     return crawler.engine.downloader.handlers._get_handler(schema)
 
 
-def make_crawler(spider_cls, settings=None):
+def make_crawler(
+    spider_cls: type[Spider], settings: dict[str, Any] | BaseSettings | None = None
+) -> Crawler:
     settings = settings or {}
     if isinstance(settings, dict):
-        _settings = _get_test_settings()
-        _settings.update(settings)
+        settings = {**_get_test_settings(), **settings}
     else:
-        _settings = _get_test_settings()
-        for k, v in dict(settings).items():
-            _settings.set(k, v, priority=settings.getpriority(k))
-    settings = _settings
+        user_settings = settings
+        settings = Settings(_get_test_settings())
+        for k, v in dict(user_settings).items():
+            priority = user_settings.getpriority(k)
+            assert priority is not None
+            settings.set(k, v, priority=priority)
 
     if not getattr(spider_cls, "name", None):
 
-        class Spider(spider_cls):
+        class Spider(spider_cls):  # type: ignore[valid-type, misc]
             name = "test_spider"
 
         Spider.__name__ = spider_cls.__name__
@@ -226,7 +271,7 @@ def make_crawler(spider_cls, settings=None):
     return Crawler(spider_cls, settings)
 
 
-def setup_crawler_engine(crawler: Crawler):
+def setup_crawler_engine(crawler: Crawler) -> None:
     """Run the crawl steps until engine setup, so that crawler.engine is not
     None.
     https://github.com/scrapy/scrapy/blob/8fbebfa943c3352f5ba49f46531a6ccdd0b52b60/scrapy/crawler.py#L116-L122
@@ -248,7 +293,11 @@ class DummySpider(Spider):
     name = "dummy"
 
 
-def get_crawler(settings=None, spider_cls=DummySpider, setup_engine=True):
+def get_crawler(
+    settings: dict[str, Any] | None = None,
+    spider_cls: type[Spider] = DummySpider,
+    setup_engine: bool = True,
+) -> Crawler:
     settings = settings or {}
     crawler = _get_crawler(settings_dict=settings, spidercls=spider_cls)
     if setup_engine:
@@ -257,38 +306,44 @@ def get_crawler(settings=None, spider_cls=DummySpider, setup_engine=True):
 
 
 class CollectorPipeline:
+    crawler: Crawler
+
     @classmethod
-    def from_crawler(cls, crawler):
+    def from_crawler(cls, crawler: Crawler) -> Self:
         obj = cls()
         obj.crawler = crawler
         return obj
 
-    def open_spider(self, spider: Spider | None = None):
-        self.crawler.spider.collected_items = []  # type: ignore[attr-defined]
+    def open_spider(self, spider: Spider | None = None) -> None:
+        self.crawler.spider.collected_items = []  # type: ignore[union-attr]
 
-    def process_item(self, item, spider: Spider | None = None):
-        self.crawler.spider.collected_items.append(item)  # type: ignore[attr-defined]
+    def process_item(self, item: Any, spider: Spider | None = None) -> Any:
+        self.crawler.spider.collected_items.append(item)  # type: ignore[union-attr]
         return item
 
 
 class InjectedDependenciesCollectorMiddleware:
+    crawler: Crawler
+
     @classmethod
-    def from_crawler(cls, crawler):
+    def from_crawler(cls, crawler: Crawler) -> Self:
         obj = cls()
         obj.crawler = crawler
         crawler.signals.connect(obj.spider_opened, signal=signals.spider_opened)
         return obj
 
-    def spider_opened(self, spider: Spider | None = None):
-        self.crawler.spider.collected_response_deps = []  # type: ignore[attr-defined]
+    def spider_opened(self, spider: Spider | None = None) -> None:
+        self.crawler.spider.collected_response_deps = []  # type: ignore[union-attr]
 
-    def process_response(self, request, response, spider: Spider | None = None):
-        self.crawler.spider.collected_response_deps.append(request.cb_kwargs)  # type: ignore[attr-defined]
+    def process_response(
+        self, request: Request, response: Response, spider: Spider | None = None
+    ) -> Response:
+        self.crawler.spider.collected_response_deps.append(request.cb_kwargs)  # type: ignore[union-attr]
         return response
 
 
-def _get_test_settings():
-    settings = {
+def _get_test_settings() -> dict[str, Any]:
+    settings: dict[str, Any] = {
         # collect scraped items to crawler.spider.collected_items
         "ITEM_PIPELINES": {
             CollectorPipeline: 100,
@@ -329,7 +384,7 @@ def _get_test_settings():
     return settings
 
 
-def create_scrapy_settings():  # pragma: no cover
+def create_scrapy_settings() -> Settings:  # pragma: no cover
     """Return the default scrapy-poet settings."""
     warn(
         "The scrapy_poet.utils.create_scrapy_settings() function is deprecated.",
@@ -339,12 +394,14 @@ def create_scrapy_settings():  # pragma: no cover
     return Settings(_get_test_settings())
 
 
-def capture_exceptions(callback):
+def capture_exceptions(
+    callback: Callable[..., Any],
+) -> Callable[..., AsyncIterator[Any]]:
     """Wrapper for Scrapy callbacks that captures exceptions within
     the provided callback and yields it under `exception` property. Also
     spider is closed on the first exception."""
 
-    async def parse(*args, **kwargs):
+    async def parse(*args: Any, **kwargs: Any) -> AsyncIterator[Any]:
         try:
             if isasyncgenfunction(callback):
                 async for x in callback(*args, **kwargs):

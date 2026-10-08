@@ -6,18 +6,18 @@ from web_poet.pages import ItemPage, WebPage
 from scrapy_poet import DummyResponse, callback_for
 
 
-class FakeItemPage(ItemPage):
-    def to_item(self):
+class FakeItemPage(ItemPage[str]):
+    def to_item(self) -> str:  # type: ignore[override]
         return "fake item page"
 
 
-class FakeItemPageAsync(ItemPage):
-    async def to_item(self):
+class FakeItemPageAsync(ItemPage[str]):
+    async def to_item(self) -> str:
         return "fake item page"
 
 
-class FakeWebPage(WebPage):
-    def to_item(self):
+class FakeWebPage(WebPage[str]):
+    def to_item(self) -> str:  # type: ignore[override]
         return "fake item web page"
 
 
@@ -32,7 +32,7 @@ class MySpiderAsync(scrapy.Spider):
     parse_item = callback_for(FakeItemPageAsync)
 
 
-def test_callback_for():
+def test_callback_for() -> None:
     """Simple test case to ensure it works as expected."""
     cb = callback_for(FakeItemPage)
     assert callable(cb)
@@ -44,7 +44,7 @@ def test_callback_for():
 
 
 @deferred_f_from_coro_f
-async def test_callback_for_async():
+async def test_callback_for_async() -> None:
     cb = callback_for(FakeItemPageAsync)
     assert callable(cb)
 
@@ -57,7 +57,7 @@ async def test_callback_for_async():
         assert await result.__anext__()
 
 
-def test_callback_for_instance_method():
+def test_callback_for_instance_method() -> None:
     spider = MySpider()
     response = DummyResponse("http://example.com/")
     fake_page = FakeItemPage()
@@ -66,7 +66,7 @@ def test_callback_for_instance_method():
 
 
 @deferred_f_from_coro_f
-async def test_callback_for_instance_method_async():
+async def test_callback_for_instance_method_async() -> None:
     spider = MySpiderAsync()
     response = DummyResponse("http://example.com/")
     fake_page = FakeItemPageAsync()
@@ -77,7 +77,7 @@ async def test_callback_for_instance_method_async():
         assert await result.__anext__()
 
 
-def test_default_callback():
+def test_default_callback() -> None:
     """Sample request not specifying callback."""
     spider = MySpider()
     request = scrapy.Request("http://example.com/")
@@ -87,7 +87,7 @@ def test_default_callback():
     assert request_dict["callback"] is None
 
 
-def test_instance_method_callback():
+def test_instance_method_callback() -> None:
     """Sample request specifying spider's instance method callback."""
     spider = MySpider()
     request = scrapy.Request("http://example.com/", callback=spider.parse_item)
@@ -103,7 +103,7 @@ def test_instance_method_callback():
     assert request_dict["callback"] == "parse_web"
 
 
-def test_inline_callback():
+def test_inline_callback() -> None:
     """Sample request with inline callback."""
     spider = MySpider()
     cb = callback_for(FakeItemPage)
@@ -115,7 +115,7 @@ def test_inline_callback():
     assert str(exc.value) == msg
 
 
-def test_inline_callback_async():
+def test_inline_callback_async() -> None:
     """Sample request with inline callback using async callback_for."""
     spider = MySpiderAsync()
     cb = callback_for(FakeItemPageAsync)

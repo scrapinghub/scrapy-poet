@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 from scrapy_poet import PageObjectInputProvider, page_input_providers
@@ -6,42 +8,42 @@ from scrapy_poet.injection_errors import MalformedProvidedClassesError
 
 
 class TestProvider:
-    def test_is_provided_on_malformed_provided_classes(self):
+    def test_is_provided_on_malformed_provided_classes(self) -> None:
         class Provider(PageObjectInputProvider):
-            provided_classes = [str]
+            provided_classes = [str]  # type: ignore[assignment]
 
         with pytest.raises(MalformedProvidedClassesError) as excinfo:
-            Provider(None).is_provided(str)
+            Provider(None).is_provided(str)  # type: ignore[arg-type]
 
         assert "Unexpected type" in str(excinfo.value)
         assert "Provider" in str(excinfo.value)
         assert "Expected either 'set' or 'callable'" in str(excinfo.value)
 
-    def test_is_provided_on_function(self):
+    def test_is_provided_on_function(self) -> None:
         class Provider(PageObjectInputProvider):
             @staticmethod
-            def provided_classes(type_):
+            def provided_classes(type_: Any) -> bool:
                 return issubclass(type_, str)
 
         class SubStr(str):
             pass
 
-        provider = Provider(None)
+        provider = Provider(None)  # type: ignore[arg-type]
         assert provider.is_provided(str)
         assert provider.is_provided(SubStr)
         assert not provider.is_provided(float)
 
-    def test_is_provided_on_set(self):
+    def test_is_provided_on_set(self) -> None:
         class Provider(PageObjectInputProvider):
             provided_classes = {str, int}
 
-        provider = Provider(None)
+        provider = Provider(None)  # type: ignore[arg-type]
         assert provider.is_provided(str)
         assert provider.is_provided(int)
         assert not provider.is_provided(float)
 
 
-def test_default_providers():
+def test_default_providers() -> None:
     providers = {
         obj
         for obj_name, obj in page_input_providers.__dict__.items()

@@ -28,7 +28,7 @@ from scrapy_poet.injection import get_callback
 try:
     from scrapy.utils.misc import build_from_crawler
 except ImportError:  # Scrapy < 2.12
-    from typing import Any, TypeVar
+    from typing import Any, TypeVar, cast
 
     from scrapy.utils.misc import create_instance  # type: ignore[attr-defined]
 
@@ -37,20 +37,23 @@ except ImportError:  # Scrapy < 2.12
     def build_from_crawler(  # type: ignore[no-redef]
         objcls: type[T], crawler: Crawler, /, *args: Any, **kwargs: Any
     ) -> T:
-        return create_instance(objcls, None, crawler, *args, **kwargs)
+        return cast("T", create_instance(objcls, None, crawler, *args, **kwargs))
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from typing import Any, Self
 
     from scrapy import Request
     from scrapy.crawler import Crawler
+
+    from scrapy_poet.injection import Injector
 
 
 logger = getLogger(__name__)
 
 
-def _serialize_dep(cls):
+def _serialize_dep(cls: Any) -> str:
     if isinstance(cls, CustomBuilder):
         cls = cls.result_class_or_fn
     elif get_origin(cls) is Annotated:
@@ -76,7 +79,7 @@ class ScrapyPoetRequestFingerprinter:
     }
 
     @classmethod
-    def from_crawler(cls, crawler):
+    def from_crawler(cls, crawler: Crawler) -> Self:
         return cls(crawler)
 
     def __init__(self, crawler: Crawler) -> None:
@@ -89,13 +92,14 @@ class ScrapyPoetRequestFingerprinter:
             ),
             crawler,
         )
-        self._callback_cache: dict[Callable, bytes | None] = {}
+        self._callback_cache: dict[Callable[..., Any], bytes | None] = {}
         self._request_cache: WeakKeyDictionary[Request, bytes] = WeakKeyDictionary()
         self._crawler: Crawler = crawler
         self._saw_unserializable_page_params = False
 
     @cached_property
-    def _injector(self):
+    def _injector(self) -> Injector:
+        assert self._crawler.engine
         middlewares = self._crawler.engine.downloader.middleware.middlewares
         for middleware in middlewares:
             if isinstance(middleware, InjectionMiddleware):
@@ -163,7 +167,7 @@ class ScrapyPoetRequestFingerprinter:
         if request in self._request_cache:
             return self._request_cache[request]
 
-        fingerprint = self._base_request_fingerprinter.fingerprint(request)
+        fingerprint: bytes = self._base_request_fingerprinter.fingerprint(request)
         deps_key = self.get_deps_key(request)
         serialized_page_params = self.serialize_page_params(request)
         if deps_key is None and serialized_page_params is None:

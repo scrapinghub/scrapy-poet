@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 from scrapy.exceptions import IgnoreRequest
-from web_poet import HttpRequest
+from web_poet import HttpRequest, HttpResponse
 from web_poet.exceptions import HttpError, HttpRequestError
 
 from scrapy_poet.utils import (
@@ -9,11 +12,19 @@ from scrapy_poet.utils import (
     scrapy_response_to_http_response,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from scrapy import Request
+    from scrapy.http import Response
+
 logger = logging.getLogger(__name__)
 
 
-def _create_scrapy_downloader(download_func):
-    async def scrapy_downloader(request: HttpRequest):
+def _create_scrapy_downloader(
+    download_func: Callable[[Request], Awaitable[Response]],
+) -> Callable[[HttpRequest], Awaitable[HttpResponse]]:
+    async def scrapy_downloader(request: HttpRequest) -> HttpResponse:
         if not isinstance(request, HttpRequest):
             raise TypeError(
                 f"The request should be 'web_poet.HttpRequest' but received "

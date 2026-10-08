@@ -17,7 +17,7 @@ class _Cache(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def __setitem__(self, fingerprint: str, value) -> None:
+    def __setitem__(self, fingerprint: str, value: Any) -> None:
         pass
 
     def close(self) -> None:  # noqa: B027
@@ -30,7 +30,7 @@ class SerializedDataCache(_Cache):
     `web_poet.serialization.SerializedDataFileStorage`
     """
 
-    def __init__(self, directory: str | os.PathLike) -> None:
+    def __init__(self, directory: str | os.PathLike[str]) -> None:
         self.directory = Path(directory)
 
     def __getitem__(self, fingerprint: str) -> SerializedData:

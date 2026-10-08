@@ -1,4 +1,6 @@
-from typing import Any, Callable, Set
+from collections.abc import AsyncIterator, Callable, Iterator
+from pathlib import Path
+from typing import Any
 from unittest import mock
 
 import attr
@@ -25,6 +27,7 @@ from scrapy_poet.page_input_providers import (
     HttpRequestProvider,
     PageObjectInputProvider,
     PageParamsProvider,
+    ScrapyPoetStatCollector,
     StatsProvider,
 )
 from scrapy_poet.utils.mockserver import get_ephemeral_port
@@ -58,13 +61,16 @@ class PriceHtmlDataProvider(PageObjectInputProvider):
     name = "price_html"
     provided_classes = {Price, Html}
 
-    def __init__(self, injector: Injector):
+    def __init__(self, injector: Injector) -> None:
         assert isinstance(injector, Injector)
         super().__init__(injector)
 
     def __call__(
-        self, to_provide, response: scrapy.http.Response, spider: scrapy.Spider
-    ):
+        self,
+        to_provide: set[Callable[..., Any]],
+        response: scrapy.http.Response,
+        spider: scrapy.Spider,
+    ) -> list[Any]:
         assert isinstance(spider, scrapy.Spider)
         ret: list[Any] = []
         if Price in to_provide:
@@ -80,7 +86,12 @@ class NameHtmlDataProvider(PageObjectInputProvider):
     name = "name_html"
     provided_classes = {Name, Html}.__contains__
 
-    def __call__(self, to_provide, response: scrapy.http.Response, settings: Settings):
+    def __call__(
+        self,
+        to_provide: set[Callable[..., Any]],
+        response: scrapy.http.Response,
+        settings: Settings,
+    ) -> list[Any]:
         assert isinstance(settings, Settings)
         ret: list[Any] = []
         if Name in to_provide:
@@ -95,7 +106,7 @@ class NameHtmlDataProvider(PageObjectInputProvider):
 class HttpResponseProviderForTest(HttpResponseProvider):
     """Uses a fixed fingerprint because the test server is always changing the URL from test to test"""
 
-    def fingerprint(self, to_provide: Set[Callable], request: Request) -> str:
+    def fingerprint(self, to_provide: set[Callable[..., Any]], request: Request) -> str:
         return "http://example.com"
 
 
@@ -105,13 +116,13 @@ for dep_cls in [Price, Name, Html]:
         return {"txt": attr.astuple(o)[0].encode()}
 
     def _deserialize(cls: type[dep_cls], data: SerializedLeafData) -> dep_cls:  # type: ignore[valid-type]
-        return cls(data["txt"].decode())  # type: ignore[misc]
+        return cls(data["txt"].decode())  # type: ignore[misc,no-any-return]
 
     register_serialization(_serialize, _deserialize)
 
 
 class PriceFirstMultiProviderSpider(scrapy.Spider):
-    url = None
+    url: str
     custom_settings = {
         "SCRAPY_POET_PROVIDERS": {
             HttpResponseProviderForTest: 0,
@@ -120,24 +131,24 @@ class PriceFirstMultiProviderSpider(scrapy.Spider):
         }
     }
 
-    def start_requests(self):
+    def start_requests(self) -> Iterator[Request]:
         yield Request(self.url, self.parse, errback=self.errback)
 
-    async def start(self):
+    async def start(self) -> AsyncIterator[Any]:
         for item_or_request in self.start_requests():
             yield item_or_request
 
-    def errback(self, failure: Failure):
+    def errback(self, failure: Failure) -> Iterator[dict[str, Any]]:
         yield {"exception": failure.value}
 
     def parse(
         self,
-        response,
+        response: scrapy.http.Response,
         price: Price,
         name: Name,
         html: Html,
         response_data: HttpResponse,
-    ):
+    ) -> Iterator[dict[Any, Any]]:
         yield {
             Price: price,
             Name: name,
@@ -157,7 +168,7 @@ class NameFirstMultiProviderSpider(PriceFirstMultiProviderSpider):
 
 
 @deferred_f_from_coro_f
-async def test_name_first_spider(settings, tmp_path):
+async def test_name_first_spider(settings: dict[str, Any], tmp_path: Path) -> None:
     port = get_ephemeral_port()
     cache = tmp_path / "cache"
     settings["SCRAPY_POET_CACHE"] = str(cache)
@@ -186,7 +197,7 @@ async def test_name_first_spider(settings, tmp_path):
 
 
 @deferred_f_from_coro_f
-async def test_price_first_spider(settings):
+async def test_price_first_spider(settings: dict[str, Any]) -> None:
     item, _, _ = await crawl_single_item_async(
         PriceFirstMultiProviderSpider, ProductHtml, settings
     )
@@ -199,7 +210,7 @@ async def test_price_first_spider(settings):
 
 
 @deferred_f_from_coro_f
-async def test_http_client_provider(settings):
+async def test_http_client_provider(settings: dict[str, Any]) -> None:
     crawler = get_crawler(Spider, settings)
     crawler.engine = mock.AsyncMock()
     injector = Injector(crawler)
@@ -215,7 +226,7 @@ async def test_http_client_provider(settings):
 
 
 @deferred_f_from_coro_f
-async def test_http_request_provider(settings):
+async def test_http_request_provider(settings: dict[str, Any]) -> None:
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)
     provider = HttpRequestProvider(injector)
@@ -245,7 +256,7 @@ async def test_http_request_provider(settings):
     assert full_request.body == HttpRequestBody(b"a")
 
 
-def test_page_params_provider(settings):
+def test_page_params_provider(settings: dict[str, Any]) -> None:
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)
     provider = PageParamsProvider(injector)
@@ -255,7 +266,7 @@ def test_page_params_provider(settings):
 
     assert results[0] == {}
 
-    expected_data = {"key": "value"}
+    expected_data: dict[Any, str] = {"key": "value"}
     request.meta.update({"page_params": expected_data})
     results = provider(set(), request)
 
@@ -269,7 +280,7 @@ def test_page_params_provider(settings):
     assert results[0] == expected_data
 
 
-def test_stats_provider(settings):
+def test_stats_provider(settings: dict[str, Any]) -> None:
     crawler = get_crawler(Spider, settings)
     injector = Injector(crawler)
     provider = StatsProvider(injector)
@@ -277,6 +288,7 @@ def test_stats_provider(settings):
     results = provider(set(), crawler)
 
     stats = results[0]
+    assert isinstance(stats._stats, ScrapyPoetStatCollector)
     assert stats._stats._stats == crawler.stats
 
     stats.set("a", "1")
