@@ -13,9 +13,9 @@ from twisted.web.server import Site
 
 if TYPE_CHECKING:
     from types import TracebackType
+    from typing import Self
 
     from twisted.web.resource import Resource
-    from typing_extensions import Self
 
 
 def get_ephemeral_port() -> int:

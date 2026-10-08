@@ -7,10 +7,11 @@ from web_poet.exceptions import Retry
 from .utils import _get_retry_request_from_exception
 
 if TYPE_CHECKING:
+    from typing import Self
+
     from scrapy import Spider
     from scrapy.crawler import Crawler
     from scrapy.http import Request, Response
-    from typing_extensions import Self
 
 
 class RetryMiddleware:

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ParamSpec
 
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
+from scrapy.downloadermiddlewares.retry import get_retry_request
 from scrapy.http import HtmlResponse, Request, Response
 from scrapy.utils.defer import deferred_from_coro
 from scrapy.utils.project import inside_project, project_data_dir
@@ -137,9 +138,6 @@ def maybeDeferred_coro(
 def _get_retry_request_from_exception(
     request: Request, exception: Retry, crawler: Crawler
 ) -> Request | None:
-    # Needed for Twisted < 21.2.0
-    # https://github.com/scrapinghub/scrapy-poet/pull/129#discussion_r1102693967
-    from scrapy.downloadermiddlewares.retry import get_retry_request  # noqa: PLC0415
 
     message = exception.args[0] if exception.args else None
     reason = str(message) if message is not None else ""

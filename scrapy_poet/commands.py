@@ -95,9 +95,7 @@ def spider_for(
             page: injectable,  # type: ignore[valid-type]
         ) -> AsyncIterator[Any]:
             global frozen_time  # noqa: PLW0603
-            frozen_time = datetime.datetime.now(datetime.timezone.utc).replace(
-                microsecond=0
-            )
+            frozen_time = datetime.datetime.now(datetime.UTC).replace(microsecond=0)
             with time_machine.travel(frozen_time):
                 try:
                     item = await ensure_awaitable(page.to_item())  # type: ignore[attr-defined]

@@ -36,7 +36,6 @@ from web_poet.pages import ItemT
 from scrapy_poet import callback_for
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from scrapy_poet.utils import is_min_scrapy_version
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
     ProductHtml,
@@ -143,15 +142,9 @@ def assert_deps(
 
 
 async def assert_no_item(page: type) -> None:
-    # Starting Scrapy 2.7, there's better support for async callbacks. This
-    # means that errors aren't suppressed.
-    if is_min_scrapy_version("2.7.0"):
-        expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
-        with pytest.raises(TypeError, match=expected_msg):
-            await crawl_item_and_deps(page)
-    else:
-        item = await crawl_item_and_deps(page)
-        assert item == (None, [{}])
+    expected_msg = r"parse\(\) missing 1 required keyword-only argument: 'item'"
+    with pytest.raises(TypeError, match=expected_msg):
+        await crawl_item_and_deps(page)
 
 
 @handle_urls(URL)

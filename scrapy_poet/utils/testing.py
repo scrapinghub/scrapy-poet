@@ -23,13 +23,13 @@ from scrapy_poet.utils.mockserver import MockServer
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable, Generator
+    from typing import Self
 
     from scrapy.http import Request, Response
     from scrapy.settings import BaseSettings
     from twisted.internet.defer import Deferred
     from twisted.python.failure import Failure
     from twisted.web.server import Request as TwistedRequest
-    from typing_extensions import Self
 
 
 class HtmlResource(Resource):
@@ -384,7 +384,7 @@ def _get_test_settings() -> dict[str, Any]:
     return settings
 
 
-def create_scrapy_settings() -> Settings:
+def create_scrapy_settings() -> Settings:  # pragma: no cover
     """Return the default scrapy-poet settings."""
     warn(
         "The scrapy_poet.utils.create_scrapy_settings() function is deprecated.",
