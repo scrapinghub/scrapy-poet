@@ -284,7 +284,7 @@ class Injector:
             if cls not in instances:
                 result_cls: type = cast("type", cls)
                 if isinstance(cls, andi.CustomBuilder):
-                    result_cls = cls.result_class_or_fn
+                    result_cls = cast("type", cls.result_class_or_fn)
                     result = cls.factory(**kwargs_spec.kwargs(instances))
                     if inspect.isawaitable(result):
                         result = await result

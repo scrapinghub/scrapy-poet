@@ -263,20 +263,6 @@ async def test_mutual_overrides() -> None:
     """Two page objects that override each other should not present any problems.
 
     In practice, this isn't useful at all.
-
-    TODO: We could present a warning to the user if this is detected.
-    THOUGHTS:
-        Although I doubt this would be common in most code bases since this would
-        only be possible if we do `handle_urls(URL, instead_of=RightPage)(LeftPage)`
-        which is highly unnatural.
-
-        Another instance that it might occur is when users don't use `handle_urls()`
-        to write the rules but create a list of `ApplyRules` manually and passing
-        them to the `SCRAPY_POET_RULES` setting. I'm also not sure how common
-        this would be against simply using `@handle_urls()`.
-
-        Let's hold off this potential warning mechanism until we observe that it
-        actually affects users.
     """
     item, deps = await crawl_item_and_deps(LeftPage)
     assert item == {"msg": "right page"}
