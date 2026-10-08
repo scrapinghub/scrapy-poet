@@ -383,6 +383,9 @@ class Injector:
                     f"provider: {provided_classes}"
                 )
             instances.update(objs_by_type)
+            for cls in objs_by_type:
+                cls_fqn = get_fq_class_name(cast("type", strip_annotated(cls)))
+                self.crawler.stats.inc_value(f"poet/injector/{cls_fqn}")
 
             if self.weak_cache.get(request):
                 self.weak_cache[request].update(objs_by_type)
