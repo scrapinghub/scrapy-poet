@@ -329,7 +329,7 @@ def _get_test_settings():
     return settings
 
 
-def create_scrapy_settings():
+def create_scrapy_settings():  # pragma: no cover
     """Return the default scrapy-poet settings."""
     warn(
         "The scrapy_poet.utils.create_scrapy_settings() function is deprecated.",
