@@ -1,4 +1,5 @@
 import argparse
+import os
 import socket
 import sys
 import time
@@ -35,13 +36,13 @@ class MockServer:
                 str(self.port),
             ],
             stdout=PIPE,
-            env={"PYTHONPATH": self.pythonpath},
+            env={**os.environ, "PYTHONPATH": self.pythonpath},
         )
         self.proc.stdout.readline()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.proc.kill()
+        self.proc.terminate()
         self.proc.wait()
         time.sleep(0.2)
 
