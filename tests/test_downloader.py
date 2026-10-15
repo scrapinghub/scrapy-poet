@@ -40,6 +40,7 @@ from scrapy_poet.utils.mockserver import MockServer
 from scrapy_poet.utils.testing import (
     DelayedResource,
     EchoResource,
+    RedirectResource,
     StatusResource,
     _get_test_settings,
     make_crawler,
@@ -56,6 +57,15 @@ class AdditionalRequestsSuccessPage(WebPage[dict[str, Any]]):
             body=b"bar",
         )
         return {"foo": response.body.decode()}
+
+
+@attr.define
+class AdditionalRequestsRedirectPage(WebPage[dict[str, Any]]):
+    http: HttpClient
+
+    async def to_item(self) -> dict[str, Any]:
+        response = await self.http.get(f"{self.response.url}/redirect")
+        return {"url": str(response.url)}
 
 
 @attr.define
@@ -283,6 +293,59 @@ async def test_additional_requests_success() -> None:
         await maybe_deferred_to_future(crawler.crawl())
 
     assert items == [{"foo": "bar"}]
+
+
+@deferred_f_from_coro_f
+async def test_response_redirect() -> None:
+    urls = []
+
+    with MockServer(RedirectResource) as server:
+
+        class TestSpider(Spider):
+            name = "test_spider"
+
+            def start_requests(self) -> Iterator[Request]:
+                yield Request(f"{server.root_url}/redirect", callback=self.parse)
+
+            async def start(self) -> AsyncIterator[Any]:
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            async def parse(self, response: Response, page: WebPage) -> None:  # type: ignore[type-arg]
+                urls.append(str(page.response.url))
+
+        crawler = make_crawler(TestSpider)
+        await maybe_deferred_to_future(crawler.crawl())
+
+    assert urls == [f"{server.root_url}/target"]
+
+
+@deferred_f_from_coro_f
+async def test_additional_requests_redirect() -> None:
+    items = []
+
+    with MockServer(RedirectResource) as server:
+
+        class TestSpider(Spider):
+            name = "test_spider"
+
+            def start_requests(self) -> Iterator[Request]:
+                yield Request(server.root_url, callback=self.parse)
+
+            async def start(self) -> AsyncIterator[Any]:
+                for item_or_request in self.start_requests():
+                    yield item_or_request
+
+            async def parse(
+                self, response: Response, page: AdditionalRequestsRedirectPage
+            ) -> None:
+                item = await page.to_item()
+                items.append(item)
+
+        crawler = make_crawler(TestSpider)
+        await maybe_deferred_to_future(crawler.crawl())
+
+    assert items == [{"url": f"{server.root_url}/target"}]
 
 
 @deferred_f_from_coro_f

@@ -120,6 +120,13 @@ class ForbiddenResource(LeafResource):
         return b""
 
 
+class RedirectResource(LeafResource):
+    def render_GET(self, request: TwistedRequest) -> bytes:
+        if request.path == b"/redirect":
+            request.redirect(b"/target")
+        return b""
+
+
 class DropResource(LeafResource):
     def render_GET(self, request: TwistedRequest) -> int:
         request.setHeader(b"Content-Length", b"10")
