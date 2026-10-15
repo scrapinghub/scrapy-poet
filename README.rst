@@ -27,7 +27,7 @@ scrapy-poet
 With ``scrapy-poet`` is possible to make a single spider that supports many sites with
 different layouts.
 
-Requires **Python 3.10+** and **Scrapy >= 2.6.0**.
+Requires **Python 3.11+** and **Scrapy >= 2.7.0**.
 
 Read the `documentation <https://scrapy-poet.readthedocs.io>`_  for more information.
 

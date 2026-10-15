@@ -98,6 +98,13 @@ class ForbiddenResource(LeafResource):
         return b""
 
 
+class RedirectResource(LeafResource):
+    def render_GET(self, request):
+        if request.path == b"/redirect":
+            request.redirect(b"/target")
+        return b""
+
+
 class DropResource(LeafResource):
     def render_GET(self, request):
         request.setHeader(b"Content-Length", b"10")
@@ -297,6 +304,9 @@ def _get_test_settings():
             # collect injected dependencies to crawler.spider.collected_response_deps
             InjectedDependenciesCollectorMiddleware: 542,
         },
+        # Scrapy 2.19+ logs a warning when the default reactor keeps this
+        # extension from loading, which breaks tests asserting an empty log.
+        "REMOTE_CONTROL_ENABLED": False,
     }
     try:
         import scrapy.addons  # noqa: F401,PLC0415
@@ -326,7 +336,7 @@ def _get_test_settings():
     return settings
 
 
-def create_scrapy_settings():
+def create_scrapy_settings():  # pragma: no cover
     """Return the default scrapy-poet settings."""
     warn(
         "The scrapy_poet.utils.create_scrapy_settings() function is deprecated.",

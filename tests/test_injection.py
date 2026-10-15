@@ -808,6 +808,27 @@ class TestInjectorStats:
         assert injector.weak_cache.get(response.request) is None
 
     @deferred_f_from_coro_f
+    async def test_stats_dynamic_deps(self, injector):
+        def callback(response: DummyResponse, dd: DynamicDeps):
+            pass
+
+        response = get_response_for_testing(
+            callback, meta={"inject": [Annotated[Cls1, 42], Cls2]}
+        )
+        await injector.build_callback_dependencies(response.request, response)
+        prefix = "poet/injector/"
+        poet_stats = {
+            name.replace(prefix, "")
+            for name in injector.crawler.stats.get_stats()
+            if name.startswith(prefix)
+        }
+        assert poet_stats == {
+            "tests.test_injection.Cls1",
+            "tests.test_injection.Cls2",
+            "scrapy_poet.injection.DynamicDeps",
+        }
+
+    @deferred_f_from_coro_f
     async def test_po_provided_via_item(self):
         rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
         registry = RulesRegistry(rules=rules)

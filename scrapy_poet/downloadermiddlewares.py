@@ -8,7 +8,7 @@ from __future__ import annotations
 import inspect
 import logging
 import warnings
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, Self, TypeVar
 
 from scrapy import Request
 from scrapy.downloadermiddlewares.stats import DownloaderStats
@@ -38,9 +38,6 @@ if TYPE_CHECKING:
     from scrapy import Spider
     from scrapy.crawler import Crawler
     from scrapy.http import Response
-
-    # typing.Self requires Python 3.11
-    from typing_extensions import Self
 
 _T = TypeVar("_T")
 
