@@ -244,9 +244,7 @@ class InjectionMiddleware:
         response = await self.crawler.engine.download_async(scrapy_request)
         plan = self.injector.build_plan_for_type(scrapy_request, page_cls)
         instances = await self.injector.build_instances(scrapy_request, response, plan)
-        if page_cls in instances:
-            return instances[page_cls]
-        return page_cls(**plan.final_kwargs(instances))
+        return plan.final_kwargs(instances)["page"]
 
     async def get_item(
         self,

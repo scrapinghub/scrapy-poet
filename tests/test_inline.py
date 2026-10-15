@@ -4,7 +4,15 @@ import pytest
 import scrapy
 from scrapy import Request
 from scrapy.utils.defer import deferred_f_from_coro_f
-from web_poet import ApplyRule, HttpRequest, ItemPage, PageParams, RequestUrl, WebPage
+from web_poet import (
+    ApplyRule,
+    HttpRequest,
+    HttpResponse,
+    ItemPage,
+    PageParams,
+    RequestUrl,
+    WebPage,
+)
 
 from scrapy_poet import InjectionMiddleware, callback_for
 from scrapy_poet.utils import is_min_scrapy_version
@@ -215,3 +223,38 @@ async def test_regular_callback_injection_unaffected(settings):
 
     items, _, _ = await crawl_items_async(GetPageSpider, ProductHtml, settings)
     assert items == [{"name": "Chocolate", "price": "22€"}]
+
+
+@deferred_f_from_coro_f
+async def test_get_page_with_provided_class(settings):
+    async def run(spider):
+        mw = spider.crawler.get_downloader_middleware(InjectionMiddleware)
+        response = await mw.get_page(spider.url, HttpResponse)
+        yield {"url": str(response.url)}
+
+    Spider = _make_spider(run)
+    items, url, _ = await crawl_items_async(Spider, ProductHtml, settings)
+    assert items == [{"url": url}]
+
+
+@deferred_f_from_coro_f
+async def test_get_page_with_override(settings):
+    class OverridingPage(ItemPage):
+        def __init__(self, url: RequestUrl):
+            self._url = url
+
+        def to_item(self):
+            return {"url": str(self._url)}
+
+    settings["SCRAPY_POET_RULES"] = [
+        ApplyRule("", use=OverridingPage, instead_of=ProductPage)
+    ]
+
+    async def run(spider):
+        mw = spider.crawler.get_downloader_middleware(InjectionMiddleware)
+        page = await mw.get_page(spider.url, ProductPage)
+        yield page.to_item()
+
+    Spider = _make_spider(run)
+    items, url, _ = await crawl_items_async(Spider, ProductHtml, settings)
+    assert items == [{"url": url}]

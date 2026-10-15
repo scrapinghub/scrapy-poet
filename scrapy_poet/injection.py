@@ -198,8 +198,10 @@ class Injector:
         Used by :meth:`InjectionMiddleware.get_page` and
         :meth:`InjectionMiddleware.get_item` to resolve a specific type inline.
         """
+        target = lambda page: None  # noqa: E731
+        target.__annotations__ = {"page": cls}
         return andi.plan(
-            cls,
+            target,
             is_injectable=is_injectable,
             externally_provided=self.is_class_provided_by_any_provider,
             overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
