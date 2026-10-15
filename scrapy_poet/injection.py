@@ -42,7 +42,7 @@ class _UNDEFINED:
     pass
 
 
-class DynamicDeps(dict):
+class DynamicDeps(dict[Any, Any]):
     """A container for dynamic dependencies provided via the ``"inject"`` request meta key.
 
     The dynamic dependency instances are available at the run time as dict
@@ -60,16 +60,18 @@ class Injector:
         self,
         crawler: Crawler,
         *,
-        default_providers: Mapping | None = None,
+        default_providers: Mapping[Any, Any] | None = None,
         registry: RulesRegistry | None = None,
-    ):
+    ) -> None:
         self.crawler = crawler
         self.spider = crawler.spider
         self.registry = registry or RulesRegistry()
         self.load_providers(default_providers)
         self.init_cache()
 
-    def load_providers(self, default_providers: Mapping | None = None):
+    def load_providers(
+        self, default_providers: Mapping[Any, Any] | None = None
+    ) -> None:
         providers_dict = {
             **(default_providers or {}),
             **self.crawler.settings.getdict("SCRAPY_POET_PROVIDERS"),
@@ -88,8 +90,8 @@ class Injector:
             self.providers
         )
 
-    def init_cache(self):
-        self.cache = {}
+    def init_cache(self) -> None:
+        self.cache: dict[str, Any] | SerializedDataCache = {}
         cache_path = self.crawler.settings.get("SCRAPY_POET_CACHE")
 
         # SCRAPY_POET_CACHE: True
@@ -111,17 +113,19 @@ class Injector:
         # This is different from the cache above as it only stores instances as long
         # as the request exists. This is useful for latter providers to re-use the
         # already built instances by earlier providers.
-        self.weak_cache: WeakKeyDictionary[Request, dict] = WeakKeyDictionary()
-        # Caches the result of build_plan() per request as (plan, inject_snapshot).
-        self._plan_cache: WeakKeyDictionary[Request, tuple[andi.Plan, tuple]] = (
+        self.weak_cache: WeakKeyDictionary[Request, dict[Any, Any]] = (
             WeakKeyDictionary()
         )
+        # Caches the result of build_plan() per request as (plan, inject_snapshot).
+        self._plan_cache: WeakKeyDictionary[
+            Request, tuple[andi.Plan, tuple[Any, ...]]
+        ] = WeakKeyDictionary()
         self._warned_inject_changed = False
 
     def available_dependencies_for_providers(
         self, request: Request, response: Response
-    ):
-        deps = {
+    ) -> dict[Callable[..., Any], Any]:
+        deps: dict[Callable[..., Any], Any] = {
             Crawler: self.crawler,
             Spider: self.spider,
             Settings: self.crawler.settings,
@@ -145,7 +149,7 @@ class Injector:
 
         return result
 
-    def is_scrapy_response_required(self, request: Request):
+    def is_scrapy_response_required(self, request: Request) -> bool:
         """
         Check whether Scrapy's :class:`~scrapy.http.Request`'s
         :class:`~scrapy.http.Response` is going to be used.
@@ -185,16 +189,13 @@ class Injector:
             callback,
             is_injectable=is_injectable,
             externally_provided=self.is_class_provided_by_any_provider,
-            # Ignore the type since andi.plan expects overrides to be
-            # Callable[[Callable], Optional[Callable]] but the registry
-            # returns the typing for ``dict.get()`` method.
-            overrides=self.registry.overrides_for(request.url).get,  # type: ignore[arg-type]
+            overrides=self.registry.overrides_for(request.url).get,
             custom_builder_fn=self._get_custom_builder(request),
         )
 
     def _get_custom_builder(
         self, request: Request
-    ) -> Callable[[Callable], Callable | None]:
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any] | None]:
         """Return a function suitable for passing as ``custom_builder_fn`` to ``andi.plan``.
 
         The returned function can map an item to a factory for that item based
@@ -202,7 +203,7 @@ class Injector:
         """
 
         @functools.cache  # to minimize the registry queries
-        def mapping_fn(dep_cls: Callable) -> Callable | None:
+        def mapping_fn(dep_cls: Callable[..., Any]) -> Callable[..., Any] | None:
             # building DynamicDeps
             if dep_cls is DynamicDeps:
                 dynamic_types = request.meta.get("inject", [])
@@ -211,14 +212,14 @@ class Injector:
                 return self._get_dynamic_deps_factory(dynamic_types)
 
             # building items from pages
-            page_object_cls: type[ItemPage] | None = self.registry.page_cls_for_item(
-                request.url, cast("type", dep_cls)
+            page_object_cls: type[ItemPage[Any]] | None = (
+                self.registry.page_cls_for_item(request.url, cast("type", dep_cls))
             )
             if not page_object_cls:
                 return None
 
             async def item_factory(page: page_object_cls) -> dep_cls:  # type: ignore[valid-type]
-                return await page.to_item()  # type: ignore[attr-defined]
+                return await page.to_item()  # type: ignore[attr-defined,no-any-return]
 
             return item_factory
 
@@ -244,7 +245,7 @@ class Injector:
 
     @staticmethod
     def _get_dynamic_deps_factory(
-        dynamic_types: list[type],
+        dynamic_types: list[Any],
     ) -> Callable[..., DynamicDeps]:
         """Return a function that creates a :class:`.DynamicDeps` instance from its args.
 
@@ -262,14 +263,15 @@ class Injector:
         txt = Injector._get_dynamic_deps_factory_text(type_names)
         ns: dict[str, Any] = {}
         exec(txt, globals(), ns)  # noqa: S102
-        return ns["__create_fn__"](*dynamic_types)
+        factory: Callable[..., DynamicDeps] = ns["__create_fn__"](*dynamic_types)
+        return factory
 
     async def build_instances(
         self,
         request: Request,
         response: Response,
         plan: andi.Plan,
-    ):
+    ) -> dict[Callable[..., Any], Any]:
         """Build the instances dict from a plan including external dependencies."""
         # First we build the external dependencies using the providers
         instances = await self.build_instances_from_providers(
@@ -301,15 +303,16 @@ class Injector:
         request: Request,
         response: Response,
         plan: andi.Plan,
-    ):
+    ) -> dict[Callable[..., Any], Any]:
         """Build dependencies handled by registered providers"""
         assert self.crawler.stats
-        instances: dict[Callable, Any] = {}
+        instances: dict[Callable[..., Any], Any] = {}
         scrapy_provided_dependencies = self.available_dependencies_for_providers(
             request, response
         )
         dependencies_set = {cls for cls, _ in plan.dependencies}
         objs: list[Any]
+        fingerprint: str | None
         for provider in self.providers:
             provided_classes = {
                 cls for cls in dependencies_set if provider.is_provided(cls)
@@ -363,11 +366,12 @@ class Injector:
                 except Exception as e:
                     if self.cache and self.caching_errors:
                         # Save errors in the cache
+                        assert fingerprint is not None
                         self.cache[fingerprint] = e
                         self.crawler.stats.inc_value("poet/cache/firsthand")
                     raise
 
-            objs_by_type: dict[Callable, Any] = {}
+            objs_by_type: dict[Callable[..., Any], Any] = {}
             for obj in objs:
                 if isinstance(obj, AnnotatedInstance):
                     cls = obj.get_annotated_cls()
@@ -394,12 +398,15 @@ class Injector:
 
             if self.cache and not cache_hit:
                 # Save the results in the cache
+                assert fingerprint is not None
                 self.cache[fingerprint] = serialize(objs)
                 self.crawler.stats.inc_value("poet/cache/firsthand")
 
         return instances
 
-    async def build_callback_dependencies(self, request: Request, response: Response):
+    async def build_callback_dependencies(
+        self, request: Request, response: Response
+    ) -> dict[str, Any]:
         """
         Scan the configured callback for this request looking for the
         dependencies and build the corresponding instances. Return a kwargs
@@ -410,7 +417,7 @@ class Injector:
         return plan.final_kwargs(provider_instances)
 
 
-def check_all_providers_are_callable(providers):
+def check_all_providers_are_callable(providers: Iterable[Any]) -> None:
     for provider in providers:
         if not callable(provider):
             raise NonCallableProviderError(
@@ -421,29 +428,30 @@ def check_all_providers_are_callable(providers):
 
 def is_class_provided_by_any_provider_fn(
     providers: list[PageObjectInputProvider],
-) -> Callable[[Callable], bool]:
+) -> Callable[[Any], bool]:
     """
     Return a function of type ``Callable[[Type], bool]`` that return
     True if the given type is provided by any of the registered providers.
 
     The ``is_provided`` method from each provider is used.
     """
-    callables: list[Callable[[Callable], bool]] = [
+    callables: list[Callable[[Any], bool]] = [
         provider.is_provided for provider in providers
     ]
 
-    def is_provided_fn(type_: Callable) -> bool:
+    def is_provided_fn(type_: Any) -> bool:
         return any(is_provided(type_) for is_provided in callables)
 
     return is_provided_fn
 
 
-def get_callback(request, spider):
+def get_callback(request: Request, spider: Spider | None) -> Callable[..., Any]:
     """Get the :attr:`scrapy.Request.callback <scrapy.http.Request.callback>` of
     a :class:`scrapy.Request <scrapy.http.Request>`.
     """
     if request.callback is None:
-        return getattr(spider, "parse")  # noqa: B009
+        parse: Callable[..., Any] = getattr(spider, "parse")  # noqa: B009
+        return parse
     return request.callback
 
 
@@ -451,7 +459,7 @@ _unset = object()
 
 
 def is_callback_requiring_scrapy_response(
-    callback: Callable, raw_callback: Any = _unset
+    callback: Callable[..., Any], raw_callback: Any = _unset
 ) -> bool:
     """
     Check whether the request's callback method requires the response.
@@ -508,7 +516,7 @@ SCRAPY_PROVIDED_CLASSES = {
 }
 
 
-def is_provider_requiring_scrapy_response(provider):
+def is_provider_requiring_scrapy_response(provider: Any) -> bool:
     """Check whether injectable provider makes use of a valid
     :class:`scrapy.http.Response`.
     """
@@ -518,15 +526,15 @@ def is_provider_requiring_scrapy_response(provider):
         externally_provided=SCRAPY_PROVIDED_CLASSES,
     )
     for possible_type, _ in plan.dependencies:
-        if issubclass(possible_type, Response):
+        if issubclass_safe(possible_type, Response):
             return True
 
     return False
 
 
 def get_injector_for_testing(
-    providers: Mapping,
-    additional_settings: dict | None = None,
+    providers: Mapping[Any, Any],
+    additional_settings: dict[str, Any] | None = None,
     registry: RulesRegistry | None = None,
 ) -> Injector:
     """
@@ -549,7 +557,7 @@ def get_injector_for_testing(
 
 
 def get_response_for_testing(
-    callback: Callable, meta: dict[str, Any] | None = None
+    callback: Callable[..., Any], meta: dict[str, Any] | None = None
 ) -> Response:
     """
     Return a :class:`scrapy.http.Response` with fake content with the configured

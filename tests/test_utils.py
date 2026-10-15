@@ -1,10 +1,14 @@
+from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
+from typing import Any
 from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
 from scrapy import Spider
 from scrapy.http import Request, Response, TextResponse
+from scrapy.settings import Settings
+from scrapy.utils.defer import deferred_f_from_coro_f, maybe_deferred_to_future
 from scrapy.utils.test import get_crawler
 from web_poet import HttpRequest, HttpResponse
 
@@ -15,6 +19,12 @@ from scrapy_poet.utils import (
     http_request_to_scrapy_request,
     http_response_to_scrapy_response,
     scrapy_response_to_http_response,
+)
+from scrapy_poet.utils.testing import (
+    CollectorPipeline,
+    ProductHtml,
+    crawl_single_item,
+    make_crawler,
 )
 
 
@@ -90,7 +100,9 @@ def test_get_scrapy_data_path(
         ),
     ],
 )
-def test_http_request_to_scrapy_request(http_request, kwargs, scrapy_request):
+def test_http_request_to_scrapy_request(
+    http_request: HttpRequest, kwargs: dict[str, Any], scrapy_request: Request
+) -> None:
     result = http_request_to_scrapy_request(http_request, **kwargs)
     assert result.url == scrapy_request.url
     assert result.method == scrapy_request.method
@@ -175,7 +187,9 @@ def test_http_request_to_scrapy_request(http_request, kwargs, scrapy_request):
         ),
     ],
 )
-def test_scrapy_response_to_http_response(scrapy_response, http_response):
+def test_scrapy_response_to_http_response(
+    scrapy_response: Response, http_response: HttpResponse
+) -> None:
     result = scrapy_response_to_http_response(scrapy_response)
     assert str(result.url) == str(http_response.url)
     assert result.body == http_response.body
@@ -252,7 +266,9 @@ def test_scrapy_response_to_http_response(scrapy_response, http_response):
         ),
     ],
 )
-def test_http_response_to_scrapy_response(scrapy_response, http_response):
+def test_http_response_to_scrapy_response(
+    scrapy_response: Response, http_response: HttpResponse
+) -> None:
     result = http_response_to_scrapy_response(http_response)
     assert str(result.url) == str(http_response.url)
     assert result.body == scrapy_response.body
@@ -262,7 +278,9 @@ def test_http_response_to_scrapy_response(scrapy_response, http_response):
 
 
 @mock.patch("scrapy_poet.utils.consume_modules")
-def test_create_registry_instance_SCRAPY_POET_DISCOVER(mock_consume_modules, settings):
+def test_create_registry_instance_SCRAPY_POET_DISCOVER(
+    mock_consume_modules: MagicMock, settings: dict[str, Any]
+) -> None:
     settings["SCRAPY_POET_RULES"] = []
 
     mock_cls = mock.Mock()
@@ -277,3 +295,40 @@ def test_create_registry_instance_SCRAPY_POET_DISCOVER(mock_consume_modules, set
     create_registry_instance(mock_cls, fake_crawler)
     assert mock_consume_modules.call_args_list == [mock.call("a.b.c"), mock.call("x.y")]
     mock_cls.assert_called_once_with(rules=[])
+
+
+def test_make_crawler_settings_object() -> None:
+    class TestSpider(Spider):
+        name = "test"
+
+    settings = Settings({"FOO": "bar"}, priority="spider")
+    crawler = make_crawler(TestSpider, settings)
+    assert crawler.settings["FOO"] == "bar"
+    assert crawler.settings.getpriority("FOO") == settings.getpriority("FOO")
+    assert CollectorPipeline in crawler.settings["ITEM_PIPELINES"]
+
+
+@deferred_f_from_coro_f
+async def test_crawl_single_item() -> None:
+    class ItemSpider(Spider):
+        name = "item"
+        url: str
+
+        def start_requests(self) -> Iterator[Request]:
+            yield Request(self.url)
+
+        async def start(self) -> AsyncIterator[Any]:
+            for request in self.start_requests():
+                yield request
+
+        def parse(self, response: Response) -> Iterator[dict[str, str]]:
+            yield {"url": response.url}
+
+    with (
+        pytest.warns(DeprecationWarning, match="crawl_items is deprecated"),
+        pytest.warns(DeprecationWarning, match="crawl_single_item is deprecated"),
+    ):
+        item, url, _ = await maybe_deferred_to_future(
+            crawl_single_item(ItemSpider, ProductHtml, {})
+        )
+    assert item == {"url": url}

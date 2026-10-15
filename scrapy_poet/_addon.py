@@ -71,7 +71,7 @@ def _replace_builtin(
 
 
 # https://github.com/scrapy-plugins/scrapy-zyte-api/blob/a1d81d11854b420248f38e7db49c685a8d46d943/scrapy_zyte_api/addon.py#L12
-def _setdefault(settings, setting, cls, pos):
+def _setdefault(settings: BaseSettings, setting: str, cls: type, pos: int) -> None:
     setting_value = settings[setting]
     if not setting_value:
         settings[setting] = {cls: pos}

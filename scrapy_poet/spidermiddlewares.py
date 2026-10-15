@@ -7,6 +7,8 @@ from web_poet.exceptions import Retry
 from .utils import _get_retry_request_from_exception
 
 if TYPE_CHECKING:
+    from typing import Self
+
     from scrapy import Spider
     from scrapy.crawler import Crawler
     from scrapy.http import Request, Response
@@ -19,7 +21,7 @@ class RetryMiddleware:
     crawler: Crawler | None
 
     @classmethod
-    def from_crawler(cls, crawler):
+    def from_crawler(cls, crawler: Crawler) -> Self:
         obj = cls()
         obj.crawler = crawler
         return obj
