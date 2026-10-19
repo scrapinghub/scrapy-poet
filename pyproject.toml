@@ -77,6 +77,7 @@ filename = "scrapy_poet/VERSION"
 
 [tool.coverage.run]
 branch = true
+sigterm = true  # MockServer stops its subprocess with SIGTERM
 patch = [
     "subprocess",
 ]
@@ -93,12 +94,11 @@ exclude_also = [
     "@(abc\\.)?abstractmethod",
 ]
 
-[[tool.mypy.overrides]]
-module = [
-    "tests.test_cache.*",
-    "tests.test_downloader.*",
-    "tests.test_web_poet_rules.*",
-    "tests.test_scrapy_dependencies.*",
+[tool.mypy]
+strict = true
+# Unannotated third-party functions.
+untyped_calls_exclude = [
+    "twisted",
 ]
 
 [tool.pytest.ini_options]
@@ -243,15 +243,7 @@ split-on-trailing-comma = false
 # scrapy_poet/__init__.py: Automatic import sorting causes circular dependencies.
 "scrapy_poet/__init__.py" = ["F401", "I"]
 "scrapy_poet/page_inputs/__init__.py" = ["F401"]
-"tests/*" = ["SLOT000", "S"]
-
-# we need to use typing.Set[] over modern alternatives with web-poet<0.19.0 && Python<3.11
-# see https://github.com/scrapinghub/web-poet/pull/219
-"scrapy_poet/page_input_providers.py" = ["UP006", "UP035"]
-"tests/test_downloader.py" =["UP006", "UP035"]
-"tests/test_providers.py" =["UP006", "UP035"]
-"tests/test_request_fingerprinter.py" =["UP006", "UP035"]
-"tests/test_web_poet_rules.py" =["UP006", "UP035"]
+"tests/*" = ["S", "SLOT000"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"

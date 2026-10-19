@@ -10,7 +10,8 @@ import os
 import socket
 import warnings
 from collections import defaultdict
-from typing import Any, Callable, Set
+from collections.abc import AsyncIterator, Callable, Iterator
+from typing import Any, cast
 
 import attrs
 import pytest
@@ -37,31 +38,31 @@ from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
 from scrapy_poet.page_input_providers import PageObjectInputProvider
 from scrapy_poet.utils.mockserver import get_ephemeral_port
 from scrapy_poet.utils.testing import (
+    ProductHtml,
     _get_test_settings,
     capture_exceptions,
     crawl_single_item_async,
 )
-from tests.test_middleware import ProductHtml
 
 DOMAIN = get_domain(socket.gethostbyname(socket.gethostname()))
 PORT = get_ephemeral_port()
 URL = f"{DOMAIN}:{PORT}"
 
 
-def rules_settings() -> dict:
+def rules_settings() -> dict[str, Any]:
     settings = _get_test_settings()
     settings["SCRAPY_POET_RULES"] = default_registry.get_rules()
     return settings
 
 
-def spider_for(injectable: type):
+def spider_for(injectable: type) -> type[scrapy.Spider]:
     class InjectableSpider(scrapy.Spider):
-        url = None
+        url: str
 
-        def start_requests(self):
+        def start_requests(self) -> Iterator[scrapy.Request]:
             yield scrapy.Request(self.url, capture_exceptions(callback_for(injectable)))
 
-        async def start(self):
+        async def start(self) -> AsyncIterator[Any]:
             for item_or_request in self.start_requests():
                 yield item_or_request
 
@@ -80,29 +81,29 @@ class PageObjectCounterMixin:
     additional requests used to produce the item.
     """
 
-    instances: dict[type, Any] = defaultdict(list)
+    instances: dict[type["PageObjectCounterMixin"], Any] = defaultdict(list)
     to_item_call_count = 0
 
-    def __attrs_pre_init__(self):
+    def __attrs_pre_init__(self) -> None:
         self.instances[type(self)].append(self)
 
     @classmethod
-    def assert_instance_count(cls, count, type_):
+    def assert_instance_count(cls, count: int, type_: type) -> None:
         assert len(cls.instances[type_]) == count, type_
 
     @classmethod
-    def clear(cls):
+    def clear(cls) -> None:
         for po_cls in cls.instances:
             po_cls.to_item_call_count = 0
         cls.instances = defaultdict(list)
 
     async def to_item(self) -> ItemT:
         type(self).to_item_call_count += 1
-        return await super().to_item()  # type: ignore[misc]
+        return await super().to_item()  # type: ignore[misc,no-any-return]
 
 
 async def crawl_item_and_deps(
-    page_object, override_settings: dict | None = None
+    page_object: type, override_settings: dict[str, Any] | None = None
 ) -> tuple[Any, Any]:
     """Helper function to easily return the item and injected dependencies from
     a simulated Scrapy callback which asks for either of these dependencies:
@@ -117,10 +118,12 @@ async def crawl_item_and_deps(
     item, _, crawler = await crawl_single_item_async(
         spider_for(page_object), ProductHtml, settings, port=PORT
     )
-    return item, crawler.spider.collected_response_deps
+    return item, cast("Any", crawler.spider).collected_response_deps
 
 
-def assert_deps(deps: list[dict[str, Any]], expected: dict[str, Any], size: int = 1):
+def assert_deps(
+    deps: list[dict[str, Any]], expected: dict[str, Any], size: int = 1
+) -> None:
     """Helper for easily checking the instances of the ``deps`` returned by
     ``crawl_item_and_deps()``.
 
@@ -145,8 +148,8 @@ async def assert_no_item(page: type) -> None:
 
 
 @handle_urls(URL)
-class UrlMatchPage(ItemPage):
-    async def to_item(self) -> dict:
+class UrlMatchPage(ItemPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "PO URL Match"}
 
 
@@ -161,8 +164,8 @@ async def test_url_only_match() -> None:
 
 
 @handle_urls("example.com")
-class UrlNoMatchPage(ItemPage):
-    async def to_item(self) -> dict:
+class UrlNoMatchPage(ItemPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "PO No URL Match"}
 
 
@@ -180,13 +183,13 @@ async def test_url_only_no_match() -> None:
     assert_deps(deps, {"page": UrlNoMatchPage})
 
 
-class NoRulePage(ItemPage):
-    async def to_item(self) -> dict:
+class NoRulePage(ItemPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "NO Rule"}
 
 
-class NoRuleWebPage(WebPage):
-    async def to_item(self) -> dict:
+class NoRuleWebPage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "NO Rule Web"}
 
 
@@ -206,14 +209,14 @@ async def test_no_rule_declaration() -> None:
     assert_deps(deps, {"page": NoRuleWebPage})
 
 
-class OverriddenPage(WebPage):
-    async def to_item(self) -> dict:
+class OverriddenPage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "PO that will be replaced"}
 
 
 @handle_urls(URL, instead_of=OverriddenPage)
-class ReplacementPage(WebPage):
-    async def to_item(self) -> dict:
+class ReplacementPage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "PO replacement"}
 
 
@@ -235,14 +238,14 @@ async def test_basic_overrides() -> None:
     assert_deps(deps, {"page": ReplacementPage})
 
 
-class LeftPage(WebPage):
-    async def to_item(self) -> dict:
+class LeftPage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "left page"}
 
 
 @handle_urls(URL, instead_of=LeftPage)
-class RightPage(WebPage):
-    async def to_item(self) -> dict:
+class RightPage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "right page"}
 
 
@@ -267,20 +270,20 @@ async def test_mutual_overrides() -> None:
 
 
 @handle_urls(URL)
-class NewHopePage(WebPage):
-    async def to_item(self) -> dict:
+class NewHopePage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "new hope"}
 
 
 @handle_urls(URL, instead_of=NewHopePage)
-class EmpireStrikesBackPage(WebPage):
-    async def to_item(self) -> dict:
+class EmpireStrikesBackPage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "empire strikes back"}
 
 
 @handle_urls(URL, instead_of=EmpireStrikesBackPage)
-class ReturnOfTheJediPage(WebPage):
-    async def to_item(self) -> dict:
+class ReturnOfTheJediPage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "return of the jedi"}
 
 
@@ -305,21 +308,21 @@ async def test_chained_overrides() -> None:
 
 
 @handle_urls(URL)
-class FirstPage(WebPage):
-    async def to_item(self) -> dict:
+class FirstPage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "First page"}
 
 
 @handle_urls(URL)
-class SecondPage(WebPage):
-    async def to_item(self) -> dict:
+class SecondPage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "Second page"}
 
 
 @handle_urls(URL, instead_of=FirstPage)
 @handle_urls(URL, instead_of=SecondPage)
-class MultipleRulePage(WebPage):
-    async def to_item(self) -> dict:
+class MultipleRulePage(WebPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"msg": "multiple rule page"}
 
 
@@ -826,7 +829,7 @@ class StandaloneProduct:
 
 
 @handle_urls(URL, to_return=StandaloneProduct)
-class StandaloneProductPage(ItemPage):
+class StandaloneProductPage(ItemPage):  # type: ignore[type-arg]
     @field
     def name(self) -> str:
         return "standalone product name"
@@ -887,18 +890,18 @@ async def test_item_return_from_injectable() -> None:
 
 
 @handle_urls(URL)
-class PageObjectDependencyPage(ItemPage):
-    async def to_item(self) -> dict:
+class PageObjectDependencyPage(ItemPage):  # type: ignore[type-arg]
+    async def to_item(self) -> dict[str, Any]:
         return {"name": "item dependency"}
 
 
 @attrs.define
 class MainProductA:
     name: str
-    item_from_po_dependency: dict
+    item_from_po_dependency: dict[str, Any]
 
 
-class ReplacedProductPageObjectDepPage(ItemPage):
+class ReplacedProductPageObjectDepPage(ItemPage):  # type: ignore[type-arg]
     pass
 
 
@@ -912,7 +915,7 @@ class ProductWithPageObjectDepPage(ItemPage[MainProductA]):
         return "(with item dependency) product name"
 
     @field
-    async def item_from_po_dependency(self) -> dict:
+    async def item_from_po_dependency(self) -> dict[str, Any]:
         return await self.injected_page.to_item()
 
 
@@ -967,7 +970,7 @@ class MainProductB:
     item_dependency: ItemDependency
 
 
-class ReplacedProductItemDepPage(ItemPage):
+class ReplacedProductItemDepPage(ItemPage):  # type: ignore[type-arg]
     pass
 
 
@@ -1315,7 +1318,9 @@ class EggCyclePage(ItemPage[EggItem]):
 
 
 @deferred_f_from_coro_f
-async def test_page_object_with_item_dependency_cycle_a(caplog) -> None:
+async def test_page_object_with_item_dependency_cycle_a(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Items with page objects which depend on each other resulting in a plan cycle
     should have a corresponding error raised.
     """
@@ -1324,19 +1329,25 @@ async def test_page_object_with_item_dependency_cycle_a(caplog) -> None:
 
 
 @deferred_f_from_coro_f
-async def test_page_object_with_item_dependency_cycle_b(caplog) -> None:
+async def test_page_object_with_item_dependency_cycle_b(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     await crawl_item_and_deps(EggItem)
     assert "Cyclic dependency found" in caplog.text
 
 
 @deferred_f_from_coro_f
-async def test_page_object_with_item_dependency_cycle_c(caplog) -> None:
+async def test_page_object_with_item_dependency_cycle_c(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     await crawl_item_and_deps(ChickenCyclePage)
     assert "Cyclic dependency found" in caplog.text
 
 
 @deferred_f_from_coro_f
-async def test_page_object_with_item_dependency_cycle_d(caplog) -> None:
+async def test_page_object_with_item_dependency_cycle_d(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     await crawl_item_and_deps(EggCyclePage)
     assert "Cyclic dependency found" in caplog.text
 
@@ -1383,7 +1394,9 @@ class Egg2CyclePage(ItemPage[Egg2Item]):
 
 
 @deferred_f_from_coro_f
-async def test_page_object_with_item_dependency_cycle_2_a(caplog) -> None:
+async def test_page_object_with_item_dependency_cycle_2_a(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """Same with ``test_page_object_with_item_dependency_cycle()`` but one
     of the page objects requires a page object instead of an item.
     """
@@ -1392,19 +1405,25 @@ async def test_page_object_with_item_dependency_cycle_2_a(caplog) -> None:
 
 
 @deferred_f_from_coro_f
-async def test_page_object_with_item_dependency_cycle_2_b(caplog) -> None:
+async def test_page_object_with_item_dependency_cycle_2_b(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     await crawl_item_and_deps(Egg2Item)
     assert "Cyclic dependency found" in caplog.text
 
 
 @deferred_f_from_coro_f
-async def test_page_object_with_item_dependency_cycle_2_c(caplog) -> None:
+async def test_page_object_with_item_dependency_cycle_2_c(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     await crawl_item_and_deps(Chicken2CyclePage)
     assert "Cyclic dependency found" in caplog.text
 
 
 @deferred_f_from_coro_f
-async def test_page_object_with_item_dependency_cycle_2_d(caplog) -> None:
+async def test_page_object_with_item_dependency_cycle_2_d(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     await crawl_item_and_deps(Egg2CyclePage)
     assert "Cyclic dependency found" in caplog.text
 
@@ -1427,7 +1446,9 @@ class MobiusPage(WebPage[Mobius]):
 class MobiusProvider(PageObjectInputProvider):
     provided_classes = {Mobius}
 
-    def __call__(self, to_provide: Set[Callable], request: scrapy.Request):
+    def __call__(
+        self, to_provide: set[Callable[..., Any]], request: scrapy.Request
+    ) -> list[Mobius]:
         return [Mobius(name="mobius from MobiusProvider")]
 
 
@@ -1451,7 +1472,7 @@ async def test_page_object_returning_item_which_is_also_a_dep() -> None:
 
 @deferred_f_from_coro_f
 async def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_item(
-    caplog,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Same as ``test_page_object_returning_item_which_is_also_a_dep()``
     but there's no provider for the original item
@@ -1462,7 +1483,7 @@ async def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_it
 
 @deferred_f_from_coro_f
 async def test_page_object_returning_item_which_is_also_a_dep_but_no_provider_po(
-    caplog,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Same with ``test_page_object_returning_item_which_is_also_a_dep_but_no_provider_item()``
     but tests the PO instead of the item.
@@ -1497,7 +1518,9 @@ class JoeyPage(KangarooPage):
 class KangarooProvider(PageObjectInputProvider):
     provided_classes = {Kangaroo}
 
-    def __call__(self, to_provide: Set[Callable], request: scrapy.Request):
+    def __call__(
+        self, to_provide: set[Callable[..., Any]], request: scrapy.Request
+    ) -> list[Kangaroo]:
         return [Kangaroo(name="data from KangarooProvider")]
 
 
