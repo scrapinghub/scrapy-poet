@@ -22,7 +22,6 @@ from web_poet import (
     HttpRequest,
     HttpRequestHeaders,
     HttpResponse,
-    HttpResponseHeaders,
     PageParams,
     RequestUrl,
     ResponseUrl,
@@ -32,6 +31,7 @@ from web_poet.page_inputs.stats import StatCollector, StatNum
 
 from scrapy_poet.downloader import _create_scrapy_downloader
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
+from scrapy_poet.utils import scrapy_response_to_http_response
 
 if TYPE_CHECKING:
     from scrapy_poet.injection import Injector
@@ -172,14 +172,7 @@ class HttpResponseProvider(PageObjectInputProvider):
         <web_poet.page_inputs.http.HttpResponse>` instance using a
         :class:`scrapy.http.Response` instance.
         """
-        return [
-            HttpResponse(
-                url=response.url,
-                body=response.body,
-                status=response.status,
-                headers=HttpResponseHeaders.from_bytes_dict(response.headers),
-            )
-        ]
+        return [scrapy_response_to_http_response(response)]
 
 
 class HttpClientProvider(PageObjectInputProvider):
