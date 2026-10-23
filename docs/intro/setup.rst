@@ -38,6 +38,8 @@ Add the following to your Scrapy configuration to enable scrapy-poet:
 
         -   Sets :class:`~scrapy_poet.InjectionMiddleware` with value ``543``.
 
+        -   Sets :class:`~scrapy_poet.NavigationMiddleware` with value ``585``.
+
         -   Replaces
             :class:`scrapy.downloadermiddlewares.stats.DownloaderStats`
             with :class:`scrapy_poet.DownloaderStatsMiddleware`.
