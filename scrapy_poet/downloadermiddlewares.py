@@ -8,11 +8,27 @@ from __future__ import annotations
 import inspect
 import logging
 import warnings
+from functools import cached_property
 from typing import TYPE_CHECKING, Self
 
 from scrapy.downloadermiddlewares.stats import DownloaderStats
+from scrapy.exceptions import NotConfigured
+from scrapy.http import TextResponse
 from web_poet import RulesRegistry
 from web_poet.exceptions import Retry
+
+try:
+    from web_poet._frostwork import (
+        _decodes_as_declared,
+        _extract,
+        _get_union_page,
+        _response_kind,
+    )
+    from web_poet._selectors import _SELECTORS_DICT_ATTRIBUTE
+except ImportError:  # web-poet without web_poet._frostwork
+    _FROSTWORK = False
+else:
+    _FROSTWORK = True
 
 from .api import DummyResponse
 from .injection import Injector
@@ -24,6 +40,7 @@ from .page_input_providers import (
     RequestUrlProvider,
     ResponseUrlProvider,
     StatsProvider,
+    _navigation_values,
 )
 from .utils import (
     _get_retry_request_from_exception,
@@ -176,4 +193,76 @@ class InjectionMiddleware:
             request.cb_kwargs[arg] = value
             # TODO: check if all arguments are fulfilled somehow?
 
+        return response
+
+
+class NavigationMiddleware:
+    """Downloader middleware that saves a parse of the response body when the
+    callback gets page objects with :ref:`declarative selectors
+    <web-poet:declarative-selectors>`, by reading the
+    :attr:`~scrapy.http.TextResponse.base_url` and
+    :attr:`~scrapy.http.TextResponse.meta_refresh` of the response in the same
+    parse that extracts their fields.
+
+    .. versionadded:: VERSION
+
+    Its value in :setting:`DOWNLOADER_MIDDLEWARES` must be lower than that of
+    :class:`~scrapy.downloadermiddlewares.httpcompression.HttpCompressionMiddleware`
+    and higher than that of
+    :class:`~scrapy.downloadermiddlewares.redirect.MetaRefreshMiddleware`.
+    """
+
+    def __init__(self, crawler: Crawler) -> None:
+        # web-poet without web_poet._frostwork, or Scrapy without writable
+        # TextResponse.base_url and meta_refresh.
+        if not _FROSTWORK or not hasattr(TextResponse, "meta_refresh"):
+            raise NotConfigured
+        self.crawler = crawler
+
+    @classmethod
+    def from_crawler(cls, crawler: Crawler) -> Self:
+        return cls(crawler)
+
+    @cached_property
+    def _injector(self) -> Injector | None:
+        assert self.crawler.engine
+        for middleware in self.crawler.engine.downloader.middleware.middlewares:
+            if isinstance(middleware, InjectionMiddleware):
+                return middleware.injector
+        return None
+
+    def process_response(
+        self, request: Request, response: Response, spider: Spider | None = None
+    ) -> Response:
+        if not isinstance(response, TextResponse) or self._injector is None:
+            return response
+        classes = [
+            cls
+            for cls, _ in self._injector.build_plan(request)
+            if isinstance(cls, type)
+            and hasattr(cls, _SELECTORS_DICT_ATTRIBUTE)
+            and _response_kind(cls) != "browser"
+        ]
+        try:
+            compiled = _get_union_page(classes)
+        except TypeError:
+            # Over the frostwork budget together. The page objects extract
+            # their declarations themselves.
+            return response
+        if compiled is None:
+            return response
+        document = (response.body, response.encoding)
+        if not _decodes_as_declared(document):
+            return response
+        values, navigation = _extract(
+            compiled, document, response.url, base_url=True, meta_refresh=True
+        )
+        assert navigation.base_url is not None
+        response.base_url = navigation.base_url
+        response.meta_refresh = navigation.meta_refresh
+        _navigation_values[response] = (
+            response.encoding,
+            values,
+            navigation.base_url,
+        )
         return response

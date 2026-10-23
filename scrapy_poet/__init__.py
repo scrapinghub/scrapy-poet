@@ -1,5 +1,9 @@
 from .api import DummyResponse, callback_for
-from .downloadermiddlewares import DownloaderStatsMiddleware, InjectionMiddleware
+from .downloadermiddlewares import (
+    DownloaderStatsMiddleware,
+    InjectionMiddleware,
+    NavigationMiddleware,
+)
 from .injection import DynamicDeps
 from .page_input_providers import HttpResponseProvider, PageObjectInputProvider
 from .spidermiddlewares import RetryMiddleware
@@ -13,6 +17,7 @@ __all__ = [
     "DynamicDeps",
     "HttpResponseProvider",
     "InjectionMiddleware",
+    "NavigationMiddleware",
     "PageObjectInputProvider",
     "RetryMiddleware",
     "ScrapyPoetRequestFingerprinter",

@@ -11,6 +11,7 @@ for example, from scrapy-playwright or from scrapy-zyte-api.
 
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, ClassVar
+from weakref import WeakKeyDictionary
 
 from scrapy import Request
 from scrapy.crawler import Crawler
@@ -35,6 +36,12 @@ from scrapy_poet.injection_errors import MalformedProvidedClassesError
 
 if TYPE_CHECKING:
     from scrapy_poet.injection import Injector
+
+# Encoding, selector declaration values and base URL that NavigationMiddleware
+# extracted from a response.
+_navigation_values: WeakKeyDictionary[Response, tuple[str, dict[Any, Any], str]] = (
+    WeakKeyDictionary()
+)
 
 
 class PageObjectInputProvider:
@@ -172,14 +179,18 @@ class HttpResponseProvider(PageObjectInputProvider):
         <web_poet.page_inputs.http.HttpResponse>` instance using a
         :class:`scrapy.http.Response` instance.
         """
-        return [
-            HttpResponse(
-                url=response.url,
-                body=response.body,
-                status=response.status,
-                headers=HttpResponseHeaders.from_bytes_dict(response.headers),
-            )
-        ]
+        http_response = HttpResponse(
+            url=response.url,
+            body=response.body,
+            status=response.status,
+            headers=HttpResponseHeaders.from_bytes_dict(response.headers),
+        )
+        if (navigation := _navigation_values.get(response)) is not None:
+            encoding, values, base_url = navigation
+            if http_response.encoding == encoding:
+                http_response._frostwork_values = values  # type: ignore[attr-defined]
+                http_response._cached_base_url = base_url
+        return [http_response]
 
 
 class HttpClientProvider(PageObjectInputProvider):

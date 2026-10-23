@@ -20,6 +20,9 @@ Scrapy components
 .. autoclass:: scrapy_poet.InjectionMiddleware
    :members:
 
+.. autoclass:: scrapy_poet.NavigationMiddleware
+   :members:
+
 .. autoclass:: scrapy_poet.RetryMiddleware
    :members:
 
