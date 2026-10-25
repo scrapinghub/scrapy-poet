@@ -10,7 +10,7 @@ automat==25.4.16
     # via twisted
 babel==2.18.0
     # via sphinx
-certifi==2026.2.25
+certifi==2026.10.19
     # via requests
 cffi==2.0.0
     # via cryptography
