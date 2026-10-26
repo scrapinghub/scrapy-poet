@@ -34,7 +34,7 @@ docutils==0.22.4
     #   sphinx
     #   sphinx-markdown-builder
     #   sphinx-rtd-theme
-filelock==3.25.2
+filelock==4.2.1
     # via tldextract
 hyperlink==21.0.0
     # via twisted
