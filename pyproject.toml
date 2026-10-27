@@ -46,6 +46,9 @@ Tracker = "https://github.com/scrapinghub/scrapy-poet/issues"
 Documentation = "https://scrapy-poet.readthedocs.io/"
 "Release notes" = "https://scrapy-poet.readthedocs.io/en/stable/changelog.html"
 
+[dependency-groups]
+docs = ["sphinx-rtd-theme >= 1.1.0"]
+
 [tool.hatch.version]
 path = "scrapy_poet/VERSION"
 pattern = "^(?P<version>.+)$"
