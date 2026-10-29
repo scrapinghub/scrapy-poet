@@ -44,20 +44,23 @@ from .test_providers import Name, Price
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
 
-def get_provider(classes, content=None):
+def get_provider(
+    classes: Any, content: str | None = None
+) -> type[PageObjectInputProvider]:
     class Provider(PageObjectInputProvider):
         provided_classes = classes
         require_response = False
 
-        def __init__(self, crawler):
+        def __init__(self, crawler: Any) -> None:
             self.crawler = crawler
 
-        def is_provided(self, type_: Callable) -> bool:
+        def is_provided(self, type_: Any) -> bool:
             return super().is_provided(strip_annotated(type_))
 
-        def __call__(self, to_provide):
+        def __call__(self, to_provide: set[Any]) -> list[Any]:
             result = []
             for cls in to_provide:
                 obj = cls(content) if content else cls()
@@ -69,15 +72,17 @@ def get_provider(classes, content=None):
     return Provider
 
 
-def get_provider_requiring_response(classes):
+def get_provider_requiring_response(
+    classes: set[Any],
+) -> type[PageObjectInputProvider]:
     class Provider(PageObjectInputProvider):
         provided_classes = classes
         require_response = True
 
-        def __init__(self, crawler):
+        def __init__(self, crawler: Any) -> None:
             self.crawler = crawler
 
-        def __call__(self, to_provide, response: Response):
+        def __call__(self, to_provide: set[Any], response: Response) -> list[Any]:
             return [cls() for cls in classes]
 
     return Provider
@@ -122,15 +127,15 @@ class MyPage(ItemPage[MyItem]):
     expensive: ExpensiveDependency2
 
     @field
-    def i(self):
+    def i(self) -> int:
         return 42
 
     @field
-    def exp(self):
+    def exp(self) -> ExpensiveDependency2:
         return self.expensive
 
 
-def get_providers_for_testing():
+def get_providers_for_testing() -> dict[type[PageObjectInputProvider], int]:
     prov1 = get_provider_requiring_response({ClsReqResponse})
     prov2 = get_provider({Cls1, Cls2})
     # Duplicating them because they should work even in this situation
@@ -138,12 +143,12 @@ def get_providers_for_testing():
 
 
 @pytest.fixture
-def providers():
+def providers() -> dict[type[PageObjectInputProvider], int]:
     return get_providers_for_testing()
 
 
 @pytest.fixture
-def injector(providers):
+def injector(providers: dict[type[PageObjectInputProvider], int]) -> Injector:
     return get_injector_for_testing(providers)
 
 
@@ -153,7 +158,7 @@ class WrapCls(Injectable):
 
 
 class TestInjector:
-    def test_constructor(self):
+    def test_constructor(self) -> None:
         injector = get_injector_for_testing(get_providers_for_testing())
         assert injector.is_class_provided_by_any_provider(ClsReqResponse)
         assert injector.is_class_provided_by_any_provider(Cls1)
@@ -165,7 +170,7 @@ class TestInjector:
                 == provider.require_response
             )
 
-    def test_non_callable_provider_error(self):
+    def test_non_callable_provider_error(self) -> None:
         """Checks that a exception is raised when a provider is not callable"""
 
         class NonCallableProvider(PageObjectInputProvider):
@@ -174,64 +179,75 @@ class TestInjector:
         with pytest.raises(NonCallableProviderError):
             get_injector_for_testing({NonCallableProvider: 1})
 
-    def test_discover_callback_providers(self, injector, providers, request):
-        def discover_fn(callback):
+    def test_discover_callback_providers(
+        self,
+        injector: Injector,
+        providers: dict[type[PageObjectInputProvider], int],
+        request: pytest.FixtureRequest,
+    ) -> None:
+        def discover_fn(callback: Callable[..., Any]) -> set[PageObjectInputProvider]:
             request = Request("http://example.com", callback=callback)
             return injector.discover_callback_providers(request)
 
         providers_list = list(providers.keys())
 
-        def callback_0(a: ClsNoProvided):
+        def callback_0(a: ClsNoProvided) -> None:
             pass
 
         assert set(map(type, discover_fn(callback_0))) == set()
 
-        def callback_1(a: ClsReqResponse, b: Cls2):
+        def callback_1(a: ClsReqResponse, b: Cls2) -> None:
             pass
 
         assert set(map(type, discover_fn(callback_1))) == set(providers_list)
 
-        def callback_2(a: Cls1, b: Cls2):
+        def callback_2(a: Cls1, b: Cls2) -> None:
             pass
 
         assert set(map(type, discover_fn(callback_2))) == {providers_list[1]}
 
-        def callback_3(a: ClsNoProvided, b: WrapCls):
+        def callback_3(a: ClsNoProvided, b: WrapCls) -> None:
             pass
 
         assert set(map(type, discover_fn(callback_3))) == {providers_list[0]}
 
-    def test_is_scrapy_response_required(self, injector):
-        def callback_no_1(response: DummyResponse, a: Cls1):
+    def test_is_scrapy_response_required(self, injector: Injector) -> None:
+        def callback_no_1(response: DummyResponse, a: Cls1) -> None:
             pass
 
         response = get_response_for_testing(callback_no_1)
+        assert response.request
         assert not injector.is_scrapy_response_required(response.request)
 
-        def callback_yes_1(response, a: Cls1):
+        def callback_yes_1(response, a: Cls1) -> None:  # type: ignore[no-untyped-def]
             pass
 
         response = get_response_for_testing(callback_yes_1)
+        assert response.request
         assert injector.is_scrapy_response_required(response.request)
 
-        def callback_yes_2(response: DummyResponse, a: ClsReqResponse):
+        def callback_yes_2(response: DummyResponse, a: ClsReqResponse) -> None:
             pass
 
         response = get_response_for_testing(callback_yes_2)
+        assert response.request
         assert injector.is_scrapy_response_required(response.request)
 
-    def test_build_plan_cache(self, injector):
-        def callback(a: Cls1):
+    def test_build_plan_cache(self, injector: Injector) -> None:
+        def callback(a: Cls1) -> None:
             pass
 
         response = get_response_for_testing(callback)
+        assert response.request
         request = response.request
         plan1 = injector.build_plan(request)
         plan2 = injector.build_plan(request)
         assert plan1 is plan2
 
-    def test_build_plan_cache_inject_change(self, caplog):
-        def callback(dd: DynamicDeps):
+    def test_build_plan_cache_inject_change(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        def callback(dd: DynamicDeps) -> None:
             pass
 
         provider = get_provider({Cls1, Cls2})
@@ -239,6 +255,7 @@ class TestInjector:
 
         with caplog.at_level(logging.WARNING, logger="scrapy_poet.injection"):
             response = get_response_for_testing(callback, meta={"inject": [Cls1]})
+            assert response.request
             request = response.request
             plan1 = injector.build_plan(request)
 
@@ -256,23 +273,25 @@ class TestInjector:
 
             # inject changes on a different request — rebuilds, no new warning.
             response2 = get_response_for_testing(callback, meta={"inject": [Cls1]})
+            assert response2.request
             injector.build_plan(response2.request)
             response2.request.meta["inject"] = [Cls2]
             injector.build_plan(response2.request)
             assert len(caplog.records) == 1
 
     @deferred_f_from_coro_f
-    async def test_build_instances_methods(self, injector):
+    async def test_build_instances_methods(self, injector: Injector) -> None:
         def callback(
             response: DummyResponse,
             a: Cls1,
             b: Cls2,
             c: WrapCls,
             d: ClsNoProviderRequired,
-        ):
+        ) -> None:
             pass
 
         response = get_response_for_testing(callback)
+        assert response.request
         request = response.request
         plan = injector.build_plan(response.request)
         instances = await injector.build_instances(request, response, plan)
@@ -283,7 +302,7 @@ class TestInjector:
             ClsReqResponse: ClsReqResponse(),
             ClsNoProviderRequired: ClsNoProviderRequired(),
         }
-        assert injector.weak_cache.get(request).keys() == {ClsReqResponse, Cls1, Cls2}
+        assert injector.weak_cache[request].keys() == {ClsReqResponse, Cls1, Cls2}
 
         instances = await injector.build_instances_from_providers(
             request, response, plan
@@ -293,20 +312,21 @@ class TestInjector:
             Cls2: Cls2(),
             ClsReqResponse: ClsReqResponse(),
         }
-        assert injector.weak_cache.get(request).keys() == {ClsReqResponse, Cls1, Cls2}
+        assert injector.weak_cache[request].keys() == {ClsReqResponse, Cls1, Cls2}
 
     @deferred_f_from_coro_f
-    async def test_build_instances_from_providers_unexpected_return(self):
-        class WrongProvider(get_provider({Cls1})):
-            def __call__(self, to_provide):
+    async def test_build_instances_from_providers_unexpected_return(self) -> None:
+        class WrongProvider(get_provider({Cls1})):  # type: ignore[misc]
+            def __call__(self, to_provide: set[Any]) -> list[Any]:
                 return [*super().__call__(to_provide), Cls2()]
 
         injector = get_injector_for_testing({WrongProvider: 0})
 
-        def callback(response: DummyResponse, a: Cls1):
+        def callback(response: DummyResponse, a: Cls1) -> None:
             pass
 
         response = get_response_for_testing(callback)
+        assert response.request
         plan = injector.build_plan(response.request)
         with pytest.raises(UndeclaredProvidedTypeError) as exinf:
             await injector.build_instances_from_providers(
@@ -327,34 +347,38 @@ class TestInjector:
         ],
     )
     @deferred_f_from_coro_f
-    async def test_build_instances_from_providers_respect_priorities(self, str_list):
+    async def test_build_instances_from_providers_respect_priorities(
+        self, str_list: list[str]
+    ) -> None:
         providers = {get_provider({str}, text): int(text) for text in str_list}
         injector = get_injector_for_testing(providers)
 
-        def callback(response: DummyResponse, arg: str):
+        def callback(response: DummyResponse, arg: str) -> None:
             pass
 
         response = get_response_for_testing(callback)
+        assert response.request
         plan = injector.build_plan(response.request)
         instances = await injector.build_instances_from_providers(
             response.request, response, plan
         )
-        assert injector.weak_cache.get(response.request).keys() == {str}
+        assert injector.weak_cache[response.request].keys() == {str}
 
         assert instances[str] == min(str_list)
 
     @deferred_f_from_coro_f
-    async def test_build_callback_dependencies(self, injector):
+    async def test_build_callback_dependencies(self, injector: Injector) -> None:
         def callback(
             response: DummyResponse,
             a: Cls1,
             b: Cls2,
             c: WrapCls,
             d: ClsNoProviderRequired,
-        ):
+        ) -> None:
             pass
 
         response = get_response_for_testing(callback)
+        assert response.request
         kwargs = await injector.build_callback_dependencies(response.request, response)
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
         assert kwargs_types == {
@@ -367,8 +391,8 @@ class TestInjector:
     @staticmethod
     async def _assert_instances(
         injector: Injector,
-        callback: Callable,
-        expected_instances: dict[type, Any],
+        callback: Callable[..., Any],
+        expected_instances: dict[Any, Any],
         expected_kwargs: dict[str, Any],
         reqmeta: dict[str, Any] | None = None,
     ) -> None:
@@ -383,15 +407,15 @@ class TestInjector:
         kwargs = await injector.build_callback_dependencies(request, response)
         assert kwargs == expected_kwargs
 
-    def test_annotated_provide(self, injector):
+    def test_annotated_provide(self, injector: Injector) -> None:
         assert injector.is_class_provided_by_any_provider(Annotated[Cls1, 42])
 
     @deferred_f_from_coro_f
-    async def test_annotated_build(self, injector):
+    async def test_annotated_build(self, injector: Injector) -> None:
         def callback(
             a: Cls1,
             b: Annotated[Cls2, 42],
-        ):
+        ) -> None:
             pass
 
         expected_instances = {
@@ -407,10 +431,10 @@ class TestInjector:
         )
 
     @deferred_f_from_coro_f
-    async def test_annotated_build_only(self, injector):
+    async def test_annotated_build_only(self, injector: Injector) -> None:
         def callback(
             a: Annotated[Cls1, 42],
-        ):
+        ) -> None:
             pass
 
         expected_instances = {
@@ -424,13 +448,13 @@ class TestInjector:
         )
 
     @deferred_f_from_coro_f
-    async def test_annotated_build_duplicate(self, injector):
+    async def test_annotated_build_duplicate(self, injector: Injector) -> None:
         def callback(
             a: Cls1,
             b: Cls2,
             c: Annotated[Cls2, 42],
             d: Annotated[Cls2, 43],
-        ):
+        ) -> None:
             pass
 
         expected_instances = {
@@ -450,15 +474,16 @@ class TestInjector:
         )
 
     @deferred_f_from_coro_f
-    async def test_annotated_build_no_support(self, injector):
+    async def test_annotated_build_no_support(self, injector: Injector) -> None:
         # get_provider_requiring_response() returns a provider that doesn't support Annotated
         def callback(
             a: Cls1,
             b: Annotated[ClsReqResponse, 42],
-        ):
+        ) -> None:
             pass
 
         response = get_response_for_testing(callback)
+        assert response.request
         request = response.request
 
         plan = injector.build_plan(response.request)
@@ -472,18 +497,18 @@ class TestInjector:
     @deferred_f_from_coro_f
     async def test_annotated_build_duplicate_forbidden(
         self,
-    ):
+    ) -> None:
         class Provider(PageObjectInputProvider):
             provided_classes = {Cls1}
             require_response = False
 
-            def __init__(self, crawler):
+            def __init__(self, crawler: Any) -> None:
                 self.crawler = crawler
 
-            def is_provided(self, type_: Callable) -> bool:
+            def is_provided(self, type_: Callable[..., Any]) -> bool:
                 return super().is_provided(strip_annotated(type_))
 
-            def __call__(self, to_provide):
+            def __call__(self, to_provide: set[Any]) -> list[Any]:
                 result = []
                 processed_classes = set()
                 for cls in to_provide:
@@ -501,10 +526,11 @@ class TestInjector:
         def callback(
             a: Annotated[Cls1, 42],
             b: Annotated[Cls1, 43],
-        ):
+        ) -> None:
             pass
 
         response = get_response_for_testing(callback)
+        assert response.request
         request = response.request
 
         providers = {
@@ -517,7 +543,7 @@ class TestInjector:
             await injector.build_instances(request, response, plan)
 
     @deferred_f_from_coro_f
-    async def test_build_callback_dependencies_minimize_provider_calls(self):
+    async def test_build_callback_dependencies_minimize_provider_calls(self) -> None:
         """Test that build_callback_dependencies does not call any given
         provider more times than it needs when one provided class is requested
         directly while another is a page object dependency requested through
@@ -526,11 +552,11 @@ class TestInjector:
         class ExpensiveProvider(PageObjectInputProvider):
             provided_classes = {ExpensiveDependency1, ExpensiveDependency2}
 
-            def __init__(self, injector):
+            def __init__(self, injector: Injector) -> None:
                 super().__init__(injector)
                 self.call_count = 0
 
-            def __call__(self, to_provide):
+            def __call__(self, to_provide: set[Any]) -> list[Any]:
                 self.call_count += 1
                 if self.call_count > 1:
                     raise RuntimeError(
@@ -542,7 +568,7 @@ class TestInjector:
         def callback(
             expensive: ExpensiveDependency1,
             item: MyItem,
-        ):
+        ) -> None:
             pass
 
         providers = {
@@ -551,6 +577,7 @@ class TestInjector:
         injector = get_injector_for_testing(providers)
         injector.registry.add_rule(ApplyRule("", use=MyPage, to_return=MyItem))
         response = get_response_for_testing(callback)
+        assert response.request
 
         # This would raise RuntimeError if expectations are not met.
         kwargs = await injector.build_callback_dependencies(response.request, response)
@@ -560,8 +587,8 @@ class TestInjector:
         assert set(kwargs.keys()) == {"expensive", "item"}
 
     @deferred_f_from_coro_f
-    async def test_dynamic_deps(self):
-        def callback(dd: DynamicDeps):
+    async def test_dynamic_deps(self) -> None:
+        def callback(dd: DynamicDeps) -> None:
             pass
 
         provider = get_provider({Cls1, Cls2})
@@ -575,7 +602,7 @@ class TestInjector:
         expected_kwargs = {
             "dd": DynamicDeps({Cls1: Cls1(), Cls2: Cls2()}),
         }
-        yield self._assert_instances(
+        await self._assert_instances(
             injector,
             callback,
             expected_instances,
@@ -584,14 +611,15 @@ class TestInjector:
         )
 
     @deferred_f_from_coro_f
-    async def test_dynamic_deps_mix(self):
-        def callback(c1: Cls1, dd: DynamicDeps):
+    async def test_dynamic_deps_mix(self) -> None:
+        def callback(c1: Cls1, dd: DynamicDeps) -> None:
             pass
 
         provider = get_provider({Cls1, Cls2})
         injector = get_injector_for_testing({provider: 1})
 
         response = get_response_for_testing(callback, meta={"inject": [Cls1, Cls2]})
+        assert response.request
         request = response.request
 
         plan = injector.build_plan(response.request)
@@ -612,8 +640,8 @@ class TestInjector:
         assert kwargs["c1"] is kwargs["dd"][Cls1]
 
     @deferred_f_from_coro_f
-    async def test_dynamic_deps_no_meta(self):
-        def callback(dd: DynamicDeps):
+    async def test_dynamic_deps_no_meta(self) -> None:
+        def callback(dd: DynamicDeps) -> None:
             pass
 
         provider = get_provider({Cls1, Cls2})
@@ -633,13 +661,14 @@ class TestInjector:
         )
 
     @deferred_f_from_coro_f
-    async def test_dynamic_deps_page(self):
-        def callback(dd: DynamicDeps):
+    async def test_dynamic_deps_page(self) -> None:
+        def callback(dd: DynamicDeps) -> None:
             pass
 
         injector = get_injector_for_testing({})
 
         response = get_response_for_testing(callback, meta={"inject": [PricePO]})
+        assert response.request
         request = response.request
 
         plan = injector.build_plan(response.request)
@@ -657,15 +686,16 @@ class TestInjector:
         assert set(instances) == {Html, PricePO, DynamicDeps}
 
     @deferred_f_from_coro_f
-    async def test_dynamic_deps_item(self):
-        def callback(dd: DynamicDeps):
+    async def test_dynamic_deps_item(self) -> None:
+        def callback(dd: DynamicDeps) -> None:
             pass
 
-        rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
+        rules = [ApplyRule(Patterns(include=[]), use=TestItemPage, to_return=TestItem)]
         registry = RulesRegistry(rules=rules)
         injector = get_injector_for_testing({}, registry=registry)
 
         response = get_response_for_testing(callback, meta={"inject": [TestItem]})
+        assert response.request
         request = response.request
 
         plan = injector.build_plan(response.request)
@@ -683,8 +713,8 @@ class TestInjector:
         assert set(instances) == {TestItemPage, TestItem, DynamicDeps}
 
     @deferred_f_from_coro_f
-    async def test_dynamic_deps_annotated(self):
-        def callback(dd: DynamicDeps):
+    async def test_dynamic_deps_annotated(self) -> None:
+        def callback(dd: DynamicDeps) -> None:
             pass
 
         provider = get_provider({Cls1, Cls2})
@@ -712,7 +742,7 @@ class Html(Injectable):
     text = """<html><body>Price: <span class="price">22</span>€</body></html>"""
 
     @property
-    def selector(self):
+    def selector(self) -> parsel.Selector:
         return parsel.Selector(self.text)
 
 
@@ -725,19 +755,19 @@ class OtherEurDollarRate(Injectable):
 
 
 @attr.s(auto_attribs=True)
-class PricePO(ItemPage, ResponseShortcutsMixin):
-    response: Html  # type: ignore[assignment]
+class PricePO(ItemPage[Any], ResponseShortcutsMixin):  # type: ignore[type-arg]
+    response: Html
 
-    def to_item(self):
-        return {"price": float(self.css(".price::text").get()), "currency": "€"}
+    def to_item(self) -> dict[str, Any]:  # type: ignore[override]
+        return {"price": float(self.css(".price::text").get("")), "currency": "€"}
 
 
 @attr.s(auto_attribs=True)
-class PriceInDollarsPO(ItemPage):
+class PriceInDollarsPO(ItemPage[Any]):
     original_po: PricePO
     conversion: EurDollarRate
 
-    def to_item(self):
+    def to_item(self) -> dict[str, Any]:  # type: ignore[override]
         item = self.original_po.to_item()
         item["price"] *= self.conversion.rate
         item["currency"] = "$"
@@ -752,7 +782,7 @@ class TestItem:
 
 
 class TestItemPage(ItemPage[TestItem]):
-    async def to_item(self):
+    async def to_item(self) -> TestItem:
         return TestItem(foo=1, bar="bar")
 
 
@@ -788,15 +818,19 @@ class TestInjectorStats:
         ],
     )
     @deferred_f_from_coro_f
-    async def test_stats(self, cb_args, expected, injector):
-        def callback_factory():
+    async def test_stats(
+        self, cb_args: dict[str, type], expected: set[str], injector: Injector
+    ) -> None:
+        def callback_factory() -> Callable[..., Any]:
             args = ", ".join([f"{k}: {v.__name__}" for k, v in cb_args.items()])
-            ns = {}
+            ns: dict[str, Any] = {}
             exec(f"def callback(response: DummyResponse, {args}): pass", None, ns)
-            return ns["callback"]
+            callback: Callable[..., Any] = ns["callback"]
+            return callback
 
         callback = callback_factory()
         response = get_response_for_testing(callback)
+        assert response.request
         await injector.build_callback_dependencies(response.request, response)
         prefix = "poet/injector/"
         poet_stats = {
@@ -808,13 +842,14 @@ class TestInjectorStats:
         assert injector.weak_cache.get(response.request) is None
 
     @deferred_f_from_coro_f
-    async def test_stats_dynamic_deps(self, injector):
-        def callback(response: DummyResponse, dd: DynamicDeps):
+    async def test_stats_dynamic_deps(self, injector: Injector) -> None:
+        def callback(response: DummyResponse, dd: DynamicDeps) -> None:
             pass
 
         response = get_response_for_testing(
             callback, meta={"inject": [Annotated[Cls1, 42], Cls2]}
         )
+        assert response.request
         await injector.build_callback_dependencies(response.request, response)
         prefix = "poet/injector/"
         poet_stats = {
@@ -829,15 +864,16 @@ class TestInjectorStats:
         }
 
     @deferred_f_from_coro_f
-    async def test_po_provided_via_item(self):
-        rules = [ApplyRule(Patterns(include=()), use=TestItemPage, to_return=TestItem)]
+    async def test_po_provided_via_item(self) -> None:
+        rules = [ApplyRule(Patterns(include=[]), use=TestItemPage, to_return=TestItem)]
         registry = RulesRegistry(rules=rules)
         injector = get_injector_for_testing({}, registry=registry)
 
-        def callback(response: DummyResponse, item: TestItem):
+        def callback(response: DummyResponse, item: TestItem) -> None:
             pass
 
         response = get_response_for_testing(callback)
+        assert response.request
         await injector.build_callback_dependencies(response.request, response)
         key = "poet/injector/tests.test_injection.TestItemPage"
         assert key in set(injector.crawler.stats.get_stats())
@@ -847,14 +883,20 @@ class TestInjectorStats:
 class TestInjectorOverrides:
     @pytest.mark.parametrize("override_should_happen", [True, False])
     @deferred_f_from_coro_f
-    async def test_overrides(self, providers, override_should_happen):
+    async def test_overrides(
+        self,
+        providers: dict[type[PageObjectInputProvider], int],
+        override_should_happen: bool,
+    ) -> None:
         domain = "example.com" if override_should_happen else "other-example.com"
         # The request domain is example.com, so overrides shouldn't be applied
         # when we configure them for domain other-example.com
         rules = [
             ApplyRule(Patterns([domain]), use=PriceInDollarsPO, instead_of=PricePO),
             ApplyRule(
-                Patterns([domain]), use=OtherEurDollarRate, instead_of=EurDollarRate
+                Patterns([domain]),
+                use=OtherEurDollarRate,  # type: ignore[arg-type]
+                instead_of=EurDollarRate,  # type: ignore[arg-type]
             ),
         ]
         registry = RulesRegistry(rules=rules)
@@ -862,10 +904,11 @@ class TestInjectorOverrides:
 
         def callback(
             response: DummyResponse, price_po: PricePO, rate_po: EurDollarRate
-        ):
+        ) -> None:
             pass
 
         response = get_response_for_testing(callback)
+        assert response.request
         kwargs = await injector.build_callback_dependencies(response.request, response)
         kwargs_types = {key: type(value) for key, value in kwargs.items()}
         price_po = kwargs["price_po"]
@@ -884,7 +927,7 @@ class TestInjectorOverrides:
             assert item == {"price": 22, "currency": "€"}
 
 
-def test_load_provider_classes():
+def test_load_provider_classes() -> None:
     provider_as_string = (
         f"{HttpResponseProvider.__module__}.{HttpResponseProvider.__name__}"
     )
@@ -895,23 +938,22 @@ def test_load_provider_classes():
     assert len(injector.providers) == 2
 
 
-def test_check_all_providers_are_callable():
-    check_all_providers_are_callable([HttpResponseProvider(None)])
+def test_check_all_providers_are_callable() -> None:
+    check_all_providers_are_callable([HttpResponseProvider(None)])  # type: ignore[arg-type]
     with pytest.raises(NonCallableProviderError) as exinf:
         check_all_providers_are_callable(
-            [PageObjectInputProvider(None), HttpResponseProvider(None)]
+            [PageObjectInputProvider(None), HttpResponseProvider(None)]  # type: ignore[arg-type]
         )
 
     assert "PageObjectInputProvider" in str(exinf.value)
     assert "not callable" in str(exinf.value)
 
 
-def test_is_class_provided_by_any_provider_fn(injector):
-    crawler = injector.crawler
+def test_is_class_provided_by_any_provider_fn(injector: Injector) -> None:
     providers = [
-        get_provider({str})(crawler),
-        get_provider(lambda self, x: issubclass(x, InjectionError))(crawler),
-        get_provider(frozenset({int, float}))(crawler),
+        get_provider({str})(injector),
+        get_provider(lambda self, x: issubclass(x, InjectionError))(injector),
+        get_provider(frozenset({int, float}))(injector),
     ]
     is_provided = is_class_provided_by_any_provider_fn(providers)
     is_provided_empty = is_class_provided_by_any_provider_fn([])
@@ -925,22 +967,28 @@ def test_is_class_provided_by_any_provider_fn(injector):
         assert not is_provided_empty(cls)
 
     class WrongProvider(PageObjectInputProvider):
-        provided_classes = [str]  # Lists are not allowed, only sets or funcs
+        # Lists are not allowed, only sets or funcs
+        provided_classes = [str]  # type: ignore[assignment]
 
     with pytest.raises(MalformedProvidedClassesError):
         is_class_provided_by_any_provider_fn([WrongProvider(injector)])(str)
 
 
-def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
+def get_provider_for_cache(
+    classes: set[Any],
+    a_name: str,
+    content: str | None = None,
+    error: type[Exception] = ValueError,
+) -> type[PageObjectInputProvider]:
     class Provider(PageObjectInputProvider):
         name = a_name
         provided_classes = classes
         require_response = False
 
-        def __init__(self, crawler):
+        def __init__(self, crawler: Any) -> None:
             self.crawler = crawler
 
-        def __call__(self, to_provide, request: Request):
+        def __call__(self, to_provide: set[Any], request: Request) -> list[Any]:
             domain = get_domain(request.url)
             if not domain == "example.com":
                 raise error(
@@ -953,14 +1001,14 @@ def get_provider_for_cache(classes, a_name, content=None, error=ValueError):
 
 @pytest.mark.parametrize("cache_errors", [True, False])
 @deferred_f_from_coro_f
-async def test_cache(tmp_path, cache_errors):
+async def test_cache(tmp_path: Path, cache_errors: bool) -> None:
     """
     In a first run, the cache is empty, and two requests are done, one with exception.
     In the second run we should get the same result as in the first run. The
     behaviour for exceptions vary if caching errors is disabled.
     """
 
-    def validate_instances(instances):
+    def validate_instances(instances: dict[Any, Any]) -> None:
         assert instances[Price].price == "price1"
         assert instances[Name].name == "name1"
 
@@ -976,16 +1024,17 @@ async def test_cache(tmp_path, cache_errors):
     settings = {"SCRAPY_POET_CACHE": cache, "SCRAPY_POET_CACHE_ERRORS": cache_errors}
     injector = get_injector_for_testing(providers, settings)
 
-    def callback(response: DummyResponse, arg_price: Price, arg_name: Name):
+    def callback(response: DummyResponse, arg_price: Price, arg_name: Name) -> None:
         pass
 
     response = get_response_for_testing(callback)
+    assert response.request
     plan = injector.build_plan(response.request)
     instances = await injector.build_instances_from_providers(
         response.request, response, plan
     )
     assert cache.exists()
-    assert injector.weak_cache.get(response.request).keys() == {Price, Name}
+    assert injector.weak_cache[response.request].keys() == {Price, Name}
 
     validate_instances(instances)
 
@@ -1008,11 +1057,12 @@ async def test_cache(tmp_path, cache_errors):
     injector = get_injector_for_testing(providers, settings)
 
     response = get_response_for_testing(callback)
+    assert response.request
     plan = injector.build_plan(response.request)
     instances = await injector.build_instances_from_providers(
         response.request, response, plan
     )
-    assert injector.weak_cache.get(response.request).keys() == {Price, Name}
+    assert injector.weak_cache[response.request].keys() == {Price, Name}
 
     validate_instances(instances)
 
@@ -1025,7 +1075,7 @@ async def test_cache(tmp_path, cache_errors):
     assert injector.weak_cache.get(response.request) is None
 
 
-def test_dynamic_deps_factory_text():
+def test_dynamic_deps_factory_text() -> None:
     txt = Injector._get_dynamic_deps_factory_text(["int", "Cls1"])
     assert (
         txt
@@ -1036,7 +1086,7 @@ def test_dynamic_deps_factory_text():
     )
 
 
-def test_dynamic_deps_factory():
+def test_dynamic_deps_factory() -> None:
     fn = Injector._get_dynamic_deps_factory([int, Cls1])
     args = andi.inspect(fn)
     assert args == {
@@ -1048,7 +1098,7 @@ def test_dynamic_deps_factory():
     assert dd == {int: 42, Cls1: c}
 
 
-def test_dynamic_deps_factory_annotated():
+def test_dynamic_deps_factory_annotated() -> None:
     fn = Injector._get_dynamic_deps_factory(
         [Annotated[Cls1, 42], Annotated[Cls2, "foo"]]
     )
@@ -1063,7 +1113,7 @@ def test_dynamic_deps_factory_annotated():
     assert dd == {Cls1: c1, Cls2: c2}
 
 
-def test_dynamic_deps_factory_bad_input():
+def test_dynamic_deps_factory_bad_input() -> None:
     with pytest.raises(
         TypeError,
         match=re.escape(r"Expected a dynamic dependency type, got (<class 'int'>,)"),

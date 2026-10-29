@@ -244,7 +244,8 @@ class InjectionMiddleware:
         response = await self.crawler.engine.download_async(scrapy_request)
         plan = self.injector.build_plan_for_type(scrapy_request, page_cls)
         instances = await self.injector.build_instances(scrapy_request, response, plan)
-        return plan.final_kwargs(instances)["page"]
+        page: _T = plan.final_kwargs(instances)["page"]
+        return page
 
     async def get_item(
         self,
@@ -274,6 +275,7 @@ class InjectionMiddleware:
                 mw = self.crawler.get_downloader_middleware(InjectionMiddleware)
                 yield await mw.get_item("https://example.com", MyItem)
         """
+        page_cls: type | None
         if is_injectable(item_or_page_cls):
             page_cls = item_or_page_cls
         else:
