@@ -1,8 +1,13 @@
 from typing import Any
 
 import pytest
+from scrapy.http import HtmlResponse
 
-from scrapy_poet import PageObjectInputProvider, page_input_providers
+from scrapy_poet import (
+    HttpResponseProvider,
+    PageObjectInputProvider,
+    page_input_providers,
+)
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
 
@@ -53,3 +58,14 @@ def test_default_providers() -> None:
         )
     }
     assert providers == set(DEFAULT_PROVIDERS)
+
+
+def test_http_response_provider_encoding() -> None:
+    # Zyte API browserHtml is UTF-8 but keeps the original <meta charset>.
+    response = HtmlResponse(
+        "https://example.com",
+        body='<meta charset="iso-8859-1">café'.encode(),
+        encoding="utf-8",
+    )
+    (http_response,) = HttpResponseProvider(None)(set(), response)  # type: ignore[arg-type]
+    assert http_response.text == response.text
