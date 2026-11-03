@@ -193,6 +193,24 @@ class Injector:
             custom_builder_fn=self._get_custom_builder(request),
         )
 
+    def build_plan_for_type(
+        self, request: Request, cls: Callable[..., Any]
+    ) -> andi.Plan:
+        """Build a dependency plan for *cls* rather than for a callback.
+
+        Used by :meth:`InjectionMiddleware.get_page` and
+        :meth:`InjectionMiddleware.get_item` to resolve a specific type inline.
+        """
+        target = lambda page: None  # noqa: E731
+        target.__annotations__ = {"page": cls}
+        return andi.plan(
+            target,
+            is_injectable=is_injectable,
+            externally_provided=self.is_class_provided_by_any_provider,
+            overrides=self.registry.overrides_for(request.url).get,
+            custom_builder_fn=self._get_custom_builder(request),
+        )
+
     def _get_custom_builder(
         self, request: Request
     ) -> Callable[[Callable[..., Any]], Callable[..., Any] | None]:
