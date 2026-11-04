@@ -111,7 +111,7 @@ def test_inline_callback() -> None:
     with pytest.raises(ValueError, match="is not an instance method in:") as exc:
         request.to_dict(spider=spider)
 
-    msg = f"Function {cb} is not an instance method in: {spider}"
+    msg = f"Function {cb} is not an instance method in: {spider!r}"
     assert str(exc.value) == msg
 
 
@@ -123,5 +123,5 @@ def test_inline_callback_async() -> None:
     with pytest.raises(ValueError, match="is not an instance method in:") as exc:
         request.to_dict(spider=spider)
 
-    msg = f"Function {cb} is not an instance method in: {spider}"
+    msg = f"Function {cb} is not an instance method in: {spider!r}"
     assert str(exc.value) == msg
