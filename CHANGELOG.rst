@@ -2,6 +2,43 @@
 Changelog
 =========
 
+0.28.0 (unreleased)
+-------------------
+
+* Dropped Python 3.10 support, added Python 3.14 and 3.15 support.
+
+* Now requires ``scrapy >= 2.13.3``, ``twisted >= 21.7.0``,
+  ``url-matcher >= 0.4.0`` and ``web-poet >= 0.25.0``.
+
+* Added Scrapy 2.20 support.
+
+* Added :class:`~scrapy_poet.NavigationMiddleware`, which the :ref:`add-on
+  <addon>` enables, to save a parse of the response body when page objects use
+  :ref:`declarative selectors <web-poet:declarative-selectors>`. It requires
+  Scrapy 2.20+.
+
+* :class:`~web_poet.page_inputs.http.HttpResponse` now gets the encoding of
+  the Scrapy response, so that page objects decode the body the same way as
+  Scrapy, e.g. when the declared encoding of the response is wrong.
+
+* Dependencies built from ``request.meta["inject"]`` are now counted in the
+  ``poet/injector/`` :ref:`stats <stats>`.
+
+* Changing ``request.meta["inject"]`` after scrapy-poet has read it now logs a
+  warning. Set its final value as early as possible, so that e.g. request
+  fingerprints can account for it.
+
+* Improved the command-line help of the ``savefixture`` command, and
+  documented how to :ref:`configure settings <testing>` for it with ``-s``.
+
+* Improved type hints.
+
+* Deprecated ``scrapy_poet.utils.NO_CALLBACK`` (use
+  :data:`scrapy.http.request.NO_CALLBACK` instead),
+  ``scrapy_poet.utils.is_min_scrapy_version()``, and the ``raw_callback``
+  parameter of
+  ``scrapy_poet.injection.is_callback_requiring_scrapy_response()``.
+
 0.27.2 (2026-04-28)
 -------------------
 
