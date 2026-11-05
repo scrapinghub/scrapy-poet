@@ -5,30 +5,15 @@ are executed.
 
 from __future__ import annotations
 
-import inspect
 import logging
-import warnings
 from functools import cached_property
 from typing import TYPE_CHECKING, Self
 
 from scrapy.downloadermiddlewares.stats import DownloaderStats
 from scrapy.exceptions import NotConfigured
 from scrapy.http import TextResponse
-from web_poet import RulesRegistry
+from web_poet import RulesRegistry, preextract_selectors
 from web_poet.exceptions import Retry
-
-try:
-    from web_poet._frostwork import (
-        _decodes_as_declared,
-        _extract,
-        _get_union_page,
-        _response_kind,
-    )
-    from web_poet._selectors import _SELECTORS_DICT_ATTRIBUTE
-except ImportError:  # web-poet without web_poet._frostwork
-    _FROSTWORK = False
-else:
-    _FROSTWORK = True
 
 from .api import DummyResponse
 from .injection import Injector
@@ -40,13 +25,10 @@ from .page_input_providers import (
     RequestUrlProvider,
     ResponseUrlProvider,
     StatsProvider,
-    _navigation_values,
+    _preextracted_responses,
+    _to_http_response,
 )
-from .utils import (
-    _get_retry_request_from_exception,
-    create_registry_instance,
-    is_min_scrapy_version,
-)
+from .utils import _get_retry_request_from_exception, create_registry_instance
 
 if TYPE_CHECKING:
     from scrapy import Spider
@@ -122,31 +104,6 @@ class InjectionMiddleware:
         self.crawler.stats.inc_value("scrapy_poet/dummy_response_count")
         return DummyResponse(url=request.url, request=request)
 
-    def _skip_dependency_creation(self, request: Request) -> bool:
-        """See:
-
-        * https://github.com/scrapinghub/scrapy-poet/issues/48  — scrapy <  2.8
-        * https://github.com/scrapinghub/scrapy-poet/issues/118 — scrapy >= 2.8
-        """
-        if is_min_scrapy_version("2.8.0"):
-            return False
-
-        # No need to skip if the callback doesn't default to the parse() method
-        if request.callback is not None:
-            return False
-
-        # If the Request.cb_kwargs possess all of the cb dependencies, then no
-        # warning message should be issued.
-        assert self.crawler.spider
-        signature_iter = iter(inspect.signature(self.crawler.spider.parse).parameters)
-        next(signature_iter)  # skip the first arg: response
-        cb_param_names = set(signature_iter)
-        if cb_param_names and cb_param_names == request.cb_kwargs.keys():
-            return False
-
-        # Skip if providers are needed.
-        return bool(self.injector.discover_callback_providers(request))
-
     async def process_response(
         self, request: Request, response: Response, spider: Spider | None = None
     ) -> Response | Request:
@@ -159,17 +116,6 @@ class InjectionMiddleware:
         arguments and any other parameter with a :class:`~.PageObjectInputProvider`
         configured for its type.
         """
-        if self._skip_dependency_creation(request):
-            warnings.warn(
-                "A request has been encountered with callback=None which "
-                "defaults to the parse() method. On such cases, annotated "
-                "dependencies in the parse() method won't be built by "
-                "scrapy-poet. However, if the request has callback=parse, "
-                "the annotated dependencies will be built.\n\n"
-                "See the Pitfalls doc for more info.",
-                stacklevel=2,
-            )
-            return response
 
         # Find out the dependencies
         try:
@@ -213,9 +159,8 @@ class NavigationMiddleware:
     """
 
     def __init__(self, crawler: Crawler) -> None:
-        # web-poet without web_poet._frostwork, or Scrapy without writable
-        # TextResponse.base_url and meta_refresh.
-        if not _FROSTWORK or not hasattr(TextResponse, "meta_refresh"):
+        # Scrapy without writable TextResponse.base_url and meta_refresh.
+        if not hasattr(TextResponse, "meta_refresh"):
             raise NotConfigured
         self.crawler = crawler
 
@@ -236,29 +181,12 @@ class NavigationMiddleware:
     ) -> Response:
         if not isinstance(response, TextResponse) or self._injector is None:
             return response
-        classes = [
-            cls
-            for cls, _ in self._injector.build_plan(request)
-            if isinstance(cls, type)
-            and hasattr(cls, _SELECTORS_DICT_ATTRIBUTE)
-            and _response_kind(cls) != "browser"
-        ]
-        try:
-            compiled = _get_union_page(classes)
-        except TypeError:
-            # Over the frostwork budget together. The page objects extract
-            # their declarations themselves.
+        http_response = _to_http_response(response)
+        classes = (cls for cls, _ in self._injector.build_plan(request))
+        navigation = preextract_selectors(http_response, classes)
+        if navigation is None:
             return response
-        if compiled is None:
-            return response
-        document = (response.body, response.encoding)
-        if not _decodes_as_declared(document):
-            return response
-        values, navigation = _extract(
-            compiled, document, response.url, base_url=True, meta_refresh=True
-        )
-        assert navigation.base_url is not None
         response.base_url = navigation.base_url
         response.meta_refresh = navigation.meta_refresh
-        _navigation_values[response] = (values, navigation.base_url)
+        _preextracted_responses[response] = http_response
         return response

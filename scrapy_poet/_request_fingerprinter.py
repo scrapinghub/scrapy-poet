@@ -9,7 +9,7 @@ from weakref import WeakKeyDictionary
 
 from andi import CustomBuilder
 from scrapy.settings.default_settings import REQUEST_FINGERPRINTER_CLASS
-from scrapy.utils.misc import load_object
+from scrapy.utils.misc import build_from_crawler, load_object
 from scrapy.utils.request import RequestFingerprinter  # noqa: F401
 from web_poet import (
     HttpClient,
@@ -24,21 +24,6 @@ from web_poet.utils import get_fq_class_name
 
 from scrapy_poet import InjectionMiddleware
 from scrapy_poet.injection import get_callback
-
-try:
-    from scrapy.utils.misc import build_from_crawler
-except ImportError:  # Scrapy < 2.12
-    from typing import Any, TypeVar, cast
-
-    from scrapy.utils.misc import create_instance  # type: ignore[attr-defined]
-
-    T = TypeVar("T")
-
-    def build_from_crawler(  # type: ignore[no-redef]
-        objcls: type[T], crawler: Crawler, /, *args: Any, **kwargs: Any
-    ) -> T:
-        return cast("T", create_instance(objcls, None, crawler, *args, **kwargs))
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable

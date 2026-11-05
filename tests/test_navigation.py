@@ -2,22 +2,19 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 import attrs
+import frostwork
 import pytest
 import scrapy
 from scrapy.http import TextResponse
 from scrapy.utils.defer import deferred_f_from_coro_f
-from web_poet import WebPage, field
+from web_poet import WebPage, css_get, field
+from web_poet._frostwork import _extract as extract
 
 from scrapy_poet.utils.testing import HtmlResource, crawl_items_async
 
-# web-poet and Scrapy with frostwork navigation.
-pytest.importorskip("web_poet._frostwork")
+# Scrapy 2.20+
 if not hasattr(TextResponse, "meta_refresh"):
     pytest.skip("Scrapy without TextResponse.meta_refresh", allow_module_level=True)
-
-import frostwork
-from web_poet import css_get
-from web_poet._frostwork import _extract as extract
 
 
 class NavigationHtml(HtmlResource):
@@ -101,7 +98,7 @@ async def test_passes(
         return navigation(*args, **kwargs)
 
     navigation = frostwork.navigation
-    monkeypatch.setattr("scrapy_poet.downloadermiddlewares._extract", counting_extract)
+    monkeypatch.setattr("web_poet._frostwork._extract", counting_extract)
     monkeypatch.setattr("web_poet.mixins._frostwork_extract", counting_extract)
     monkeypatch.setattr(frostwork, "navigation", counting_navigation)
 
@@ -109,9 +106,9 @@ async def test_passes(
     assert items == [
         {
             "name": "Chocolate",
-            "page_base_url": f"{url}/food/",
-            "base_url": f"{url}/food/",
-            "meta_refresh": (1000.0, f"{url}/food/next"),
+            "page_base_url": f"{url}food/",
+            "base_url": f"{url}food/",
+            "meta_refresh": (1000.0, f"{url}food/next"),
         }
     ]
     assert len(passes) == passes_

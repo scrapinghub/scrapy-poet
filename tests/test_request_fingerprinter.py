@@ -44,13 +44,6 @@ ANDI_VERSION = Version(package_version("andi"))
 
 SETTINGS = _get_test_settings()
 
-try:
-    import scrapy.addons  # noqa: F401
-except ImportError:
-    ADDON_SUPPORT = False
-else:
-    ADDON_SUPPORT = True
-
 
 def get_crawler(
     spider_cls: type[Spider] | None = None,
@@ -498,16 +491,6 @@ def test_base_custom() -> None:
     assert fingerprinter.fingerprint(request) == b"foo"
     request = Request("https://example.com", callback=spider.parse_page)
     assert fingerprinter.fingerprint(request) != b"foo"
-
-
-@pytest.mark.skipif(ADDON_SUPPORT, reason="Using the add-on")
-def test_missing_middleware() -> None:
-    settings = {**SETTINGS, "DOWNLOADER_MIDDLEWARES": {}}
-    crawler = get_crawler(settings=settings)
-    fingerprinter = crawler.request_fingerprinter
-    request = Request("https://example.com")
-    with pytest.raises(RuntimeError):
-        fingerprinter.fingerprint(request)
 
 
 def test_callback_cache() -> None:

@@ -37,11 +37,22 @@ from scrapy_poet.injection_errors import MalformedProvidedClassesError
 if TYPE_CHECKING:
     from scrapy_poet.injection import Injector
 
-# Selector declaration values and base URL that NavigationMiddleware extracted
-# from a response.
-_navigation_values: WeakKeyDictionary[Response, tuple[dict[Any, Any], str]] = (
-    WeakKeyDictionary()
-)
+# HttpResponse that NavigationMiddleware pre-extracted selectors into, by the
+# response it was built from.
+_preextracted_responses: WeakKeyDictionary[Response, HttpResponse] = WeakKeyDictionary()
+
+
+def _to_http_response(response: Response) -> HttpResponse:
+    kwargs: dict[str, Any] = {}
+    if isinstance(response, TextResponse):
+        kwargs["encoding"] = response.encoding
+    return HttpResponse(
+        url=response.url,
+        body=response.body,
+        status=response.status,
+        headers=HttpResponseHeaders.from_bytes_dict(response.headers),
+        **kwargs,
+    )
 
 
 class PageObjectInputProvider:
@@ -179,20 +190,9 @@ class HttpResponseProvider(PageObjectInputProvider):
         <web_poet.page_inputs.http.HttpResponse>` instance using a
         :class:`scrapy.http.Response` instance.
         """
-        kwargs: dict[str, Any] = {}
-        if isinstance(response, TextResponse):
-            kwargs["encoding"] = response.encoding
-        http_response = HttpResponse(
-            url=response.url,
-            body=response.body,
-            status=response.status,
-            headers=HttpResponseHeaders.from_bytes_dict(response.headers),
-            **kwargs,
-        )
-        if (navigation := _navigation_values.get(response)) is not None:
-            values, base_url = navigation
-            http_response._frostwork_values = values  # type: ignore[attr-defined]
-            http_response._cached_base_url = base_url
+        http_response = _preextracted_responses.get(response)
+        if http_response is None:
+            http_response = _to_http_response(response)
         return [http_response]
 
 
