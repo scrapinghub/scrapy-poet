@@ -75,9 +75,7 @@ class UndeclaredSpider(NavigationSpider):
     ("spider_cls", "resource_cls", "passes_", "navigations"),
     [
         (NavigationSpider, NavigationHtml, 1, 0),
-        # Scrapy and web-poet infer different encodings, so web-poet
-        # extracts again.
-        (NavigationSpider, UndeclaredEncodingHtml, 2, 0),
+        (NavigationSpider, UndeclaredEncodingHtml, 1, 0),
         # No selector declarations: Scrapy reads the navigation itself.
         (UndeclaredSpider, NavigationHtml, 0, 1),
     ],

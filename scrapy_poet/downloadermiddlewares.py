@@ -260,9 +260,5 @@ class NavigationMiddleware:
         assert navigation.base_url is not None
         response.base_url = navigation.base_url
         response.meta_refresh = navigation.meta_refresh
-        _navigation_values[response] = (
-            response.encoding,
-            values,
-            navigation.base_url,
-        )
+        _navigation_values[response] = (values, navigation.base_url)
         return response

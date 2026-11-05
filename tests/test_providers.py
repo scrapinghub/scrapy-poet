@@ -6,6 +6,7 @@ from unittest import mock
 import attr
 import scrapy
 from scrapy import Request, Spider
+from scrapy.http import Response, TextResponse
 from scrapy.settings import Settings
 from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy.utils.test import get_crawler
@@ -301,3 +302,16 @@ def test_stats_provider(settings: dict[str, Any]) -> None:
     expected = {f"poet/stats/{k}": v for k, v in expected.items()}
     actual = {k: v for k, v in crawler.stats._stats.items() if k in expected}
     assert actual == expected
+
+
+def test_http_response_provider_encoding(settings: dict[str, Any]) -> None:
+    crawler = get_crawler(Spider, settings)
+    provider = HttpResponseProvider(Injector(crawler))
+    url = "https://example.com"
+    body = "<p>Привет</p>".encode("cp1251")
+
+    (response,) = provider(set(), TextResponse(url, body=body, encoding="cp1251"))
+    assert response.text == "<p>Привет</p>"
+
+    (response,) = provider(set(), Response(url, body=body))
+    assert response.body == body

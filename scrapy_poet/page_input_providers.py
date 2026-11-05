@@ -15,7 +15,7 @@ from weakref import WeakKeyDictionary
 
 from scrapy import Request
 from scrapy.crawler import Crawler
-from scrapy.http import Response
+from scrapy.http import Response, TextResponse
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import (
@@ -37,9 +37,9 @@ from scrapy_poet.injection_errors import MalformedProvidedClassesError
 if TYPE_CHECKING:
     from scrapy_poet.injection import Injector
 
-# Encoding, selector declaration values and base URL that NavigationMiddleware
-# extracted from a response.
-_navigation_values: WeakKeyDictionary[Response, tuple[str, dict[Any, Any], str]] = (
+# Selector declaration values and base URL that NavigationMiddleware extracted
+# from a response.
+_navigation_values: WeakKeyDictionary[Response, tuple[dict[Any, Any], str]] = (
     WeakKeyDictionary()
 )
 
@@ -179,17 +179,20 @@ class HttpResponseProvider(PageObjectInputProvider):
         <web_poet.page_inputs.http.HttpResponse>` instance using a
         :class:`scrapy.http.Response` instance.
         """
+        kwargs: dict[str, Any] = {}
+        if isinstance(response, TextResponse):
+            kwargs["encoding"] = response.encoding
         http_response = HttpResponse(
             url=response.url,
             body=response.body,
             status=response.status,
             headers=HttpResponseHeaders.from_bytes_dict(response.headers),
+            **kwargs,
         )
         if (navigation := _navigation_values.get(response)) is not None:
-            encoding, values, base_url = navigation
-            if http_response.encoding == encoding:
-                http_response._frostwork_values = values  # type: ignore[attr-defined]
-                http_response._cached_base_url = base_url
+            values, base_url = navigation
+            http_response._frostwork_values = values  # type: ignore[attr-defined]
+            http_response._cached_base_url = base_url
         return [http_response]
 
 
