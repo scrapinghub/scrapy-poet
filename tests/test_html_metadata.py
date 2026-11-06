@@ -10,6 +10,7 @@ from scrapy.utils.defer import deferred_f_from_coro_f
 from web_poet import WebPage, css_get, field
 from web_poet._frostwork import _extract as extract
 
+from scrapy_poet import HtmlMetadataMiddleware
 from scrapy_poet.utils.testing import HtmlResource, crawl_items_async
 
 # Scrapy < 2.20
@@ -32,6 +33,15 @@ class MetadataHtml(HtmlResource):
 
 class UndeclaredEncodingHtml(MetadataHtml):
     content_type = "text/html"
+
+
+class NoRefreshHtml(MetadataHtml):
+    html = """
+    <html>
+        <base href="/food/">
+        <h1>Chocolate</h1>
+    </html>
+    """
 
 
 @attrs.define
@@ -60,6 +70,14 @@ class MetadataSpider(scrapy.Spider):
         }
 
 
+class ResponseSpider(MetadataSpider):
+    async def parse_page(self, response: Any) -> Any:  # type: ignore[override]
+        yield {
+            "base_url": response.base_url,
+            "meta_refresh": response.meta_refresh,
+        }
+
+
 class UndeclaredSpider(MetadataSpider):
     async def parse_page(self, response: Any, page: UndeclaredPage) -> Any:  # type: ignore[override]
         yield {
@@ -70,24 +88,10 @@ class UndeclaredSpider(MetadataSpider):
         }
 
 
-@pytest.mark.parametrize(
-    ("spider_cls", "resource_cls", "passes_", "metadata_reads_"),
-    [
-        (MetadataSpider, MetadataHtml, 1, 0),
-        (MetadataSpider, UndeclaredEncodingHtml, 1, 0),
-        # No selector declarations: Scrapy reads the HTML metadata itself.
-        (UndeclaredSpider, MetadataHtml, 0, 1),
-    ],
-)
-@deferred_f_from_coro_f
-async def test_passes(
-    settings: dict[str, Any],
-    monkeypatch: pytest.MonkeyPatch,
-    spider_cls: type[scrapy.Spider],
-    resource_cls: type[HtmlResource],
-    passes_: int,
-    metadata_reads_: int,
-) -> None:
+@pytest.fixture
+def counts(monkeypatch: pytest.MonkeyPatch) -> tuple[list[Any], list[Any]]:
+    """Return the lists that every selector extraction pass and every HTML
+    metadata read without selector extraction get appended to."""
     passes: list[Any] = []
     metadata_reads: list[Any] = []
 
@@ -103,15 +107,59 @@ async def test_passes(
     monkeypatch.setattr("web_poet._frostwork._extract", counting_extract)
     monkeypatch.setattr("web_poet.mixins._frostwork_extract", counting_extract)
     monkeypatch.setattr(frostwork, "navigation", counting_navigation)
+    return passes, metadata_reads
 
+
+@pytest.mark.parametrize(
+    ("spider_cls", "resource_cls", "refresh_path", "passes_", "metadata_reads_"),
+    [
+        (MetadataSpider, MetadataHtml, "food/next", 1, 0),
+        (MetadataSpider, UndeclaredEncodingHtml, "food/next", 1, 0),
+        (MetadataSpider, NoRefreshHtml, None, 1, 0),
+        # No selector declarations: Scrapy reads the HTML metadata itself.
+        (UndeclaredSpider, MetadataHtml, "food/next", 0, 1),
+    ],
+)
+@deferred_f_from_coro_f
+async def test_passes(
+    settings: dict[str, Any],
+    counts: tuple[list[Any], list[Any]],
+    spider_cls: type[scrapy.Spider],
+    resource_cls: type[HtmlResource],
+    refresh_path: str | None,
+    passes_: int,
+    metadata_reads_: int,
+) -> None:
     items, url, _ = await crawl_items_async(spider_cls, resource_cls, settings)
+    meta_refresh = (
+        None if refresh_path is None else MetaRefresh(1000.0, url + refresh_path)
+    )
     assert items == [
         {
             "name": "Chocolate",
             "page_base_url": f"{url}food/",
             "base_url": f"{url}food/",
+            "meta_refresh": meta_refresh,
+        }
+    ]
+    passes, metadata_reads = counts
+    assert len(passes) == passes_
+    assert len(metadata_reads) == metadata_reads_
+
+
+@deferred_f_from_coro_f
+async def test_no_injection_middleware(
+    settings: dict[str, Any], counts: tuple[list[Any], list[Any]]
+) -> None:
+    settings["ADDONS"] = {}
+    settings["DOWNLOADER_MIDDLEWARES"][HtmlMetadataMiddleware] = 585
+    items, url, _ = await crawl_items_async(ResponseSpider, MetadataHtml, settings)
+    assert items == [
+        {
+            "base_url": f"{url}food/",
             "meta_refresh": MetaRefresh(1000.0, f"{url}food/next"),
         }
     ]
-    assert len(passes) == passes_
-    assert len(metadata_reads) == metadata_reads_
+    passes, metadata_reads = counts
+    assert len(passes) == 0
+    assert len(metadata_reads) == 1
