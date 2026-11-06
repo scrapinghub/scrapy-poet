@@ -15,8 +15,7 @@ Changelog
 * Added :class:`~scrapy_poet.HtmlMetadataMiddleware`, which the :ref:`add-on
   <addon>` enables, to save a parse of the response body when page objects use
   :ref:`declarative selectors <web-poet:declarative-selectors>`. It requires
-  Scrapy 2.20+. If you do not use the add-on, add it to
-  :setting:`DOWNLOADER_MIDDLEWARES` with value ``585``.
+  Scrapy 2.20+.
 
 * :class:`~web_poet.page_inputs.http.HttpResponse` now gets the encoding of
   the Scrapy response, so that page objects decode the body the same way as
