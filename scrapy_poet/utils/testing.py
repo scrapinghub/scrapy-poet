@@ -1,24 +1,24 @@
 from __future__ import annotations
 
-import contextlib
 import json
 from inspect import isasyncgenfunction
 from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 from scrapy import Spider, signals
+from scrapy.core.engine import ExecutionEngine
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider
 from scrapy.settings import Settings
 from scrapy.utils.defer import maybe_deferred_to_future
 from scrapy.utils.python import to_bytes
 from scrapy.utils.test import get_crawler as _get_crawler
+from scrapy.utils.test import get_reactor_settings
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet.task import deferLater
 from twisted.web.resource import Resource
 from twisted.web.server import NOT_DONE_YET
 
-from scrapy_poet import ScrapyPoetRequestFingerprinter
 from scrapy_poet.utils.mockserver import MockServer
 
 if TYPE_CHECKING:
@@ -287,9 +287,11 @@ def setup_crawler_engine(crawler: Crawler) -> None:
     crawler.crawling = True
     crawler.spider = crawler._create_spider()
     crawler.settings.frozen = False
-    with contextlib.suppress(AttributeError):  # Scrapy < 2.10
-        crawler._apply_settings()
-    crawler.engine = crawler._create_engine()
+    crawler._apply_settings()
+    if hasattr(crawler, "_create_engine"):  # Scrapy < 2.20
+        crawler.engine = crawler._create_engine()
+    else:
+        crawler.engine = ExecutionEngine(crawler)
 
     handler = get_download_handler(crawler, "https")
     if hasattr(handler, "engine_started"):
@@ -363,31 +365,10 @@ def _get_test_settings() -> dict[str, Any]:
         # extension from loading, which breaks tests asserting an empty log.
         "REMOTE_CONTROL_ENABLED": False,
     }
-    try:
-        import scrapy.addons  # noqa: F401,PLC0415
-    except ImportError:
-        settings["DOWNLOADER_MIDDLEWARES"]["scrapy_poet.InjectionMiddleware"] = 543
-        settings["DOWNLOADER_MIDDLEWARES"][
-            "scrapy.downloadermiddlewares.stats.DownloaderStats"
-        ] = None
-        settings["DOWNLOADER_MIDDLEWARES"]["scrapy_poet.DownloaderStatsMiddleware"] = (
-            850
-        )
-        settings["REQUEST_FINGERPRINTER_CLASS"] = ScrapyPoetRequestFingerprinter
-        settings["SPIDER_MIDDLEWARES"] = {
-            "scrapy_poet.RetryMiddleware": 275,
-        }
-    else:
-        settings["ADDONS"] = {
-            "scrapy_poet.Addon": 300,
-        }
-    try:
-        from scrapy.utils.test import get_reactor_settings  # noqa: PLC0415
-
-        settings.update(get_reactor_settings())
-    except ImportError:
-        # Scrapy < 2.13.0, no need to change the reactor settings
-        pass
+    settings["ADDONS"] = {
+        "scrapy_poet.Addon": 300,
+    }
+    settings.update(get_reactor_settings())
     return settings
 
 

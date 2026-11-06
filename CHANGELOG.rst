@@ -7,15 +7,16 @@ Changelog
 
 * Dropped Python 3.10 support, added Python 3.14 and 3.15 support.
 
-* Now requires ``scrapy >= 2.13.3``, ``twisted >= 21.7.0``,
-  ``url-matcher >= 0.4.0`` and ``web-poet >= 0.25.0``.
+* Now requires ``attrs >= 22.1.0``, ``scrapy >= 2.13.3``,
+  ``twisted >= 21.7.0``, ``url-matcher >= 0.4.0`` and ``web-poet >= 0.25.0``.
 
 * Added Scrapy 2.20 support.
 
-* Added :class:`~scrapy_poet.NavigationMiddleware`, which the :ref:`add-on
+* Added :class:`~scrapy_poet.HtmlMetadataMiddleware`, which the :ref:`add-on
   <addon>` enables, to save a parse of the response body when page objects use
   :ref:`declarative selectors <web-poet:declarative-selectors>`. It requires
-  Scrapy 2.20+.
+  Scrapy 2.20+. If you do not use the add-on, add it to
+  :setting:`DOWNLOADER_MIDDLEWARES` with value ``585``.
 
 * :class:`~web_poet.page_inputs.http.HttpResponse` now gets the encoding of
   the Scrapy response, so that page objects decode the body the same way as

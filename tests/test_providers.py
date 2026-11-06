@@ -6,6 +6,7 @@ from unittest import mock
 import attr
 import scrapy
 from scrapy import Request, Spider
+from scrapy.http import Response, TextResponse
 from scrapy.settings import Settings
 from scrapy.utils.defer import deferred_f_from_coro_f
 from scrapy.utils.test import get_crawler
@@ -231,11 +232,11 @@ async def test_http_request_provider(settings: dict[str, Any]) -> None:
     injector = Injector(crawler)
     provider = HttpRequestProvider(injector)
 
-    empty_scrapy_request = scrapy.http.Request("https://example.com")
+    empty_scrapy_request = scrapy.http.Request("https://example.com/")
     (empty_request,) = provider(set(), empty_scrapy_request)
     assert isinstance(empty_request, HttpRequest)
     assert isinstance(empty_request.url, RequestUrl)
-    assert str(empty_request.url) == "https://example.com"
+    assert str(empty_request.url) == "https://example.com/"
     assert empty_request.method == "GET"
     assert isinstance(empty_request.headers, HttpRequestHeaders)
     assert empty_request.headers == HttpRequestHeaders()
@@ -243,12 +244,12 @@ async def test_http_request_provider(settings: dict[str, Any]) -> None:
     assert empty_request.body == HttpRequestBody()
 
     full_scrapy_request = scrapy.http.Request(
-        "https://example.com", method="POST", body=b"a", headers={"a": "b"}
+        "https://example.com/", method="POST", body=b"a", headers={"a": "b"}
     )
     (full_request,) = provider(set(), full_scrapy_request)
     assert isinstance(full_request, HttpRequest)
     assert isinstance(full_request.url, RequestUrl)
-    assert str(full_request.url) == "https://example.com"
+    assert str(full_request.url) == "https://example.com/"
     assert full_request.method == "POST"
     assert isinstance(full_request.headers, HttpRequestHeaders)
     assert full_request.headers == HttpRequestHeaders([("a", "b")])
@@ -301,3 +302,16 @@ def test_stats_provider(settings: dict[str, Any]) -> None:
     expected = {f"poet/stats/{k}": v for k, v in expected.items()}
     actual = {k: v for k, v in crawler.stats._stats.items() if k in expected}
     assert actual == expected
+
+
+def test_http_response_provider_encoding(settings: dict[str, Any]) -> None:
+    crawler = get_crawler(Spider, settings)
+    provider = HttpResponseProvider(Injector(crawler))
+    url = "https://example.com"
+    body = "<p>Привет</p>".encode("cp1251")
+
+    (response,) = provider(set(), TextResponse(url, body=body, encoding="cp1251"))
+    assert response.text == "<p>Привет</p>"
+
+    (response,) = provider(set(), Response(url, body=body))
+    assert response.body == body

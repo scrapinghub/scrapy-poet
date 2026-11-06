@@ -7,13 +7,13 @@ from unittest.mock import MagicMock
 import pytest
 from scrapy import Spider
 from scrapy.http import Request, Response, TextResponse
+from scrapy.http.request import NO_CALLBACK
 from scrapy.settings import Settings
 from scrapy.utils.defer import deferred_f_from_coro_f, maybe_deferred_to_future
 from scrapy.utils.test import get_crawler
 from web_poet import HttpRequest, HttpResponse
 
 from scrapy_poet.utils import (
-    NO_CALLBACK,
     create_registry_instance,
     get_scrapy_data_path,
     http_request_to_scrapy_request,
@@ -332,3 +332,17 @@ async def test_crawl_single_item() -> None:
             crawl_single_item(ItemSpider, ProductHtml, {})
         )
     assert item == {"url": url}
+
+
+def test_is_min_scrapy_version_deprecated() -> None:
+    from scrapy_poet.utils import is_min_scrapy_version  # noqa: PLC0415
+
+    with pytest.warns(DeprecationWarning, match="is_min_scrapy_version"):
+        assert is_min_scrapy_version("2.0.0") is True
+
+
+def test_no_callback_deprecated() -> None:
+    from scrapy_poet import utils  # noqa: PLC0415
+
+    with pytest.warns(DeprecationWarning, match="NO_CALLBACK"):
+        assert utils.NO_CALLBACK is NO_CALLBACK

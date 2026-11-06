@@ -11,10 +11,11 @@ for example, from scrapy-playwright or from scrapy-zyte-api.
 
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, ClassVar
+from weakref import WeakKeyDictionary
 
 from scrapy import Request
 from scrapy.crawler import Crawler
-from scrapy.http import Response
+from scrapy.http import Response, TextResponse
 from scrapy.statscollectors import StatsCollector
 from scrapy.utils.defer import maybe_deferred_to_future
 from web_poet import (
@@ -22,6 +23,7 @@ from web_poet import (
     HttpRequest,
     HttpRequestHeaders,
     HttpResponse,
+    HttpResponseHeaders,
     PageParams,
     RequestUrl,
     ResponseUrl,
@@ -31,10 +33,26 @@ from web_poet.page_inputs.stats import StatCollector, StatNum
 
 from scrapy_poet.downloader import _create_scrapy_downloader
 from scrapy_poet.injection_errors import MalformedProvidedClassesError
-from scrapy_poet.utils import scrapy_response_to_http_response
 
 if TYPE_CHECKING:
     from scrapy_poet.injection import Injector
+
+# HttpResponse that HtmlMetadataMiddleware pre-extracted selectors into, by
+# the response it was built from.
+_preextracted_responses: WeakKeyDictionary[Response, HttpResponse] = WeakKeyDictionary()
+
+
+def _to_http_response(response: Response) -> HttpResponse:
+    kwargs: dict[str, Any] = {}
+    if isinstance(response, TextResponse):
+        kwargs["encoding"] = response.encoding
+    return HttpResponse(
+        url=response.url,
+        body=response.body,
+        status=response.status,
+        headers=HttpResponseHeaders.from_bytes_dict(response.headers),
+        **kwargs,
+    )
 
 
 class PageObjectInputProvider:
@@ -172,7 +190,10 @@ class HttpResponseProvider(PageObjectInputProvider):
         <web_poet.page_inputs.http.HttpResponse>` instance using a
         :class:`scrapy.http.Response` instance.
         """
-        return [scrapy_response_to_http_response(response)]
+        http_response = _preextracted_responses.get(response)
+        if http_response is None:
+            http_response = _to_http_response(response)
+        return [http_response]
 
 
 class HttpClientProvider(PageObjectInputProvider):
@@ -262,7 +283,7 @@ class ScrapyPoetStatCollector(StatCollector):
         self._stats.set_value(f"{self._prefix}{key}", value)
 
     def inc(self, key: str, value: StatNum = 1) -> None:
-        self._stats.inc_value(f"{self._prefix}{key}", value)  # type: ignore[arg-type]
+        self._stats.inc_value(f"{self._prefix}{key}", value)
 
 
 class StatsProvider(PageObjectInputProvider):

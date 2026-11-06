@@ -67,11 +67,11 @@ class BTSBookPage(WebPage):
     async def to_item(self):
         await self.client.request(self.base_url)
         try:
-            await self.client.request(f"{self.base_url}/403")
+            await self.client.request(self.urljoin("/403"))
         except HttpResponseError:
             pass
         try:
-            await self.client.request(f"{self.base_url}/drop")
+            await self.client.request(self.urljoin("/drop"))
         except HttpRequestError:
             pass
         return {

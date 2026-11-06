@@ -1041,10 +1041,10 @@ async def test_cache(tmp_path: Path, cache_errors: bool) -> None:
     # Changing the request URL below would result in the following error:
     #   <twisted.python.failure.Failure builtins.ValueError: The URL is not from
     #   example.com>>
-    response.request = Request.replace(response.request, url="http://willfail.page")
+    response.request = Request.replace(response.request, url="http://willfail.page/")
     plan = injector.build_plan(response.request)
     with pytest.raises(
-        ValueError, match=r"\(http://willfail.page\) is not example.com"
+        ValueError, match=r"\(http://willfail.page/\) is not example.com"
     ):
         await injector.build_instances_from_providers(response.request, response, plan)
     assert injector.weak_cache.get(response.request) is None
