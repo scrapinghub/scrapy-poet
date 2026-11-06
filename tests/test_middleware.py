@@ -18,7 +18,6 @@ from scrapy.utils.log import configure_logging
 from twisted.internet.threads import deferToThread
 from url_matcher.util import get_domain
 from web_poet import ApplyRule, HttpResponse, ItemPage, RequestUrl, ResponseUrl, WebPage
-from web_poet.pages import is_injectable
 
 from scrapy_poet import DummyResponse, callback_for
 from scrapy_poet.page_input_providers import PageObjectInputProvider
@@ -120,7 +119,7 @@ async def test_overrides(settings: dict[str, Any]) -> None:
 
 
 @attr.s(auto_attribs=True)
-class OptionalAndUnionPageNew(WebPage[Any]):
+class OptionalAndUnionPage(WebPage[Any]):
     breadcrumbs: BreadcrumbsExtraction
     # ruff: disable[UP007,UP045]
     opt_check_1: Optional[BreadcrumbsExtraction]
@@ -135,14 +134,10 @@ class OptionalAndUnionPageNew(WebPage[Any]):
         return attr.asdict(self, recurse=False)
 
 
-@pytest.mark.skipif(
-    is_injectable(type(None)),
-    reason="This version of web-poet considers type(None) injectable",
-)
 @deferred_f_from_coro_f
-async def test_optional_and_unions_new(settings: dict[str, Any]) -> None:
+async def test_optional_and_unions(settings: dict[str, Any]) -> None:
     item, _, _ = await crawl_single_item_async(
-        spider_for(OptionalAndUnionPageNew), ProductHtml, settings
+        spider_for(OptionalAndUnionPage), ProductHtml, settings
     )
     assert item["breadcrumbs"].response is item["response"]
     assert item["opt_check_1"] is item["breadcrumbs"]
@@ -150,42 +145,6 @@ async def test_optional_and_unions_new(settings: dict[str, Any]) -> None:
     assert item["union_check_2"] is item["breadcrumbs"].response
     assert item["union_check_3"] is item["breadcrumbs"].response
     assert item["union_check_4"] is item["breadcrumbs"].response
-    assert item["union_check_5"] is item["breadcrumbs"]
-
-
-@attr.s(auto_attribs=True)
-class OptionalAndUnionPageOld(WebPage[Any]):
-    breadcrumbs: BreadcrumbsExtraction
-    # ruff: disable[UP007,UP045]
-    opt_check_1: Optional[BreadcrumbsExtraction]
-    opt_check_2: Optional[str]  # str is not Injectable, so None expected here
-    union_check_1: Union[BreadcrumbsExtraction, HttpResponse]  # Breadcrumbs is injected
-    union_check_2: Union[str, HttpResponse]  # HttpResponse is injected
-    union_check_3: Union[Optional[str], HttpResponse]  # None is injected
-    union_check_4: Union[None, str, HttpResponse]  # None is injected
-    union_check_5: Union[BreadcrumbsExtraction, None, str]  # Breadcrumbs is injected
-    # ruff: enable[UP007,UP045]
-
-    def to_item(self) -> dict[str, Any]:  # type: ignore[override]
-        return attr.asdict(self, recurse=False)
-
-
-@pytest.mark.skipif(
-    not is_injectable(type(None)),
-    reason="This version of web-poet does not consider type(None) injectable",
-)
-@deferred_f_from_coro_f
-async def test_optional_and_unions_old(settings: dict[str, Any]) -> None:
-    item, _, _ = await crawl_single_item_async(
-        spider_for(OptionalAndUnionPageOld), ProductHtml, settings
-    )
-    assert item["breadcrumbs"].response is item["response"]
-    assert item["opt_check_1"] is item["breadcrumbs"]
-    assert item["opt_check_2"] is None
-    assert item["union_check_1"] is item["breadcrumbs"]
-    assert item["union_check_2"] is item["breadcrumbs"].response
-    assert item["union_check_3"] is None
-    assert item["union_check_4"] is None
     assert item["union_check_5"] is item["breadcrumbs"]
 
 
@@ -295,7 +254,7 @@ async def test_providers_returning_wrong_classes(
     assert "UndeclaredProvidedTypeError:" in caplog.text
 
 
-class MultiArgsCallbackSpiderNew(scrapy.Spider):
+class MultiArgsCallbackSpider(scrapy.Spider):
     url: str
     custom_settings = {"SCRAPY_POET_PROVIDERS": {WithDeferredProvider: 1}}
 
@@ -326,67 +285,16 @@ class MultiArgsCallbackSpiderNew(scrapy.Spider):
         }
 
 
-@pytest.mark.skipif(
-    is_injectable(type(None)),
-    reason="This version of web-poet considers type(None) injectable",
-)
 @deferred_f_from_coro_f
-async def test_multi_args_callbacks_new(settings: dict[str, Any]) -> None:
+async def test_multi_args_callbacks(settings: dict[str, Any]) -> None:
     item, _, _ = await crawl_single_item_async(
-        MultiArgsCallbackSpiderNew, ProductHtml, settings
+        MultiArgsCallbackSpider, ProductHtml, settings
     )
     assert type(item["product"]) is ProductPage
     assert type(item["provided"]) is ProvidedWithDeferred
     assert item["cb_arg"] == "arg!"
     assert item["cb_arg2"] is False
     assert item["non_cb_arg"] == "default"
-
-
-class MultiArgsCallbackSpiderOld(scrapy.Spider):
-    url: str
-    custom_settings = {"SCRAPY_POET_PROVIDERS": {WithDeferredProvider: 1}}
-
-    def start_requests(self) -> Iterator[Request]:
-        yield Request(
-            self.url, self.parse, cb_kwargs={"cb_arg": "arg!", "cb_arg2": False}
-        )
-
-    async def start(self) -> AsyncIterator[Any]:
-        for item_or_request in self.start_requests():
-            yield item_or_request
-
-    def parse(
-        self,
-        response: Response,
-        product: ProductPage,
-        provided: ProvidedWithDeferred,
-        cb_arg: Optional[str],  # noqa: UP045
-        cb_arg2: Optional[bool],  # noqa: UP045
-        non_cb_arg: Optional[str],  # noqa: UP045
-    ) -> Iterator[dict[str, Any]]:
-        yield {
-            "product": product,
-            "provided": provided,
-            "cb_arg": cb_arg,
-            "cb_arg2": cb_arg2,
-            "non_cb_arg": non_cb_arg,
-        }
-
-
-@pytest.mark.skipif(
-    not is_injectable(type(None)),
-    reason="This version of web-poet does not consider type(None) injectable",
-)
-@deferred_f_from_coro_f
-async def test_multi_args_callbacks_old(settings: dict[str, Any]) -> None:
-    item, _, _ = await crawl_single_item_async(
-        MultiArgsCallbackSpiderOld, ProductHtml, settings
-    )
-    assert type(item["product"]) is ProductPage
-    assert type(item["provided"]) is ProvidedWithDeferred
-    assert item["cb_arg"] == "arg!"
-    assert item["cb_arg2"] is False
-    assert item["non_cb_arg"] is None
 
 
 @attr.s(auto_attribs=True)
@@ -588,27 +496,13 @@ async def test_skip_download_request_url_page(settings: dict[str, Any]) -> None:
 
 
 def test_scrapy_shell(tmp_path: Path) -> None:
-    try:
-        import scrapy.addons  # noqa: F401,PLC0415
-    except ImportError:
-        settings = """
-            DOWNLOADER_MIDDLEWARES = {
-                "scrapy_poet.InjectionMiddleware": 543,
-                "scrapy.downloadermiddlewares.stats.DownloaderStats": None,
-                "scrapy_poet.DownloaderStatsMiddleware": 850,
-            }
-            REQUEST_FINGERPRINTER_CLASS = "scrapy_poet.ScrapyPoetRequestFingerprinter"
-            SPIDER_MIDDLEWARES = {
-                "scrapy_poet.RetryMiddleware": 275,
-            }
+    settings = dedent(
         """
-    else:
-        settings = """
-            ADDONS = {
-                "scrapy_poet.Addon": 300,
-            }
+        ADDONS = {
+            "scrapy_poet.Addon": 300,
+        }
         """
-    settings = dedent(settings)
+    )
     (tmp_path / "settings.py").write_text(settings)
 
     env = os.environ.copy()

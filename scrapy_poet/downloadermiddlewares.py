@@ -5,13 +5,14 @@ are executed.
 
 from __future__ import annotations
 
-import inspect
 import logging
-import warnings
+from functools import cached_property
 from typing import TYPE_CHECKING, Self
 
 from scrapy.downloadermiddlewares.stats import DownloaderStats
-from web_poet import RulesRegistry
+from scrapy.exceptions import NotConfigured
+from scrapy.http import TextResponse
+from web_poet import RulesRegistry, preextract_selectors
 from web_poet.exceptions import Retry
 
 from .api import DummyResponse
@@ -24,12 +25,10 @@ from .page_input_providers import (
     RequestUrlProvider,
     ResponseUrlProvider,
     StatsProvider,
+    _preextracted_responses,
+    _to_http_response,
 )
-from .utils import (
-    _get_retry_request_from_exception,
-    create_registry_instance,
-    is_min_scrapy_version,
-)
+from .utils import _get_retry_request_from_exception, create_registry_instance
 
 if TYPE_CHECKING:
     from scrapy import Spider
@@ -105,31 +104,6 @@ class InjectionMiddleware:
         self.crawler.stats.inc_value("scrapy_poet/dummy_response_count")
         return DummyResponse(url=request.url, request=request)
 
-    def _skip_dependency_creation(self, request: Request) -> bool:
-        """See:
-
-        * https://github.com/scrapinghub/scrapy-poet/issues/48  — scrapy <  2.8
-        * https://github.com/scrapinghub/scrapy-poet/issues/118 — scrapy >= 2.8
-        """
-        if is_min_scrapy_version("2.8.0"):
-            return False
-
-        # No need to skip if the callback doesn't default to the parse() method
-        if request.callback is not None:
-            return False
-
-        # If the Request.cb_kwargs possess all of the cb dependencies, then no
-        # warning message should be issued.
-        assert self.crawler.spider
-        signature_iter = iter(inspect.signature(self.crawler.spider.parse).parameters)
-        next(signature_iter)  # skip the first arg: response
-        cb_param_names = set(signature_iter)
-        if cb_param_names and cb_param_names == request.cb_kwargs.keys():
-            return False
-
-        # Skip if providers are needed.
-        return bool(self.injector.discover_callback_providers(request))
-
     async def process_response(
         self, request: Request, response: Response, spider: Spider | None = None
     ) -> Response | Request:
@@ -142,17 +116,6 @@ class InjectionMiddleware:
         arguments and any other parameter with a :class:`~.PageObjectInputProvider`
         configured for its type.
         """
-        if self._skip_dependency_creation(request):
-            warnings.warn(
-                "A request has been encountered with callback=None which "
-                "defaults to the parse() method. On such cases, annotated "
-                "dependencies in the parse() method won't be built by "
-                "scrapy-poet. However, if the request has callback=parse, "
-                "the annotated dependencies will be built.\n\n"
-                "See the Pitfalls doc for more info.",
-                stacklevel=2,
-            )
-            return response
 
         # Find out the dependencies
         try:
@@ -176,4 +139,56 @@ class InjectionMiddleware:
             request.cb_kwargs[arg] = value
             # TODO: check if all arguments are fulfilled somehow?
 
+        return response
+
+
+class HtmlMetadataMiddleware:
+    """Downloader middleware that, when the callback gets page objects with
+    :ref:`declarative selectors <web-poet:declarative-selectors>`, reads the
+    :attr:`~scrapy.http.TextResponse.base_url` and
+    :attr:`~scrapy.http.TextResponse.meta_refresh` of the response in the same
+    pass that extracts those selectors.
+
+    .. versionadded:: VERSION
+
+    Its value in :setting:`DOWNLOADER_MIDDLEWARES` must be lower than that of
+    :class:`~scrapy.downloadermiddlewares.httpcompression.HttpCompressionMiddleware`
+    and higher than that of
+    :class:`~scrapy.downloadermiddlewares.redirect.MetaRefreshMiddleware`.
+    """
+
+    def __init__(self, crawler: Crawler) -> None:
+        # Scrapy < 2.20
+        if not hasattr(TextResponse, "meta_refresh"):
+            raise NotConfigured
+        self.crawler = crawler
+
+    @classmethod
+    def from_crawler(cls, crawler: Crawler) -> Self:
+        return cls(crawler)
+
+    @cached_property
+    def _injector(self) -> Injector | None:
+        assert self.crawler.engine
+        for middleware in self.crawler.engine.downloader.middleware.middlewares:
+            if isinstance(middleware, InjectionMiddleware):
+                return middleware.injector
+        return None
+
+    def process_response(
+        self, request: Request, response: Response, spider: Spider | None = None
+    ) -> Response:
+        if not isinstance(response, TextResponse) or self._injector is None:
+            return response
+        http_response = _to_http_response(response)
+        classes = (cls for cls, _ in self._injector.build_plan(request))
+        metadata = preextract_selectors(http_response, classes)
+        if metadata is None:
+            return response
+        response.base_url = metadata.base_url
+        meta_refresh = metadata.meta_refresh
+        response.meta_refresh = (
+            None if meta_refresh is None else (meta_refresh.delay, meta_refresh.url)
+        )
+        _preextracted_responses[response] = http_response
         return response

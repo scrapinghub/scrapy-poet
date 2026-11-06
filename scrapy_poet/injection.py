@@ -31,7 +31,6 @@ from scrapy_poet.injection_errors import (
     UndeclaredProvidedTypeError,
 )
 from scrapy_poet.page_input_providers import PageObjectInputProvider
-from scrapy_poet.utils import is_min_scrapy_version
 
 from .utils import create_registry_instance, get_scrapy_data_path
 
@@ -155,7 +154,7 @@ class Injector:
         :class:`~scrapy.http.Response` is going to be used.
         """
         callback = get_callback(request, self.spider)
-        if is_callback_requiring_scrapy_response(callback, request.callback):
+        if is_callback_requiring_scrapy_response(callback):
             return True
 
         for provider in self.discover_callback_providers(request):
@@ -466,6 +465,14 @@ def is_callback_requiring_scrapy_response(
     Basically, it won't be required if the response argument in the
     callback is annotated with :class:`~.DummyResponse`.
     """
+    if raw_callback is not _unset:
+        warnings.warn(
+            "The raw_callback parameter of "
+            "is_callback_requiring_scrapy_response() is deprecated and has no "
+            "effect, stop passing it.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
     if getattr(callback, _CALLBACK_FOR_MARKER, False) is True:
         # The callback_for function was used to create this callback.
         return False
@@ -484,26 +491,8 @@ def is_callback_requiring_scrapy_response(
         # There's no type annotation, so we're probably using response here.
         return True
 
-    if issubclass_safe(first_parameter_type_hint, DummyResponse):
-        # See: https://github.com/scrapinghub/scrapy-poet/issues/48
-        # See: https://github.com/scrapinghub/scrapy-poet/issues/118
-        if raw_callback is None and not is_min_scrapy_version("2.8.0"):
-            warnings.warn(
-                "A request has been encountered with callback=None which "
-                "defaults to the parse() method. If the parse() method is "
-                "annotated with scrapy_poet.DummyResponse (or its subclasses), "
-                "we're assuming this isn't intended and would simply ignore "
-                "this annotation.\n\n"
-                "See the Pitfalls doc for more info.",
-                stacklevel=1,
-            )
-            return True
-
-        # Type annotation is DummyResponse, so we're probably NOT using it.
-        return False
-
-    # Type annotation is not DummyResponse, so we're probably using it.
-    return True
+    # The response is probably not used if annotated as DummyResponse.
+    return not issubclass_safe(first_parameter_type_hint, DummyResponse)
 
 
 SCRAPY_PROVIDED_CLASSES = {

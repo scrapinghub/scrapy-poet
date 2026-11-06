@@ -18,7 +18,7 @@ async def test_cache_no_errors(caplog: pytest.LogCaptureFixture) -> None:
 
         class Page(WebPage[dict[str, Any]]):
             @field
-            async def url(self) -> ResponseUrl:
+            async def url(self) -> ResponseUrl:  # type: ignore[override]
                 return self.response.url
 
         class CacheSpider(Spider):

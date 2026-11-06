@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ParamSpec
+from warnings import warn
 
 from packaging.version import Version
 from scrapy import __version__ as SCRAPY_VERSION
 from scrapy.downloadermiddlewares.retry import get_retry_request
 from scrapy.http import HtmlResponse, Request, Response
+from scrapy.http.request import NO_CALLBACK as _NO_CALLBACK
 from scrapy.utils.defer import deferred_from_coro
 from scrapy.utils.project import inside_project, project_data_dir
 from scrapy.utils.response import open_in_browser as scrapy_open_in_browser
@@ -22,14 +23,6 @@ from web_poet import (
     consume_modules,
     default_registry,
 )
-
-try:
-    from scrapy.http.request import (
-        NO_CALLBACK as NO_CALLBACK,  # available on Scrapy >= 2.8
-    )
-except ImportError:
-    NO_CALLBACK = None  # type: ignore[assignment]
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -60,7 +53,7 @@ def http_request_to_scrapy_request(request: HttpRequest, **kwargs: Any) -> Reque
         method=request.method,
         headers=request.headers,
         body=request.body,
-        callback=NO_CALLBACK,
+        callback=_NO_CALLBACK,
         **kwargs,
     )
 
@@ -112,8 +105,12 @@ def create_registry_instance(
     return cls(rules=rules)
 
 
-@lru_cache
 def is_min_scrapy_version(version: str) -> bool:
+    warn(
+        "scrapy_poet.utils.is_min_scrapy_version() is deprecated.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return Version(SCRAPY_VERSION) >= Version(version)
 
 
@@ -149,3 +146,15 @@ def _get_retry_request_from_exception(
         reason=reason,
         max_retry_times=getattr(exception, "max_retries", None),
     )
+
+
+def __getattr__(name: str) -> Any:
+    if name == "NO_CALLBACK":
+        warn(
+            "scrapy_poet.utils.NO_CALLBACK is deprecated, use "
+            "scrapy.http.request.NO_CALLBACK instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return _NO_CALLBACK
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
