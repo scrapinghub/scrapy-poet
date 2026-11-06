@@ -64,7 +64,7 @@ class AdditionalRequestsRedirectPage(WebPage[dict[str, Any]]):
     http: HttpClient
 
     async def to_item(self) -> dict[str, Any]:
-        response = await self.http.get(f"{self.response.url}/redirect")
+        response = await self.http.get(f"{self.response.url}redirect")
         return {"url": str(response.url)}
 
 
@@ -305,7 +305,7 @@ async def test_response_redirect() -> None:
             name = "test_spider"
 
             def start_requests(self) -> Iterator[Request]:
-                yield Request(f"{server.root_url}/redirect", callback=self.parse)
+                yield Request(f"{server.root_url}redirect", callback=self.parse)
 
             async def start(self) -> AsyncIterator[Any]:
                 for item_or_request in self.start_requests():
@@ -317,7 +317,7 @@ async def test_response_redirect() -> None:
         crawler = make_crawler(TestSpider)
         await maybe_deferred_to_future(crawler.crawl())
 
-    assert urls == [f"{server.root_url}/target"]
+    assert urls == [f"{server.root_url}target"]
 
 
 @deferred_f_from_coro_f
@@ -345,7 +345,7 @@ async def test_additional_requests_redirect() -> None:
         crawler = make_crawler(TestSpider)
         await maybe_deferred_to_future(crawler.crawl())
 
-    assert items == [{"url": f"{server.root_url}/target"}]
+    assert items == [{"url": f"{server.root_url}target"}]
 
 
 @deferred_f_from_coro_f

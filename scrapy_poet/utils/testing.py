@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 from scrapy import Spider, signals
+from scrapy.core.engine import ExecutionEngine
 from scrapy.crawler import Crawler
 from scrapy.exceptions import CloseSpider
 from scrapy.settings import Settings
@@ -289,7 +290,10 @@ def setup_crawler_engine(crawler: Crawler) -> None:
     crawler.settings.frozen = False
     with contextlib.suppress(AttributeError):  # Scrapy < 2.10
         crawler._apply_settings()
-    crawler.engine = crawler._create_engine()
+    if hasattr(crawler, "_create_engine"):  # Scrapy < 2.20
+        crawler.engine = crawler._create_engine()
+    else:
+        crawler.engine = ExecutionEngine(crawler)  # type: ignore[call-arg]
 
     handler = get_download_handler(crawler, "https")
     if hasattr(handler, "engine_started"):
