@@ -12,9 +12,11 @@ from web_poet._frostwork import _extract as extract
 
 from scrapy_poet.utils.testing import HtmlResource, crawl_items_async
 
-# Scrapy 2.20+
+# Scrapy < 2.20
 if not hasattr(TextResponse, "meta_refresh"):
     pytest.skip("Scrapy without TextResponse.meta_refresh", allow_module_level=True)
+
+from scrapy.http.response.text import MetaRefresh
 
 
 class MetadataHtml(HtmlResource):
@@ -108,7 +110,7 @@ async def test_passes(
             "name": "Chocolate",
             "page_base_url": f"{url}food/",
             "base_url": f"{url}food/",
-            "meta_refresh": (1000.0, f"{url}food/next"),
+            "meta_refresh": MetaRefresh(1000.0, f"{url}food/next"),
         }
     ]
     assert len(passes) == passes_

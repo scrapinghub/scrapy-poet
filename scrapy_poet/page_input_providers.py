@@ -283,7 +283,7 @@ class ScrapyPoetStatCollector(StatCollector):
         self._stats.set_value(f"{self._prefix}{key}", value)
 
     def inc(self, key: str, value: StatNum = 1) -> None:
-        self._stats.inc_value(f"{self._prefix}{key}", value)  # type: ignore[arg-type]
+        self._stats.inc_value(f"{self._prefix}{key}", value)
 
 
 class StatsProvider(PageObjectInputProvider):

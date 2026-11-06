@@ -143,12 +143,11 @@ class InjectionMiddleware:
 
 
 class HtmlMetadataMiddleware:
-    """Downloader middleware that saves a parse of the response body when the
-    callback gets page objects with :ref:`declarative selectors
-    <web-poet:declarative-selectors>`, by reading the
+    """Downloader middleware that, when the callback gets page objects with
+    :ref:`declarative selectors <web-poet:declarative-selectors>`, reads the
     :attr:`~scrapy.http.TextResponse.base_url` and
     :attr:`~scrapy.http.TextResponse.meta_refresh` of the response in the same
-    parse that extracts their fields.
+    pass that extracts those selectors.
 
     .. versionadded:: VERSION
 
@@ -159,7 +158,7 @@ class HtmlMetadataMiddleware:
     """
 
     def __init__(self, crawler: Crawler) -> None:
-        # Scrapy without writable TextResponse.base_url and meta_refresh.
+        # Scrapy < 2.20
         if not hasattr(TextResponse, "meta_refresh"):
             raise NotConfigured
         self.crawler = crawler
@@ -187,6 +186,9 @@ class HtmlMetadataMiddleware:
         if metadata is None:
             return response
         response.base_url = metadata.base_url
-        response.meta_refresh = metadata.meta_refresh
+        meta_refresh = metadata.meta_refresh
+        response.meta_refresh = (
+            None if meta_refresh is None else (meta_refresh.delay, meta_refresh.url)
+        )
         _preextracted_responses[response] = http_response
         return response

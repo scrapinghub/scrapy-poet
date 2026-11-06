@@ -557,7 +557,7 @@ async def test_additional_requests_dont_filter_offsite() -> None:
 
         class TestSpider(Spider):
             name = "test_spider"
-            allowed_domains = [urlparse(server.root_url).hostname]
+            allowed_domains = [str(urlparse(server.root_url).hostname)]
 
             def start_requests(self) -> Iterator[Request]:
                 yield Request(server.root_url, callback=self.parse)

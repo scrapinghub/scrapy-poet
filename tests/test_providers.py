@@ -232,7 +232,7 @@ async def test_http_request_provider(settings: dict[str, Any]) -> None:
     injector = Injector(crawler)
     provider = HttpRequestProvider(injector)
 
-    empty_scrapy_request = scrapy.http.Request("https://example.com")
+    empty_scrapy_request = scrapy.http.Request("https://example.com/")
     (empty_request,) = provider(set(), empty_scrapy_request)
     assert isinstance(empty_request, HttpRequest)
     assert isinstance(empty_request.url, RequestUrl)
@@ -244,7 +244,7 @@ async def test_http_request_provider(settings: dict[str, Any]) -> None:
     assert empty_request.body == HttpRequestBody()
 
     full_scrapy_request = scrapy.http.Request(
-        "https://example.com", method="POST", body=b"a", headers={"a": "b"}
+        "https://example.com/", method="POST", body=b"a", headers={"a": "b"}
     )
     (full_request,) = provider(set(), full_scrapy_request)
     assert isinstance(full_request, HttpRequest)
