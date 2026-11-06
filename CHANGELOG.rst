@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.28.0 (unreleased)
+0.28.0 (2026-11-06)
 -------------------
 
 * Dropped Python 3.10 support, added Python 3.14 and 3.15 support.
