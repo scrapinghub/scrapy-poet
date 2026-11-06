@@ -142,7 +142,7 @@ class InjectionMiddleware:
         return response
 
 
-class NavigationMiddleware:
+class HtmlMetadataMiddleware:
     """Downloader middleware that saves a parse of the response body when the
     callback gets page objects with :ref:`declarative selectors
     <web-poet:declarative-selectors>`, by reading the
@@ -183,10 +183,10 @@ class NavigationMiddleware:
             return response
         http_response = _to_http_response(response)
         classes = (cls for cls, _ in self._injector.build_plan(request))
-        navigation = preextract_selectors(http_response, classes)
-        if navigation is None:
+        metadata = preextract_selectors(http_response, classes)
+        if metadata is None:
             return response
-        response.base_url = navigation.base_url
-        response.meta_refresh = navigation.meta_refresh
+        response.base_url = metadata.base_url
+        response.meta_refresh = metadata.meta_refresh
         _preextracted_responses[response] = http_response
         return response

@@ -37,8 +37,8 @@ from scrapy_poet.injection_errors import MalformedProvidedClassesError
 if TYPE_CHECKING:
     from scrapy_poet.injection import Injector
 
-# HttpResponse that NavigationMiddleware pre-extracted selectors into, by the
-# response it was built from.
+# HttpResponse that HtmlMetadataMiddleware pre-extracted selectors into, by
+# the response it was built from.
 _preextracted_responses: WeakKeyDictionary[Response, HttpResponse] = WeakKeyDictionary()
 
 

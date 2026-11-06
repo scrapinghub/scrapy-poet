@@ -17,7 +17,7 @@ if not hasattr(TextResponse, "meta_refresh"):
     pytest.skip("Scrapy without TextResponse.meta_refresh", allow_module_level=True)
 
 
-class NavigationHtml(HtmlResource):
+class MetadataHtml(HtmlResource):
     content_type = "text/html; charset=utf-8"
     html = """
     <html>
@@ -28,7 +28,7 @@ class NavigationHtml(HtmlResource):
     """
 
 
-class UndeclaredEncodingHtml(NavigationHtml):
+class UndeclaredEncodingHtml(MetadataHtml):
     content_type = "text/html"
 
 
@@ -42,8 +42,8 @@ class UndeclaredPage(WebPage[Any]):
     pass
 
 
-class NavigationSpider(scrapy.Spider):
-    name = "navigation"
+class MetadataSpider(scrapy.Spider):
+    name = "html_metadata"
     url: str
 
     async def start(self) -> AsyncIterator[Any]:
@@ -58,7 +58,7 @@ class NavigationSpider(scrapy.Spider):
         }
 
 
-class UndeclaredSpider(NavigationSpider):
+class UndeclaredSpider(MetadataSpider):
     async def parse_page(self, response: Any, page: UndeclaredPage) -> Any:  # type: ignore[override]
         yield {
             "name": page.css("h1::text").get(),
@@ -69,12 +69,12 @@ class UndeclaredSpider(NavigationSpider):
 
 
 @pytest.mark.parametrize(
-    ("spider_cls", "resource_cls", "passes_", "navigations"),
+    ("spider_cls", "resource_cls", "passes_", "metadata_reads_"),
     [
-        (NavigationSpider, NavigationHtml, 1, 0),
-        (NavigationSpider, UndeclaredEncodingHtml, 1, 0),
-        # No selector declarations: Scrapy reads the navigation itself.
-        (UndeclaredSpider, NavigationHtml, 0, 1),
+        (MetadataSpider, MetadataHtml, 1, 0),
+        (MetadataSpider, UndeclaredEncodingHtml, 1, 0),
+        # No selector declarations: Scrapy reads the HTML metadata itself.
+        (UndeclaredSpider, MetadataHtml, 0, 1),
     ],
 )
 @deferred_f_from_coro_f
@@ -84,17 +84,17 @@ async def test_passes(
     spider_cls: type[scrapy.Spider],
     resource_cls: type[HtmlResource],
     passes_: int,
-    navigations: int,
+    metadata_reads_: int,
 ) -> None:
     passes: list[Any] = []
-    navigation_calls: list[Any] = []
+    metadata_reads: list[Any] = []
 
     def counting_extract(*args: Any, **kwargs: Any) -> Any:
         passes.append(args)
         return extract(*args, **kwargs)
 
     def counting_navigation(*args: Any, **kwargs: Any) -> Any:
-        navigation_calls.append(args)
+        metadata_reads.append(args)
         return navigation(*args, **kwargs)
 
     navigation = frostwork.navigation
@@ -112,4 +112,4 @@ async def test_passes(
         }
     ]
     assert len(passes) == passes_
-    assert len(navigation_calls) == navigations
+    assert len(metadata_reads) == metadata_reads_

@@ -36,7 +36,7 @@ This is what the add-on changes:
 
     -   Sets :class:`~scrapy_poet.InjectionMiddleware` with value ``543``.
 
-    -   Sets :class:`~scrapy_poet.NavigationMiddleware` with value ``585``.
+    -   Sets :class:`~scrapy_poet.HtmlMetadataMiddleware` with value ``585``.
 
     -   Replaces
         :class:`scrapy.downloadermiddlewares.stats.DownloaderStats`

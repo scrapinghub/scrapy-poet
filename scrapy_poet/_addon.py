@@ -7,8 +7,8 @@ from scrapy.utils.misc import load_object
 from ._request_fingerprinter import ScrapyPoetRequestFingerprinter
 from .downloadermiddlewares import (
     DownloaderStatsMiddleware,
+    HtmlMetadataMiddleware,
     InjectionMiddleware,
-    NavigationMiddleware,
 )
 from .spidermiddlewares import RetryMiddleware
 
@@ -98,7 +98,7 @@ class Addon:
             priority="addon",
         )
         _setdefault(settings, "DOWNLOADER_MIDDLEWARES", InjectionMiddleware, 543)
-        _setdefault(settings, "DOWNLOADER_MIDDLEWARES", NavigationMiddleware, 585)
+        _setdefault(settings, "DOWNLOADER_MIDDLEWARES", HtmlMetadataMiddleware, 585)
         _setdefault(settings, "SPIDER_MIDDLEWARES", RetryMiddleware, 275)
         _replace_builtin(
             settings,
