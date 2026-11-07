@@ -77,7 +77,9 @@ class ScrapyPoetRequestFingerprinter:
             ),
             crawler,
         )
-        self._callback_cache: dict[Callable[..., Any], bytes | None] = {}
+        self._callback_cache: dict[
+            tuple[Callable[..., Any], tuple[Any, ...]], bytes | None
+        ] = {}
         self._request_cache: WeakKeyDictionary[Request, bytes] = WeakKeyDictionary()
         self._crawler: Crawler = crawler
         self._saw_unserializable_page_params = False
@@ -109,17 +111,21 @@ class ScrapyPoetRequestFingerprinter:
         dependencies requested through scrapy-poet injection that could
         impact the request, or None if there are no such dependencies."""
         callback = get_callback(request, self._crawler.spider)
-        if callback in self._callback_cache:
-            return self._callback_cache[callback]
+        # Dependencies passed through the "inject" request meta key are also
+        # part of the plan, so requests with the same callback can still have
+        # different dependencies.
+        cache_key = (callback, tuple(request.meta.get("inject", ())))
+        if cache_key in self._callback_cache:
+            return self._callback_cache[cache_key]
 
         deps = self._get_deps(request)
         if not deps:
-            self._callback_cache[callback] = None
+            self._callback_cache[cache_key] = None
             return None
 
         deps_key = json.dumps(deps, sort_keys=True).encode()
-        self._callback_cache[callback] = deps_key
-        return self._callback_cache[callback]
+        self._callback_cache[cache_key] = deps_key
+        return self._callback_cache[cache_key]
 
     def serialize_page_params(self, request: Request) -> bytes | None:
         """Return a JSON object as bytes that represents the page params,
