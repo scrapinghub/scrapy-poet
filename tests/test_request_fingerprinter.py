@@ -29,7 +29,7 @@ from web_poet import (
     WebPage,
 )
 
-from scrapy_poet import DummyResponse
+from scrapy_poet import DummyResponse, DynamicDeps
 from scrapy_poet._request_fingerprinter import _serialize_dep
 from scrapy_poet.downloadermiddlewares import DEFAULT_PROVIDERS
 from scrapy_poet.injection import Injector, is_class_provided_by_any_provider_fn
@@ -535,6 +535,42 @@ def test_request_cache() -> None:
         fingerprinter.fingerprint(request)
         fingerprinter.fingerprint(request)
         mock.assert_called_once_with(request)
+
+
+def test_inject() -> None:
+    """Dependencies from the inject request meta key affect the fingerprint,
+    even for requests with the same URL and callback."""
+
+    class APage(WebPage):  # type: ignore[type-arg]
+        pass
+
+    class BPage(WebPage):  # type: ignore[type-arg]
+        pass
+
+    class TestSpider(Spider):
+        name = "test_spider"
+
+        async def parse_page(self, response: Response, dynamic: DynamicDeps) -> None:
+            pass
+
+    crawler = get_crawler(spider_cls=TestSpider)
+
+    spider = cast("TestSpider", crawler.spider)
+    fingerprinter = crawler.request_fingerprinter
+
+    def fingerprint(inject: list[Any] | None) -> bytes:
+        meta = {} if inject is None else {"inject": inject}
+        request = Request("https://toscrape.com", callback=spider.parse_page, meta=meta)
+        return fingerprinter.fingerprint(request)
+
+    fingerprint_a = fingerprint([APage])
+    fingerprint_b = fingerprint([BPage])
+    fingerprint_none = fingerprint(None)
+    fingerprint_ab = fingerprint([APage, BPage])
+    assert len({fingerprint_a, fingerprint_b, fingerprint_none, fingerprint_ab}) == 4
+    assert fingerprint([APage]) == fingerprint_a
+    assert fingerprint([]) == fingerprint_none
+    assert fingerprint([BPage, APage]) == fingerprint_ab
 
 
 def test_item(settings: dict[str, Any]) -> None:
